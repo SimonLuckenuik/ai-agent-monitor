@@ -26,7 +26,7 @@
 #include "integrations.h"
 
 
-#define FW_VERSION "1.3.0"   // see CHANGELOG.md
+#define FW_VERSION "1.3.1"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -1023,6 +1023,9 @@ void loop() {
   if (WiFi.status() == WL_CONNECTED && mode != MODE_RUN) {
     mode = MODE_RUN;
     linkUpAt = millis();
+    // Joined with the build-time network from secrets.ini: keep it, or a release
+    // image (built without it) would have no network to join.
+    if (cfg.ssid.isEmpty() && staSsid.length()) { cfg.ssid = staSsid; cfg.password = staPass; cfg.save(); }
     applyTime();
     clockDisplay().fillScreen(TFT_BLACK);
     centerText(WiFi.localIP().toString(), 100, 4, TFT_YELLOW);

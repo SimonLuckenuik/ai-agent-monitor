@@ -4,6 +4,17 @@ All notable SmartClock-OSS changes are recorded here. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
+## 1.3.1 - 2026-10-16
+
+### Fixed
+
+- A clock that joined WiFi only through the build-time network in `secrets.ini`
+  now saves it on the first join. Before, updating it to a release image (built
+  without that network) left it on the setup screen with no network to join.
+- WiFi setup: **Connect & restart** no longer asks for confirmation first. Phone
+  captive-portal windows, where the setup page usually opens, block that dialog,
+  so the button did nothing.
+
 ## 1.3.0 - 2026-10-16
 
 ### Added

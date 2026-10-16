@@ -6,11 +6,14 @@ history.
 
 ## Release and checkout
 
-The latest release is **1.3.0** (2026-10-16, tag `v1.3.0`), published on GitHub as
-`michaeldale/smartclock-oss` with `SDPro_SmartClockOSS_v1.3.0.bin` built by
-`scripts/make_release.py` (no WiFi details). It adds a switch to hide the time on
-photos (issue #1) and shows why the clock cannot join WiFi (issue #2); neither has
-run on the device yet. Earlier: 1.2.0 added the integrations (custom faces,
+The latest release is **1.3.1** (2026-10-16, tag `v1.3.1`), published on GitHub as
+`michaeldale/smartclock-oss` with `SDPro_SmartClockOSS_v1.3.1.bin` built by
+`scripts/make_release.py` (no WiFi details). It fixes **Connect & restart** doing
+nothing in phone captive-portal windows, and saves the build-time WiFi network on
+first join. The test unit is back on WiFi after 1.3.0 left it on the setup
+screen. 1.3.0 added
+a switch to hide the time on photos (issue #1) and shows why the clock cannot join
+WiFi (issue #2). Earlier: 1.2.0 added the integrations (custom faces,
 geekmagic-hacs, MQTT), all off by default, and runs on the test unit at 10.0.1.118;
 0.1.2 added the device password; 0.1.1 was the first public release;
 0.1.0 (`v0.1.0`, `6d94d08`) was the first image flashed over stock SD Pro V1.0.6
