@@ -261,6 +261,8 @@ a{color:var(--accent)}
       <select class="sm" id="photointerval" data-key="photointerval">
         <option value="10">10 s</option><option value="30">30 s</option><option value="60">1 min</option>
         <option value="300">5 min</option><option value="900">15 min</option></select></div>
+    <div class="row"><label for="photoclock">Show the time<span class="hint">Turn off for Home Assistant dashboards, so the time does not cover them</span></label>
+      <label class="switch"><input type="checkbox" id="photoclock" data-key="photoclock"><span></span></label></div>
     <p class="note" id="phNote">Tap the eye to leave a photo out of the slideshow.</p>
   </section>
 
@@ -459,7 +461,7 @@ function fillConfig(c){
   cfg=c;renderThemes();
   for(const k of ['themeInterval','brightness','nightbrightness','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
   if(![...$('themeInterval').options].some(o=>o.value==String(c.themeInterval))){const o=new Option(c.themeInterval+' s',c.themeInterval);$('themeInterval').add(o);$('themeInterval').value=c.themeInterval}
-  $('nightmode').checked=!!c.nightmode;
+  $('nightmode').checked=!!c.nightmode;$('photoclock').checked=c.photoclock!==false;
   ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
   ['mqtthost','mqttuser','mqttbase'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
   ['color1','color2','color3'].forEach(k=>$(k).value=hex565(c[k]||0));
@@ -486,8 +488,9 @@ function fillStatus(s){
   if(s.time){const [d,t,z]=s.time.split(' ');$('tTime').textContent=t.slice(0,5);
     const dt=new Date(d+'T00:00:00');$('tDate').textContent=dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+' · '+z}
   $('tNet').textContent=s.connected?s.ssid:'Not connected';
-  $('tNetS').innerHTML=s.connected?s.ip+' &nbsp;'+bars(s.rssi):(s.ssid?'Trying '+s.ssid:'Use the WiFi card below');
-  $('wifiNow').innerHTML=s.connected?`${s.ssid} · ${s.ip} · ${s.rssi} dBm`:'Not connected';
+  const why=s.wifiError?`Can't join ${s.ssid}: ${s.wifiError}`:'';
+  if(s.connected)$('tNetS').innerHTML=s.ip+' &nbsp;'+bars(s.rssi);else $('tNetS').textContent=why||(s.ssid?'Trying '+s.ssid:'Use the WiFi card below');
+  if(s.connected)$('wifiNow').innerHTML=`${s.ssid} · ${s.ip} · ${s.rssi} dBm`;else $('wifiNow').textContent=why||'Not connected';
   const f=['false','0'].includes(String(cfg.celsius));
   if(s.weather){$('tWx').textContent=Math.round(f?s.weather.temp*9/5+32:s.weather.temp)+'°'+(f?'F':'C')+' '+s.weather.main;
     $('tWxS').textContent=(s.weather.city||'')+' · '+s.weather.desc+' · '+s.weather.humidity+'%'}

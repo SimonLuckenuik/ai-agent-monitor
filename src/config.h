@@ -35,6 +35,7 @@ struct Config {
   uint16_t color3 = 0x4ED4;          // weather (mint #4CD9A0)
   // Photos: seconds per photo, and names left out of the slideshow ("|a.jpg|b.jpg|").
   int    photoInterval = 60;
+  bool   photoClock = true;          // the time pill on the Photo face
   String photoOff;
   String customFace;                 // the custom face shown when theme is FACE_CUSTOM
   // Integrations, all off by default (settings page, Integrations card).
@@ -80,6 +81,7 @@ struct Config {
     color2      = doc["color2"]      | color2;
     color3      = doc["color3"]      | color3;
     photoInterval = doc["photointerval"] | photoInterval;
+    photoClock  = doc["photoclock"]  | photoClock;
     photoOff    = doc["photooff"]    | photoOff;
     customFace  = doc["customface"]  | customFace;
     facesApi    = doc["facesapi"]    | facesApi;
@@ -110,7 +112,7 @@ struct Config {
     doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness;
     doc["starttime"] = startHour; doc["stoptime"] = stopHour;
     doc["color1"] = color1;       doc["color2"] = color2;   doc["color3"] = color3;
-    doc["photointerval"] = photoInterval; doc["photooff"] = photoOff; doc["customface"] = customFace;
+    doc["photointerval"] = photoInterval; doc["photoclock"] = photoClock; doc["photooff"] = photoOff; doc["customface"] = customFace;
     doc["facesapi"] = facesApi;   doc["hacompat"] = haCompat; doc["mqtt"] = mqttOn;
     doc["mqtthost"] = mqttHost;   doc["mqttport"] = mqttPort; doc["mqttuser"] = mqttUser;
     doc["mqttpass"] = mqttPass;   doc["mqttbase"] = mqttBase; doc["apikey"] = apiKey;

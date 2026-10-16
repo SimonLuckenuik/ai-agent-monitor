@@ -26,7 +26,7 @@
 #include "integrations.h"
 
 
-#define FW_VERSION "1.2.0"   // see CHANGELOG.md
+#define FW_VERSION "1.3.0"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -373,7 +373,7 @@ String configJson() {
   doc["nightbrightness"] = cfg.nightBrightness; doc["ntp"] = cfg.ntp;
   doc["timezone"] = cfg.timezoneMin; doc["tz"] = cfg.tz; doc["themeInterval"] = cfg.themeInterval;
   doc["faces"] = cfg.faceMask; doc["nightauto"] = cfg.nightAuto;
-  doc["photointerval"] = cfg.photoInterval;
+  doc["photointerval"] = cfg.photoInterval; doc["photoclock"] = cfg.photoClock;
   doc["facesapi"] = cfg.facesApi; doc["hacompat"] = cfg.haCompat; doc["mqtt"] = cfg.mqttOn;
   doc["mqtthost"] = cfg.mqttHost; doc["mqttport"] = cfg.mqttPort; doc["mqttuser"] = cfg.mqttUser;
   doc["mqttbase"] = cfg.mqttBase;   // the MQTT password and API key are never sent back
@@ -414,6 +414,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == "nightauto")  cfg.nightAuto = (val == "1" || val == "true");
   else if (key == "lcd_brightness") cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key
   else if (key == "photointerval") cfg.photoInterval = constrain(val.toInt(), 1, 3600);
+  else if (key == "photoclock") cfg.photoClock = (val == "1" || val == "true");
   else if (key == "facesapi")   { cfg.facesApi = (val == "1" || val == "true"); integrationsSettingsChanged(); }
   else if (key == "hacompat")   cfg.haCompat = (val == "1" || val == "true");
   else if (key == "mqtt")       { cfg.mqttOn = (val == "1" || val == "true"); integrationsSettingsChanged(); }
@@ -790,11 +791,23 @@ void restartAP() {
 String staSsid, staPass;
 bool staTrying = false, staRetryNow = true;
 uint32_t staTimer = 0;
+int staFail = -1, staFailShown = -1;   // WiFi.status() when the last try gave up; -1 = none
 constexpr uint32_t STA_TRY_MS = 30000, STA_RETRY_MS = 5UL * 60 * 1000;
 
 void staConfigure(const String& ssid, const String& pass) {
   staSsid = ssid; staPass = pass;
-  staTrying = false; staRetryNow = true;
+  staTrying = false; staRetryNow = true; staFail = -1;
+}
+
+// Why the last try failed, for the setup screen and the settings page.
+String staFailText() {
+  switch (staFail) {
+    case -1:                return "";
+    case WL_NO_SSID_AVAIL:  return F("network not found");
+    case WL_WRONG_PASSWORD: return F("wrong password");
+    case WL_CONNECT_FAILED: return F("connection refused");
+    default:                return F("no answer");
+  }
 }
 
 void serviceSta() {
@@ -803,8 +816,12 @@ void serviceSta() {
   if (WiFi.status() == WL_CONNECTED) {
     staTrying = false;
     staRetryNow = true;              // a dropped link retries immediately
+    staFail = -1;
   } else if (staTrying) {
-    if (now - staTimer >= STA_TRY_MS) { WiFi.disconnect(false); staTrying = false; staTimer = now; }
+    if (now - staTimer >= STA_TRY_MS) {
+      staFail = WiFi.status();
+      WiFi.disconnect(false); staTrying = false; staTimer = now;
+    }
   } else if (staRetryNow || now - staTimer >= STA_RETRY_MS) {
     staRetryNow = false;
     WiFi.begin(staSsid.c_str(), staPass.c_str());
@@ -820,6 +837,8 @@ void drawSetupScreen() {
   centerText("Password:", 140, 2, TFT_WHITE);
   centerText(devicePassword, 166, 4, TFT_YELLOW);
   centerText("then open " + WiFi.softAPIP().toString(), 206, 2, TFT_WHITE);
+  staFailShown = staFail;
+  if (staFail >= 0) centerText("Can't join: " + staFailText(), 228, 2, TFT_ORANGE);
 }
 
 void drawPasswordScreen() {
@@ -873,6 +892,7 @@ void handleStatus() {
   bool linked = WiFi.status() == WL_CONNECTED;
   doc["connected"] = linked;
   doc["ssid"] = linked ? WiFi.SSID() : staSsid;
+  if (!linked && staFail >= 0) doc["wifiError"] = staFailText();
   if (linked) { doc["ip"] = WiFi.localIP().toString(); doc["rssi"] = WiFi.RSSI(); }
   doc["apIp"] = WiFi.softAPIP().toString();
   doc["mdns"] = deviceHost() + ".local";
@@ -1016,6 +1036,8 @@ void loop() {
   } else if (mode == MODE_AP && revealUntil && (int32_t)(millis() - revealUntil) >= 0) {
     revealUntil = 0;
     drawSetupScreen();   // back from "Show on clock" while not connected
+  } else if (mode == MODE_AP && !revealUntil && staFail != staFailShown) {
+    drawSetupScreen();   // a try failed: say why
   }
 
   static uint32_t lastButton = 0;

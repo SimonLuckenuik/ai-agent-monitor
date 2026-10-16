@@ -4,6 +4,18 @@ All notable SmartClock-OSS changes are recorded here. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
+## 1.3.0 - 2026-10-16
+
+### Added
+
+- Photos: a **Show the time** switch on the Photos card (on by default). Turn
+  it off so the time does not cover Home Assistant dashboards pushed by
+  geekmagic-hacs ([#1](https://github.com/michaeldale/smartclock-oss/issues/1)).
+- WiFi setup: when the clock cannot join the saved network, the setup screen
+  and the settings page say why (network not found, wrong password, connection
+  refused, or no answer) instead of only showing the setup screen again
+  ([#2](https://github.com/michaeldale/smartclock-oss/issues/2)).
+
 ## 1.2.0 - 2026-10-06
 
 The version moves from 0.1.x to 1.2.0 with this release.

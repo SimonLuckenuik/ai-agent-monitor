@@ -441,7 +441,7 @@ void simple(const struct tm& t, bool force) {
   }
 }
 
-// ---- 2 Photo: JPEGs from /photo with the time on top -----------------------------
+// ---- 2 Photo: JPEGs from /photo, with the time on top unless turned off ----------
 struct JpgIo { File* file; int ox, oy; };
 
 size_t jpgIn(JDEC* jd, uint8_t* buf, size_t n) {
@@ -534,7 +534,7 @@ void photo(const struct tm& t, bool force) {
       }
     }
   }
-  if (have && t.tm_min != min) {
+  if (have && cfg.photoClock && t.tm_min != min) {
     char tb[8]; smallTime(tb, sizeof(tb), t);
     D().fillSmoothRoundRect(66, 196, 108, 34, 17, BG, BG);
     text(tb, 120, 214, 4, WHITE, BG, MC_DATUM);

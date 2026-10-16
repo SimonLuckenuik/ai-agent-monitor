@@ -127,7 +127,9 @@ endpoints, which that integration detects as "SD_PRO firmware":
 **These work without signing in** while the integration is on, because
 geekmagic-hacs cannot send credentials. They only reach photos, the face choice and
 brightness. WiFi, the password, settings and firmware still need a sign-in. Prefer a
-refresh interval of 30 s or longer: each update rewrites a photo in flash.
+refresh interval of 30 s or longer: each update rewrites a photo in flash. To stop
+the time covering part of the dashboard, turn off **Show the time** on the Photos
+card (or `/api/set?key=photoclock&value=0` while signed in).
 
 ## MQTT
 
