@@ -488,7 +488,7 @@ function fillStatus(s){
   if(s.time){const [d,t,z]=s.time.split(' ');$('tTime').textContent=t.slice(0,5);
     const dt=new Date(d+'T00:00:00');$('tDate').textContent=dt.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+' · '+z}
   $('tNet').textContent=s.connected?s.ssid:'Not connected';
-  const why=s.wifiError?`Can't join ${s.ssid}: ${s.wifiError}`:'';
+  const why=s.wifiError?`Can't join ${s.ssid}: ${s.wifiError}`+(s.wifiCode?` (code ${s.wifiCode}${wifiCodes[s.wifiCode]?': '+wifiCodes[s.wifiCode]:''})`:''):'';
   if(s.connected)$('tNetS').innerHTML=s.ip+' &nbsp;'+bars(s.rssi);else $('tNetS').textContent=why||(s.ssid?'Trying '+s.ssid:'Use the WiFi card below');
   if(s.connected)$('wifiNow').innerHTML=`${s.ssid} · ${s.ip} · ${s.rssi} dBm`;else $('wifiNow').textContent=why||'Not connected';
   const f=['false','0'].includes(String(cfg.celsius));
@@ -537,6 +537,12 @@ function waitForReboot(title,sub){
     setTimeout(tick,1500)};
   setTimeout(tick,1500)}
 
+// ESP8266 disconnect reasons (WiFiDisconnectReason), as reported in /status wifiCode.
+const wifiCodes={2:'authentication expired',3:'the router dropped the clock',4:'association expired',5:'the router has too many clients',
+  6:'not authenticated',7:'not associated',8:'left the network',15:'password handshake timed out, check the password',
+  16:'group key timed out',18:'unsupported group cipher',19:'unsupported cipher',20:'unsupported security mode, try WPA2 (not WPA3-only)',
+  23:'802.1X sign-in failed',24:'cipher rejected',200:'lost the signal',201:'network not found',202:'authentication failed, check the password',
+  203:'the router refused the connection',204:'password handshake timed out, check the password'};
 async function connect(){
   const ssid=$('ssid').value.trim(),password=$('pass').value;
   if(!ssid){toast('Choose a network',1);return}

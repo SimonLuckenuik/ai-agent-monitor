@@ -26,7 +26,7 @@
 #include "integrations.h"
 
 
-#define FW_VERSION "1.3.1"   // see CHANGELOG.md
+#define FW_VERSION "1.3.2"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -769,12 +769,19 @@ void setupRoutes() {
 }
 
 // ---------------------------- WiFi ------------------------------------------
+// The router's (or SDK's) reason for the last disconnect during a try, e.g. 15 = the
+// 4-way handshake timed out. 0 = none. The settings page explains the codes.
+volatile int staReason = 0;
+int staFailReason = 0;
+WiFiEventHandler staDisconnected;
+
 void startAP() {
   mode = MODE_AP;
   WiFi.persistent(false);
   WiFi.setAutoReconnect(false); // serviceSta() owns retries (see below).
   WiFi.mode(WIFI_AP_STA); // Keep recovery accessible even when the router disappears.
   WiFi.hostname(deviceHost());   // DHCP hostname: lets the router name the clock
+  staDisconnected = WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& e) { staReason = e.reason; });
   WiFi.softAPConfig(IPAddress(192,168,4,1), IPAddress(192,168,4,1), IPAddress(255,255,255,0));
   restartAP();
   dns.start(53, "*", WiFi.softAPIP());
@@ -819,11 +826,12 @@ void serviceSta() {
     staFail = -1;
   } else if (staTrying) {
     if (now - staTimer >= STA_TRY_MS) {
-      staFail = WiFi.status();
+      staFail = WiFi.status(); staFailReason = staReason;
       WiFi.disconnect(false); staTrying = false; staTimer = now;
     }
   } else if (staRetryNow || now - staTimer >= STA_RETRY_MS) {
     staRetryNow = false;
+    staReason = 0;
     WiFi.begin(staSsid.c_str(), staPass.c_str());
     staTrying = true; staTimer = now;
   }
@@ -838,7 +846,7 @@ void drawSetupScreen() {
   centerText(devicePassword, 166, 4, TFT_YELLOW);
   centerText("then open " + WiFi.softAPIP().toString(), 206, 2, TFT_WHITE);
   staFailShown = staFail;
-  if (staFail >= 0) centerText("Can't join: " + staFailText(), 228, 2, TFT_ORANGE);
+  if (staFail >= 0) centerText("Can't join: " + staFailText() + (staFailReason ? " (" + String(staFailReason) + ")" : String()), 228, 2, TFT_ORANGE);
 }
 
 void drawPasswordScreen() {
@@ -892,7 +900,7 @@ void handleStatus() {
   bool linked = WiFi.status() == WL_CONNECTED;
   doc["connected"] = linked;
   doc["ssid"] = linked ? WiFi.SSID() : staSsid;
-  if (!linked && staFail >= 0) doc["wifiError"] = staFailText();
+  if (!linked && staFail >= 0) { doc["wifiError"] = staFailText(); doc["wifiCode"] = staFailReason; }
   if (linked) { doc["ip"] = WiFi.localIP().toString(); doc["rssi"] = WiFi.RSSI(); }
   doc["apIp"] = WiFi.softAPIP().toString();
   doc["mdns"] = deviceHost() + ".local";

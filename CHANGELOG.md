@@ -4,6 +4,16 @@ All notable SmartClock-OSS changes are recorded here. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
+## 1.3.2 - 2026-10-17
+
+### Added
+
+- WiFi setup: a failed join now also shows the disconnect code the clock
+  received, such as `(15)` on the setup screen. The settings page explains it,
+  for example "password handshake timed out, check the password" or
+  "unsupported security mode, try WPA2"
+  ([#2](https://github.com/michaeldale/smartclock-oss/issues/2)).
+
 ## 1.3.1 - 2026-10-16
 
 ### Fixed
