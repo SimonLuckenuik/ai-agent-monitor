@@ -30,6 +30,22 @@ const char* const DAY_SHORT[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"
 const char* const MONTH_LONG[] = {"January", "February", "March", "April", "May", "June", "July",
                                   "August", "September", "October", "November", "December"};
 const char* const MONTH_SHORT[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+// French, without accents: the fonts are ASCII.
+const char* const DAY_LONG_FR[] = {"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"};
+const char* const DAY_SHORT_FR[] = {"DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM"};
+const char* const MONTH_LONG_FR[] = {"janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet",
+                                     "aout", "septembre", "octobre", "novembre", "decembre"};
+const char* const MONTH_SHORT_FR[] = {"janv", "fevr", "mars", "avr", "mai", "juin", "juil", "aout", "sept", "oct", "nov", "dec"};
+
+bool fr() { return cfg.lang == "fr"; }
+const char* tr(const char* en, const char* french) { return fr() ? french : en; }
+const char* dayLong(int i) { return (fr() ? DAY_LONG_FR : DAY_LONG)[i]; }
+const char* dayShort(int i) { return (fr() ? DAY_SHORT_FR : DAY_SHORT)[i]; }
+const char* monthLong(int i) { return (fr() ? MONTH_LONG_FR : MONTH_LONG)[i]; }
+const char* monthShort(int i) { return (fr() ? MONTH_SHORT_FR : MONTH_SHORT)[i]; }
+// Weather words in the clock's language; wx.main / wx.desc stay English for the API.
+String wxMain() { if (!fr()) return wx.main; String m, d; wmoText(wx.code, true, m, d); return m; }
+String wxDesc() { if (!fr()) return wx.desc; String m, d; wmoText(wx.code, true, m, d); return d; }
 
 int drawnFace = -1;      // -2 = "setting the time" screen
 bool dirty = true;
@@ -190,10 +206,10 @@ void placeholder(int iconY, const char* title, const char* line1, const char* li
 // What to say while there is no data: the last error, or waiting.
 void weatherPlaceholder(const char* title) {
   if (wx.error == "City not found" || wx.error == "Set a city") {
-    placeholder(92, title, wx.error.c_str(), "Check the city in settings");
+    placeholder(92, title, wx.error.c_str(), tr("Check the city in settings", "Verifiez la ville"));
     return;
   }
-  placeholder(92, title, wx.error.length() ? wx.error.c_str() : "Waiting for the first update", nullptr);
+  placeholder(92, title, wx.error.length() ? wx.error.c_str() : tr("Waiting for the first update", "En attente des donnees"), nullptr);
 }
 
 // ---- Setting the time -----------------------------------------------------------
@@ -203,8 +219,8 @@ void syncScreen() {
   D().drawWedgeLine(120, 88, 120, 66, 3, 2, WHITE, PANEL_HI);
   D().drawWedgeLine(120, 88, 136, 98, 3, 2, cfg.color1, PANEL_HI);
   D().fillSmoothCircle(120, 88, 4, WHITE, PANEL_HI);
-  text("Setting the time", 120, 150, 4, WHITE, BG, MC_DATUM);
-  text("Waiting for a time server", 120, 178, 2, MUTED, BG, MC_DATUM);
+  text(tr("Setting the time", "Reglage de l'heure"), 120, 150, 4, WHITE, BG, MC_DATUM);
+  text(tr("Waiting for a time server", "Attente du serveur de temps"), 120, 178, 2, MUTED, BG, MC_DATUM);
 }
 
 // ---- 0 Classic: date, big time, seconds bar, weather line ------------------------
@@ -215,8 +231,8 @@ void classic(const struct tm& t, bool force) {
   const int barX = 30, barY = 166, barW = cfg.hour12 ? 150 : 180, barH = 4;
   if (t.tm_yday != day) {
     char date[24];
-    snprintf(date, sizeof(date), "%d %s", t.tm_mday, MONTH_LONG[t.tm_mon]);
-    String wd = DAY_LONG[t.tm_wday]; wd.toUpperCase();
+    snprintf(date, sizeof(date), "%d %s", t.tm_mday, monthLong(t.tm_mon));
+    String wd = dayLong(t.tm_wday); wd.toUpperCase();
     text(wd.c_str(), 120, 28, 2, cfg.color2, BG, MC_DATUM, 200);
     text(date, 120, 52, 4, WHITE, BG, MC_DATUM, 230);
     day = t.tm_yday;
@@ -236,11 +252,11 @@ void classic(const struct tm& t, bool force) {
     D().fillRect(0, 184, 240, 56, BG);
     if (wx.valid) {
       char tb[8]; snprintf(tb, sizeof(tb), "%d", displayTemp(wx.temp));
-      int tw = D().textWidth(tb, 4) + 12, mw = D().textWidth(wx.main, 2);
+      int tw = D().textWidth(tb, 4) + 12, mw = D().textWidth(wxMain(), 2);
       int x = 120 - (36 + 8 + tw + 8 + mw) / 2;
       weatherIcon(x + 18, 206, 36, wx.icon, BG);
       temp(x + 44 + tw / 2, 207, displayTemp(wx.temp), 4, cfg.color3, BG);
-      text(wx.main.c_str(), x + 44 + tw + 8, 208, 2, MUTED, BG, ML_DATUM);
+      text(wxMain().c_str(), x + 44 + tw + 8, 208, 2, MUTED, BG, ML_DATUM);
     }
     wxv = wx.version;
   }
@@ -276,7 +292,7 @@ void dial(const struct tm& t, bool force) {
     dialHand(pH, 56, 0, 4.6f, 3.1f, BG);
   }
   // Complications are redrawn every second because the hands sweep across them.
-  char date[12]; snprintf(date, sizeof(date), "%s %d", DAY_SHORT[t.tm_wday], t.tm_mday);
+  char date[12]; snprintf(date, sizeof(date), "%s %d", dayShort(t.tm_wday), t.tm_mday);
   text(date, 120, 170, 2, MUTED, BG, MC_DATUM, 70);
   if (wx.valid) temp(120, 72, displayTemp(wx.temp), 4, cfg.color3, BG);
   dialHand(aH, 56, 0, 4.0f, 2.5f, WHITE);
@@ -294,7 +310,7 @@ void weather(const struct tm& t, bool force) {
   if (force) { min = -1; wxv = ~0u; }
   if (t.tm_min != min) {
     char tb[8]; smallTime(tb, sizeof(tb), t);
-    char db[16]; snprintf(db, sizeof(db), "%s %d %s", DAY_SHORT[t.tm_wday], t.tm_mday, MONTH_SHORT[t.tm_mon]);
+    char db[16]; snprintf(db, sizeof(db), "%s %d %s", dayShort(t.tm_wday), t.tm_mday, monthShort(t.tm_mon));
     text(tb, 16, 24, 4, WHITE, BG, ML_DATUM, 90);
     text(db, 224, 24, 2, MUTED, BG, MR_DATUM, 110);
     min = t.tm_min;
@@ -304,7 +320,7 @@ void weather(const struct tm& t, bool force) {
   D().fillRect(0, 44, 240, 196, BG);
   if (!wx.valid) {
     cloud(120, 92, 84, DIM, BG);
-    weatherPlaceholder("No weather yet");
+    weatherPlaceholder(tr("No weather yet", "Pas encore de meteo"));
     return;
   }
   weatherIcon(64, 104, 100, wx.icon, BG);
@@ -315,9 +331,9 @@ void weather(const struct tm& t, bool force) {
   text(cfg.celsius ? "C" : "F", 126 + w + 18, 80, 2, MUTED, BG, ML_DATUM);
   char hl[24]; snprintf(hl, sizeof(hl), "H %d   L %d", displayTemp(wx.tempMax), displayTemp(wx.tempMin));
   text(hl, 128, 132, 2, MUTED, BG, ML_DATUM);
-  String desc = wx.desc; if (desc.length()) desc.setCharAt(0, toupper(desc[0]));
+  String desc = wxDesc(); if (desc.length()) desc.setCharAt(0, toupper(desc[0]));
   text(desc.c_str(), 120, 170, D().textWidth(desc, 4) <= 228 ? 4 : 2, cfg.color2, BG, MC_DATUM);
-  const char* labels[] = {"FEELS", "HUMIDITY", "WIND"};
+  const char* labels[] = {tr("FEELS", "RESSENTI"), tr("HUMIDITY", "HUMIDITE"), tr("WIND", "VENT")};
   for (int i = 0; i < 3; ++i) text(labels[i], 42 + i * 78, 198, 2, MUTED, BG, MC_DATUM);
   temp(42, 222, displayTemp(wx.feels), 4, WHITE, BG);
   char hu[8]; snprintf(hu, sizeof(hu), "%d%%", wx.humidity);
@@ -347,7 +363,7 @@ void forecast(const struct tm& t, bool force) {
   D().fillRect(0, 44, 240, 196, BG);
   if (!fc.valid) {
     cloud(120, 92, 84, DIM, BG);
-    weatherPlaceholder("No forecast yet");
+    weatherPlaceholder(tr("No forecast yet", "Pas encore de previsions"));
     return;
   }
   for (int i = 0; i < FORECAST_DAYS; ++i) {
@@ -355,7 +371,7 @@ void forecast(const struct tm& t, bool force) {
     D().fillSmoothRoundRect(x, 50, 54, 182, 12, PANEL, BG);
     if (i >= fc.count) continue;
     const ForecastDay& d = fc.days[i];
-    text(d.today ? "TODAY" : DAY_SHORT[d.wday], cx, 70, 2, d.today ? cfg.color2 : MUTED, PANEL, MC_DATUM);
+    text(d.today ? tr("TODAY", "AUJ.") : dayShort(d.wday), cx, 70, 2, d.today ? cfg.color2 : MUTED, PANEL, MC_DATUM);
     weatherIcon(cx, 110, 44, dayIcon(d.icon), PANEL);
     temp(cx, 152, displayTemp(d.hi), 4, WHITE, PANEL);
     temp(cx, 178, displayTemp(d.lo), 2, MUTED, PANEL);
@@ -413,8 +429,8 @@ void flip(const struct tm& t, bool force) {
   if (strcmp(m, pm)) { if (force || !pm[0]) flipCard(122, m, nullptr); else flipAnimate(122, m, nullptr); strcpy(pm, m); }
   if (t.tm_yday != day) {
     char db[28];
-    snprintf(db, sizeof(db), "%s %d %s", DAY_LONG[t.tm_wday], t.tm_mday, MONTH_LONG[t.tm_mon]);
-    if (D().textWidth(db, 4) > 228) snprintf(db, sizeof(db), "%.3s %d %s", DAY_LONG[t.tm_wday], t.tm_mday, MONTH_SHORT[t.tm_mon]);
+    snprintf(db, sizeof(db), "%s %d %s", dayLong(t.tm_wday), t.tm_mday, monthLong(t.tm_mon));
+    if (D().textWidth(db, 4) > 228) snprintf(db, sizeof(db), "%.3s %d %s", dayLong(t.tm_wday), t.tm_mday, monthShort(t.tm_mon));
     text(db, 120, 194, 4, cfg.color2, BG, MC_DATUM, 236);
     day = t.tm_yday;
   }
@@ -436,7 +452,7 @@ void simple(const struct tm& t, bool force) {
   if (t.tm_sec != sec) { colon(bigTimeColonX(120, t), 104, t.tm_sec % 2 ? DIM : WHITE, BG); sec = t.tm_sec; }
   if (t.tm_yday != day) {
     char db[32];
-    snprintf(db, sizeof(db), "%s  %d %s", DAY_LONG[t.tm_wday], t.tm_mday, MONTH_LONG[t.tm_mon]);
+    snprintf(db, sizeof(db), "%s  %d %s", dayLong(t.tm_wday), t.tm_mday, monthLong(t.tm_mon));
     String s = db; s.toUpperCase();
     text(s.c_str(), 120, 168, 2, MUTED, BG, MC_DATUM, 236);
     text(ampm(t), 120, 190, 2, cfg.color1, BG, MC_DATUM, 40);
@@ -522,7 +538,7 @@ void photo(const struct tm& t, bool force) {
       D().fillSmoothRoundRect(84, 62, 72, 58, 10, PANEL_HI, BG);
       D().fillSmoothCircle(104, 82, 7, MUTED, PANEL_HI);
       D().fillTriangle(92, 112, 116, 88, 140, 112, DIM);
-      placeholder(92, "No photos yet", "Upload photos in the", "clock's settings");
+      placeholder(92, tr("No photos yet", "Aucune photo"), tr("Upload photos in the", "Ajoutez des photos dans"), tr("clock's settings", "les reglages"));
       return;
     }
     int next = (index + 1) % count;
@@ -533,7 +549,7 @@ void photo(const struct tm& t, bool force) {
       min = -1;   // the photo covers the time pill; draw it again
       if (!drawJpeg(photoAt(index))) {
         D().fillScreen(BG);
-        placeholder(92, "Photo unreadable", "Use a baseline JPEG", nullptr);
+        placeholder(92, tr("Photo unreadable", "Photo illisible"), tr("Use a baseline JPEG", "Utilisez un JPEG de base"), nullptr);
       }
     }
   }
@@ -577,6 +593,8 @@ uint16_t hex565(const char* s, uint16_t fallback) {
   return ((n >> 8) & 0xF800) | ((n >> 5) & 0x07E0) | ((n >> 3) & 0x001F);
 }
 
+String messageValue(const String& key);
+
 // {name} -> its current value: clock and weather fields, else a pushed variable.
 String fieldValue(const String& key, const struct tm& t) {
   char b[24];
@@ -589,12 +607,12 @@ String fieldValue(const String& key, const struct tm& t) {
   if (key == "ms") return num(millis() % 1000);
   if (key == "ampm") return ampm(t);
   if (key == "day") return num(t.tm_mday);
-  if (key == "dow") return DAY_LONG[t.tm_wday];
-  if (key == "dow3") return DAY_SHORT[t.tm_wday];
-  if (key == "month") return MONTH_LONG[t.tm_mon];
-  if (key == "mon3") return MONTH_SHORT[t.tm_mon];
+  if (key == "dow") return dayLong(t.tm_wday);
+  if (key == "dow3") return dayShort(t.tm_wday);
+  if (key == "month") return monthLong(t.tm_mon);
+  if (key == "mon3") return monthShort(t.tm_mon);
   if (key == "year") return num(t.tm_year + 1900);
-  if (key == "date") { snprintf(b, sizeof(b), "%d %s", t.tm_mday, MONTH_LONG[t.tm_mon]); return b; }
+  if (key == "date") { snprintf(b, sizeof(b), "%d %s", t.tm_mday, monthLong(t.tm_mon)); return b; }
   if (key == "unit") return cfg.celsius ? "C" : "F";
   if (key == "wunit") return cfg.mile ? "mph" : "km/h";
   bool w = wx.valid;
@@ -604,8 +622,8 @@ String fieldValue(const String& key, const struct tm& t) {
   if (key == "lo") return w ? num(displayTemp(wx.tempMin)) : "--";
   if (key == "hum") return w ? num(wx.humidity) : "--";
   if (key == "wind") return w ? num((int)lroundf(cfg.mile ? wx.wind * 2.237f : wx.wind * 3.6f)) : "--";
-  if (key == "desc") return wx.desc;
-  if (key == "main") return wx.main;
+  if (key == "desc") return wxDesc();
+  if (key == "main") return wxMain();
   if (key == "city") return wx.cityName;
   if (key == "icon") return wx.icon;
   if (key == "sunrise" || key == "sunset") {
@@ -614,7 +632,50 @@ String fieldValue(const String& key, const struct tm& t) {
     snprintf(b, sizeof(b), "%02d:%02d", (m / 60) % 24, m % 60);
     return b;
   }
+  if (key.startsWith("msg.")) return messageValue(key.substring(4));
   return faceVar(key);
+}
+
+// ---- The Message face's icons: Lucide-style outlines on a 24x24 grid, in flash.
+#define ICON_CIRCLE "M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0"
+const char ICON_INFO[] PROGMEM = ICON_CIRCLE "M12 16v-4M12 8h.01";
+const char ICON_SUCCESS[] PROGMEM = ICON_CIRCLE "M9 12l2 2 4-4";
+const char ICON_WARNING[] PROGMEM = "M21.73 18l-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3M12 9v4M12 17h.01";
+const char ICON_ERROR[] PROGMEM = ICON_CIRCLE "M15 9l-6 6M9 9l6 6";
+const char ICON_WAITING[] PROGMEM = ICON_CIRCLE "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01";
+const char ICON_RUNNING[] PROGMEM = "M21 12a9 9 0 1 1-6.219-8.56";
+const char ICON_BELL[] PROGMEM = "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0";
+const char ICON_DONE[] PROGMEM = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7";
+struct MessageIcon { const char* name; const char* color; const char* path; };
+const MessageIcon MESSAGE_ICON_SET[] = {
+    {"info", "#0a84ff", ICON_INFO},       {"success", "#30d158", ICON_SUCCESS}, {"warning", "#ff9f0a", ICON_WARNING},
+    {"error", "#ff453a", ICON_ERROR},     {"waiting", "#ffd60a", ICON_WAITING}, {"running", "#64d2ff", ICON_RUNNING},
+    {"bell", "#ff9f0a", ICON_BELL},       {"done", "#30d158", ICON_DONE}};
+
+String pgmString(const char* p) {
+  String s;
+  for (char c; (c = (char)pgm_read_byte(p)); ++p) s += c;
+  return s;
+}
+
+// A message field for the Message face's template: the icon's path and colours come
+// from the icon set, the rest from the message.
+String messageValue(const String& key) {
+  int slot = messageShowing();
+  String icon = messageField(slot, "icon");
+  const MessageIcon* def = &MESSAGE_ICON_SET[0];
+  for (const MessageIcon& m : MESSAGE_ICON_SET) if (icon == m.name) def = &m;
+  String color = messageField(slot, "color");
+  if (color.isEmpty()) color = def->color;
+  if (key == "icon") return pgmString(def->path);
+  if (key == "color") return color;
+  if (key == "bg") {   // the colour at a quarter strength, for the top of the background
+    uint16_t c = hex565(color.c_str(), WHITE);
+    char b[8];
+    snprintf(b, sizeof(b), "#%02x%02x%02x", ((c >> 11) * 255 / 31) / 4, (((c >> 5) & 63) * 255 / 63) / 4, ((c & 31) * 255 / 31) / 4);
+    return b;
+  }
+  return messageField(slot, key);
 }
 
 String resolve(const char* tpl, const struct tm& t) {
@@ -1171,8 +1232,13 @@ void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
   float rot = num(it, "rotate", 0, t) * DEG_TO_RAD;
   P.cosr = cosf(rot); P.sinr = sinf(rot);
   JsonVariantConst d = it["d"];
-  if (d.is<JsonArrayConst>()) for (JsonVariantConst part : d.as<JsonArrayConst>()) parsePath(P, part | "");
-  else parsePath(P, d | "");
+  auto parse = [&](const char* data) {
+    if (!strchr(data, '{')) { parsePath(P, data); return; }
+    String r = resolve(data, t);
+    parsePath(P, r.c_str());
+  };
+  if (d.is<JsonArrayConst>()) for (JsonVariantConst part : d.as<JsonArrayConst>()) parse(part | "");
+  else parse(d | "");
   P.close();
   bool hasStroke = jhas(it, "stroke");
   JsonVariantConst fillV = it["fill"];
@@ -1312,6 +1378,8 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
   }
 }
 
+void renderItems(const struct tm& t, bool force);
+
 void custom(const struct tm& t, bool force) {
   if (customName != cfg.customFace || customVer != customFacesVersion()) {
     customName = cfg.customFace;
@@ -1323,9 +1391,14 @@ void custom(const struct tm& t, bool force) {
     force = true;
   }
   if (!customLoaded) {
-    if (force) { D().fillScreen(BG); placeholder(92, "Face not found", customName.c_str(), nullptr); }
+    if (force) { D().fillScreen(BG); placeholder(92, tr("Face not found", "Cadran introuvable"), customName.c_str(), nullptr); }
     return;
   }
+  renderItems(t, force);
+}
+
+// The face in customDoc, item by item.
+void renderItems(const struct tm& t, bool force) {
   // A face asks for faster updates with "fps" (default 4, at most 20).
   int fps = std::max(1, std::min(20, (int)(customDoc["fps"] | 4)));
   if (!force && millis() - customEvalAt < 1000u / fps) return;
@@ -1353,6 +1426,34 @@ void custom(const struct tm& t, bool force) {
   }
 }
 
+// ---- The Message face: the message messageShowing() points at, drawn from this
+// template by the custom-face renderer ({msg.*} placeholders, see messageValue).
+const char MESSAGE_FACE[] PROGMEM = R"({"bg":{"stops":["{msg.bg}","#000000"],"angle":180},"items":[
+{"type":"path","x":120,"y":56,"size":76,"align":"mc","stroke":"{msg.color}","sw":2,"d":"{msg.icon}"},
+{"type":"text","x":120,"y":108,"w":228,"lines":1,"text":"{msg.title}","font":4,"align":"tc","color":"{msg.color}"},
+{"type":"text","x":120,"y":142,"w":220,"lines":"{msg.pct}>=0?3:4","text":"{msg.text}","font":2,"align":"tc","color":"#f2f2f7"},
+{"type":"bar","x":40,"y":204,"w":160,"h":8,"value":"{msg.pct}","color":"{msg.color}","track":"#2c2c2e","show":"{msg.pct}>=0"},
+{"type":"text","x":120,"y":228,"text":"{time}","font":2,"align":"mc","color":"#8e8e93"}]})";
+const char* const MESSAGE_DOC = "\x01message";   // customName while customDoc holds the template
+
+void message(const struct tm& t, bool force) {
+  static uint32_t seen = 0;
+  static int seenSlot = -1;
+  if (customName != MESSAGE_DOC) {
+    customDoc.clear();
+    String json = pgmString(MESSAGE_FACE);
+    customLoaded = !deserializeJson(customDoc, json.c_str());   // copied into the document
+    customName = MESSAGE_DOC;   // custom() reloads its own face when it is next shown
+    force = true;
+  }
+  if (seen != messageVersion() || seenSlot != messageShowing()) {
+    seen = messageVersion();
+    seenSlot = messageShowing();
+    force = true;
+  }
+  if (customLoaded) renderItems(t, force);
+}
+
 }  // namespace
 
 // ---- Public -----------------------------------------------------------------------
@@ -1374,6 +1475,7 @@ bool faceAvailable(int face) {
     case FACE_FORECAST: return fc.valid;
     case FACE_PHOTO:    return photoCount() > 0;
     case FACE_CUSTOM:   return cfg.facesApi && customFaceExists(cfg.customFace);
+    case FACE_MESSAGE:  return messageActive(messageShowing());
     default:            return face >= 0 && face < FACE_COUNT;
   }
 }
@@ -1386,7 +1488,7 @@ void faceDraw(int face, const struct tm& t, bool timeValid) {
   }
   bool force = dirty || face != drawnFace;
   if (face == FACE_CUSTOM && !cfg.facesApi) face = FACE_CLASSIC;   // integration turned off
-  if (force && face != FACE_PHOTO && face != FACE_CUSTOM) D().fillScreen(BG);
+  if (force && face != FACE_PHOTO && face != FACE_CUSTOM && face != FACE_MESSAGE) D().fillScreen(BG);
   switch (face) {
     case FACE_WEATHER:  weather(t, force);  break;
     case FACE_PHOTO:    photo(t, force);    break;
@@ -1395,6 +1497,7 @@ void faceDraw(int face, const struct tm& t, bool timeValid) {
     case FACE_FORECAST: forecast(t, force); break;
     case FACE_FLIP:     flip(t, force);     break;
     case FACE_CUSTOM:   custom(t, force);   break;
+    case FACE_MESSAGE:  message(t, force);  break;
     default:            classic(t, force);  break;
   }
   drawnFace = face; dirty = false;

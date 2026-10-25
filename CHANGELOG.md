@@ -8,6 +8,17 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- Agent messages: `POST /api/message` (and MQTT `<base>/message`) puts a title, a
+  message, one of 8 built-in icons (info, success, warning, error, waiting, running,
+  bell, done) and an optional progress bar on the built-in Message face. No sign-in.
+  Up to 4 at a time, kept in RAM with a ttl; each is a turn of its own in the face
+  rotation; `show` puts one on screen now; warning and error light the backlight fully.
+- The clock's language: English or French (without accents), on the Display card or
+  `/api/set?key=lang&value=fr`. Days, months, weather words and the faces' labels
+  follow it; the API, MQTT and the settings page stay in English.
+- Accented and typographic characters in messages and face variables are folded to
+  the fonts' ASCII.
+
 - Custom faces: any string field takes placeholders, and number and colour fields
   take expressions (`+ - * / %`, comparisons, `&& || !`, `?:`, `sin cos min max abs
   round`). Every item takes `show`, a condition. Faces take `fps` (1 to 20) and the

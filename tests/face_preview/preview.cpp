@@ -28,6 +28,29 @@ String faceVar(const String& key) {
   return String();
 }
 bool photoEnabled(const String&) { return true; }
+// The agent message the Message face shows (integrations.cpp is not built here).
+static std::string msgTitle, msgText, msgIcon, msgColor;
+static int msgPct = -1;
+static uint32_t msgVer = 1;
+bool messageActive(int slot) { return slot == 0 && !msgIcon.empty(); }
+int messageShowing() { return 0; }
+uint32_t messageVersion() { return msgVer; }
+String messageField(int, const String& key) {
+  if (key == "title") return String(msgTitle);
+  if (key == "text") return String(msgText);
+  if (key == "icon") return String(msgIcon);
+  if (key == "color") return String(msgColor);
+  if (key == "pct") return String(msgPct);
+  return String();
+}
+static void setMessage(const char* icon, const char* title, const char* text, int pct = -1, const char* color = "") {
+  msgIcon = icon; msgTitle = title; msgText = text; msgPct = pct; msgColor = color; msgVer++;
+}
+// weather.cpp is not built here either: just enough words for the faces.
+void wmoText(int, bool fr, String& main, String& desc) {
+  main = fr ? "Nuageux" : "Clouds";
+  desc = fr ? "partiellement nuageux" : "scattered clouds";
+}
 LittleFSClass LittleFS;
 static uint32_t fakeMillis = 0;
 uint32_t millis() { return fakeMillis; }
@@ -175,7 +198,40 @@ int main(int argc, char** argv) {
   fresh(FACE_CUSTOM, at(21, 54, 26), "custom_missing");
   cfg.facesApi = false;
 
-  // 5. No data yet.
+  // 5. The Message face: every built-in icon, then the incremental check while the
+  // clock ticks and the message changes.
+  for (const char* icon : {"info", "success", "warning", "error", "waiting", "running", "bell", "done"}) {
+    setMessage(icon, icon, "Claude needs your approval to deploy faces-v2 to the clock.", !strcmp(icon, "running") ? 64 : -1);
+    fresh(FACE_MESSAGE, at(21, 54, 26), std::string("message_") + icon);
+  }
+  {
+    setMessage("running", "Deploying", "Uploading the firmware", 10);
+    struct tm t = at(21, 58, 50);
+    faceInvalidate(); faceDraw(FACE_MESSAGE, t, true);
+    for (int s = 0; s < 150; ++s) {
+      tick(t);
+      if (s == 30) setMessage("running", "Deploying", "Uploading the firmware", 70);
+      if (s == 90) setMessage("success", "Deployed", "faces-v2 is on the clock", -1, "#64d2ff");
+      faceDraw(FACE_MESSAGE, t, true);
+    }
+    std::vector<uint16_t> inc(clockDisplay().fb, clockDisplay().fb + TFT_eSPI::W * TFT_eSPI::H);
+    faceInvalidate(); faceDraw(FACE_MESSAGE, t, true);
+    int diff = 0;
+    for (int i = 0; i < TFT_eSPI::W * TFT_eSPI::H; ++i) diff += inc[i] != clockDisplay().fb[i];
+    printf("incremental message       %5d pixels differ from a full redraw\n", diff);
+    if (diff) failures++;
+  }
+
+  // 6. French.
+  cfg.lang = "fr";
+  setWeather("03d", "Clouds", "scattered clouds", 21.4f);
+  fresh(FACE_CLASSIC, at(21, 54, 26), "french_classic");
+  fresh(FACE_WEATHER, at(21, 54, 26), "french_weather");
+  fresh(FACE_FORECAST, at(21, 54, 26), "french_forecast");
+  fresh(FACE_FLIP, at(9, 5, 7), "french_flip");
+  cfg.lang = "en";
+
+  // 7. No data yet.
   wx = Weather(); fc = Forecast();
   fresh(FACE_CLASSIC, at(21, 54, 26), "empty_classic");
   fresh(FACE_WEATHER, at(21, 54, 26), "empty_weather_waiting");

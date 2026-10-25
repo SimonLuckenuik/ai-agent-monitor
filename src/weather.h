@@ -8,7 +8,8 @@ struct Weather {
   bool valid = false;
   float temp = 0, feels = 0, tempMin = 0, tempMax = 0, wind = 0;   // metric: C, m/s
   int humidity = 0, pressure = 0, clouds = 0;
-  String main, desc, icon, cityName;
+  String main, desc, icon, cityName;   // main and desc in English (API, MQTT)
+  int code = 3;                        // WMO weather code, for other languages
   int16_t sunrise = -1, sunset = -1;   // today, minutes after local midnight; -1 unknown
   String error;                        // last failure, for the page and the faces
   uint32_t lastFetch = 0;              // millis() of the last attempt
@@ -33,6 +34,9 @@ struct Forecast {
 };
 
 extern Weather wx;
+
+// The words for a WMO weather code: English, or French (without accents).
+void wmoText(int code, bool fr, String& main, String& desc);
 extern Forecast fc;
 
 // Current conditions and the forecast in one request, geocoding the city first

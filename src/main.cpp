@@ -213,14 +213,21 @@ void centerText(const String& s, int y, uint8_t font, uint16_t color) {
 uint32_t faceSince = 0;   // when the current face was chosen (rotation timer)
 
 // Moves to the next face: built-in faces by id (enabled for rotation, when rotating,
-// and with something to show), then custom faces by name when that integration is on.
+// and with something to show), then custom faces by name when that integration is on,
+// then each active agent message, one turn each.
 void advanceFace(bool rotation) {
-  int customs = cfg.facesApi ? customFaceCount() : 0, n = FACE_COUNT + customs;
+  int customs = cfg.facesApi ? customFaceCount() : 0, n = FACE_COUNT + customs + MESSAGE_MAX;
   int cur = cfg.theme < FACE_COUNT ? cfg.theme : FACE_COUNT - 1;
   if (cfg.theme == FACE_CUSTOM)
     for (int i = 0; i < customs; ++i) if (customFaceAt(i) == cfg.customFace) cur = FACE_COUNT + i;
+  if (cfg.theme == FACE_MESSAGE) cur = FACE_COUNT + customs + messageShowing();
   for (int step = 1; step <= n; ++step) {
     int pos = (cur + step) % n;
+    if (pos >= FACE_COUNT + customs) {
+      int slot = pos - FACE_COUNT - customs;
+      if (messageActive(slot)) { cfg.theme = FACE_MESSAGE; messageShowSlot(slot); return; }
+      continue;
+    }
     if (pos >= FACE_COUNT) {
       String name = customFaceAt(pos - FACE_COUNT);
       if (name.length()) { cfg.theme = FACE_CUSTOM; cfg.customFace = name; return; }
@@ -371,7 +378,7 @@ void handlePasswordChange() {
 // ---------------------------- Web API (stock-compatible) --------------------
 String configJson() {
   JsonDocument doc;
-  doc["theme"] = cfg.theme; doc["celsius"] = cfg.celsius; doc["hour12"] = cfg.hour12;
+  doc["theme"] = cfg.theme; doc["celsius"] = cfg.celsius; doc["hour12"] = cfg.hour12; doc["lang"] = cfg.lang;
   doc["mile"] = cfg.mile;   doc["city"] = cfg.city;       doc["brightness"] = cfg.brightness;
   doc["location"] = cfg.geoFor == cfg.city ? cfg.geoName : "";
   doc["nightmode"] = cfg.nightMode; doc["starttime"] = cfg.startHour; doc["stoptime"] = cfg.stopHour;
@@ -407,6 +414,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == "brightness") { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
   else if (key == "celsius")    cfg.celsius = (val == "1" || val == "true");
   else if (key == "hour12")     cfg.hour12 = (val == "1" || val == "true");
+  else if (key == "lang")       cfg.lang = val == "fr" ? "fr" : "en";
   else if (key == "nightmode")  cfg.nightMode = (val == "1" || val == "true");
   else if (key == "nightbrightness") cfg.nightBrightness = constrain(val.toInt(), 0, 100);
   else if (key == "starttime")  cfg.startHour = constrain(val.toInt(), 0, 23);
@@ -1071,6 +1079,15 @@ void loop() {
     faceSince = millis();
     advanceFace(true);   // in RAM only; the saved face stays the user's choice
   }
+  if (cfg.theme == FACE_MESSAGE && !messageActive(messageShowing())) {   // expired or cleared
+    faceSince = millis();
+    advanceFace(true);
+    if (cfg.theme == FACE_MESSAGE && !messageActive(messageShowing())) cfg.theme = FACE_CLASSIC;
+  }
+  // A warning or error message on screen lights the panel fully, even at night.
+  static bool boosted = false;
+  bool boost = cfg.theme == FACE_MESSAGE && messageUrgent(messageShowing());
+  if (boost != boosted) { boosted = boost; brightnessDirty = true; }
 
   if (mode == MODE_RUN) {
     serviceWeather();
@@ -1083,7 +1100,7 @@ void loop() {
     if (timeValid && (t.tm_min != lastBrightMin || brightnessDirty)) {
       brightnessDirty = false;
       lastBrightMin = t.tm_min;
-      setBacklight(backlightOff ? 0 : isNight(t) ? cfg.nightBrightness : cfg.brightness);
+      setBacklight(backlightOff ? 0 : boosted ? 100 : isNight(t) ? cfg.nightBrightness : cfg.brightness);
     }
     if (revealUntil && (int32_t)(millis() - revealUntil) >= 0) { revealUntil = 0; faceInvalidate(); }
     if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) faceDraw(cfg.theme, t, timeValid);

@@ -87,6 +87,18 @@ mDNS out to make room in the update budget.
 Later updates are installed from the **Firmware update** card on our settings page. It
 accepts only SmartClock-OSS images and checks each one before writing.
 
+## Messages from agents and scripts
+
+Anything on the network can put a message on the clock, no sign-in needed:
+
+```bash
+curl -X POST http://<clock>/api/message -d '{"title":"Build","text":"All 42 tests passed.","icon":"success","show":true}'
+```
+
+The built-in Message face shows the icon (info, success, warning, error, waiting,
+running, bell or done), the title and the text until the message's `ttl` runs out.
+See [Agent messages](docs/specifications/integrations-api.md#agent-messages).
+
 ## Claude Code plugin
 
 This repository is also a Claude Code plugin marketplace. Its `ai-agent-monitor` skill

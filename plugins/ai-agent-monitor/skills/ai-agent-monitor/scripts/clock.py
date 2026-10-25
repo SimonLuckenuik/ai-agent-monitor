@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Talk to an AI Agent Monitor clock (SmartClock-OSS firmware) or its emulator.
 
+    python clock.py message TITLE TEXT [--icon NAME] [--id ID] [--ttl S] [--pct N] [--color #hex] [--show]
+    python clock.py messages
+    python clock.py clear [ID]
     python clock.py status
     python clock.py faces
     python clock.py push NAME FACE.json [--show]
@@ -8,6 +11,9 @@
     python clock.py delete NAME
     python clock.py vars key=value [key=value ...]
     python clock.py screenshot OUT.png        (emulator only)
+
+Messages need no key: anyone on the network may post one. Icons: info, success,
+warning, error, waiting, running, bell, done.
 
 Configuration, from the environment:
     CLOCK_URL         the clock, e.g. http://192.168.1.50  (default http://127.0.0.1:8000,
@@ -104,7 +110,23 @@ def main(argv):
         print(__doc__)
         return
     cmd, args = argv[0], argv[1:]
-    if cmd == "status":
+    if cmd == "message" and len(args) >= 2:
+        msg = {"title": args[0], "text": args[1]}
+        rest = args[2:]
+        for i, a in enumerate(rest):
+            if a == "--show":
+                msg["show"] = True
+            elif a in ("--icon", "--id", "--color") and i + 1 < len(rest):
+                msg[a[2:]] = rest[i + 1]
+            elif a in ("--ttl", "--pct") and i + 1 < len(rest):
+                msg[a[2:]] = int(rest[i + 1])
+        print(call("POST", "/api/message", json.dumps(msg)).decode())
+    elif cmd == "messages":
+        print(json.dumps(json.loads(call("GET", "/api/message")), indent=2))
+    elif cmd == "clear":
+        path = "/api/message" + (f"?id={urllib.parse.quote(args[0])}" if args else "")
+        print(call("DELETE", path).decode())
+    elif cmd == "status":
         print(json.dumps(json.loads(call("GET", "/status")), indent=2))
     elif cmd == "screenshot" and len(args) == 1:
         screenshot(args[0])

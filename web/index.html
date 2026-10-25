@@ -222,6 +222,8 @@ a{color:var(--accent)}
       <input type="text" id="tzCustom" placeholder="e.g. AEST-10AEDT,M10.1.0,M4.1.0/3" spellcheck="false"></div>
     <div class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><span class="lbl">Clock format</span>
       <div class="seg" data-key="hour12"><button data-v="1">12 h</button><button data-v="0">24 h</button></div></div>
+    <div class="row"><span class="lbl">Clock language</span>
+      <div class="seg" data-key="lang"><button data-v="en">English</button><button data-v="fr">Français</button></div></div>
     <div class="row"><span class="lbl">Temperature</span>
       <div class="seg" data-key="celsius"><button data-v="1">°C</button><button data-v="0">°F</button></div></div>
     <div class="row"><span class="lbl">Wind speed</span>
@@ -465,7 +467,7 @@ function fillConfig(c){
   ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
   ['mqtthost','mqttuser','mqttbase'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
   ['color1','color2','color3'].forEach(k=>$(k).value=hex565(c[k]||0));
-  paintSeg(document.querySelector('[data-key=hour12]'),c.hour12?1:0);
+  paintSeg(document.querySelector('[data-key=hour12]'),c.hour12?1:0);paintSeg(document.querySelector('[data-key=lang]'),c.lang||'en');
   paintSeg(document.querySelector('[data-key=celsius]'),c.celsius?1:0);
   paintSeg(document.querySelector('[data-key=mile]'),c.mile?1:0);
   paintSeg(document.querySelector('[data-key=nightauto]'),c.nightauto?1:0);nightRows(c.nightauto);

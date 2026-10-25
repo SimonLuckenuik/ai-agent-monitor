@@ -57,34 +57,36 @@ static const char* wmoIcon(int code) {
   return "04";   // 3 = overcast, and anything unknown
 }
 
-static void wmoText(int code, String& main, String& desc) {
+void wmoText(int code, bool fr, String& main, String& desc) {
+#define W(m, d, mf, df) do { main = fr ? F(mf) : F(m); desc = fr ? F(df) : F(d); } while (0)
   switch (code) {
-    case 0:  main = F("Clear"); desc = F("clear sky"); break;
-    case 1:  main = F("Clear"); desc = F("mainly clear"); break;
-    case 2:  main = F("Clouds"); desc = F("partly cloudy"); break;
-    case 45: main = F("Fog"); desc = F("fog"); break;
-    case 48: main = F("Fog"); desc = F("freezing fog"); break;
-    case 51: main = F("Drizzle"); desc = F("light drizzle"); break;
-    case 53: main = F("Drizzle"); desc = F("drizzle"); break;
-    case 55: main = F("Drizzle"); desc = F("heavy drizzle"); break;
-    case 56: case 57: main = F("Drizzle"); desc = F("freezing drizzle"); break;
-    case 61: main = F("Rain"); desc = F("light rain"); break;
-    case 63: main = F("Rain"); desc = F("rain"); break;
-    case 65: main = F("Rain"); desc = F("heavy rain"); break;
-    case 66: case 67: main = F("Rain"); desc = F("freezing rain"); break;
-    case 71: main = F("Snow"); desc = F("light snow"); break;
-    case 73: main = F("Snow"); desc = F("snow"); break;
-    case 75: main = F("Snow"); desc = F("heavy snow"); break;
-    case 77: main = F("Snow"); desc = F("snow grains"); break;
-    case 80: main = F("Rain"); desc = F("light showers"); break;
-    case 81: main = F("Rain"); desc = F("showers"); break;
-    case 82: main = F("Rain"); desc = F("heavy showers"); break;
-    case 85: main = F("Snow"); desc = F("snow showers"); break;
-    case 86: main = F("Snow"); desc = F("heavy snow showers"); break;
-    case 95: main = F("Thunderstorm"); desc = F("thunderstorm"); break;
-    case 96: case 99: main = F("Thunderstorm"); desc = F("thunderstorm with hail"); break;
-    default: main = F("Clouds"); desc = F("overcast"); break;
+    case 0:  W("Clear", "clear sky", "Degage", "ciel degage"); break;
+    case 1:  W("Clear", "mainly clear", "Degage", "plutot degage"); break;
+    case 2:  W("Clouds", "partly cloudy", "Nuageux", "partiellement nuageux"); break;
+    case 45: W("Fog", "fog", "Brouillard", "brouillard"); break;
+    case 48: W("Fog", "freezing fog", "Brouillard", "brouillard givrant"); break;
+    case 51: W("Drizzle", "light drizzle", "Bruine", "bruine faible"); break;
+    case 53: W("Drizzle", "drizzle", "Bruine", "bruine"); break;
+    case 55: W("Drizzle", "heavy drizzle", "Bruine", "bruine forte"); break;
+    case 56: case 57: W("Drizzle", "freezing drizzle", "Bruine", "bruine verglacante"); break;
+    case 61: W("Rain", "light rain", "Pluie", "pluie faible"); break;
+    case 63: W("Rain", "rain", "Pluie", "pluie"); break;
+    case 65: W("Rain", "heavy rain", "Pluie", "pluie forte"); break;
+    case 66: case 67: W("Rain", "freezing rain", "Pluie", "pluie verglacante"); break;
+    case 71: W("Snow", "light snow", "Neige", "neige faible"); break;
+    case 73: W("Snow", "snow", "Neige", "neige"); break;
+    case 75: W("Snow", "heavy snow", "Neige", "neige forte"); break;
+    case 77: W("Snow", "snow grains", "Neige", "grains de neige"); break;
+    case 80: W("Rain", "light showers", "Pluie", "averses faibles"); break;
+    case 81: W("Rain", "showers", "Pluie", "averses"); break;
+    case 82: W("Rain", "heavy showers", "Pluie", "averses fortes"); break;
+    case 85: W("Snow", "snow showers", "Neige", "averses de neige"); break;
+    case 86: W("Snow", "heavy snow showers", "Neige", "fortes averses de neige"); break;
+    case 95: W("Thunderstorm", "thunderstorm", "Orage", "orage"); break;
+    case 96: case 99: W("Thunderstorm", "thunderstorm with hail", "Orage", "orage avec grele"); break;
+    default: W("Clouds", "overcast", "Nuageux", "couvert"); break;
   }
+#undef W
 }
 
 // "Sydney" or "Sydney, AU" (an ISO country code narrows the search).
@@ -164,7 +166,8 @@ static bool fetchOpenMeteo() {
   wx.sunset = minutes(daily["sunset"][0] | "");
   wx.tempMax = his[0] | wx.temp;
   wx.tempMin = los[0] | wx.temp;
-  wmoText(code, wx.main, wx.desc);
+  wmoText(code, false, wx.main, wx.desc);
+  wx.code = code;
   wx.icon = String(wmoIcon(code)) + (day ? "d" : "n");
   int comma = cfg.geoName.indexOf(',');
   wx.cityName = comma > 0 ? cfg.geoName.substring(0, comma) : cfg.geoName;

@@ -21,5 +21,16 @@ String customFaceAt(int index);     // "" when out of range
 bool customFaceExists(const String& name);
 String faceVar(const String& key);  // a variable pushed with /api/faces/vars, or ""
 
+// Agent messages (POST /api/message, MQTT <base>/message): kept in RAM until their
+// ttl runs out, each one a turn of its own in the face rotation (FACE_MESSAGE).
+constexpr int MESSAGE_MAX = 4;
+bool messageActive(int slot);                       // set and not expired
+String messageField(int slot, const String& key);   // id, title, text, icon, color, pct
+bool messageUrgent(int slot);                       // warning or error: full backlight
+int  messageShowing();                              // the slot the Message face shows
+void messageShowSlot(int slot);
+uint32_t messageVersion();                          // bumped whenever a message changes
+String asciiFold(const String& s);                  // the fonts are ASCII: e for é, ' for ’
+
 // Photos: per-photo slideshow switch, shared with the stock-compatible API.
 bool photoEnabled(const String& name);

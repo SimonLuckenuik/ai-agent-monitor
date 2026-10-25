@@ -1,16 +1,62 @@
 # Integrations API
 
-Three optional integrations, each **off by default**. Turn them on in the settings page
-under **Integrations**:
+[Agent messages](#agent-messages) are always on. Three optional integrations are
+each **off by default**; turn them on in the settings page under **Integrations**:
 
 | Integration | What it is for | Who may call it |
 |---|---|---|
+| [Agent messages](#agent-messages) | A title, a message and an icon on the built-in Message face | **Anyone on the network** |
 | [Custom faces](#custom-faces) | Your own faces as JSON, with live values | Signed-in page, or the API key |
 | [Home Assistant dashboards](#home-assistant-dashboards-geekmagic-hacs) | The `geekmagic-hacs` integration pushes rendered dashboards | **Anyone on the network** (it cannot sign in) |
 | [MQTT](#mqtt) | Home Assistant discovery; faces and variables over MQTT | Your MQTT broker |
 
-The clock is at `http://<clock>/`, where `<clock>` is its IP address or
-`smartclock-XXXXXX.local`.
+The clock is at `http://<clock>/`, where `<clock>` is its IP address (or
+`smartclock-XXXXXX.local` on a build with mDNS).
+
+## Agent messages
+
+Always on, and open to **anyone on the network** (no sign-in, no API key): the one
+thing any agent or script may do is put a message on the clock. A message is drawn
+by the built-in **Message** face: an icon, a title, wrapped text, an optional progress
+bar and the time, in the icon's colour.
+
+```bash
+curl -X POST http://<clock>/api/message -d '{"id":"tooling","title":"tooling","text":"Waiting for your approval to deploy.","icon":"waiting","show":true}'
+```
+
+| Field | Meaning (default) |
+|---|---|
+| `id` | Who the message is from: a new message with the same `id` replaces the old one (`agent`, at most 15 characters) |
+| `title` | One line in the icon's colour (at most 40 characters) |
+| `text` | Up to 4 wrapped lines, 3 with a progress bar (at most 160 characters) |
+| `icon` | `info`, `success`, `warning`, `error`, `waiting`, `running`, `bell` or `done` (`info`) |
+| `color` | `"#rrggbb"` or `"#rgb"`, instead of the icon's colour |
+| `pct` | 0–100: draws a progress bar |
+| `ttl` | Seconds until the message goes away (600; 5 to 86400) |
+| `show` | `true`: show it now. Otherwise it waits for its turn in the rotation |
+
+| Method and path | Does |
+|---|---|
+| `POST /api/message` | Stores a message (the JSON above) |
+| `GET /api/message` | `{"messages":[{"id","title","text","icon","color","pct","ttl","showing"}]}`, `ttl` being the seconds left |
+| `DELETE /api/message?id=<id>` | Removes that message; without `id`, all of them |
+
+- Up to **4 messages** at a time, kept in RAM: they are lost on restart. A fifth
+  replaces the one that would expire first.
+- Each active message is **a turn of its own in the face rotation**, after the built-in
+  and custom faces. With rotation off, a message is only seen when sent with `show`.
+- While a `warning` or `error` message is on screen, the backlight is at **100%**, even
+  at night.
+- The fonts are ASCII: accented letters lose their accents (`é` becomes `e`),
+  typographic quotes and dashes become plain ones, and other characters become `?`.
+  Variables (`/api/faces/vars`) are folded the same way.
+
+| Icon | Colour | | Icon | Colour |
+|---|---|---|---|---|
+| `info` | blue `#0a84ff` | | `waiting` | yellow `#ffd60a` |
+| `success` | green `#30d158` | | `running` | light blue `#64d2ff` |
+| `warning` | amber `#ff9f0a` | | `bell` | amber `#ff9f0a` |
+| `error` | red `#ff453a` | | `done` | green `#30d158` |
 
 ## Custom faces
 
@@ -216,12 +262,17 @@ discovery** (prefix `homeassistant/`):
 | Entity | Topics |
 |---|---|
 | Light "Backlight" (JSON schema, brightness 0–100) | `<base>/backlight/set`, state `<base>/backlight` |
-| Select "Face" (built-in and custom faces) | `<base>/face/set`, state `<base>/face` |
+| Select "Face" (built-in and custom faces) | `<base>/face/set`, state `<base>/face` (`message` while one is shown) |
 | Sensors: Temperature, Humidity, Weather, WiFi signal | `<base>/state` (JSON) |
 | Button "Update weather" | `<base>/sync` |
 
 Availability is on `<base>/status` (`online`/`offline`, retained). State is
 published on every change and every 60 s.
+
+Agent messages go through MQTT too:
+
+- `<base>/message`: a message JSON, as for `POST /api/message`.
+- `<base>/message/clear`: an `id` to remove that message, or an empty payload for all.
 
 With **Custom faces** also on, the clock subscribes to:
 

@@ -63,14 +63,97 @@ constexpr int VARS_MAX = 24;
 constexpr unsigned VAR_VALUE_MAX = 160;   // a short message; strings hold only their length
 Var vars[VARS_MAX];
 
-void setVar(const String& key, const String& value) {
+void setVar(const String& key, const String& rawValue) {
   if (key.isEmpty() || key.length() > 15) return;
+  String value = asciiFold(rawValue);
   int freeSlot = -1;
   for (int i = 0; i < VARS_MAX; ++i) {
     if (vars[i].key == key) { vars[i].value = value.substring(0, VAR_VALUE_MAX); return; }
     if (freeSlot < 0 && vars[i].key.isEmpty()) freeSlot = i;
   }
   if (freeSlot >= 0) { vars[freeSlot].key = key; vars[freeSlot].value = value.substring(0, VAR_VALUE_MAX); }
+}
+
+// ---------------------------------------------------------------- agent messages
+// POST /api/message {"id","title","text","icon","color","pct","ttl","show"}: shown by
+// the built-in Message face. No sign-in, by design: a message is the one thing any
+// agent on the network may do. Kept in RAM; each expires after its ttl.
+struct Message { String id, title, text, icon, color; int pct = -1; uint32_t until = 0; bool used = false; };
+Message messages[MESSAGE_MAX];
+int messageSlot = 0;   // the one the Message face shows
+uint32_t messagesVersion = 1;
+const char* const MESSAGE_ICONS[] = {"info", "success", "warning", "error", "waiting", "running", "bell", "done"};
+
+bool isHexColor(const String& c) {
+  if ((c.length() != 4 && c.length() != 7) || c[0] != '#') return false;
+  for (unsigned i = 1; i < c.length(); ++i) if (!isxdigit((unsigned char)c[i])) return false;
+  return true;
+}
+
+void showMessage(int slot) {
+  messageSlot = slot;
+  cfg.theme = FACE_MESSAGE;   // in RAM only: a message never becomes the saved face
+  faceSince = millis();
+  faceInvalidate();
+}
+
+// Stores (or replaces, by id) a message.
+void storeMessage(JsonObjectConst m) {
+  String id = asciiFold(m["id"] | "agent").substring(0, 15);
+  int slot = -1, freeSlot = -1, soonest = 0;
+  for (int i = 0; i < MESSAGE_MAX; ++i) {
+    if (messageActive(i) && messages[i].id == id) slot = i;
+    if (!messageActive(i) && freeSlot < 0) freeSlot = i;
+    if ((int32_t)(messages[i].until - messages[soonest].until) < 0) soonest = i;
+  }
+  if (slot < 0) slot = freeSlot >= 0 ? freeSlot : soonest;   // full: the one ending first goes
+  Message& msg = messages[slot];
+  msg.id = id;
+  msg.title = asciiFold(m["title"] | "").substring(0, 40);
+  msg.text = asciiFold(m["text"] | "").substring(0, 160);
+  msg.icon = "info";
+  for (const char* name : MESSAGE_ICONS) if (!strcmp(m["icon"] | "", name)) msg.icon = name;
+  msg.color = m["color"] | "";
+  if (!isHexColor(msg.color)) msg.color = "";
+  msg.pct = m["pct"].is<float>() ? constrain((int)lroundf(m["pct"].as<float>()), 0, 100) : -1;
+  long ttl = constrain((long)(m["ttl"] | 600), 5L, 86400L);
+  msg.until = millis() + (uint32_t)ttl * 1000;
+  msg.used = true;
+  messagesVersion++;
+  if (m["show"] | false) showMessage(slot);
+}
+
+void clearMessages(const String& id) {
+  for (Message& m : messages) if (id.isEmpty() || m.id == id) { m.used = false; m.until = millis(); }
+  messagesVersion++;
+}
+
+void handleMessage() {   // POST: store; GET: list; DELETE ?id=: clear (all without id)
+  if (server.method() == HTTP_DELETE) { clearMessages(server.arg("id")); server.send(200, "text/plain", "OK"); return; }
+  if (server.method() == HTTP_POST) {
+    JsonDocument doc;
+    if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
+      server.send(400, "text/plain", "Expected a JSON object");
+      return;
+    }
+    storeMessage(doc.as<JsonObjectConst>());
+    server.send(200, "text/plain", "OK");
+    return;
+  }
+  JsonDocument doc;
+  JsonArray list = doc["messages"].to<JsonArray>();
+  for (int i = 0; i < MESSAGE_MAX; ++i) {
+    if (!messageActive(i)) continue;
+    JsonObject o = list.add<JsonObject>();
+    o["id"] = messages[i].id; o["title"] = messages[i].title; o["text"] = messages[i].text;
+    o["icon"] = messages[i].icon;
+    if (messages[i].color.length()) o["color"] = messages[i].color;
+    if (messages[i].pct >= 0) o["pct"] = messages[i].pct;
+    o["ttl"] = (messages[i].until - millis()) / 1000;
+    o["showing"] = cfg.theme == FACE_MESSAGE && messageSlot == i;
+  }
+  String out; serializeJson(doc, out);
+  server.send(200, "application/json", out);
 }
 
 void showFace(const String& name) {
@@ -261,6 +344,7 @@ String nodeId() { char id[16]; snprintf(id, sizeof(id), "sc_%06x", (unsigned)(ES
 
 String faceLabel() {
   if (cfg.theme == FACE_CUSTOM) return cfg.customFace;
+  if (cfg.theme == FACE_MESSAGE) return "message";
   return cfg.theme >= 0 && cfg.theme < FACE_COUNT ? FACE_NAMES[cfg.theme] : FACE_NAMES[0];
 }
 
@@ -332,6 +416,11 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     if (cfg.facesApi && customFaceExists(body)) { showFace(body); saveConfig(); }
   } else if (topic == b + "/sync") {
     syncWeather();
+  } else if (topic == b + "/message") {
+    JsonDocument d;
+    if (!deserializeJson(d, body) && d.is<JsonObject>()) storeMessage(d.as<JsonObjectConst>());
+  } else if (topic == b + "/message/clear") {
+    clearMessages(body);
   } else if (cfg.facesApi && topic.startsWith(b + "/custom/")) {
     String name = faceName(topic.substring(b.length() + 8));
     if (name.length()) storeFace(name, body);
@@ -378,6 +467,53 @@ String faceVar(const String& key) {
 
 bool photoEnabled(const String& name) { return cfg.photoOff.indexOf(photoKey(name)) < 0; }
 
+bool messageActive(int slot) {
+  return slot >= 0 && slot < MESSAGE_MAX && messages[slot].used && (int32_t)(messages[slot].until - millis()) > 0;
+}
+String messageField(int slot, const String& key) {
+  if (!messageActive(slot)) return "";
+  const Message& m = messages[slot];
+  if (key == "title") return m.title;
+  if (key == "text") return m.text;
+  if (key == "icon") return m.icon;
+  if (key == "color") return m.color;
+  if (key == "pct") return String(m.pct);
+  if (key == "id") return m.id;
+  return "";
+}
+bool messageUrgent(int slot) { return messageActive(slot) && (messages[slot].icon == "warning" || messages[slot].icon == "error"); }
+int messageShowing() { return messageSlot; }
+void messageShowSlot(int slot) { messageSlot = slot; }
+uint32_t messageVersion() { return messagesVersion; }
+
+// UTF-8 to the fonts' ASCII: Latin-1 letters lose their accents (e-acute to e, sharp s
+// to ss), typographic quotes and dashes become plain ones, anything else becomes '?'.
+String asciiFold(const String& s) {
+  static const char LATIN1[] = "AAAAAA*CEEEEIIIIDNOOOOOxOUUUUYT*aaaaaa*ceeeeiiiidnooooo/ouuuuyty";
+  String out;
+  for (unsigned i = 0; i < s.length(); ++i) {
+    uint8_t c = s[i];
+    if (c < 0x80) { out += (char)c; continue; }
+    uint8_t c1 = i + 1 < s.length() ? (uint8_t)s[i + 1] : 0, c2 = i + 2 < s.length() ? (uint8_t)s[i + 2] : 0;
+    if (c == 0xC3 && c1 >= 0x80 && c1 <= 0xBF) {
+      char a = LATIN1[c1 - 0x80];
+      if (a != '*') out += a;
+      else out += c1 == 0x86 ? "AE" : c1 == 0xA6 ? "ae" : "ss";
+      ++i;
+    } else if (c == 0xC5 && (c1 == 0x92 || c1 == 0x93)) {
+      out += c1 == 0x92 ? "OE" : "oe";
+      ++i;
+    } else if (c == 0xE2 && c1 == 0x80 && c2) {
+      out += c2 == 0x98 || c2 == 0x99 ? "'" : c2 == 0x9C || c2 == 0x9D ? "\"" : c2 == 0x93 || c2 == 0x94 ? "-" : c2 == 0xA6 ? "..." : "?";
+      i += 2;
+    } else {
+      out += '?';   // and skip the rest of this UTF-8 sequence
+      while (i + 1 < s.length() && ((uint8_t)s[i + 1] & 0xC0) == 0x80) ++i;
+    }
+  }
+  return out;
+}
+
 String mqttStatus() {
   if (!cfg.mqttOn) return "off";
   return mqtt.connected() ? "connected" : mqttLastError;
@@ -392,6 +528,7 @@ void integrationsRoutes() {
   server.on("/api/faces/show", HTTP_POST, handleFaceShow);
   server.on("/api/faces/vars", HTTP_POST, handleFaceVars);
   server.on("/api/integrations", handleIntegrations);
+  server.on("/api/message", handleMessage);
   // Stock SD Pro shapes (only answer while "Home Assistant dashboards" is on).
   server.on("/theme/list", handleThemeList);
   server.on("/theme/toggle", handleThemeToggle);
@@ -425,7 +562,7 @@ void integrationsLoop() {
     if (!ok) { mqttLastError = "cannot connect (" + String(mqtt.state()) + ")"; return; }
     String b = base();
     mqtt.publish(will.c_str(), "online", true);
-    for (const char* t : {"/backlight/set", "/face/set", "/sync", "/custom/+", "/vars"}) mqtt.subscribe((b + t).c_str());
+    for (const char* t : {"/backlight/set", "/face/set", "/sync", "/custom/+", "/vars", "/message", "/message/clear"}) mqtt.subscribe((b + t).c_str());
     publishDiscovery();
     publishState();
   }

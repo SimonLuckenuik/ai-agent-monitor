@@ -1,8 +1,38 @@
-# Clock API for custom faces
+# Clock API
 
 Base URL: `CLOCK_URL` (the clock's address, or `http://127.0.0.1:8000` for the
-emulator). Authenticate with the header `X-Api-Key: <key>` (or `?key=<key>`). The key
-is on the settings page under **Integrations → Custom faces**, which must be turned on;
+emulator).
+
+## Messages (no key)
+
+| Method and path | Body | Does |
+|---|---|---|
+| `POST /api/message` | message JSON | Stores a message; a message with an existing `id` replaces it |
+| `GET /api/message` | | `{"messages":[{"id","title","text","icon","color","pct","ttl","showing"}]}` (`ttl`: seconds left) |
+| `DELETE /api/message?id=<id>` | | Removes that message; without `id`, all of them |
+
+| Field | Meaning (default) |
+|---|---|
+| `id` | Who it is from; same id replaces (`agent`, at most 15 characters) |
+| `title` | One line in the icon's colour (at most 40 characters) |
+| `text` | Up to 4 wrapped lines, 3 with a progress bar (at most 160 characters) |
+| `icon` | `info`, `success`, `warning`, `error`, `waiting`, `running`, `bell`, `done` (`info`) |
+| `color` | `"#rrggbb"` instead of the icon's colour |
+| `pct` | 0–100: a progress bar |
+| `ttl` | Seconds until it goes away (600; 5 to 86400) |
+| `show` | `true`: on screen now; otherwise it waits for its turn in the rotation |
+
+```bash
+curl -X POST "$CLOCK_URL/api/message" -d '{"id":"build","title":"Build","text":"3 tests failed in faces.cpp","icon":"error","show":true}'
+```
+
+Up to 4 messages at a time, kept in RAM (lost on restart). `warning` and `error` light
+the screen fully while shown. Accents and typographic quotes are folded to ASCII.
+
+## Custom faces (API key)
+
+Authenticate with the header `X-Api-Key: <key>` (or `?key=<key>`). The key is on the
+settings page under **Integrations → Custom faces**, which must be turned on;
 otherwise these endpoints answer 404 `Custom faces are turned off`.
 
 | Method and path | Body | Does |
@@ -37,6 +67,8 @@ works through their broker, with the topic base shown there (default
 - `<base>/vars`: `{"key":"value",...}`. Publish with **retain** so the values come back
   after the clock restarts.
 - `<base>/face/set`: the name of a face to show.
+- `<base>/message`: a message JSON; `<base>/message/clear`: an id, or empty for all.
+  These work without Custom faces turned on.
 
 ## Emulator only
 

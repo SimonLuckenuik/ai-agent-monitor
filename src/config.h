@@ -21,6 +21,7 @@ struct Config {
   bool   celsius     = true;
   bool   hour12      = true;
   bool   mile        = false;
+  String lang        = "en";         // the faces' language: "en" or "fr"
   int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Dial 4=Simple 5=Forecast 6=Flip
   int    themeInterval = 10;         // seconds; 0 = no rotation
   int    faceMask    = 0x7f;         // bit n set = face n takes part in rotation
@@ -68,6 +69,7 @@ struct Config {
     celsius     = doc["celsius"]     | celsius;
     hour12      = doc["hour12"]      | hour12;
     mile        = doc["mile"]        | mile;
+    lang        = doc["lang"]        | lang;
     theme       = doc["theme"]       | theme;
     themeInterval = doc["themeInterval"] | themeInterval;
     faceMask    = doc["faces"]       | faceMask;
@@ -105,7 +107,7 @@ struct Config {
     if (!isnan(lat) && !isnan(lon)) { doc["lat5"] = lroundf(lat * 1e5f); doc["lon5"] = lroundf(lon * 1e5f); }
     doc["geoname"] = geoName; doc["geofor"] = geoFor;
     doc["tz"] = tz;
-    doc["celsius"] = celsius;     doc["hour12"] = hour12;   doc["mile"] = mile;
+    doc["celsius"] = celsius;     doc["hour12"] = hour12;   doc["mile"] = mile;   doc["lang"] = lang;
     doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
     doc["faces"] = faceMask;
     doc["brightness"] = brightness;
