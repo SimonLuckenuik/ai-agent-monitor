@@ -41,6 +41,8 @@ class String {
   void toLowerCase() { for (auto& c : s) c = tolower((unsigned char)c); }
   void remove(unsigned i) { if (i < s.size()) s.erase(i); }
   void remove(unsigned i, unsigned n) { if (i < s.size()) s.erase(i, n); }
+  bool concat(const char* c, unsigned n) { s.append(c, n); return true; }
+  int lastIndexOf(char c) const { size_t i = s.rfind(c); return i == std::string::npos ? -1 : (int)i; }
   String& operator+=(const String& o) { s += o.s; return *this; }
   String& operator+=(char c) { s += c; return *this; }
   bool operator==(const String& o) const { return s == o.s; }

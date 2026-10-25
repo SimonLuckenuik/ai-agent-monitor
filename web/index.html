@@ -501,7 +501,7 @@ function fillStatus(s){
   $('wxAge').textContent=ago===undefined?(s.weatherError?'Not yet: '+s.weatherError:'Not yet'):ago<60?'Just now':ago<3600?Math.floor(ago/60)+' min ago':Math.floor(ago/3600)+' h ago';
   $('wxLoc').textContent=s.weatherError&&!s.weather?'⚠ '+s.weatherError:s.location?'Found: '+s.location:'A city name, optionally with a country code: “Sydney, AU”.';
   $('tUp').textContent='Up '+up(s.uptime);$('tDev').textContent=(s.heap/1024).toFixed(1)+' KB free';
-  $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=`<a href="http://${s.mdns}/">${s.mdns}</a>`;$('sAp').textContent='Smart Weather Clock · '+s.apIp;
+  $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=s.mdns?`<a href="http://${s.mdns}/">${s.mdns}</a>`:(s.host||'—');$('sAp').textContent='Smart Weather Clock · '+s.apIp;
   $('sFs').textContent=s.storageReady?'Mounted':s.storageMountFailed?'Could not mount':'Not started';
   const kb=b=>(b/1024).toFixed(1)+' KB';
   $('sHeap').textContent=kb(s.heap)+(s.heapLow?' · lowest '+kb(s.heapLow):'');
@@ -533,7 +533,7 @@ function waitForReboot(title,sub){
   $('ovT').textContent=title;$('ovS').textContent=sub||'The page will reconnect automatically.';$('overlay').style.display='grid';
   let n=0;const t0=Date.now();
   const tick=async()=>{n++;if(Date.now()-t0>4000)try{const r=await fetch('/version',{cache:'no-store'});if(r.ok){location.reload();return}}catch(e){}
-    if(n>90){$('ovS').textContent='Still not back. If the network changed, find the clock at '+(st.mdns||'its .local name')+', in your router\'s client list, or on the setup network.';}
+    if(n>90){$('ovS').textContent='Still not back. If the network changed, find the clock at '+(st.mdns||st.host||'its name')+', in your router\'s client list, or on the setup network.';}
     setTimeout(tick,1500)};
   setTimeout(tick,1500)}
 
@@ -547,7 +547,7 @@ async function connect(){
   const ssid=$('ssid').value.trim(),password=$('pass').value;
   if(!ssid){toast('Choose a network',1);return}
   // No confirm(): phone captive-portal windows suppress it (returns false), so the button did nothing.
-  try{await req('/connect',form({ssid,password}));waitForReboot('Connecting to '+ssid,'If the network is different, reconnect this device to it, then open '+(st.mdns||'its .local name')+'.')}
+  try{await req('/connect',form({ssid,password}));waitForReboot('Connecting to '+ssid,'If the network is different, reconnect this device to it, then open '+(st.mdns||'its address (router client list: '+(st.host||'smartclock-…')+')')+'.')}
   catch(e){toast(e.message||'Could not save WiFi',1)}}
 
 async function restart(){if(!confirm('Restart the clock?'))return;try{await fetch('/restart',{method:'POST'})}catch(e){}waitForReboot('Restarting')}

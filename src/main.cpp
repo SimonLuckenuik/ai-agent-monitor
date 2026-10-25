@@ -9,7 +9,12 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPClient.h>
+#ifndef SMARTCLOCK_MDNS
+#define SMARTCLOCK_MDNS 0   // see serviceMdns()
+#endif
+#if SMARTCLOCK_MDNS
 #include <ESP8266mDNS.h>
+#endif
 #include <DNSServer.h>
 #include <EEPROM.h>
 #include <LittleFS.h>
@@ -903,7 +908,8 @@ void handleStatus() {
   if (!linked && staFail >= 0) { doc["wifiError"] = staFailText(); doc["wifiCode"] = staFailReason; }
   if (linked) { doc["ip"] = WiFi.localIP().toString(); doc["rssi"] = WiFi.RSSI(); }
   doc["apIp"] = WiFi.softAPIP().toString();
-  doc["mdns"] = deviceHost() + ".local";
+  doc["host"] = deviceHost();   // the DHCP hostname, as the router lists it
+  if (SMARTCLOCK_MDNS) doc["mdns"] = deviceHost() + ".local";
   time_t now = time(nullptr);
   if (now > 1600000000) {            // only once NTP has set the clock
     struct tm t; localtime_r(&now, &t);
@@ -961,7 +967,10 @@ void recoveryLoop() {
 
 // mDNS waits for the station link and 28 KB of free heap (its responder allocates
 // on start), then advertises the web UI with a few identifying TXT records.
+// Built only with SMARTCLOCK_MDNS (env:esp12e_mdns): the responder costs ~20 KB of
+// the OTA budget, and the DHCP hostname already names the clock in the router.
 void serviceMdns() {
+#if SMARTCLOCK_MDNS
   static bool started = false;
   if (started) { MDNS.update(); return; }
   if (WiFi.status() != WL_CONNECTED || millis() - bootStarted < 1500) return;
@@ -975,6 +984,7 @@ void serviceMdns() {
   MDNS.addServiceTxt("http", "tcp", "api", "smartclock-oss");
   MDNS.addServiceTxt("http", "tcp", "path", "/");
   started = true;
+#endif
 }
 
 // ---------------------------- setup / loop ----------------------------------
@@ -1037,7 +1047,7 @@ void loop() {
     applyTime();
     clockDisplay().fillScreen(TFT_BLACK);
     centerText(WiFi.localIP().toString(), 100, 4, TFT_YELLOW);
-    centerText(deviceHost() + ".local", 140, 2, TFT_CYAN);
+    centerText(deviceHost() + (SMARTCLOCK_MDNS ? ".local" : ""), 140, 2, TFT_CYAN);
     faceHoldUntil = millis() + 3000;   // let the address be read
     faceInvalidate();
   } else if (WiFi.status() != WL_CONNECTED && mode == MODE_RUN) {

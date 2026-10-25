@@ -4,6 +4,30 @@ All notable SmartClock-OSS changes are recorded here. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
+## Unreleased
+
+### Added
+
+- Custom faces: any string field takes placeholders, and number and colour fields
+  take expressions (`+ - * / %`, comparisons, `&& || !`, `?:`, `sin cos min max abs
+  round`). Every item takes `show`, a condition. Faces take `fps` (1 to 20) and the
+  `{ms}` placeholder for animation.
+- Custom faces: a `path` item draws SVG path data (all commands, arcs included) from a
+  viewBox, filled with anti-aliased edges and/or stroked with round caps and joins, so
+  Lucide or Material Symbols icons can be used as they are.
+- Custom faces: linear gradients (2 to 4 stops, any angle) for the face background,
+  rectangles, circles and paths.
+- Custom faces: `text` wraps with `w`, `lines` and `lh`.
+- `/status` reports the DHCP hostname as `host`.
+
+### Changed
+
+- mDNS is now a build option (`pio run -e esp12e_mdns`): the default build leaves it
+  out, which frees ~20 KB of the update budget. `/status` reports `mdns` only when it
+  is built in.
+- Custom faces redraw only items whose resolved content changed; a change in position,
+  size or visibility redraws the face.
+
 ## 1.3.2 - 2026-10-17
 
 ### Added

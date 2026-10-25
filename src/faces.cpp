@@ -4,6 +4,7 @@
 #include "faces.h"
 #include <Arduino.h>
 #include <algorithm>
+#include <new>
 #include <LittleFS.h>
 #include <TFT_eSPI.h>
 #include <tjpgd.h>   // the decoder core only: the TJpg_Decoder wrapper links SPIFFS (~32 KB)
@@ -16,6 +17,8 @@ TFT_eSPI& clockDisplay();   // main.cpp
 static TFT_eSPI& D() { return clockDisplay(); }
 
 namespace {
+
+constexpr int SCR_W = 240, SCR_H = 240;   // the panel
 
 // ---- Palette (RGB565). Accents come from the user's color1..3.
 constexpr uint16_t BG = 0x0000, PANEL = 0x18E3, PANEL_HI = 0x2945, DIM = 0x528A,
@@ -543,36 +546,30 @@ void photo(const struct tm& t, bool force) {
 }
 
 // ---- Custom faces (integrations): a JSON list of items --------------------------
-// Items draw in order. Text with a "bg" colour, rings, bars and icons with "bg" are
-// opaque: when only their content changes they are redrawn alone. Anything else
-// that changes (a transparent text, an image) redraws the whole face.
+// Items draw in order. Any string field may hold placeholders ({ss}, {temp}, pushed
+// variables). Number and colour fields may also hold an expression, evaluated after
+// the placeholders: "120+60*sin({ss}*6)", "{state}==warn?#ff9f0a:#30d158".
+// Only items whose placeholder-dependent content changed are redrawn: an opaque item
+// (text or icon with "bg", ring, bar) whose content changed is redrawn alone; a change
+// to anything else (position, size, visibility, a transparent item) redraws the face.
 JsonDocument customDoc;
 String customName;
 uint32_t customVer = 0, customEvalAt = 0;
 bool customLoaded = false;
 constexpr size_t CUSTOM_ITEMS = 32;
-uint32_t customHash[CUSTOM_ITEMS];
+uint32_t customHash[CUSTOM_ITEMS], customGeo[CUSTOM_ITEMS];
 
 // Field access through a few out-of-line helpers: inlined ArduinoJson lookups at
 // every use cost several KB of flash.
-__attribute__((noinline)) int ji(JsonObjectConst o, const char* k, int d) {
-  JsonVariantConst v = o[k];
-  return v.is<int>() ? v.as<int>() : d;
-}
 __attribute__((noinline)) const char* js(JsonObjectConst o, const char* k, const char* d) {
   const char* v = o[k];
   return v ? v : d;
 }
 __attribute__((noinline)) bool jhas(JsonObjectConst o, const char* k) { return !o[k].isNull(); }
-__attribute__((noinline)) bool jb(JsonObjectConst o, const char* k, bool d) {
-  JsonVariantConst v = o[k];
-  return v.is<bool>() ? v.as<bool>() : d;
-}
 
-uint16_t color565(JsonVariantConst v, uint16_t fallback) {
-  if (v.is<int>()) return (uint16_t)v.as<int>();   // already RGB565
-  const char* s = v | "";
-  if (*s != '#') return fallback;
+// "#rgb" / "#rrggbb" -> RGB565.
+uint16_t hex565(const char* s, uint16_t fallback) {
+  if (!s || *s != '#') return fallback;
   uint32_t n = strtoul(s + 1, nullptr, 16);
   size_t len = strlen(s + 1);
   if (len == 3) n = ((n & 0xf00) * 0x1100) | ((n & 0xf0) * 0x110) | ((n & 0xf) * 0x11);
@@ -589,6 +586,7 @@ String fieldValue(const String& key, const struct tm& t) {
   if (key == "hh") { snprintf(b, sizeof(b), cfg.hour12 ? "%d" : "%02d", clockHour(t)); return b; }
   if (key == "mm") return two(t.tm_min);
   if (key == "ss") return two(t.tm_sec);
+  if (key == "ms") return num(millis() % 1000);
   if (key == "ampm") return ampm(t);
   if (key == "day") return num(t.tm_mday);
   if (key == "dow") return DAY_LONG[t.tm_wday];
@@ -630,16 +628,607 @@ String resolve(const char* tpl, const struct tm& t) {
   return out;
 }
 
-int intOf(JsonVariantConst v, const struct tm& t, int fallback) {
-  if (v.is<int>()) return v.as<int>();
-  if (v.is<const char*>()) return atoi(resolve(v.as<const char*>(), t).c_str());
-  return fallback;
+// ---- Expressions: numbers, words (strings), + - * / %, comparisons, && || !, ?:,
+// and sin cos (degrees), min max abs round. A word compares as text; in arithmetic
+// it reads as its leading number. Errors give 0 / "". Values are slices of the
+// expression text, so evaluating allocates nothing.
+// Numbers are parsed here rather than with strtof/atof, which link ~9 KB of libc.
+float parseNum(const char*& s, bool* ok = nullptr) {
+  const char* p = s;
+  while (*p == ' ') ++p;
+  bool neg = *p == '-';
+  if (*p == '-' || *p == '+') ++p;
+  float v = 0, f = 0.1f;
+  bool digits = false;
+  while (isdigit((unsigned char)*p)) { v = v * 10 + (*p++ - '0'); digits = true; }
+  if (*p == '.') for (++p; isdigit((unsigned char)*p); f *= 0.1f) { v += (*p++ - '0') * f; digits = true; }
+  if (digits && (*p == 'e' || *p == 'E') && (isdigit((unsigned char)p[1]) || (strchr("+-", p[1]) && isdigit((unsigned char)p[2])))) {
+    bool en = p[1] == '-';
+    p += isdigit((unsigned char)p[1]) ? 1 : 2;
+    int e = 0;
+    while (isdigit((unsigned char)*p)) e = e * 10 + (*p++ - '0');
+    while (e-- > 0) v = en ? v / 10 : v * 10;
+  }
+  if (ok) *ok = digits;
+  if (!digits) return 0;
+  s = p;
+  return neg ? -v : v;
+}
+float toNum(const char* s) { return parseNum(s); }
+
+String numText(float n) {
+  char b[16];
+  long m = lroundf(n * 1000);
+  if (m % 1000 == 0) snprintf(b, sizeof(b), "%ld", m / 1000);
+  else snprintf(b, sizeof(b), "%s%ld.%03ld", m < 0 ? "-" : "", labs(m) / 1000, labs(m) % 1000);
+  return b;
 }
 
-uint8_t datumOf(const char* a) {
+struct Val { float n = 0; const char* s = nullptr; uint8_t len = 0; bool num = true; };
+
+bool sliceIs(const Val& v, const char* w) { return !v.num && strlen(w) == v.len && !strncmp(v.s, w, v.len); }
+bool truth(const Val& v) {
+  if (v.num) return v.n != 0;
+  return v.len && !sliceIs(v, "0") && !sliceIs(v, "false") && !sliceIs(v, "off");
+}
+float numOf(const Val& v) { const char* s = v.s; return v.num ? v.n : parseNum(s); }
+Val number(float n) { Val v; v.n = n; return v; }
+
+class Expr {
+ public:
+  explicit Expr(const char* src) : p(src) {}
+  Val parse() { return ternary(); }
+
+ private:
+  const char* p;
+  void ws() { while (*p == ' ') ++p; }
+  bool eat(const char* tok) {
+    ws();
+    size_t n = strlen(tok);
+    if (strncmp(p, tok, n)) return false;
+    p += n;
+    return true;
+  }
+  Val ternary() {
+    Val c = orOp();
+    if (!eat("?")) return c;
+    Val a = ternary(), b;
+    if (eat(":")) b = ternary();
+    return truth(c) ? a : b;
+  }
+  Val orOp() {
+    Val a = andOp();
+    while (eat("||")) { bool l = truth(a); a = number(truth(andOp()) || l); }
+    return a;
+  }
+  Val andOp() {
+    Val a = cmp();
+    while (eat("&&")) { bool l = truth(a); a = number(truth(cmp()) && l); }
+    return a;
+  }
+  Val cmp() {
+    Val a = add();
+    static const char* const ops[] = {"==", "!=", "<=", ">=", "<", ">"};
+    for (int i = 0; i < 6; ++i) {
+      if (!eat(ops[i])) continue;
+      Val b = add();
+      if (i < 2 && (!a.num || !b.num)) {   // text: equal only if both are the same word
+        bool same = !a.num && !b.num && a.len == b.len && !strncmp(a.s, b.s, a.len);
+        return number(same == (i == 0));
+      }
+      float x = numOf(a), y = numOf(b);
+      bool r[] = {x == y, x != y, x <= y, x >= y, x < y, x > y};
+      return number(r[i]);
+    }
+    return a;
+  }
+  Val add() {
+    Val a = mul();
+    for (;;) {
+      if (eat("+")) { float l = numOf(a); a = number(l + numOf(mul())); }
+      else if (eat("-")) { float l = numOf(a); a = number(l - numOf(mul())); }
+      else return a;
+    }
+  }
+  Val mul() {
+    Val a = unary();
+    for (;;) {
+      ws();
+      char op = *p;
+      if (op != '*' && op != '/' && op != '%') return a;
+      ++p;
+      float l = numOf(a), r = numOf(unary());
+      a = number(op == '*' ? l * r : !r ? 0 : op == '/' ? l / r : l - r * (long)(l / r));
+    }
+  }
+  Val unary() {
+    if (eat("-")) return number(-numOf(unary()));
+    if (eat("!")) return number(!truth(unary()));
+    return primary();
+  }
+  Val primary() {
+    if (eat("(")) { Val v = ternary(); eat(")"); return v; }
+    ws();
+    const char* start = p;
+    while (*p && !strchr("+-*/%()?:<>=!&|,", *p)) ++p;
+    const char* end = p;
+    while (end > start && end[-1] == ' ') --end;
+    Val v;
+    v.s = start; v.len = std::min(255, (int)(end - start)); v.num = false;
+    ws();
+    if (*p == '(' && v.len) {   // a function call
+      ++p;
+      float a = numOf(ternary()), b = eat(",") ? numOf(ternary()) : 0;
+      eat(")");
+      if (sliceIs(v, "sin")) return number(sinf(a * DEG_TO_RAD));
+      if (sliceIs(v, "cos")) return number(cosf(a * DEG_TO_RAD));
+      if (sliceIs(v, "min")) return number(std::min(a, b));
+      if (sliceIs(v, "max")) return number(std::max(a, b));
+      if (sliceIs(v, "abs")) return number(fabsf(a));
+      if (sliceIs(v, "round")) return number(lroundf(a));
+      return number(0);
+    }
+    const char* s = start;
+    bool ok;
+    float n = parseNum(s, &ok);
+    if (ok && s == end) return number(n);   // the whole word is a number
+    return v;
+  }
+};
+
+bool hasOperator(const String& s) {
+  for (unsigned i = 0; i < s.length(); ++i) if (strchr("+-*/%()?:<>=!&|", s[i]) && !(i == 0 && s[i] == '-')) return true;
+  return false;
+}
+float evalNum(const String& s) { return hasOperator(s) ? numOf(Expr(s.c_str()).parse()) : toNum(s.c_str()); }
+String evalStr(const String& s) {
+  if (!hasOperator(s)) return s;
+  Val v = Expr(s.c_str()).parse();
+  if (v.num) return numText(v.n);
+  String out;
+  out.concat(v.s, v.len);
+  return out;
+}
+
+// A number field: a JSON number, or a string of placeholders and an expression.
+__attribute__((noinline)) float num(JsonObjectConst o, const char* k, float d, const struct tm& t) {
+  JsonVariantConst v = o[k];
+  if (v.is<float>()) return v.as<float>();
+  if (v.is<const char*>()) return evalNum(resolve(v.as<const char*>(), t));
+  return d;
+}
+int inum(JsonObjectConst o, const char* k, int d, const struct tm& t) { return (int)lroundf(num(o, k, d, t)); }
+
+__attribute__((noinline)) bool visible(JsonObjectConst it, const struct tm& t) {
+  JsonVariantConst v = it["show"];
+  if (v.is<bool>()) return v.as<bool>();
+  const char* s = v;
+  if (!s) return true;
+  String r = resolve(s, t);
+  if (hasOperator(r)) return truth(Expr(r.c_str()).parse());
+  return r.length() && r != "0" && r != "false" && r != "off";
+}
+
+// ---- Paint: a solid colour or a linear gradient ({"stops":[..],"angle":deg} or
+// {"from":..,"to":..}; angle as in CSS: 180 = top to bottom, 90 = left to right).
+struct Paint {
+  uint16_t c[4] = {WHITE};
+  uint8_t n = 1;
+  float x0 = 0, y0 = 0, dx = 0, dy = 0;   // t = (x - x0) * dx + (y - y0) * dy, 0..1
+  uint16_t first() const { return c[0]; }
+};
+
+uint16_t colorOf(JsonVariantConst v, uint16_t fallback, const struct tm& t) {
+  if (v.is<int>()) return (uint16_t)v.as<int>();   // already RGB565
+  const char* s = v;
+  if (!s) return fallback;
+  if (strchr(s, '{') || hasOperator(s)) return hex565(evalStr(resolve(s, t)).c_str(), fallback);
+  return hex565(s, fallback);
+}
+
+// The gradient spans the box (x, y, w, h) the paint is used for.
+Paint paintOf(JsonVariantConst v, uint16_t fallback, int x, int y, int w, int h, const struct tm& t) {
+  Paint p;
+  if (!v.is<JsonObjectConst>()) { p.c[0] = colorOf(v, fallback, t); return p; }
+  JsonObjectConst g = v;
+  if (g["stops"].is<JsonArrayConst>()) {
+    p.n = 0;
+    for (JsonVariantConst s : g["stops"].as<JsonArrayConst>()) {
+      if (p.n == 4) break;
+      p.c[p.n++] = colorOf(s, fallback, t);
+    }
+  } else {
+    p.n = 2;
+    p.c[0] = colorOf(g["from"], fallback, t);
+    p.c[1] = colorOf(g["to"], fallback, t);
+  }
+  if (p.n < 2) { if (!p.n) p.c[0] = fallback; p.n = 1; return p; }
+  float a = num(g, "angle", 180, t) * DEG_TO_RAD, sx = sinf(a), sy = -cosf(a);
+  float len = fabsf(w * sx) + fabsf(h * sy);   // the CSS gradient line
+  if (len < 1) len = 1;
+  p.dx = sx / len; p.dy = sy / len;
+  p.x0 = x + w / 2.0f;   // t = 0.5 at the box's centre
+  p.y0 = y + h / 2.0f;
+  return p;
+}
+
+uint16_t lerp565(uint16_t a, uint16_t b, int f) {   // f: 0..256
+  int r = ((a >> 11) * (256 - f) + (b >> 11) * f) >> 8;
+  int g = (((a >> 5) & 63) * (256 - f) + ((b >> 5) & 63) * f) >> 8;
+  int bl = ((a & 31) * (256 - f) + (b & 31) * f) >> 8;
+  return (r << 11) | (g << 5) | bl;
+}
+
+uint16_t paintAt(const Paint& p, float x, float y) {
+  if (p.n < 2) return p.c[0];
+  float t = (x - p.x0) * p.dx + (y - p.y0) * p.dy + 0.5f;
+  t = std::min(1.0f, std::max(0.0f, t)) * (p.n - 1);
+  int seg = std::min((int)t, p.n - 2);
+  return lerp565(p.c[seg], p.c[seg + 1], (int)((t - seg) * 256));
+}
+
+// One horizontal span [x0, x1] of row y, in runs of equal colour. The gradient
+// position steps in 16.16 fixed point: the ESP8266 has no FPU.
+void span(const Paint& p, int x0, int x1, int y) {
+  x0 = std::max(x0, 0); x1 = std::min(x1, SCR_W - 1);
+  if (y < 0 || y >= SCR_H || x1 < x0) return;
+  if (p.n < 2) { D().drawFastHLine(x0, y, x1 - x0 + 1, p.c[0]); return; }
+  int32_t top = (p.n - 1) << 16;
+  int32_t t = (int32_t)(((x0 + 0.5f - p.x0) * p.dx + (y + 0.5f - p.y0) * p.dy + 0.5f) * top);
+  int32_t dt = (int32_t)(p.dx * top);
+  int runStart = x0;
+  uint16_t run = 0;
+  for (int x = x0; x <= x1 + 1; ++x, t += dt) {
+    uint16_t c = run;
+    if (x <= x1) {
+      int32_t tc = std::min(top, std::max((int32_t)0, t));
+      int seg = std::min(tc >> 16, (int32_t)p.n - 2);
+      c = lerp565(p.c[seg], p.c[seg + 1], (tc - (seg << 16)) >> 8);
+    }
+    if (x == x0) run = c;
+    else if (c != run || x > x1) { D().drawFastHLine(runStart, y, x - runStart, run); runStart = x; run = c; }
+  }
+}
+
+// Writes one row of coverage (0..255): full runs as spans, edge pixels blended into
+// `under` (the face background: the panel cannot be read back).
+uint8_t cov[SCR_W];
+void emitRow(int lo, int hi, int y, const Paint& paint, uint16_t under) {
+  for (int x = lo; x <= hi;) {
+    if (cov[x] >= 250) {
+      int e = x;
+      while (e + 1 <= hi && cov[e + 1] >= 250) ++e;
+      span(paint, x, e, y);
+      x = e + 1;
+    } else {
+      if (cov[x]) D().drawPixel(x, y, lerp565(under, paintAt(paint, x + 0.5f, y + 0.5f), cov[x] + 1));
+      ++x;
+    }
+  }
+}
+
+// Rounded rectangle (r >= 0) filled with a paint, row by row.
+void paintRect(const Paint& p, int x, int y, int w, int h, int r) {
+  r = std::min(r, std::min(w, h) / 2);
+  for (int j = 0; j < h; ++j) {
+    int inset = 0;
+    int dy = j < r ? r - j : j >= h - r ? j - (h - 1 - r) : 0;
+    if (dy) inset = r - (int)lroundf(sqrtf(std::max(0, r * r - dy * dy)));
+    span(p, x + inset, x + w - 1 - inset, y + j);
+  }
+}
+
+// ---- Paths: SVG path data (M L H V C S Q T A Z, absolute and relative) scaled from a
+// viewBox, filled (non-zero rule, anti-aliased edges) and/or stroked.
+struct Poly {
+  static constexpr int MAX_PTS = 400, MAX_RINGS = 32;   // 3.2 KB of heap while drawing
+  float* x = new (std::nothrow) float[MAX_PTS];
+  float* y = new (std::nothrow) float[MAX_PTS];
+  int n = 0, rings = 0, ringStart[MAX_RINGS + 1] = {0};
+  float sx = 1, sy = 1, ox = 0, oy = 0, cosr = 1, sinr = 0, cx = 0, cy = 0;
+  ~Poly() { delete[] x; delete[] y; }
+  void map(float vx, float vy, float& X, float& Y) const {   // viewBox -> screen
+    float px = vx * sx + ox - cx, py = vy * sy + oy - cy;
+    X = px * cosr - py * sinr + cx;
+    Y = px * sinr + py * cosr + cy;
+  }
+  void move() { if (rings < MAX_RINGS && n > ringStart[rings]) ringStart[++rings] = n; }
+  bool ok() const { return x && y; }
+  void add(float vx, float vy) {
+    if (n >= MAX_PTS || !ok()) return;
+    map(vx, vy, x[n], y[n]);
+    ++n;
+  }
+  void close() { move(); }
+  int ringCount() const { return n > ringStart[rings] ? rings + 1 : rings; }
+  int ringEnd(int r) const { return r < rings ? ringStart[r + 1] : n; }
+};
+
+int curveSteps(float len) { return std::max(2, std::min(24, (int)(len / 3))); }
+
+// atan2 to ~1e-5 rad, without libm's atan2f/atanf.
+float fastAtan2(float y, float x) {
+  float ax = fabsf(x), ay = fabsf(y);
+  if (ax < 1e-9f && ay < 1e-9f) return 0;
+  float a = std::min(ax, ay) / std::max(ax, ay), s = a * a;
+  float r = ((-0.0464964749f * s + 0.15931422f) * s - 0.327622764f) * s * a + a;
+  if (ay > ax) r = 1.57079637f - r;
+  if (x < 0) r = 3.14159274f - r;
+  return y < 0 ? -r : r;
+}
+
+void arcTo(Poly& P, float x1, float y1, float rx, float ry, float rotDeg, bool large, bool sweep, float x2, float y2) {
+  if (rx == 0 || ry == 0) { P.add(x2, y2); return; }
+  rx = fabsf(rx); ry = fabsf(ry);
+  float phi = rotDeg * DEG_TO_RAD, cp = cosf(phi), sp = sinf(phi);
+  float dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
+  float x1p = cp * dx + sp * dy, y1p = -sp * dx + cp * dy;
+  float lam = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry);
+  if (lam > 1) { float s = sqrtf(lam); rx *= s; ry *= s; }
+  float top = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p;
+  float den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
+  float co = den ? sqrtf(std::max(0.0f, top / den)) : 0;
+  if (large == sweep) co = -co;
+  float cxp = co * rx * y1p / ry, cyp = -co * ry * x1p / rx;
+  float ccx = cp * cxp - sp * cyp + (x1 + x2) / 2, ccy = sp * cxp + cp * cyp + (y1 + y2) / 2;
+  float a1 = fastAtan2((y1p - cyp) / ry, (x1p - cxp) / rx);
+  float a2 = fastAtan2((-y1p - cyp) / ry, (-x1p - cxp) / rx);
+  float da = a2 - a1;
+  if (sweep && da < 0) da += 2 * PI;
+  if (!sweep && da > 0) da -= 2 * PI;
+  int steps = curveSteps(fabsf(da) * std::max(rx, ry) * std::max(fabsf(P.sx), fabsf(P.sy)));
+  for (int i = 1; i <= steps; ++i) {
+    float a = a1 + da * i / steps, ex = rx * cosf(a), ey = ry * sinf(a);
+    P.add(cp * ex - sp * ey + ccx, sp * ex + cp * ey + ccy);
+  }
+}
+
+// A cubic Bezier from (x0, y0); quadratics are passed in as cubics.
+__attribute__((noinline)) void cubicTo(Poly& P, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
+  float len = (fabsf(x1 - x0) + fabsf(y1 - y0) + fabsf(x2 - x1) + fabsf(y2 - y1) + fabsf(x3 - x2) + fabsf(y3 - y2)) *
+              std::max(fabsf(P.sx), fabsf(P.sy));
+  int steps = curveSteps(len);
+  for (int i = 1; i <= steps; ++i) {
+    float u = (float)i / steps, v = 1 - u, a = v * v * v, b = 3 * v * v * u, c = 3 * v * u * u, d = u * u * u;
+    P.add(a * x0 + b * x1 + c * x2 + d * x3, a * y0 + b * y1 + c * y2 + d * y3);
+  }
+}
+
+struct PathReader {
+  const char* d;
+  void skip() { while (*d == ' ' || *d == ',' || *d == '\n' || *d == '\t' || *d == '\r') ++d; }
+  __attribute__((noinline)) bool num(float& out) {
+    skip();
+    bool ok;
+    out = parseNum(d, &ok);
+    return ok;
+  }
+  bool nums(float* out, int n) { for (int i = 0; i < n; ++i) if (!num(out[i])) return false; return true; }
+  bool flag(bool& out) {   // arc flags may be packed: "a1 1 0 01 2 3"
+    skip();
+    if (*d != '0' && *d != '1') return false;
+    out = *d++ == '1';
+    return true;
+  }
+};
+
+void parsePath(Poly& P, const char* src) {
+  PathReader R{src};
+  char cmd = 0, last = 0;
+  float cx = 0, cy = 0, sx = 0, sy = 0, qx = 0, qy = 0;   // current, subpath start, last control
+  float a[7];
+  for (;;) {
+    R.skip();
+    if (!*R.d) break;
+    if (isalpha((unsigned char)*R.d)) cmd = *R.d++;
+    else if (!cmd) break;
+    bool rel = islower((unsigned char)cmd);
+    float ox = rel ? cx : 0, oy = rel ? cy : 0;
+    char c = tolower(cmd);
+    bool smooth = (c == 's' && strchr("CcSs", last)) || (c == 't' && strchr("QqTt", last));
+    float rx = smooth ? 2 * cx - qx : cx, ry = smooth ? 2 * cy - qy : cy;   // reflected control
+    if (c == 'm') {
+      if (!R.nums(a, 2)) return;
+      P.move(); cx = sx = a[0] + ox; cy = sy = a[1] + oy; P.add(cx, cy);
+      cmd = rel ? 'l' : 'L';   // further pairs are line-tos
+    } else if (c == 'l' || c == 'h' || c == 'v') {
+      if (!R.nums(a, c == 'l' ? 2 : 1)) return;
+      if (c == 'l') { cx = a[0] + ox; cy = a[1] + oy; }
+      else if (c == 'h') cx = a[0] + ox;
+      else cy = a[0] + oy;
+      P.add(cx, cy);
+    } else if (c == 'c' || c == 's') {
+      float* q = c == 'c' ? a : a + 2;
+      if (c == 's') { a[0] = rx - ox; a[1] = ry - oy; }
+      if (!R.nums(q, c == 'c' ? 6 : 4)) return;
+      cubicTo(P, cx, cy, a[0] + ox, a[1] + oy, a[2] + ox, a[3] + oy, a[4] + ox, a[5] + oy);
+      qx = a[2] + ox; qy = a[3] + oy; cx = a[4] + ox; cy = a[5] + oy;
+    } else if (c == 'q' || c == 't') {
+      float* q = c == 'q' ? a : a + 2;
+      if (c == 't') { a[0] = rx - ox; a[1] = ry - oy; }
+      if (!R.nums(q, c == 'q' ? 4 : 2)) return;
+      float kx = a[0] + ox, ky = a[1] + oy, ex = a[2] + ox, ey = a[3] + oy;
+      cubicTo(P, cx, cy, cx + (kx - cx) * 2 / 3, cy + (ky - cy) * 2 / 3, ex + (kx - ex) * 2 / 3, ey + (ky - ey) * 2 / 3, ex, ey);
+      qx = kx; qy = ky; cx = ex; cy = ey;
+    } else if (c == 'a') {
+      bool large, sweep;
+      if (!R.nums(a, 3) || !R.flag(large) || !R.flag(sweep) || !R.nums(a + 3, 2)) return;
+      arcTo(P, cx, cy, a[0], a[1], a[2], large, sweep, a[3] + ox, a[4] + oy);
+      cx = a[3] + ox; cy = a[4] + oy;
+    } else if (c == 'z') {
+      if (P.n) P.add(sx, sy);
+      P.close(); cx = sx; cy = sy;
+    } else {
+      return;
+    }
+    last = cmd;
+  }
+}
+
+// Non-zero (or even-odd) fill with 4 sub-scanlines per row and fractional span ends.
+void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
+  if (P.n < 3) return;
+  float minY = 1e9f, maxY = -1e9f;
+  for (int i = 0; i < P.n; ++i) { minY = std::min(minY, P.y[i]); maxY = std::max(maxY, P.y[i]); }
+  int y0 = std::max(0, (int)floorf(minY)), y1 = std::min(SCR_H - 1, (int)ceilf(maxY));
+  constexpr int SUB = 4, MAX_X = 64;
+  float xs[MAX_X];
+  int8_t dir[MAX_X];
+  for (int y = y0; y <= y1; ++y) {
+    memset(cov, 0, sizeof(cov));
+    int lo = SCR_W, hi = -1;
+    for (int s = 0; s < SUB; ++s) {
+      float sy = y + (s + 0.5f) / SUB;
+      int k = 0;
+      for (int r = 0, rings = P.ringCount(); r < rings; ++r) {
+        int a0 = P.ringStart[r], a1 = P.ringEnd(r);
+        for (int i = a0; i < a1; ++i) {
+          int j = i + 1 < a1 ? i + 1 : a0;   // rings close implicitly
+          float ya = P.y[i], yb = P.y[j];
+          if ((ya <= sy) == (yb <= sy) || k >= MAX_X) continue;
+          float xa = P.x[i] + (sy - ya) * (P.x[j] - P.x[i]) / (yb - ya);
+          int m = k++;   // insertion sort by x
+          while (m > 0 && xs[m - 1] > xa) { xs[m] = xs[m - 1]; dir[m] = dir[m - 1]; --m; }
+          xs[m] = xa; dir[m] = yb > ya ? 1 : -1;
+        }
+      }
+      int wind = 0;
+      for (int i = 0; i + 1 < k; ++i) {
+        wind = evenOdd ? (wind ^ 1) : wind + dir[i];
+        if (!wind) continue;
+        float xa = std::max(0.0f, xs[i]), xb = std::min((float)SCR_W, xs[i + 1]);
+        if (xb <= xa) continue;
+        int ia = (int)xa, ib = (int)xb;
+        lo = std::min(lo, ia); hi = std::max(hi, std::min(ib, SCR_W - 1));
+        auto addCov = [&](int x, float amount) { if (x >= 0 && x < SCR_W) cov[x] = std::min(255, cov[x] + (int)(amount * 255 / SUB + 0.5f)); };
+        if (ia == ib) { addCov(ia, xb - xa); continue; }
+        addCov(ia, 1 - (xa - ia));
+        for (int x = ia + 1; x < ib; ++x) addCov(x, 1);
+        addCov(ib, xb - ib);
+      }
+    }
+    emitRow(lo, hi, y, paint, under);
+  }
+}
+
+// A stroke as one shape: each pixel's coverage comes from its distance to the nearest
+// segment, so joints overlap without seams and ends and corners come out round.
+void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) {
+  float r = std::max(0.5f, width / 2);
+  float minY = 1e9f, maxY = -1e9f;
+  for (int i = 0; i < P.n; ++i) { minY = std::min(minY, P.y[i]); maxY = std::max(maxY, P.y[i]); }
+  int y0 = std::max(0, (int)floorf(minY - r - 1)), y1 = std::min(SCR_H - 1, (int)ceilf(maxY + r + 1));
+  for (int y = y0; y <= y1; ++y) {
+    memset(cov, 0, sizeof(cov));
+    int lo = SCR_W, hi = -1;
+    float py = y + 0.5f;
+    for (int ring = 0, rings = P.ringCount(); ring < rings; ++ring) {
+      int a0 = P.ringStart[ring], a1 = P.ringEnd(ring);
+      for (int i = a0; i < a1; ++i) {
+        int j = i + 1 < a1 ? i + 1 : i;   // a lone point still draws a dot
+        float ax = P.x[i], ay = P.y[i], dx = P.x[j] - ax, dy = P.y[j] - ay;
+        if (py < std::min(ay, ay + dy) - r - 1 || py > std::max(ay, ay + dy) + r + 1) continue;
+        float len2 = dx * dx + dy * dy;
+        int xa = std::max(0, (int)floorf(std::min(ax, ax + dx) - r - 1));
+        int xb = std::min(SCR_W - 1, (int)ceilf(std::max(ax, ax + dx) + r + 1));
+        for (int x = xa; x <= xb; ++x) {
+          float px = x + 0.5f, u = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+          u = std::min(1.0f, std::max(0.0f, u));
+          float ex = px - ax - u * dx, ey = py - ay - u * dy;
+          float c = r + 0.5f - sqrtf(ex * ex + ey * ey);
+          if (c <= 0) continue;
+          cov[x] = std::max<int>(cov[x], c >= 1 ? 255 : (int)(c * 255));
+          lo = std::min(lo, x); hi = std::max(hi, x);
+        }
+        if (j == i) break;
+      }
+    }
+    emitRow(lo, hi, y, paint, under);
+  }
+}
+
+// {"type":"path","d":"M..." or ["M...","M..."],"x","y","size" (or "w","h"),
+//  "vb":"0 0 24 24","align","rotate","fill","stroke","sw","rule":"evenodd"}
+void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
+  float vb[4] = {0, 0, 24, 24};
+  if (const char* s = it["vb"]) { PathReader R{s}; R.nums(vb, 4); }
+
+  if (vb[2] <= 0 || vb[3] <= 0) return;
+  float size = num(it, "size", 48, t), w = num(it, "w", size, t), h = num(it, "h", size, t);
+  float x = num(it, "x", 0, t), y = num(it, "y", 0, t);
+  uint8_t datum = 0;
+  if (const char* a = it["align"]) {
+    static const char* const names[] = {"tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"};
+    for (uint8_t i = 0; i < 9; ++i) if (!strcmp(a, names[i])) datum = i;
+  }
+  x -= (datum % 3) * w / 2;
+  y -= (datum / 3) * h / 2;
+  Poly P;
+  if (!P.ok()) return;
+  P.sx = w / vb[2]; P.sy = h / vb[3];
+  P.ox = x - vb[0] * P.sx; P.oy = y - vb[1] * P.sy;
+  P.cx = x + w / 2; P.cy = y + h / 2;
+  float rot = num(it, "rotate", 0, t) * DEG_TO_RAD;
+  P.cosr = cosf(rot); P.sinr = sinf(rot);
+  JsonVariantConst d = it["d"];
+  if (d.is<JsonArrayConst>()) for (JsonVariantConst part : d.as<JsonArrayConst>()) parsePath(P, part | "");
+  else parsePath(P, d | "");
+  P.close();
+  bool hasStroke = jhas(it, "stroke");
+  JsonVariantConst fillV = it["fill"];
+  bool fill = !(fillV.is<bool>() && !fillV.as<bool>()) && !(fillV.is<const char*>() && !strcmp(fillV.as<const char*>(), "none"));
+  if (hasStroke && fillV.isNull()) fill = false;   // a stroke alone: an outline icon
+  if (fill) {
+    JsonVariantConst src = fillV.isNull() || fillV.is<bool>() ? it["color"] : fillV;
+    Paint p = paintOf(src, WHITE, (int)x, (int)y, (int)w, (int)h, t);
+    const char* rule = it["rule"];
+    fillPoly(P, p, under, rule && !strcmp(rule, "evenodd"));
+  }
+  if (hasStroke) {
+    float sw = num(it, "sw", 2, t) * std::max(P.sx, P.sy);
+    strokePoly(P, sw, paintOf(it["stroke"], WHITE, (int)x, (int)y, (int)w, (int)h, t), under);
+  }
+}
+
+// ---- Text, possibly wrapped to "w" pixels over at most "lines" lines.
+void drawText(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
+  String s = resolve(js(it, "text", ""), t);
+  int font = inum(it, "font", 4, t);
+  if (font != 2 && font != 4 && font != 6 && font != 8) font = 4;
   static const char* const names[] = {"tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"};
-  for (uint8_t i = 0; i < 9; ++i) if (!strcmp(a, names[i])) return i;   // TL_DATUM.. BR_DATUM
-  return TL_DATUM;
+  uint8_t datum = TL_DATUM;
+  const char* a = js(it, "align", "tl");
+  for (uint8_t i = 0; i < 9; ++i) if (!strcmp(a, names[i])) datum = i;
+  bool opaque = jhas(it, "bg");
+  int w = inum(it, "w", 0, t);
+  if (w <= 0) {
+    if (!opaque) textClear(s.c_str(), x, y, font, c, datum);
+    else text(s.c_str(), x, y, font, c, bg, datum, inum(it, "pad", 0, t));
+    return;
+  }
+  String lines[8];
+  int count = 0, maxLines = std::max(1, std::min(8, inum(it, "lines", 8, t)));
+  String line;
+  for (int i = 0; i <= (int)s.length() && count < maxLines; ++i) {
+    bool end = i == (int)s.length();
+    if (!end && s[i] != ' ' && s[i] != '\n') { line += s[i]; continue; }
+    // A word ended: does it still fit on this line?
+    int cut = line.lastIndexOf(' ');
+    if (D().textWidth(line, font) > w && cut > 0) {
+      lines[count++] = line.substring(0, cut);
+      line = line.substring(cut + 1);
+      if (count == maxLines) break;
+    }
+    if (end || s[i] == '\n') { lines[count++] = line; line = ""; }
+    else line += ' ';
+  }
+  int lh = D().fontHeight(font) + inum(it, "lh", 2, t), total = count * lh - (count ? inum(it, "lh", 2, t) : 0);
+  int top = y - (datum / 3) * total / 2;
+  uint8_t lineDatum = datum % 3;   // TL, TC or TR
+  for (int i = 0; i < count; ++i) {
+    if (!opaque) textClear(lines[i].c_str(), x, top + i * lh, font, c, lineDatum);
+    else text(lines[i].c_str(), x, top + i * lh, font, c, bg, lineDatum, w);
+  }
 }
 
 bool itemOpaque(JsonObjectConst it) {
@@ -648,14 +1237,21 @@ bool itemOpaque(JsonObjectConst it) {
   return jhas(it, "bg") && (!strcmp(type, "text") || !strcmp(type, "icon"));
 }
 
-uint32_t itemHash(JsonObjectConst it, const struct tm& t) {   // FNV-1a of its live content
-  String v = resolve(js(it, "text", ""), t);
-  v += '|'; v += intOf(it["value"], t, 0);
-  v += '|'; v += resolve(js(it, "icon", ""), t);
-  v += '|'; v += js(it, "src", "");
-  uint32_t h = 2166136261u;
-  for (unsigned i = 0; i < v.length(); ++i) h = (h ^ (uint8_t)v[i]) * 16777619u;
-  return h;
+// FNV-1a over the resolved values of every placeholder-bearing string in an item.
+// "content" keys (what an opaque item redraws in place) and the others (position,
+// size, visibility: these need the whole face redrawn) hash separately.
+void mixValues(JsonVariantConst v, const char* key, const struct tm& t, uint32_t& content, uint32_t& geo) {
+  if (v.is<JsonObjectConst>()) { for (JsonPairConst kv : v.as<JsonObjectConst>()) mixValues(kv.value(), key, t, content, geo); return; }
+  if (v.is<JsonArrayConst>()) { for (JsonVariantConst e : v.as<JsonArrayConst>()) mixValues(e, key, t, content, geo); return; }
+  const char* s = v;
+  if (!s || !strchr(s, '{')) return;
+  static const char* const contentKeys[] = {"text", "value", "max", "icon", "color", "track", "fill", "stroke"};
+  bool isContent = false;
+  for (const char* k : contentKeys) if (!strcmp(key, k)) isContent = true;
+  uint32_t& h = isContent ? content : geo;
+  String r = resolve(s, t);
+  for (unsigned i = 0; i < r.length(); ++i) h = (h ^ (uint8_t)r[i]) * 16777619u;
+  h = (h ^ '|') * 16777619u;
 }
 
 void ring(int x, int y, int r, int w, int value, int max, uint16_t c, uint16_t track, uint16_t bg) {
@@ -671,41 +1267,48 @@ void ring(int x, int y, int r, int w, int value, int max, uint16_t c, uint16_t t
 }
 
 void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
+  if (!visible(it, t)) return;
   const char* type = js(it, "type", "");
-  int x = ji(it, "x", 0), y = ji(it, "y", 0);
-  uint16_t c = color565(it["color"], WHITE), bg = color565(it["bg"], faceBg);
+  int x = inum(it, "x", 0, t), y = inum(it, "y", 0, t);
+  uint16_t bg = colorOf(it["bg"], faceBg, t);
   if (!strcmp(type, "text")) {
-    String s = resolve(js(it, "text", ""), t);
-    int font = ji(it, "font", 4);
-    if (font != 2 && font != 4 && font != 6 && font != 8) font = 4;
-    uint8_t datum = datumOf(js(it, "align", "tl"));
-    if (!jhas(it, "bg")) textClear(s.c_str(), x, y, font, c, datum);
-    else text(s.c_str(), x, y, font, c, bg, datum, ji(it, "pad", 0));
+    drawText(it, t, x, y, colorOf(it["color"], WHITE, t), bg);
   } else if (!strcmp(type, "rect")) {
-    int w = ji(it, "w", 0), h = ji(it, "h", 0), r = ji(it, "r", 0);
-    if (jb(it, "fill", true)) { if (r) D().fillSmoothRoundRect(x, y, w, h, r, c, faceBg); else D().fillRect(x, y, w, h, c); }
-    else if (r) D().drawRoundRect(x, y, w, h, r, c); else D().drawRect(x, y, w, h, c);
+    int w = inum(it, "w", 0, t), h = inum(it, "h", 0, t), r = inum(it, "r", 0, t);
+    Paint p = paintOf(it["color"], WHITE, x, y, w, h, t);
+    bool fill = !it["fill"].is<bool>() || it["fill"].as<bool>();
+    if (fill && p.n == 1) { if (r) D().fillSmoothRoundRect(x, y, w, h, r, p.first(), faceBg); else D().fillRect(x, y, w, h, p.first()); }
+    else if (fill) paintRect(p, x, y, w, h, r);
+    else if (r) D().drawRoundRect(x, y, w, h, r, p.first());
+    else D().drawRect(x, y, w, h, p.first());
   } else if (!strcmp(type, "circle")) {
-    int r = ji(it, "r", 10);
-    if (jb(it, "fill", true)) D().fillSmoothCircle(x, y, r, c, faceBg); else D().drawSmoothCircle(x, y, r, c, faceBg);
+    int r = inum(it, "r", 10, t);
+    Paint p = paintOf(it["color"], WHITE, x - r, y - r, 2 * r, 2 * r, t);
+    bool fill = !it["fill"].is<bool>() || it["fill"].as<bool>();
+    if (!fill) D().drawSmoothCircle(x, y, r, p.first(), faceBg);
+    else if (p.n == 1) D().fillSmoothCircle(x, y, r, p.first(), faceBg);
+    else paintRect(p, x - r, y - r, 2 * r + 1, 2 * r + 1, r);
   } else if (!strcmp(type, "line")) {
-    float w = (ji(it, "w", 2)) / 2.0f;
-    D().drawWedgeLine(x, y, ji(it, "x2", x), ji(it, "y2", y), w, w, c, faceBg);
+    float w = num(it, "w", 2, t) / 2.0f;
+    D().drawWedgeLine(x, y, num(it, "x2", x, t), num(it, "y2", y, t), w, w, colorOf(it["color"], WHITE, t), faceBg);
   } else if (!strcmp(type, "ring")) {
-    ring(x, y, ji(it, "r", 50), ji(it, "w", 8), intOf(it["value"], t, 0), intOf(it["max"], t, 100),
-         c, color565(it["track"], PANEL_HI), faceBg);
+    ring(x, y, inum(it, "r", 50, t), inum(it, "w", 8, t), inum(it, "value", 0, t), inum(it, "max", 100, t),
+         colorOf(it["color"], WHITE, t), colorOf(it["track"], PANEL_HI, t), faceBg);
   } else if (!strcmp(type, "bar")) {
-    int w = ji(it, "w", 100), h = ji(it, "h", 8), r = std::min(h / 2, (int)(ji(it, "r", h / 2)));
-    int value = intOf(it["value"], t, 0), max = std::max(1, intOf(it["max"], t, 100));
-    D().fillSmoothRoundRect(x, y, w, h, r, color565(it["track"], PANEL_HI), faceBg);
+    int w = inum(it, "w", 100, t), h = inum(it, "h", 8, t), r = std::min(h / 2, inum(it, "r", h / 2, t));
+    int value = inum(it, "value", 0, t), max = std::max(1, inum(it, "max", 100, t));
+    uint16_t track = colorOf(it["track"], PANEL_HI, t);
+    D().fillSmoothRoundRect(x, y, w, h, r, track, faceBg);
     int fw = std::min(w, std::max(0, value) * w / max);
-    if (fw > 0) D().fillSmoothRoundRect(x, y, std::max(fw, 2 * r), h, r, c, color565(it["track"], PANEL_HI));
+    if (fw > 0) D().fillSmoothRoundRect(x, y, std::max(fw, 2 * r), h, r, colorOf(it["color"], WHITE, t), track);
+  } else if (!strcmp(type, "path")) {
+    drawPath(it, t, faceBg);
   } else if (!strcmp(type, "icon")) {
-    int size = ji(it, "size", 48);
+    int size = inum(it, "size", 48, t);
     if (jhas(it, "bg")) D().fillRect(x - size / 2 - 2, y - size / 2 - 2, size + 4, size + 4, bg);
     weatherIcon(x, y, size, resolve(js(it, "icon", "{icon}"), t), bg);
   } else if (!strcmp(type, "image")) {
-    drawJpeg(String("/photo/") + (js(it, "src", "")), x, y);
+    drawJpeg(String("/photo/") + resolve(js(it, "src", ""), t), x, y);
   }
 }
 
@@ -723,21 +1326,30 @@ void custom(const struct tm& t, bool force) {
     if (force) { D().fillScreen(BG); placeholder(92, "Face not found", customName.c_str(), nullptr); }
     return;
   }
-  if (!force && millis() - customEvalAt < 250) return;   // placeholders change at most each second
+  // A face asks for faster updates with "fps" (default 4, at most 20).
+  int fps = std::max(1, std::min(20, (int)(customDoc["fps"] | 4)));
+  if (!force && millis() - customEvalAt < 1000u / fps) return;
   customEvalAt = millis();
-  uint16_t bg = color565(customDoc["bg"], BG);
+  JsonVariantConst bgV = customDoc["bg"];
+  Paint bgPaint = paintOf(bgV, BG, 0, 0, SCR_W, SCR_H, t);
+  uint16_t bg = bgPaint.first();
   JsonArrayConst items = customDoc["items"];
   size_t n = std::min(items.size(), CUSTOM_ITEMS);
-  uint32_t h[CUSTOM_ITEMS];
+  uint32_t h[CUSTOM_ITEMS], g[CUSTOM_ITEMS];
   bool full = force;
   for (size_t i = 0; i < n; ++i) {
-    h[i] = itemHash(items[i], t);
-    if (h[i] != customHash[i] && !itemOpaque(items[i])) full = true;
+    h[i] = g[i] = 2166136261u;
+    for (JsonPairConst kv : items[i].as<JsonObjectConst>()) mixValues(kv.value(), kv.key().c_str(), t, h[i], g[i]);
+    if (g[i] != customGeo[i] || (h[i] != customHash[i] && !itemOpaque(items[i]))) full = true;
   }
-  if (full) D().fillScreen(bg);
+  if (full) {
+    if (bgPaint.n > 1) for (int y = 0; y < SCR_H; ++y) span(bgPaint, 0, SCR_W - 1, y);
+    else D().fillScreen(bg);
+  }
   for (size_t i = 0; i < n; ++i) {
     if (full || h[i] != customHash[i]) drawItem(items[i], t, bg);
     customHash[i] = h[i];
+    customGeo[i] = g[i];
   }
 }
 
