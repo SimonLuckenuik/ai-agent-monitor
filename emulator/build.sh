@@ -13,6 +13,14 @@ python3 "$root/emulator/gen_headers.py" "$root" "$work/generated"
 touch "$work/sketch/smartclock.ino"
 
 cd /esp8266/tests/host
+# The core's mockWrite() polls again forever when a peer stops reading (poll() times
+# out and the loop retries), which freezes the whole emulator. Give up on a timeout
+# instead: the caller gets a short write, as a real socket would. Applied once.
+mock=common/ClientContextSocket.cpp
+if ! grep -q 'emulator: give up' "$mock"; then
+  sed -i 's|^\(\s*\)int ret  = poll(&p, 1, timeout_ms);|&\n\1if (ret == 0) break;   // emulator: give up when the peer stops reading|' "$mock"
+  grep -q 'emulator: give up' "$mock" || { echo "build.sh: could not patch $mock" >&2; exit 1; }
+fi
 # Flags from platformio.ini that change behaviour, not just size.
 make -j"$(nproc)" FORCE32=0 OPTZ=-O1 R=noexec \
   ULIBDIRS=/libs/ArduinoJson:/libs/PubSubClient \

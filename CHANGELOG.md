@@ -8,15 +8,18 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
-- Faces: **Date** (id 3: the day of the week, the day in large type, the month and
-  year, the time and today's weather), **Big time** (7: hours above minutes, the full
-  height of the screen), **Big weather** (8: the current temperature in the largest
-  digits, its icon, the description, feels-like and today's high/low) and the
-  **Agents board** (9, last: every active agent message with its icon, title, first
-  line and time left; "All quiet" when there are none, in the rotation only while
-  messages are active). Custom faces move from id 7 to 10 and messages to 11; a saved
-  configuration is migrated, and the new faces join an existing rotation.
+- Faces: three **Big tiles** that each show one thing as large as the screen allows,
+  in one modern monoline style (a stroke font and outline icons drawn by the path
+  renderer): **Date** (id 3: day of the week, the day, the month), **Big time** (7:
+  hours above minutes) and **Big weather** (8: the conditions' icon above the
+  temperature). And the **Agents board** (9, last: every active agent message with its
+  icon, title, first line and time left; "All quiet" when there are none, in the
+  rotation only while messages are active). Custom faces move from id 7 to 10 and
+  messages to 11; a saved configuration is migrated, and the new faces join an
+  existing rotation.
 - Custom faces: `{name|fallback}` shows the fallback while a value is empty.
+- **At night show** (Night mode card, `nightface`): one face all night instead of the
+  rotation, for example Big time. A message shown on purpose still comes through.
 
 - Agent messages: `POST /api/message` (and MQTT `<base>/message`) puts a title, a
   message, one of 8 built-in icons (info, success, warning, error, waiting, running,
@@ -47,6 +50,8 @@ versioning. `/version` on the device reports the version it was built as; a
 - The Dial face. Its id (3) now holds the Date face.
 
 ### Changed
+
+- New clocks start on a 24-hour clock (km/h and °C, as before).
 
 - The hostname (DHCP, and the default MQTT topic base) is now `agentmonitor-XXXXXX`
   (was `smartclock-XXXXXX`). With MQTT on, Home Assistant sees new topics: remove the

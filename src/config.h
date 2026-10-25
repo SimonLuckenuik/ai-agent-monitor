@@ -19,7 +19,7 @@ struct Config {
   // timezoneMin; empty means "fixed timezoneMin offset" (stock behaviour).
   String tz          = "AEST-10AEDT,M10.1.0,M4.1.0/3";   // Sydney/Melbourne/Canberra
   bool   celsius     = true;
-  bool   hour12      = true;
+  bool   hour12      = false;        // 24 h by default
   bool   mile        = false;
   String lang        = "en";         // the faces' language: "en" or "fr"
   int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Date 4=Simple 5=Forecast 6=Flip
@@ -29,6 +29,7 @@ struct Config {
   bool   nightMode   = true;
   bool   nightAuto   = false;          // dim from sunset to sunrise instead of fixed hours
   int    nightBrightness = 15;       // 0..100
+  int    nightFace   = -1;           // during night mode: this face only; -1 = the rotation
   int    startHour   = 23;           // night start
   int    stopHour    = 7;            // night end
   uint16_t color1 = 0xFD44;          // RGB565 accents: time and hands (amber #FFA826)
@@ -77,6 +78,7 @@ struct Config {
     nightMode   = doc["nightmode"]   | nightMode;
     nightAuto   = doc["nightauto"]   | nightAuto;
     nightBrightness = doc["nightbrightness"] | nightBrightness;
+    nightFace   = doc["nightface"]   | nightFace;
     startHour   = doc["starttime"]   | startHour;
     stopHour    = doc["stoptime"]    | stopHour;
     color1      = doc["color1"]      | color1;
@@ -121,7 +123,7 @@ struct Config {
     doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
     doc["faces"] = faceMask;     doc["facesv"] = 3;
     doc["brightness"] = brightness;
-    doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness;
+    doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness; doc["nightface"] = nightFace;
     doc["starttime"] = startHour; doc["stoptime"] = stopHour;
     doc["color1"] = color1;       doc["color2"] = color2;   doc["color3"] = color3;
     doc["photointerval"] = photoInterval; doc["photoclock"] = photoClock; doc["photooff"] = photoOff; doc["customface"] = customFace;

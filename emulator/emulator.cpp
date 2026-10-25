@@ -67,13 +67,16 @@ void sendHeaders(WiFiClient& c, const char* type, size_t length, const String& e
   c.print("\r\n");
 }
 
-// The host socket takes part of a large buffer per write; keep going until it is all out.
-void writeAll(WiFiClient& c, const uint8_t* p, size_t left) {
+// The host socket takes part of a large buffer per write; keep going until it is all
+// out, for at most 2 s. False when the peer stopped reading (a background browser tab):
+// the caller drops it rather than stall the clock.
+bool writeAll(WiFiClient& c, const uint8_t* p, size_t left) {
   for (uint32_t start = millis(); left && c.connected() && millis() - start < 2000;) {
     size_t sent = c.write(p, left);
     p += sent; left -= sent;
     if (!sent) delay(1);
   }
+  return left == 0;
 }
 
 void sendText(WiFiClient& c, int status, const char* type, const String& body) {
@@ -203,10 +206,10 @@ bool wsSend(WiFiClient& c, int firstRow, int rows) {
   else if (payload < 65536) { head[1] = 126; head[2] = uint8_t(payload >> 8); head[3] = uint8_t(payload); headLen = 4; }
   else { head[1] = 127; for (int i = 0; i < 8; ++i) head[2 + i] = uint8_t(uint64_t(payload) >> (56 - 8 * i)); headLen = 10; }
   uint8_t info[6] = {1, uint8_t(backlightPercent()), uint8_t(firstRow), uint8_t(firstRow >> 8), uint8_t(rows), uint8_t(rows >> 8)};
-  writeAll(c, head, headLen);
-  writeAll(c, info, sizeof(info));
-  writeAll(c, reinterpret_cast<const uint8_t*>(clockDisplay().fb + firstRow * TFT_eSPI::W), size_t(rows) * TFT_eSPI::W * 2);
-  return c.connected();
+  // A half-sent frame would corrupt the stream: a viewer that falls behind is dropped.
+  return writeAll(c, head, headLen) && writeAll(c, info, sizeof(info)) &&
+         writeAll(c, reinterpret_cast<const uint8_t*>(clockDisplay().fb + firstRow * TFT_eSPI::W), size_t(rows) * TFT_eSPI::W * 2) &&
+         c.connected();
 }
 
 void wsPush(bool now = false);
@@ -220,9 +223,10 @@ void wsAccept(WiFiClient& c, const String& key) {
   sha1(reinterpret_cast<const uint8_t*>(accept.c_str()), accept.length(), digest);
   c.print("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
           "Sec-WebSocket-Accept: " + base64::encode(digest, 20, false) + "\r\n\r\n");
+  c.setTimeout(100);           // a stalled viewer costs the clock at most a moment
   wsPush(true);                 // bring the other viewers (and wsSent) up to date first,
-  wsSend(c, 0, TFT_eSPI::H);   // so the newcomer's whole frame is the shared baseline
-  wsClients[slot] = c;
+  if (wsSend(c, 0, TFT_eSPI::H)) wsClients[slot] = c;   // so the newcomer's whole frame is the shared baseline
+  else c.stop();
 }
 
 // Drops viewers that closed (the page sends nothing else), then pushes changed rows.

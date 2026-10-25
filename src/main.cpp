@@ -211,6 +211,8 @@ void centerText(const String& s, int y, uint8_t font, uint16_t color) {
 
 // ---------------------------- Faces and weather schedule --------------------
 uint32_t faceSince = 0;   // when the current face was chosen (rotation timer)
+bool nightNow = false;    // inside the night hours, as of the last minute
+bool nightTile() { return nightNow && cfg.nightFace >= 0 && cfg.nightFace < FACE_COUNT; }
 
 // Moves to the next face: built-in faces by id (enabled for rotation, when rotating,
 // and with something to show), then custom faces by name when that integration is on,
@@ -382,7 +384,7 @@ String configJson() {
   doc["mile"] = cfg.mile;   doc["city"] = cfg.city;       doc["brightness"] = cfg.brightness;
   doc["location"] = cfg.geoFor == cfg.city ? cfg.geoName : "";
   doc["nightmode"] = cfg.nightMode; doc["starttime"] = cfg.startHour; doc["stoptime"] = cfg.stopHour;
-  doc["nightbrightness"] = cfg.nightBrightness; doc["ntp"] = cfg.ntp;
+  doc["nightbrightness"] = cfg.nightBrightness; doc["nightface"] = cfg.nightFace; doc["ntp"] = cfg.ntp;
   doc["timezone"] = cfg.timezoneMin; doc["tz"] = cfg.tz; doc["themeInterval"] = cfg.themeInterval;
   doc["faces"] = cfg.faceMask; doc["nightauto"] = cfg.nightAuto;
   doc["photointerval"] = cfg.photoInterval; doc["photoclock"] = cfg.photoClock;
@@ -417,6 +419,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == "lang")       cfg.lang = val == "fr" ? "fr" : "en";
   else if (key == "nightmode")  cfg.nightMode = (val == "1" || val == "true");
   else if (key == "nightbrightness") cfg.nightBrightness = constrain(val.toInt(), 0, 100);
+  else if (key == "nightface")  cfg.nightFace = constrain(val.toInt(), -1, FACE_COUNT - 1);
   else if (key == "starttime")  cfg.startHour = constrain(val.toInt(), 0, 23);
   else if (key == "stoptime")   cfg.stopHour = constrain(val.toInt(), 0, 23);
   else if (key == "color1")     cfg.color1 = (uint16_t)val.toInt();
@@ -1077,7 +1080,7 @@ void loop() {
     // Debounced and not persisted: a noisy or unfitted GPIO4 must not wear flash.
     if (millis() - lastButton > 300) { lastButton = millis(); advanceFace(false); faceSince = millis(); }
   }
-  if (cfg.themeInterval > 0 && millis() - faceSince > (uint32_t)cfg.themeInterval * 1000) {
+  if (cfg.themeInterval > 0 && !nightTile() && millis() - faceSince > (uint32_t)cfg.themeInterval * 1000) {
     faceSince = millis();
     advanceFace(true);   // in RAM only; the saved face stays the user's choice
   }
@@ -1102,10 +1105,14 @@ void loop() {
     if (timeValid && (t.tm_min != lastBrightMin || brightnessDirty)) {
       brightnessDirty = false;
       lastBrightMin = t.tm_min;
-      setBacklight(backlightOff ? 0 : boosted ? 100 : isNight(t) ? cfg.nightBrightness : cfg.brightness);
+      nightNow = isNight(t);
+      setBacklight(backlightOff ? 0 : boosted ? 100 : nightNow ? cfg.nightBrightness : cfg.brightness);
     }
     if (revealUntil && (int32_t)(millis() - revealUntil) >= 0) { revealUntil = 0; faceInvalidate(); }
-    if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) faceDraw(cfg.theme, t, timeValid);
+    // At night, one face of the user's choice instead of the rotation; a message shown
+    // on purpose (show) still comes through.
+    int shown = nightTile() && cfg.theme != FACE_MESSAGE ? cfg.nightFace : cfg.theme;
+    if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) faceDraw(shown, t, timeValid);
   }
   delay(20);   // faces redraw only what changed, so a short tick is cheap
 }

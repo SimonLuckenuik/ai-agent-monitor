@@ -1419,68 +1419,159 @@ void message(const struct tm& t, bool force) {
   if (customLoaded) renderItems(t, force);
 }
 
-// ---- 3 Date: the day in large type, the time and today's weather below -----------
+// ---- The Big tiles (Date, Big time, Big weather): one thing each, as large as the
+// screen allows, in one style. The fonts stop at 26 px for letters, so the tiles use
+// a monoline sans: each glyph a few round-capped strokes on a 20-unit-high grid,
+// drawn by the path renderer (the same outline style as the icons).
+const char MG_0[] PROGMEM = "M5.5 0a5.5 10 0 1 0 0 20a5.5 10 0 1 0 0-20";
+const char MG_1[] PROGMEM = "M1 4.5L6 0v20";
+const char MG_2[] PROGMEM = "M.6 5A5.2 5 0 0 1 10.6 5.5c0 2.8-2.2 4.6-4.6 6.9L0 20h11";
+const char MG_3[] PROGMEM = "M.5 0h10l-5.2 7.6a6.2 6.2 0 1 1-4.8 9.9";
+const char MG_4[] PROGMEM = "M9 20V0L0 14h12";
+const char MG_5[] PROGMEM = "M10 0H1.5L.8 8.6a6.2 6 0 1 1-.3 8.6";
+const char MG_6[] PROGMEM = "M8.3 0L2.2 9.3M0 14a5.5 6 0 1 0 11 0a5.5 6 0 1 0-11 0";
+const char MG_7[] PROGMEM = "M0 0h11L4 20";
+const char MG_8[] PROGMEM = "M5.5 0a4.5 4.6 0 1 0 0 9.2a4.5 4.6 0 1 0 0-9.2M5.5 9.2a5.5 5.4 0 1 0 0 10.8a5.5 5.4 0 1 0 0-10.8";
+const char MG_9[] PROGMEM = "M2.7 20l6.1-9.3M11 6a5.5 6 0 1 0-11 0a5.5 6 0 1 0 11 0";
+const char MG_MINUS[] PROGMEM = "M0 11h7";
+const char MG_DEG[] PROGMEM = "M0 3a3 3 0 1 0 6 0a3 3 0 1 0-6 0";
+const char MG_SPACE[] PROGMEM = "";
+const char MG_A[] PROGMEM = "M0 20L6.5 0 13 20M2.6 13h7.8";
+const char MG_B[] PROGMEM = "M0 0v20h6a5 5 0 0 0 0-10H0M0 0h5.2a5 5 0 0 1 0 10";
+const char MG_C[] PROGMEM = "M11.4 3.8A6.2 10 0 1 0 11.4 16.2";
+const char MG_D[] PROGMEM = "M0 0v20h3.5a8.5 10 0 0 0 0-20z";
+const char MG_E[] PROGMEM = "M10 0H0v20h10M0 10h8.5";
+const char MG_F[] PROGMEM = "M10 0H0v20M0 10h8.5";
+const char MG_G[] PROGMEM = "M11.6 3.8A6.4 10 0 1 0 12.8 12H7.5";
+const char MG_H[] PROGMEM = "M0 0v20M12 0v20M0 10h12";
+const char MG_I[] PROGMEM = "M0 0v20";
+const char MG_J[] PROGMEM = "M9 0v14a4.5 6 0 0 1-9 0";
+const char MG_K[] PROGMEM = "M0 0v20M11 0L0 12.5M3.6 8.6L11 20";
+const char MG_L[] PROGMEM = "M0 0v20h9";
+const char MG_M[] PROGMEM = "M0 20V0l7.5 13L15 0v20";
+const char MG_N[] PROGMEM = "M0 20V0l12 20V0";
+const char MG_O[] PROGMEM = "M6.5 0a6.5 10 0 1 0 0 20a6.5 10 0 1 0 0-20";
+const char MG_P[] PROGMEM = "M0 20V0h5.5a5.5 5.5 0 0 1 0 11H0";
+const char MG_Q[] PROGMEM = "M6.5 0a6.5 10 0 1 0 0 20a6.5 10 0 1 0 0-20M8.5 14.5l4.5 6";
+const char MG_R[] PROGMEM = "M0 20V0h5.5a5.5 5.5 0 0 1 0 11H0M5.5 11l5.5 9";
+const char MG_S[] PROGMEM = "M10.5 3.2C9.6 1.2 7.8 0 5.5 0 2.6 0 .6 2 .6 4.8c0 6.2 10.4 3.7 10.4 10.3 0 3-2.4 4.9-5.5 4.9-2.7 0-4.6-1.3-5.5-3.6";
+const char MG_T[] PROGMEM = "M0 0h12M6 0v20";
+const char MG_U[] PROGMEM = "M0 0v13.5a6 6.5 0 0 0 12 0V0";
+const char MG_V[] PROGMEM = "M0 0l6.5 20L13 0";
+const char MG_W[] PROGMEM = "M0 0l4.2 20L9 6l4.8 14L18 0";
+const char MG_X[] PROGMEM = "M0 0l12 20M12 0L0 20";
+const char MG_Y[] PROGMEM = "M0 0l6 10 6-10M6 10v10";
+const char MG_Z[] PROGMEM = "M0 0h11L0 20h11";
+struct MonoGlyph { char c; uint8_t w; const char* path; };
+const MonoGlyph MONO[] = {
+    {'0', 11, MG_0}, {'1', 7, MG_1}, {'2', 11, MG_2}, {'3', 11, MG_3}, {'4', 12, MG_4},
+    {'5', 11, MG_5}, {'6', 11, MG_6}, {'7', 11, MG_7}, {'8', 11, MG_8}, {'9', 11, MG_9},
+    {'-', 7, MG_MINUS}, {'*', 6, MG_DEG}, {' ', 5, MG_SPACE},
+    {'A', 13, MG_A}, {'B', 11, MG_B}, {'C', 12, MG_C}, {'D', 12, MG_D}, {'E', 10, MG_E},
+    {'F', 10, MG_F}, {'G', 13, MG_G}, {'H', 12, MG_H}, {'I', 0, MG_I}, {'J', 9, MG_J},
+    {'K', 11, MG_K}, {'L', 9, MG_L}, {'M', 15, MG_M}, {'N', 12, MG_N}, {'O', 13, MG_O},
+    {'P', 11, MG_P}, {'Q', 13, MG_Q}, {'R', 11, MG_R}, {'S', 11, MG_S}, {'T', 12, MG_T},
+    {'U', 12, MG_U}, {'V', 13, MG_V}, {'W', 18, MG_W}, {'X', 12, MG_X}, {'Y', 12, MG_Y},
+    {'Z', 11, MG_Z}};
+constexpr float MONO_H = 20, MONO_GAP = 3.2f, MONO_STROKE = 2.3f;   // grid units ('*' is the degree sign)
+
+const MonoGlyph* monoGlyph(char c) {
+  c = toupper((unsigned char)c);
+  for (const MonoGlyph& g : MONO) if (g.c == c) return &g;
+  return nullptr;
+}
+
+float monoWidth(const char* s) {
+  float w = 0;
+  int n = 0;
+  for (; *s; ++s) if (const MonoGlyph* g = monoGlyph(*s)) { w += g->w; ++n; }
+  return n ? w + MONO_GAP * (n - 1) : 0;
+}
+
+// Draws s centred on cx in the box from y to y+maxH, as large as maxW and maxH allow.
+void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) {
+  float k = std::min(maxH / (MONO_H + MONO_STROKE), maxW / (monoWidth(s) + MONO_STROKE));
+  float x = cx - monoWidth(s) * k / 2, top = y + (maxH - MONO_H * k) / 2;
+  Paint paint;
+  paint.c[0] = color;
+  for (; *s; ++s) {
+    const MonoGlyph* g = monoGlyph(*s);
+    if (!g) continue;
+    String d = pgmString(g->path);
+    if (d.length()) {
+      Poly P;
+      if (!P.ok()) return;
+      P.sx = P.sy = k; P.ox = x; P.oy = top;
+      parsePath(P, d.c_str());
+      P.close();
+      strokePoly(P, MONO_STROKE * k, paint, BG);
+    }
+    x += (g->w + MONO_GAP) * k;
+  }
+}
+
+// Weather icons in the same outline style, on a 24x24 grid, for OpenWeatherMap codes.
+const char WI_SUN[] PROGMEM = "M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41";
+const char WI_MOON[] PROGMEM = "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z";
+const char WI_CLOUD[] PROGMEM = "M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z";
+const char WI_CLOUD_SUN[] PROGMEM = "M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41M15.95 12.65a4 4 0 0 0-5.93-4.13M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6z";
+const char WI_CLOUD_MOON[] PROGMEM = "M13 16a3 3 0 1 1 0 6H7a5 5 0 1 1 4.9-6zM10.1 9A6 6 0 0 1 16 4a4.24 4.24 0 0 0 6 6 6 6 0 0 1-3 5.2";
+#define WI_CLOUD_TOP "M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"
+const char WI_DRIZZLE[] PROGMEM = WI_CLOUD_TOP "M8 19v1M8 14v1M16 19v1M16 14v1M12 21v1M12 16v1";
+const char WI_RAIN[] PROGMEM = WI_CLOUD_TOP "M16 14v6M8 14v6M12 16v6";
+const char WI_STORM[] PROGMEM = "M6 16.33A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.97M13 12l-3 5h4l-3 5";
+const char WI_SNOW[] PROGMEM = WI_CLOUD_TOP "M8 15h.01M8 19h.01M12 17h.01M12 21h.01M16 15h.01M16 19h.01";
+const char WI_FOG[] PROGMEM = WI_CLOUD_TOP "M16 17H7M17 21H9";
+
+const char* weatherOutline(const String& icon) {
+  bool night = icon.endsWith("n");
+  String c = icon.substring(0, 2);
+  if (c == "01") return night ? WI_MOON : WI_SUN;
+  if (c == "02") return night ? WI_CLOUD_MOON : WI_CLOUD_SUN;
+  if (c == "09") return WI_DRIZZLE;
+  if (c == "10") return WI_RAIN;
+  if (c == "11") return WI_STORM;
+  if (c == "13") return WI_SNOW;
+  if (c == "50") return WI_FOG;
+  return WI_CLOUD;
+}
+
+// The tiles' layout: the main element white, the others in the accent colour.
+constexpr int TILE_W = 226;
+
+// ---- 3 Date: the day of the week, the day, the month
 void bigDate(const struct tm& t, bool force) {
-  static int day = -1, min = -1;
-  static uint32_t wxSeen = 0;
-  if (force || t.tm_yday != day) {
-    if (!force) D().fillRect(0, 0, 240, 186, BG);
-    String dow = dayLong(t.tm_wday); dow.toUpperCase();
-    text(dow.c_str(), 120, 30, 4, cfg.color2, BG, MC_DATUM, 236);
-    char n[4]; snprintf(n, sizeof(n), "%d", t.tm_mday);
-    text(n, 120, 98, 8, cfg.color1, BG, MC_DATUM, 200);
-    char my[24]; snprintf(my, sizeof(my), "%s %d", monthLong(t.tm_mon), t.tm_year + 1900);
-    text(my, 120, 160, 4, WHITE, BG, MC_DATUM, 236);
-    day = t.tm_yday; min = -1; wxSeen = 0;
-  }
-  if (t.tm_min != min) {
-    char tb[12]; smallTime(tb, sizeof(tb), t);
-    text(tb, 24, 214, 4, MUTED, BG, ML_DATUM, 100);
-    min = t.tm_min;
-  }
-  if (wx.valid && wx.version != wxSeen) {
-    D().fillRect(124, 190, 116, 50, BG);
-    weatherIcon(146, 214, 34, wx.icon, BG);
-    char hl[16]; snprintf(hl, sizeof(hl), "%d/%d", displayTemp(wx.tempMax), displayTemp(wx.tempMin));
-    text(hl, 222, 214, 4, cfg.color3, BG, MR_DATUM, 70);
-    wxSeen = wx.version;
-  }
+  static int day = -1;
+  if (!force && t.tm_yday == day) return;
+  if (!force) D().fillScreen(BG);
+  day = t.tm_yday;
+  monoText(dayLong(t.tm_wday), 120, 6, TILE_W, 44, cfg.color1);
+  char n[4]; snprintf(n, sizeof(n), "%d", t.tm_mday);
+  monoText(n, 120, 56, TILE_W, 128, WHITE);
+  monoText(monthLong(t.tm_mon), 120, 190, TILE_W, 44, cfg.color1);
 }
 
-// ---- 7 Big time: hours above minutes, each row nearly half the screen high. The
-// fonts stop at 75 px, so the digits are drawn as rounded segments; a change redraws
-// only the segments of that digit.
-void segDigit(int x, int y, int w, int h, int d, uint16_t on) {
-  static const uint8_t SEGS[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
-  uint8_t bits = d >= 0 && d <= 9 ? SEGS[d] : 0;   // a negative digit is blank
-  int t = w / 6, r = t / 2, mid = y + h / 2, g = 2;   // thickness, radius, middle, gap
-  int vh = h / 2 - r - 2 * g;                          // a vertical segment's height
-  struct { int x, y, w, h; } seg[7] = {
-      {x + r + g, y, w - t - 2 * g, t},                // a
-      {x + w - t, y + r + g, t, vh},                   // b
-      {x + w - t, mid + g, t, vh},                     // c
-      {x + r + g, y + h - t, w - t - 2 * g, t},        // d
-      {x, mid + g, t, vh},                             // e
-      {x, y + r + g, t, vh},                           // f
-      {x + r + g, mid - r, w - t - 2 * g, t}};         // g
-  for (int pass = 0; pass < 2; ++pass)   // off segments first, so they never cut into lit ones
-    for (int i = 0; i < 7; ++i)
-      if ((bits >> i & 1) == pass) D().fillSmoothRoundRect(seg[i].x, seg[i].y, seg[i].w, seg[i].h, r, pass ? on : BG, BG);
-}
-
+// ---- 7 Big time: the hours, the minutes below
 void bigTimeFace(const struct tm& t, bool force) {
-  static int shown[4] = {-2, -2, -2, -2};
-  if (force) for (int& s : shown) s = -2;
+  static int hour = -1, minute = -1;
+  if (force) hour = minute = -1;
   int h = clockHour(t);
-  int digits[4] = {cfg.hour12 && h < 10 ? -1 : h / 10, h % 10, t.tm_min / 10, t.tm_min % 10};
-  for (int i = 0; i < 4; ++i) {
-    if (digits[i] == shown[i]) continue;
-    segDigit(i % 2 ? 128 : 14, i < 2 ? 6 : 126, 98, 108, digits[i], i < 2 ? WHITE : cfg.color1);
-    shown[i] = digits[i];
+  char b[4];
+  if (h != hour) {
+    D().fillRect(0, 0, SCR_W, 120, BG);
+    snprintf(b, sizeof(b), cfg.hour12 ? "%d" : "%02d", h);
+    monoText(b, 120, 8, TILE_W, 106, WHITE);
+    hour = h;
+  }
+  if (t.tm_min != minute) {
+    D().fillRect(0, 120, SCR_W, 120, BG);
+    snprintf(b, sizeof(b), "%02d", t.tm_min);
+    monoText(b, 120, 126, TILE_W, 106, cfg.color1);
+    minute = t.tm_min;
   }
 }
 
-// ---- 8 Big weather: the current temperature in the largest digits, with its icon --
+// ---- 8 Big weather: the conditions' icon, the temperature below
 void bigWeather(const struct tm& t, bool force) {
   static uint32_t seen = 0;
   if (!wx.valid) {
@@ -1490,13 +1581,17 @@ void bigWeather(const struct tm& t, bool force) {
   if (!force && seen == wx.version) return;
   if (!force) D().fillScreen(BG);
   seen = wx.version;
-  weatherIcon(120, 62, 96, wx.icon, BG);
-  temp(120, 148, displayTemp(wx.temp), 8, WHITE, BG);
-  String desc = wxDesc(); if (desc.length()) desc.setCharAt(0, toupper(desc[0]));
-  text(desc.c_str(), 120, 200, 4, cfg.color3, BG, MC_DATUM, 236);
-  char fl[32];
-  snprintf(fl, sizeof(fl), "%s %d   %d/%d", tr("Feels", "Ressenti"), displayTemp(wx.feels), displayTemp(wx.tempMax), displayTemp(wx.tempMin));
-  text(fl, 120, 226, 2, MUTED, BG, MC_DATUM, 236);
+  Poly P;
+  if (P.ok()) {   // the icon fills the top half
+    P.sx = P.sy = 124 / 24.0f; P.ox = 120 - 62; P.oy = 0;   // the grid's margins stay empty
+    parsePath(P, pgmString(weatherOutline(wx.icon)).c_str());
+    P.close();
+    Paint paint;
+    paint.c[0] = cfg.color1;
+    strokePoly(P, 2 * P.sx, paint, BG);
+  }
+  char b[8]; snprintf(b, sizeof(b), "%d*", displayTemp(wx.temp));   // '*' draws the degree sign
+  monoText(b, 120, 126, TILE_W, 106, WHITE);
 }
 
 // ---- 9 Agents: every active agent message on one screen --------------------------

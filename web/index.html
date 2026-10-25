@@ -195,6 +195,10 @@ a{color:var(--accent)}
     <div class="row" id="sunRow"><span class="lbl">Today<span class="hint" id="sunTimes">Needs a weather location</span></span></div>
     <div class="row hoursRow"><span class="lbl">From</span><select class="sm hours" id="starttime" data-key="starttime"></select></div>
     <div class="row hoursRow"><span class="lbl">Until</span><select class="sm hours" id="stoptime" data-key="stoptime"></select></div>
+    <div class="row"><span class="lbl">At night show<span class="hint">One face all night, instead of the rotation</span></span>
+      <select class="sm" id="nightface" data-key="nightface"><option value="-1">The rotation</option><option value="7">Big time</option>
+        <option value="3">Date</option><option value="8">Big weather</option><option value="0">Classic</option><option value="4">Simple</option>
+        <option value="6">Flip</option><option value="9">Agents</option></select></div>
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
   </section>
@@ -464,7 +468,7 @@ function renderThemes(){
 
 function fillConfig(c){
   cfg=c;renderThemes();
-  for(const k of ['themeInterval','brightness','nightbrightness','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
+  for(const k of ['themeInterval','brightness','nightbrightness','nightface','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
   if(![...$('themeInterval').options].some(o=>o.value==String(c.themeInterval))){const o=new Option(c.themeInterval+' s',c.themeInterval);$('themeInterval').add(o);$('themeInterval').value=c.themeInterval}
   $('nightmode').checked=!!c.nightmode;$('photoclock').checked=c.photoclock!==false;
   ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
