@@ -116,6 +116,8 @@ static void testFields() {
   vars = {{"state", "warn"}, {"n", "42"}};
   CHECK_STR(resolve("{state}-{n}", t), "warn-42");
   CHECK_STR(resolve("{nope}!", t), "!");
+  CHECK_STR(resolve("{nope|waiting}", t), "waiting");   // the fallback while empty
+  CHECK_STR(resolve("{state|none}", t), "warn");
   CHECK_STR(resolve("{ss}", t), "07");
   CHECK_STR(resolve("{not a placeholder because it is too long}", t), "{not a placeholder because it is too long}");
 

@@ -158,7 +158,9 @@ weather stay current without the face being sent again.
 | `{sunrise}` `{sunset}` | `05:41` `18:12` | | | |
 
 Any other name is a **variable** set with `/api/faces/vars`, or over MQTT. An unknown
-variable is empty. Weather placeholders show `--` until the first weather update.
+variable is empty; `{name|fallback}` shows the fallback instead, for example
+`{msg|Waiting for an agent}` until `msg` is pushed (variables are lost on restart).
+Weather placeholders show `--` until the first weather update.
 
 **Number and colour fields** (`x`, `y`, `w`, `r`, `value`, `rotate`, `color`, …) may
 be a string that, after the placeholders, is an **expression**:
@@ -236,7 +238,7 @@ endpoints, which that integration detects as "SD_PRO firmware":
 | Path | Does |
 |---|---|
 | `GET /theme/list` | `{"themes":[{"id":0,"name":"Classic","enabled":true},...],"interval":10}` |
-| `GET /theme/toggle?id=<0-6>&state=<0/1>` | Face in or out of rotation |
+| `GET /theme/toggle?id=<0-9>&state=<0/1>` | Face in or out of rotation |
 | `GET /theme/interval?val=<s>` | Rotation interval |
 | `GET /photo/list` | `{"files":[{"name","size","enabled"}],"total","used","interval"}` |
 | `POST /photo/upload` | Multipart JPEG upload (any field name), up to 200 KB |

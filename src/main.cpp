@@ -409,7 +409,7 @@ String applySetting(const String& key, const String& val) {
     if (val.length() > 63) return F("TZ rule too long");
     cfg.tz = val; timeChanged = true;
   }
-  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); if (cfg.theme == FACE_DIAL) cfg.theme = FACE_CLASSIC; faceSince = millis(); }
+  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); }
   else if (key == "themeInterval") cfg.themeInterval = constrain(val.toInt(), 0, 3600);
   else if (key == "brightness") { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
   else if (key == "celsius")    cfg.celsius = (val == "1" || val == "true");

@@ -70,7 +70,8 @@ separately, so it is saved once and then updated with values only.
    python scripts/clock.py show status
    ```
 4. **Update with values only** (they live in RAM: fast, and no flash wear). Re-push a
-   face only when its layout changes.
+   face only when its layout changes. Values are lost on restart: write
+   `{name|fallback}` so a face still reads sensibly before they are pushed again.
 5. **Delete it** when done (`python scripts/clock.py delete status`): saved custom
    faces stay in the face rotation until deleted.
 

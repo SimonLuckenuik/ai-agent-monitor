@@ -70,7 +70,9 @@ weather stay current without the face being sent again.
 | `{sunrise}` `{sunset}` | `05:41` `18:12` | | | |
 
 Any other name is a **variable** set with `/api/faces/vars`, or over MQTT. An unknown
-variable is empty. Weather placeholders show `--` until the first weather update.
+variable is empty; `{name|fallback}` shows the fallback instead, for example
+`{msg|Waiting for an agent}` until `msg` is pushed (variables are lost on restart).
+Weather placeholders show `--` until the first weather update.
 
 **Number and colour fields** (`x`, `y`, `w`, `r`, `value`, `rotate`, `color`, …) may
 be a string that, after the placeholders, is an **expression**:

@@ -637,12 +637,18 @@ String messageValue(const String& key) {
   return messageField(slot, key);
 }
 
+// {name} is replaced by its value; {name|fallback} uses the fallback while the value
+// is empty (a variable not pushed yet, for instance after a restart).
 String resolve(const char* tpl, const struct tm& t) {
   String out;
   for (const char* p = tpl; *p; ++p) {
     const char* end = *p == '{' ? strchr(p, '}') : nullptr;
-    if (!end || end - p > 16) { out += *p; continue; }
-    out += fieldValue(String(p + 1).substring(0, end - p - 1), t);
+    const char* bar = end ? (const char*)memchr(p, '|', end - p) : nullptr;
+    const char* keyEnd = bar ? bar : end;
+    if (!end || keyEnd - p > 16 || end - p > 96) { out += *p; continue; }
+    String value = fieldValue(String(p + 1).substring(0, keyEnd - p - 1), t);
+    if (value.isEmpty() && bar) value = String(bar + 1).substring(0, end - bar - 1);
+    out += value;
     p = end;
   }
   return out;
@@ -1413,6 +1419,131 @@ void message(const struct tm& t, bool force) {
   if (customLoaded) renderItems(t, force);
 }
 
+// ---- 3 Date: the day in large type, the time and today's weather below -----------
+void bigDate(const struct tm& t, bool force) {
+  static int day = -1, min = -1;
+  static uint32_t wxSeen = 0;
+  if (force || t.tm_yday != day) {
+    if (!force) D().fillRect(0, 0, 240, 186, BG);
+    String dow = dayLong(t.tm_wday); dow.toUpperCase();
+    text(dow.c_str(), 120, 30, 4, cfg.color2, BG, MC_DATUM, 236);
+    char n[4]; snprintf(n, sizeof(n), "%d", t.tm_mday);
+    text(n, 120, 98, 8, cfg.color1, BG, MC_DATUM, 200);
+    char my[24]; snprintf(my, sizeof(my), "%s %d", monthLong(t.tm_mon), t.tm_year + 1900);
+    text(my, 120, 160, 4, WHITE, BG, MC_DATUM, 236);
+    day = t.tm_yday; min = -1; wxSeen = 0;
+  }
+  if (t.tm_min != min) {
+    char tb[12]; smallTime(tb, sizeof(tb), t);
+    text(tb, 24, 214, 4, MUTED, BG, ML_DATUM, 100);
+    min = t.tm_min;
+  }
+  if (wx.valid && wx.version != wxSeen) {
+    D().fillRect(124, 190, 116, 50, BG);
+    weatherIcon(146, 214, 34, wx.icon, BG);
+    char hl[16]; snprintf(hl, sizeof(hl), "%d/%d", displayTemp(wx.tempMax), displayTemp(wx.tempMin));
+    text(hl, 222, 214, 4, cfg.color3, BG, MR_DATUM, 70);
+    wxSeen = wx.version;
+  }
+}
+
+// ---- 7 Big time: hours above minutes, each row nearly half the screen high. The
+// fonts stop at 75 px, so the digits are drawn as rounded segments; a change redraws
+// only the segments of that digit.
+void segDigit(int x, int y, int w, int h, int d, uint16_t on) {
+  static const uint8_t SEGS[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
+  uint8_t bits = d >= 0 && d <= 9 ? SEGS[d] : 0;   // a negative digit is blank
+  int t = w / 6, r = t / 2, mid = y + h / 2, g = 2;   // thickness, radius, middle, gap
+  int vh = h / 2 - r - 2 * g;                          // a vertical segment's height
+  struct { int x, y, w, h; } seg[7] = {
+      {x + r + g, y, w - t - 2 * g, t},                // a
+      {x + w - t, y + r + g, t, vh},                   // b
+      {x + w - t, mid + g, t, vh},                     // c
+      {x + r + g, y + h - t, w - t - 2 * g, t},        // d
+      {x, mid + g, t, vh},                             // e
+      {x, y + r + g, t, vh},                           // f
+      {x + r + g, mid - r, w - t - 2 * g, t}};         // g
+  for (int pass = 0; pass < 2; ++pass)   // off segments first, so they never cut into lit ones
+    for (int i = 0; i < 7; ++i)
+      if ((bits >> i & 1) == pass) D().fillSmoothRoundRect(seg[i].x, seg[i].y, seg[i].w, seg[i].h, r, pass ? on : BG, BG);
+}
+
+void bigTimeFace(const struct tm& t, bool force) {
+  static int shown[4] = {-2, -2, -2, -2};
+  if (force) for (int& s : shown) s = -2;
+  int h = clockHour(t);
+  int digits[4] = {cfg.hour12 && h < 10 ? -1 : h / 10, h % 10, t.tm_min / 10, t.tm_min % 10};
+  for (int i = 0; i < 4; ++i) {
+    if (digits[i] == shown[i]) continue;
+    segDigit(i % 2 ? 128 : 14, i < 2 ? 6 : 126, 98, 108, digits[i], i < 2 ? WHITE : cfg.color1);
+    shown[i] = digits[i];
+  }
+}
+
+// ---- 8 Big weather: the current temperature in the largest digits, with its icon --
+void bigWeather(const struct tm& t, bool force) {
+  static uint32_t seen = 0;
+  if (!wx.valid) {
+    if (force) weatherPlaceholder(tr("No weather yet", "Pas encore de meteo"));
+    return;
+  }
+  if (!force && seen == wx.version) return;
+  if (!force) D().fillScreen(BG);
+  seen = wx.version;
+  weatherIcon(120, 62, 96, wx.icon, BG);
+  temp(120, 148, displayTemp(wx.temp), 8, WHITE, BG);
+  String desc = wxDesc(); if (desc.length()) desc.setCharAt(0, toupper(desc[0]));
+  text(desc.c_str(), 120, 200, 4, cfg.color3, BG, MC_DATUM, 236);
+  char fl[32];
+  snprintf(fl, sizeof(fl), "%s %d   %d/%d", tr("Feels", "Ressenti"), displayTemp(wx.feels), displayTemp(wx.tempMax), displayTemp(wx.tempMin));
+  text(fl, 120, 226, 2, MUTED, BG, MC_DATUM, 236);
+}
+
+// ---- 9 Agents: every active agent message on one screen --------------------------
+// Text cut to a width, with "..." when it does not fit.
+String fit(String s, int width, uint8_t font) {
+  if (D().textWidth(s, font) <= width) return s;
+  while (s.length() > 1 && D().textWidth(s + "...", font) > width) s.remove(s.length() - 1);
+  return s + "...";
+}
+
+void agents(const struct tm& t, bool force) {
+  static uint32_t seen = 0;
+  static int min = -1;
+  if (!force && seen == messageVersion() && min == t.tm_min) return;   // minutes left change each minute
+  seen = messageVersion(); min = t.tm_min;
+  D().fillScreen(BG);
+  char tb[12]; smallTime(tb, sizeof(tb), t);
+  text(tb, 16, 20, 4, WHITE, BG, ML_DATUM);
+  text("AGENTS", 224, 20, 2, MUTED, BG, MR_DATUM);
+  int row = 0;
+  for (int slot = 0; slot < MESSAGE_MAX; ++slot) {
+    if (!messageActive(slot)) continue;
+    int y = 44 + row * 49;
+    D().fillSmoothRoundRect(6, y, 228, 45, 8, PANEL, BG);
+    String icon = messageField(slot, "icon"), color = messageField(slot, "color");
+    const MessageIcon* def = &MESSAGE_ICON_SET[0];
+    for (const MessageIcon& m : MESSAGE_ICON_SET) if (icon == m.name) def = &m;
+    if (color.isEmpty()) color = def->color;
+    uint16_t c = hex565(color.c_str(), WHITE);
+    JsonDocument item;   // the icon, drawn as a path item
+    item["x"] = 26; item["y"] = y + 22; item["size"] = 28; item["align"] = "mc";
+    item["stroke"] = color; item["sw"] = 2; item["d"] = pgmString(def->path);
+    drawPath(item.as<JsonObjectConst>(), t, PANEL);
+    long left = messageField(slot, "ttl").toInt();
+    char tl[8];
+    snprintf(tl, sizeof(tl), left >= 3600 ? "%ldh" : "%ldm", left >= 3600 ? left / 3600 : (left + 59) / 60);
+    text(tl, 226, y + 13, 2, MUTED, PANEL, MR_DATUM);
+    text(fit(messageField(slot, "title"), 150, 2).c_str(), 48, y + 13, 2, c, PANEL, ML_DATUM);
+    text(fit(messageField(slot, "text"), 176, 2).c_str(), 48, y + 32, 2, CLOUD, PANEL, ML_DATUM);
+    ++row;
+  }
+  if (!row) {
+    text(tr("All quiet", "Tout est calme"), 120, 120, 4, MUTED, BG, MC_DATUM);
+    text(tr("No agent messages", "Aucun message"), 120, 150, 2, DIM, BG, MC_DATUM);
+  }
+}
+
 }  // namespace
 
 // ---- Public -----------------------------------------------------------------------
@@ -1433,7 +1564,8 @@ bool faceAvailable(int face) {
     case FACE_WEATHER:  return wx.valid;
     case FACE_FORECAST: return fc.valid;
     case FACE_PHOTO:    return photoCount() > 0;
-    case FACE_DIAL:     return false;   // removed; the id stays reserved
+    case FACE_BIGWEATHER: return wx.valid;
+    case FACE_AGENTS: for (int s = 0; s < MESSAGE_MAX; ++s) if (messageActive(s)) return true; return false;
     case FACE_CUSTOM:   return cfg.facesApi && customFaceExists(cfg.customFace);
     case FACE_MESSAGE:  return messageActive(messageShowing());
     default:            return face >= 0 && face < FACE_COUNT;
@@ -1455,6 +1587,10 @@ void faceDraw(int face, const struct tm& t, bool timeValid) {
     case FACE_SIMPLE:   simple(t, force);   break;
     case FACE_FORECAST: forecast(t, force); break;
     case FACE_FLIP:     flip(t, force);     break;
+    case FACE_DATE:     bigDate(t, force);  break;
+    case FACE_BIGTIME:  bigTimeFace(t, force); break;
+    case FACE_BIGWEATHER: bigWeather(t, force); break;
+    case FACE_AGENTS:   agents(t, force);   break;
     case FACE_CUSTOM:   custom(t, force);   break;
     case FACE_MESSAGE:  message(t, force);  break;
     default:            classic(t, force);  break;

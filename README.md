@@ -10,9 +10,10 @@ are needed.
 
 ## Features
 
-- **Six clock faces:** Classic, Weather, Forecast, Flip (with a fold
-  animation), Simple, and Photo. Faces rotate automatically if you want them to, and
-  skip any that have nothing to show yet.
+- **Ten clock faces:** Classic, Weather, Forecast, Flip (with a fold
+  animation), Simple, Photo, Date, Big time, Big weather and the Agents board (every
+  active agent message at a glance). Faces rotate automatically if you want them to,
+  and skip any that have nothing to show yet.
 - **Weather and a 4-day forecast with no API key**, from
   [Open-Meteo](https://open-meteo.com/). Type a city ("Sydney" or "Sydney, AU").
 - **Correct local time all year**: time zones include daylight-saving rules.

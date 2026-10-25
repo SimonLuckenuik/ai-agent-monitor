@@ -22,9 +22,9 @@ struct Config {
   bool   hour12      = true;
   bool   mile        = false;
   String lang        = "en";         // the faces' language: "en" or "fr"
-  int    theme       = 0;            // 0=Classic 1=Weather 2=Photo (3 reserved) 4=Simple 5=Forecast 6=Flip
+  int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Date 4=Simple 5=Forecast 6=Flip
   int    themeInterval = 10;         // seconds; 0 = no rotation
-  int    faceMask    = 0x7f;         // bit n set = face n takes part in rotation
+  int    faceMask    = 0x3ff;        // bit n set = face n takes part in rotation
   int    brightness  = 60;           // 0..100
   bool   nightMode   = true;
   bool   nightAuto   = false;          // dim from sunset to sunrise instead of fixed hours
@@ -86,6 +86,16 @@ struct Config {
     photoClock  = doc["photoclock"]  | photoClock;
     photoOff    = doc["photooff"]    | photoOff;
     customFace  = doc["customface"]  | customFace;
+    // Face ids moved: 1.3.x had custom faces at 7 (facesv 1); 1.4 development builds
+    // had the Agents board at 7 and custom faces at 8 (facesv 2). The new faces join
+    // the rotation.
+    int facesv = doc["facesv"] | 1;
+    if (facesv < 3) {
+      if (facesv < 2 && theme == 7) theme = 10;
+      else if (facesv == 2 && theme == 7) theme = 9;
+      else if (facesv == 2 && theme == 8) theme = 10;
+      faceMask = (faceMask & 0x7f) | 0x380;
+    }
     facesApi    = doc["facesapi"]    | facesApi;
     haCompat    = doc["hacompat"]    | haCompat;
     mqttOn      = doc["mqtt"]        | mqttOn;
@@ -109,7 +119,7 @@ struct Config {
     doc["tz"] = tz;
     doc["celsius"] = celsius;     doc["hour12"] = hour12;   doc["mile"] = mile;   doc["lang"] = lang;
     doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
-    doc["faces"] = faceMask;
+    doc["faces"] = faceMask;     doc["facesv"] = 3;
     doc["brightness"] = brightness;
     doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness;
     doc["starttime"] = startHour; doc["stoptime"] = stopHour;

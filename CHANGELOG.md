@@ -8,6 +8,16 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- Faces: **Date** (id 3: the day of the week, the day in large type, the month and
+  year, the time and today's weather), **Big time** (7: hours above minutes, the full
+  height of the screen), **Big weather** (8: the current temperature in the largest
+  digits, its icon, the description, feels-like and today's high/low) and the
+  **Agents board** (9, last: every active agent message with its icon, title, first
+  line and time left; "All quiet" when there are none, in the rotation only while
+  messages are active). Custom faces move from id 7 to 10 and messages to 11; a saved
+  configuration is migrated, and the new faces join an existing rotation.
+- Custom faces: `{name|fallback}` shows the fallback while a value is empty.
+
 - Agent messages: `POST /api/message` (and MQTT `<base>/message`) puts a title, a
   message, one of 8 built-in icons (info, success, warning, error, waiting, running,
   bell, done) and an optional progress bar on the built-in Message face. No sign-in.
@@ -34,8 +44,7 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Removed
 
-- The Dial face. Its id (3) stays reserved so the other faces keep their stock
-  numbers; a clock set to it shows Classic.
+- The Dial face. Its id (3) now holds the Date face.
 
 ### Changed
 
