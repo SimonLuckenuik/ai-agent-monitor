@@ -549,7 +549,7 @@ async function connect(){
   const ssid=$('ssid').value.trim(),password=$('pass').value;
   if(!ssid){toast('Choose a network',1);return}
   // No confirm(): phone captive-portal windows suppress it (returns false), so the button did nothing.
-  try{await req('/connect',form({ssid,password}));waitForReboot('Connecting to '+ssid,'If the network is different, reconnect this device to it, then open '+(st.mdns||'its address (router client list: '+(st.host||'smartclock-…')+')')+'.')}
+  try{await req('/connect',form({ssid,password}));waitForReboot('Connecting to '+ssid,'If the network is different, reconnect this device to it, then open '+(st.mdns||'its address (router client list: '+(st.host||'agentmonitor-…')+')')+'.')}
   catch(e){toast(e.message||'Could not save WiFi',1)}}
 
 async function restart(){if(!confirm('Restart the clock?'))return;try{await fetch('/restart',{method:'POST'})}catch(e){}waitForReboot('Restarting')}

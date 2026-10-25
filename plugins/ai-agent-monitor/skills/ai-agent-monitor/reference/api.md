@@ -60,7 +60,7 @@ KB`, `At most 32 items`, `At most 12 custom faces`, `name: 1-20 of a-z 0-9 _ -`)
 
 When the user has MQTT set up on the clock (settings page → Integrations), the same
 works through their broker, with the topic base shown there (default
-`smartclock-XXXXXX`):
+`agentmonitor-XXXXXX`):
 
 - `<base>/custom/<name>`: a face JSON (empty payload deletes). Payloads are limited to
   about 1.5 KB.

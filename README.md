@@ -79,9 +79,9 @@ this firmware is not for your clock.
 6. The clock shows its new address when it connects. Open that address in a browser to
    choose faces, set your city and time zone, and add photos.
 
-The clock names itself `smartclock-XXXXXX` (unique per clock) in your router's list of
+The clock names itself `agentmonitor-XXXXXX` (unique per clock) in your router's list of
 devices. A build with the `esp12e_mdns` environment also answers at
-`http://smartclock-XXXXXX.local/` (mDNS, same network only); the default build leaves
+`http://agentmonitor-XXXXXX.local/` (mDNS, same network only); the default build leaves
 mDNS out to make room in the update budget.
 
 Later updates are installed from the **Firmware update** card on our settings page. It

@@ -11,7 +11,7 @@ each **off by default**; turn them on in the settings page under **Integrations*
 | [MQTT](#mqtt) | Home Assistant discovery; faces and variables over MQTT | Your MQTT broker |
 
 The clock is at `http://<clock>/`, where `<clock>` is its IP address (or
-`smartclock-XXXXXX.local` on a build with mDNS).
+`agentmonitor-XXXXXX.local` on a build with mDNS).
 
 ## Agent messages
 
@@ -255,7 +255,7 @@ card (or `/api/set?key=photoclock&value=0` while signed in).
 ## MQTT
 
 Set the broker, port, optional username and password, and a topic base (default:
-the clock's hostname, `smartclock-XXXXXX`). The clock connects when it is on WiFi,
+the clock's hostname, `agentmonitor-XXXXXX`). The clock connects when it is on WiFi,
 retries every 30 s, and announces itself to Home Assistant through **MQTT
 discovery** (prefix `homeassistant/`):
 
@@ -286,6 +286,6 @@ changes:
 ```yaml
 action: mqtt.publish
 data:
-  topic: smartclock-XXXXXX/vars
+  topic: agentmonitor-XXXXXX/vars
   payload: '{"solar": "{{ states(''sensor.solar_power'') }}", "pct": {{ states(''sensor.battery'') | int }}}'
 ```

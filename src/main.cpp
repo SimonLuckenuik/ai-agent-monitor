@@ -54,11 +54,11 @@ Config cfg;
 #ifndef DEFAULT_WIFI_PASS
 #define DEFAULT_WIFI_PASS ""
 #endif
-// "smartclock-1a2b3c": unique per unit, used for mDNS and as the DHCP hostname so
+// "agentmonitor-1a2b3c": unique per unit, used for mDNS and as the DHCP hostname so
 // the router can list the clock by name (mDNS does not cross subnets).
 String deviceHost() {
-  char name[20];
-  snprintf(name, sizeof(name), "smartclock-%06x", (unsigned)(ESP.getChipId() & 0xffffff));
+  char name[24];
+  snprintf(name, sizeof(name), "agentmonitor-%06x", (unsigned)(ESP.getChipId() & 0xffffff));
   return name;
 }
 

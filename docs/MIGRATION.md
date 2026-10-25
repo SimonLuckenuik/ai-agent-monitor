@@ -41,9 +41,9 @@ starts its embedded web server before any storage or display initialization. The
 up in every mode, alongside home WiFi. No button is needed to reach it. While the saved
 network is missing, the STA side searches in 30 s windows every 5 minutes, because
 continuous searching makes the ESP8266 hop channels and drop AP clients. On the LAN the
-clock's DHCP hostname is **smartclock-XXXXXX**, where XXXXXX is from the chip id, so
+clock's DHCP hostname is **agentmonitor-XXXXXX**, where XXXXXX is from the chip id, so
 the router's client list shows it. Builds with mDNS (`pio run -e esp12e_mdns`) also
-answer at **http://smartclock-XXXXXX.local/**, from the same subnet only.
+answer at **http://agentmonitor-XXXXXX.local/**, from the same subnet only.
 
 The unit has no usable button, so GPIO4 is never read to choose recovery. Recovery starts
 when any of these happen:

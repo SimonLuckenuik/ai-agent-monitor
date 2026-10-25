@@ -34,6 +34,9 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Changed
 
+- The hostname (DHCP, and the default MQTT topic base) is now `agentmonitor-XXXXXX`
+  (was `smartclock-XXXXXX`). With MQTT on, Home Assistant sees new topics: remove the
+  old device there. The MQTT device is named "AI Agent Monitor XXXXXX".
 - The setup network is now **AI Agent Monitor** (was Smart Weather Clock), and the
   settings page's project link and update check point to
   github.com/SimonLuckenuik/ai-agent-monitor.
