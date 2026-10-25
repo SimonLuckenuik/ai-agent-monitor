@@ -293,6 +293,7 @@ void handleThemeList() {
   JsonDocument doc;
   JsonArray themes = doc["themes"].to<JsonArray>();
   for (int i = 0; i < FACE_COUNT; ++i) {
+    if (i == FACE_DIAL) continue;   // removed
     JsonObject t = themes.add<JsonObject>();
     t["id"] = i; t["name"] = FACE_NAMES[i]; t["enabled"] = (cfg.faceMask >> i & 1) != 0;
   }
@@ -368,7 +369,7 @@ void publishDiscovery() {
   publishConfig("light", "backlight", q("name", "Backlight") + "," + q("schema", "json") +
                 F(",\"brightness\":true,\"brightness_scale\":100,") + q("cmd_t", b + "/backlight/set") + "," +
                 q("stat_t", b + "/backlight"));
-  String options = "\"Classic\",\"Weather\",\"Photo\",\"Dial\",\"Simple\",\"Forecast\",\"Flip\"";
+  String options = "\"Classic\",\"Weather\",\"Photo\",\"Simple\",\"Forecast\",\"Flip\"";
   if (cfg.facesApi) for (int i = 0, n = customFaceCount(); i < n; ++i) options += ",\"" + customFaceAt(i) + "\"";
   publishConfig("select", "face", q("name", "Face") + "," + q("cmd_t", b + "/face/set") + "," +
                 q("stat_t", b + "/face") + ",\"options\":[" + options + "]");
@@ -412,7 +413,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     brightnessDirty = true;
   } else if (topic == b + "/face/set") {
     for (int i = 0; i < FACE_COUNT; ++i)
-      if (body == FACE_NAMES[i]) { cfg.theme = i; faceSince = millis(); faceInvalidate(); saveConfig(); }
+      if (i != FACE_DIAL && body == FACE_NAMES[i]) { cfg.theme = i; faceSince = millis(); faceInvalidate(); saveConfig(); }
     if (cfg.facesApi && customFaceExists(body)) { showFace(body); saveConfig(); }
   } else if (topic == b + "/sync") {
     syncWeather();

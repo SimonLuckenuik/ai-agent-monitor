@@ -1,7 +1,9 @@
 #pragma once
 #include <time.h>
 
-// Clock faces. Ids match the stock theme numbers and /api/set?key=theme.
+// Clock faces. Ids match the stock theme numbers and /api/set?key=theme. FACE_DIAL
+// was removed: its id stays reserved so the others keep their numbers, and a clock
+// set to it shows Classic.
 enum Face { FACE_CLASSIC = 0, FACE_WEATHER = 1, FACE_PHOTO = 2, FACE_DIAL = 3,
             FACE_SIMPLE = 4, FACE_FORECAST = 5, FACE_FLIP = 6, FACE_COUNT = 7,
             FACE_CUSTOM = 7,     // cfg.customFace, from /faces/<name>.json (integrations)

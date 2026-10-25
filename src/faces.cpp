@@ -262,47 +262,6 @@ void classic(const struct tm& t, bool force) {
   }
 }
 
-// ---- 3 Dial: anti-aliased hands; only the hands are erased and redrawn ------------
-void dialHand(float deg, float len, float tail, float r0, float r1, uint16_t c) {
-  float a = deg * DEG_TO_RAD, sx = sinf(a), cy = cosf(a);
-  D().drawWedgeLine(120 - sx * tail, 120 + cy * tail, 120 + sx * len, 120 - cy * len, r0, r1, c, BG);
-}
-
-void dial(const struct tm& t, bool force) {
-  static int sec = -1;
-  static float pH = -1, pM = 0, pS = 0;
-  if (force) {
-    D().drawSmoothArc(120, 120, 119, 116, 0, 360, PANEL_HI, BG);
-    for (int i = 0; i < 60; ++i) {
-      float a = i * 6 * DEG_TO_RAD, sx = sinf(a), cx = cosf(a);
-      if (i % 5) { D().fillSmoothCircle(120 + sx * 108, 120 - cx * 108, 1, DIM, BG); continue; }
-      bool major = i % 15 == 0;
-      D().drawWedgeLine(120 + sx * (major ? 98 : 102), 120 - cx * (major ? 98 : 102),
-                        120 + sx * 111, 120 - cx * 111, major ? 2.5f : 1.5f, major ? 2.5f : 1.5f,
-                        major ? WHITE : MUTED, BG);
-    }
-    sec = -1; pH = -1;
-  }
-  if (t.tm_sec == sec) return;
-  sec = t.tm_sec;
-  float aS = t.tm_sec * 6.0f, aM = t.tm_min * 6.0f + t.tm_sec * 0.1f, aH = (t.tm_hour % 12) * 30.0f + t.tm_min * 0.5f;
-  if (pH >= 0) {   // erase the previous hands with the same geometry, slightly wider
-    dialHand(pS, 94, 18, 1.6f, 1.1f, BG);
-    dialHand(pM, 84, 0, 3.6f, 2.1f, BG);
-    dialHand(pH, 56, 0, 4.6f, 3.1f, BG);
-  }
-  // Complications are redrawn every second because the hands sweep across them.
-  char date[12]; snprintf(date, sizeof(date), "%s %d", dayShort(t.tm_wday), t.tm_mday);
-  text(date, 120, 170, 2, MUTED, BG, MC_DATUM, 70);
-  if (wx.valid) temp(120, 72, displayTemp(wx.temp), 4, cfg.color3, BG);
-  dialHand(aH, 56, 0, 4.0f, 2.5f, WHITE);
-  dialHand(aM, 84, 0, 3.0f, 1.5f, WHITE);
-  dialHand(aS, 94, 18, 1.0f, 0.6f, cfg.color1);
-  D().fillSmoothCircle(120, 120, 6, cfg.color1, BG);
-  D().fillSmoothCircle(120, 120, 2, BG, cfg.color1);
-  pH = aH; pM = aM; pS = aS;
-}
-
 // ---- 1 Weather: big icon and temperature, details below -------------------------
 void weather(const struct tm& t, bool force) {
   static int min = -1;
@@ -1474,6 +1433,7 @@ bool faceAvailable(int face) {
     case FACE_WEATHER:  return wx.valid;
     case FACE_FORECAST: return fc.valid;
     case FACE_PHOTO:    return photoCount() > 0;
+    case FACE_DIAL:     return false;   // removed; the id stays reserved
     case FACE_CUSTOM:   return cfg.facesApi && customFaceExists(cfg.customFace);
     case FACE_MESSAGE:  return messageActive(messageShowing());
     default:            return face >= 0 && face < FACE_COUNT;
@@ -1492,7 +1452,6 @@ void faceDraw(int face, const struct tm& t, bool timeValid) {
   switch (face) {
     case FACE_WEATHER:  weather(t, force);  break;
     case FACE_PHOTO:    photo(t, force);    break;
-    case FACE_DIAL:     dial(t, force);     break;
     case FACE_SIMPLE:   simple(t, force);   break;
     case FACE_FORECAST: forecast(t, force); break;
     case FACE_FLIP:     flip(t, force);     break;

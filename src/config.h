@@ -22,7 +22,7 @@ struct Config {
   bool   hour12      = true;
   bool   mile        = false;
   String lang        = "en";         // the faces' language: "en" or "fr"
-  int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Dial 4=Simple 5=Forecast 6=Flip
+  int    theme       = 0;            // 0=Classic 1=Weather 2=Photo (3 reserved) 4=Simple 5=Forecast 6=Flip
   int    themeInterval = 10;         // seconds; 0 = no rotation
   int    faceMask    = 0x7f;         // bit n set = face n takes part in rotation
   int    brightness  = 60;           // 0..100

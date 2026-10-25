@@ -103,12 +103,13 @@ int main(int argc, char** argv) {
   setForecast({"10d", "01d", "04d", "11d"});
 
   // 1. Every face at 9:54:26 pm.
-  for (int f = 0; f < FACE_COUNT; ++f) fresh(f, at(21, 54, 26), std::string("face_") + std::to_string(f) + "_" + names[f]);
+  for (int f = 0; f < FACE_COUNT; ++f) if (f != FACE_DIAL) fresh(f, at(21, 54, 26), std::string("face_") + std::to_string(f) + "_" + names[f]);
 
   // 2. Incremental vs full redraw.
   int failures = 0;
   for (int f = 0; f < FACE_COUNT; ++f) {
     if (f == FACE_PHOTO) continue;   // the photo advances on a timer by design
+    if (f == FACE_DIAL) continue;    // removed
     struct tm t = at(21, 58, 50);
     faceInvalidate();
     faceDraw(f, t, true);
@@ -140,7 +141,6 @@ int main(int argc, char** argv) {
   setWeather("02d", "Clouds", "few clouds", 21.4f);
   fresh(FACE_CLASSIC, at(9, 5, 7), "variant_classic_24h_fahrenheit");
   fresh(FACE_FLIP, at(9, 5, 7), "variant_flip_24h");
-  fresh(FACE_DIAL, at(3, 40, 15), "variant_dial_340");
   cfg.hour12 = true; cfg.celsius = true;
 
   // 4. Custom faces (integrations): the settings page's example, and one using

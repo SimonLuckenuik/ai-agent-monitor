@@ -409,7 +409,7 @@ String applySetting(const String& key, const String& val) {
     if (val.length() > 63) return F("TZ rule too long");
     cfg.tz = val; timeChanged = true;
   }
-  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); }
+  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); if (cfg.theme == FACE_DIAL) cfg.theme = FACE_CLASSIC; faceSince = millis(); }
   else if (key == "themeInterval") cfg.themeInterval = constrain(val.toInt(), 0, 3600);
   else if (key == "brightness") { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
   else if (key == "celsius")    cfg.celsius = (val == "1" || val == "true");
@@ -801,10 +801,11 @@ void startAP() {
 }
 
 // WPA2 with the device password; open in recovery, so recovery is always reachable.
-constexpr const char* SETUP_SSID = "AI Agent Monitor";
+// "AI Agent Monitor 1a2b3c": the hostname's suffix, so clocks side by side differ.
+String setupSsid() { String h = deviceHost(); return "AI Agent Monitor " + h.substring(h.lastIndexOf('-') + 1); }
 void restartAP() {
-  if (recoveryMode) WiFi.softAP(SETUP_SSID);
-  else WiFi.softAP(SETUP_SSID, devicePassword.c_str());
+  if (recoveryMode) WiFi.softAP(setupSsid().c_str());
+  else WiFi.softAP(setupSsid().c_str(), devicePassword.c_str());
 }
 
 // While the STA side searches for a missing router the ESP8266 hops channels and AP
@@ -855,7 +856,7 @@ void drawSetupScreen() {
   clockDisplay().fillScreen(TFT_BLACK);
   centerText("Setup WiFi", 50, 4, TFT_WHITE);
   centerText("Join WiFi:", 88, 2, TFT_WHITE);
-  centerText(SETUP_SSID, 110, 2, TFT_CYAN);
+  centerText(setupSsid(), 110, 2, TFT_CYAN);
   centerText("Password:", 140, 2, TFT_WHITE);
   centerText(devicePassword, 166, 4, TFT_YELLOW);
   centerText("then open " + WiFi.softAPIP().toString(), 206, 2, TFT_WHITE);
@@ -874,7 +875,7 @@ void drawRecoveryScreen() {
   clockDisplay().fillScreen(TFT_BLACK);
   centerText("Recovery", 60, 4, TFT_ORANGE);
   centerText("Join WiFi:", 105, 2, TFT_WHITE);
-  centerText(SETUP_SSID, 130, 2, TFT_CYAN);
+  centerText(setupSsid(), 130, 2, TFT_CYAN);
   centerText(WiFi.softAPIP().toString(), 160, 4, TFT_YELLOW);
   centerText("Password: " + devicePassword, 190, 2, TFT_WHITE);
   if (WiFi.status() == WL_CONNECTED) centerText(WiFi.localIP().toString(), 210, 2, TFT_GREEN);
@@ -916,7 +917,7 @@ void handleStatus() {
   doc["ssid"] = linked ? WiFi.SSID() : staSsid;
   if (!linked && staFail >= 0) { doc["wifiError"] = staFailText(); doc["wifiCode"] = staFailReason; }
   if (linked) { doc["ip"] = WiFi.localIP().toString(); doc["rssi"] = WiFi.RSSI(); }
-  doc["apIp"] = WiFi.softAPIP().toString();
+  doc["apIp"] = WiFi.softAPIP().toString(); doc["apSsid"] = setupSsid();
   doc["host"] = deviceHost();   // the DHCP hostname, as the router lists it
   if (SMARTCLOCK_MDNS) doc["mdns"] = deviceHost() + ".local";
   time_t now = time(nullptr);

@@ -6,11 +6,11 @@ from scratch from a reverse-engineering of the stock firmware; no vendor code is
 You install it from the clock's own update page. No cables, soldering or opening the case
 are needed.
 
-![The seven clock faces](docs/images/faces.png)
+![The clock faces](docs/images/faces.png)
 
 ## Features
 
-- **Seven clock faces:** Classic, Dial, Weather, Forecast, Flip (with a fold
+- **Six clock faces:** Classic, Weather, Forecast, Flip (with a fold
   animation), Simple, and Photo. Faces rotate automatically if you want them to, and
   skip any that have nothing to show yet.
 - **Weather and a 4-day forecast with no API key**, from
@@ -71,7 +71,7 @@ this firmware is not for your clock.
    starts), and find **Firmware Update (OTA)**.
 3. Choose the downloaded file and press **Start Update**. Confirm, then wait for
    "Update Success". The clock restarts by itself within about 30 seconds.
-4. On your phone or computer, join the WiFi network **AI Agent Monitor** with the
+4. On your phone or computer, join the WiFi network **AI Agent Monitor XXXXXX** (the name and password are on the clock's screen) with the
    password shown on the clock, and open **http://192.168.4.1/**. Sign in with the same
    password.
 5. In the **WiFi** card, pick your network, enter its password, and press
@@ -116,7 +116,7 @@ Custom faces) in `CLOCK_URL` and `CLOCK_API_KEY`. Without them it uses the emula
 
 ## Recovery
 
-- The **AI Agent Monitor** setup network stays on at all times, so you can always
+- The **AI Agent Monitor XXXXXX** setup network stays on at all times, so you can always
   reach **http://192.168.4.1/**, even when your home WiFi is down or wrong.
 - **Forgotten the password?** On the sign-in page, press **Show the password on the
   clock**, or use recovery mode below, which shows it on screen.
@@ -190,7 +190,7 @@ platformio.ini        build and panel configuration
 scripts/              build options (size guard, secrets) and the release script
 include/pins.h        pin map
 src/main.cpp          boot, recovery, WiFi, web API, updates
-src/faces.cpp         the seven clock faces
+src/faces.cpp         the clock faces
 src/weather.cpp       Open-Meteo geocoding, weather and forecast
 src/config.h          settings stored on the clock (/config.json)
 web/index.html        settings page (compressed into the firmware at build time)

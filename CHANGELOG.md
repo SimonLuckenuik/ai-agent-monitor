@@ -32,13 +32,19 @@ versioning. `/version` on the device reports the version it was built as; a
 - `/status` reports the DHCP hostname as `host`.
 - Face variables hold up to 160 characters (was 40), enough for a short message.
 
+### Removed
+
+- The Dial face. Its id (3) stays reserved so the other faces keep their stock
+  numbers; a clock set to it shows Classic.
+
 ### Changed
 
 - The hostname (DHCP, and the default MQTT topic base) is now `agentmonitor-XXXXXX`
   (was `smartclock-XXXXXX`). With MQTT on, Home Assistant sees new topics: remove the
   old device there. The MQTT device is named "AI Agent Monitor XXXXXX".
-- The setup network is now **AI Agent Monitor** (was Smart Weather Clock), and the
-  settings page's project link and update check point to
+- The setup network is now **AI Agent Monitor XXXXXX** (was Smart Weather Clock), with
+  the hostname's suffix so clocks side by side do not share a name; `/status` reports
+  it as `apSsid`. The settings page's project link and update check point to
   github.com/SimonLuckenuik/ai-agent-monitor.
 - mDNS is now a build option (`pio run -e esp12e_mdns`): the default build leaves it
   out, which frees ~20 KB of the update budget. `/status` reports `mdns` only when it

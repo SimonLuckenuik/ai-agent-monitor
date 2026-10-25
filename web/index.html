@@ -250,7 +250,7 @@ a{color:var(--accent)}
     <div class="field"><label for="pass">Password</label>
       <div class="pw"><input type="password" id="pass" autocomplete="off"><button type="button" onclick="reveal('pass',this)">Show</button></div></div>
     <div class="btns"><button class="btn primary" onclick="connect()">Connect &amp; restart</button></div>
-    <p class="note">2.4 GHz networks only. The setup network <strong>AI Agent Monitor</strong> stays on as a fallback.</p>
+    <p class="note">2.4 GHz networks only. The setup network <strong class="apName">AI Agent Monitor</strong> stays on as a fallback.</p>
   </section>
 
   <section class="card settings">
@@ -338,7 +338,7 @@ a{color:var(--accent)}
 
     <div class="settings">
     <div class="sub">Password</div>
-    <p class="note" style="margin-top:0">One password protects this page and the <strong>AI Agent Monitor</strong> setup network.
+    <p class="note" style="margin-top:0">One password protects this page and the <strong class="apName">AI Agent Monitor</strong> setup network.
       It is not secret from anyone who can see the clock: the sign-in page has <strong>Show the password on the clock</strong>,
       which displays it on the clock's screen for up to a minute, and the clock also shows it while setting up WiFi.</p>
     <div class="field"><label for="newPass">New password</label>
@@ -378,7 +378,6 @@ const $=id=>document.getElementById(id),all=s=>[...document.querySelectorAll(s)]
 let cfg={},st={},recovery=false,fwFile=null;
 
 const THEMES=[[0,'Classic','<rect x="4" y="8" width="30" height="16" rx="3"/><path d="M10 14v4M14 14v4M19 13v1M19 18v1M24 14v4M28 14v4M10 28h18"/>'],
- [3,'Dial','<circle cx="19" cy="19" r="14"/><path d="M19 10v9l6 4"/>'],
  [1,'Weather','<path d="M12 27a6 6 0 1 1 1.4-11.8A8 8 0 0 1 29 17a5 5 0 0 1-1 10z"/>'],
  [5,'Forecast','<rect x="5" y="9" width="28" height="20" rx="3"/><path d="M5 16h28M14 9v20M24 9v20"/>'],
  [6,'Flip','<rect x="6" y="8" width="11" height="22" rx="2"/><rect x="21" y="8" width="11" height="22" rx="2"/><path d="M6 19h11M21 19h11"/>'],
@@ -403,9 +402,9 @@ $('restoreFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';
   try{const t=await req('/api/settings/import',{method:'POST',headers:{'Content-Type':'application/json'},body:await f.text()});
     toast(t);fillConfig(await(await fetch('/config')).json())}catch(err){toast(err.message,1)}};
 async function forgetWifi(){if(!confirm('Forget the saved WiFi network? The clock restarts and waits on its setup network.'))return;
-  try{await req('/api/wifi/forget',{method:'POST'});waitForReboot('Restarting','Join the AI Agent Monitor network to set up WiFi again.')}catch(e){toast(e.message,1)}}
+  try{await req('/api/wifi/forget',{method:'POST'});waitForReboot('Restarting','Join the '+(st.apSsid||'AI Agent Monitor')+' network to set up WiFi again.')}catch(e){toast(e.message,1)}}
 async function resetSettings(){if(!confirm('Reset all settings, including WiFi? Photos and the password are kept.'))return;
-  try{await req('/api/settings/reset',form({confirm:'reset'}));waitForReboot('Resetting','Join the AI Agent Monitor network to set up the clock again.')}catch(e){toast(e.message,1)}}
+  try{await req('/api/settings/reset',form({confirm:'reset'}));waitForReboot('Resetting','Join the '+(st.apSsid||'AI Agent Monitor')+' network to set up the clock again.')}catch(e){toast(e.message,1)}}
 // ---- Update check: the browser asks GitHub; the clock itself needs no internet access for this.
 const REPO='SimonLuckenuik/ai-agent-monitor';
 const vnum=v=>(v||'').replace(/^v/,'').split('-')[0].split('.').map(n=>+n||0);
@@ -503,7 +502,7 @@ function fillStatus(s){
   $('wxAge').textContent=ago===undefined?(s.weatherError?'Not yet: '+s.weatherError:'Not yet'):ago<60?'Just now':ago<3600?Math.floor(ago/60)+' min ago':Math.floor(ago/3600)+' h ago';
   $('wxLoc').textContent=s.weatherError&&!s.weather?'⚠ '+s.weatherError:s.location?'Found: '+s.location:'A city name, optionally with a country code: “Sydney, AU”.';
   $('tUp').textContent='Up '+up(s.uptime);$('tDev').textContent=(s.heap/1024).toFixed(1)+' KB free';
-  $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=s.mdns?`<a href="http://${s.mdns}/">${s.mdns}</a>`:(s.host||'—');$('sAp').textContent='AI Agent Monitor · '+s.apIp;
+  $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=s.mdns?`<a href="http://${s.mdns}/">${s.mdns}</a>`:(s.host||'—');$('sAp').textContent=(s.apSsid||'AI Agent Monitor')+' · '+s.apIp;if(s.apSsid)all('.apName').forEach(e=>e.textContent=s.apSsid);
   $('sFs').textContent=s.storageReady?'Mounted':s.storageMountFailed?'Could not mount':'Not started';
   const kb=b=>(b/1024).toFixed(1)+' KB';
   $('sHeap').textContent=kb(s.heap)+(s.heapLow?' · lowest '+kb(s.heapLow):'');
