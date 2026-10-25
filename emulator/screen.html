@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartClock Emulator</title>
+<style>
+  :root {
+    --bg: #eceae6; --text: #1d1d1f; --muted: #6e6e73; --card: #ffffff; --line: #d8d6d1;
+    --case: #1b1b1d; --case-edge: #2c2c30; --accent: #0a84ff; --warn: #c2410c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141416; --text: #f2f2f7; --muted: #9a9aa0; --card: #1f1f23; --line: #333338;
+            --case: #0b0b0c; --case-edge: #26262a; --accent: #0a84ff; --warn: #fb923c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px; display: grid; gap: 24px;
+         grid-template-columns: auto 1fr; align-items: start; }
+  @media (max-width: 680px) { main { grid-template-columns: 1fr; justify-items: center; } }
+  .clock { background: var(--case); border: 1px solid var(--case-edge); border-radius: 22px;
+           padding: 34px 30px 46px; box-shadow: 0 18px 40px rgba(0,0,0,.25); }
+  .glass { background: #000; padding: 6px; border-radius: 4px; width: fit-content; margin: 0 auto; }
+  canvas { display: block; width: 360px; max-width: calc(100vw - 110px); aspect-ratio: 1; height: auto;
+           image-rendering: pixelated; transition: filter .2s; }
+  canvas.smooth { image-rendering: auto; }
+  .zoom { display: flex; justify-content: center; gap: 4px; margin-top: 14px; }
+  .zoom button { padding: 3px 9px; font-size: 13px; background: var(--case-edge); color: #c7c7cc; border-color: #3a3a3e; }
+  .zoom button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; width: 100%; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 0 0 14px; color: var(--muted); }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 16px; }
+  dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  button, a.button { font: inherit; border: 1px solid var(--line); background: var(--bg); color: var(--text);
+           border-radius: 9px; padding: 7px 12px; cursor: pointer; text-decoration: none; }
+  button:hover, a.button:hover { border-color: var(--accent); }
+  a.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #state.off { color: var(--warn); }
+  small { color: var(--muted); }
+
+  .storage { grid-column: 1 / -1; }
+  .storage header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 2px; font-family: ui-monospace, Consolas, monospace; }
+  .crumbs button { border: 0; background: none; padding: 2px 4px; color: var(--accent); }
+  .crumbs span { color: var(--muted); padding: 2px 0; }
+  .browser { display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: 14px; min-height: 220px; }
+  @media (max-width: 680px) { .browser { grid-template-columns: 1fr; } }
+  .files { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: auto; max-height: 420px; }
+  .files li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 10px; cursor: pointer;
+              border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+  .files li:last-child { border-bottom: 0; }
+  .files li:hover, .files li.on { background: var(--bg); }
+  .files .size { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .files .empty { color: var(--muted); cursor: default; }
+  .viewer { border: 1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; overflow: auto; max-height: 420px; }
+  .viewer .meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: var(--muted); }
+  .viewer .meta a { color: var(--accent); text-decoration: none; }
+  .viewer pre { margin: 0; font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .viewer img { max-width: 100%; image-rendering: pixelated; background: #000; }
+</style>
+</head>
+<body>
+<main>
+  <div class="clock">
+    <div class="glass"><canvas id="screen" width="240" height="240"></canvas></div>
+    <div class="zoom" id="zoom" title="Screen size"></div>
+  </div>
+  <section class="panel">
+    <h1>SmartClock emulator</h1>
+    <p>The firmware's screen, as the emulator draws it.</p>
+    <dl>
+      <dt>Firmware</dt><dd id="state">connecting…</dd>
+      <dt>Backlight</dt><dd id="backlight">–</dd>
+      <dt>Updates</dt><dd id="frames">–</dd>
+    </dl>
+    <div class="buttons">
+      <a class="button primary" id="settings" target="_blank" rel="noopener">Settings page</a>
+      <a class="button" id="status" target="_blank" rel="noopener">/status</a>
+    </div>
+    <div class="buttons">
+      <button data-post="/power" title="Unplug and plug back in: a power-on reset, RTC memory cleared">Power cycle</button>
+      <button data-post="/reset" title="An external (EN pin) reset">Reset</button>
+      <button id="recovery" title="Three boots that each end within 10 s">Enter recovery</button>
+    </div>
+    <small>The clock's own web server is the firmware on port 80 of the container
+      (<span id="clockurl"></span>). Open this page with <code>?clock=&lt;port&gt;</code> if you mapped it elsewhere.</small>
+  </section>
+  <section class="panel storage">
+    <header>
+      <div><h1>Storage</h1><div class="crumbs" id="crumbs"></div></div>
+      <div><small id="usage"></small> <button id="refresh">Refresh</button></div>
+    </header>
+    <div class="browser">
+      <ul class="files" id="files"></ul>
+      <div class="viewer" id="viewer"><small>Pick a file to see it.</small></div>
+    </div>
+  </section>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const clock = `${location.protocol}//${location.hostname}:${params.get("clock") || "8000"}`;
+// The settings link carries the device password in the fragment (never sent to the
+// server); the emulator's build of the settings page signs in with it.
+const settings = document.getElementById("settings");
+settings.href = clock + "/";
+async function refreshSettingsLink() {
+  try {
+    const r = await fetch("/password", { cache: "no-store" });
+    if (r.ok) settings.href = `${clock}/#password=${encodeURIComponent(await r.text())}`;
+  } catch {}
+}
+refreshSettingsLink();
+setInterval(refreshSettingsLink, 5000);   // it changes with the System card, or a new volume
+
+// ---- Zoom. "Real" is the panel's physical size: 1.54" diagonal, a 1.09" square
+// (about 105 CSS px; how close that is to life depends on the monitor).
+const zooms = [["Real", 105], ["1×", 240], ["1.5×", 360], ["2×", 480]];
+const zoomBox = document.getElementById("zoom");
+function setZoom(px) {
+  const canvasEl = document.getElementById("screen");
+  canvasEl.style.width = px + "px";
+  canvasEl.classList.toggle("smooth", px < 240);   // downscaled: let the browser filter it
+  for (const b of zoomBox.children) b.classList.toggle("on", Number(b.dataset.px) === px);
+  try { localStorage.setItem("emu-zoom", String(px)); } catch {}
+}
+for (const [label, px] of zooms) {
+  const b = Object.assign(document.createElement("button"), { textContent: label, onclick: () => setZoom(px) });
+  b.dataset.px = px;
+  zoomBox.append(b);
+}
+let savedZoom = 360;
+try { savedZoom = Number(localStorage.getItem("emu-zoom")) || 360; } catch {}
+setZoom(zooms.some(([, px]) => px === savedZoom) ? savedZoom : 360);
+document.getElementById("status").href = clock + "/status";
+document.getElementById("clockurl").textContent = clock;
+
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+const image = ctx.createImageData(240, 240);
+const state = document.getElementById("state");
+
+// Rows of RGB565 (little-endian) into the canvas image, from row `first` on.
+function drawRows(px, first) {
+  const out = image.data;
+  for (let i = 0, o = first * 240 * 4; i < px.length; i++, o += 4) {
+    const v = px[i];
+    out[o] = ((v >> 11) & 31) * 255 / 31;
+    out[o + 1] = ((v >> 5) & 63) * 255 / 63;
+    out[o + 2] = (v & 31) * 255 / 31;
+    out[o + 3] = 255;
+  }
+  ctx.putImageData(image, 0, 0, 0, first, 240, px.length / 240);
+}
+
+function setBacklight(light) {
+  // PWM duty to perceived light: a square root, like the panel looks at night.
+  canvas.style.filter = `brightness(${Math.sqrt(Math.max(0, Math.min(100, light)) / 100)})`;
+  document.getElementById("backlight").textContent = light + " %";
+}
+
+// The emulator pushes the whole screen on connect, then only the rows that changed:
+// [1, backlight, first row (u16), row count (u16)] + rows. It drops the connection
+// when the firmware restarts, so this reconnects until it is back.
+let updates = 0;
+function connect() {
+  const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.binaryType = "arraybuffer";
+  ws.onopen = () => { state.textContent = "running"; state.className = ""; };
+  ws.onmessage = e => {
+    const head = new DataView(e.data, 0, 6);
+    setBacklight(head.getUint8(1));
+    const first = head.getUint16(2, true), rows = head.getUint16(4, true);
+    if (rows) { drawRows(new Uint16Array(e.data, 6, rows * 240), first); updates++; }
+  };
+  ws.onclose = () => {
+    state.textContent = "restarting…"; state.className = "off";
+    setTimeout(connect, 1000);
+  };
+}
+connect();
+setInterval(() => { document.getElementById("frames").textContent = `${updates} / s`; updates = 0; }, 1000);
+
+const post = path => fetch(path, { method: "POST" }).catch(() => {});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+for (const b of document.querySelectorAll("[data-post]")) b.onclick = () => post(b.dataset.post);
+
+// ---- Storage: the clock's LittleFS volume, read-only.
+const el = (tag, props = {}, ...kids) => {
+  const e = Object.assign(document.createElement(tag), props);
+  e.append(...kids);
+  return e;
+};
+const size = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
+const join = (dir, name) => (dir.endsWith("/") ? dir : dir + "/") + name;
+const fileUrl = (path, download) => `/fs/file?path=${encodeURIComponent(path)}${download ? "&download=1" : ""}`;
+let cwd = "/", picked = null;
+
+function crumbs() {
+  const box = document.getElementById("crumbs");
+  box.replaceChildren();
+  const parts = cwd.split("/").filter(Boolean);
+  box.append(el("button", { textContent: "/", onclick: () => openDir("/") }));
+  parts.forEach((p, i) => {
+    if (i) box.append(el("span", { textContent: "/" }));
+    box.append(el("button", { textContent: p, onclick: () => openDir("/" + parts.slice(0, i + 1).join("/")) }));
+  });
+}
+
+async function openDir(path) {
+  const list = document.getElementById("files");
+  try {
+    const r = await fetch(`/fs?path=${encodeURIComponent(path)}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    cwd = d.path;
+    crumbs();
+    document.getElementById("usage").textContent = `${size(d.used)} of ${size(d.total)} used`;
+    const items = d.entries.sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name));
+    if (cwd !== "/") items.unshift({ name: "..", dir: true, up: true });
+    list.replaceChildren(...items.map(e => {
+      const path = e.up ? cwd.replace(/\/[^/]+$/, "") || "/" : join(cwd, e.name);
+      const li = el("li", { onclick: () => e.dir ? openDir(path) : view(path, e.size, li) },
+        el("span", { textContent: e.dir ? `${e.name}/` : e.name }),
+        el("span", { className: "size", textContent: e.dir ? "" : size(e.size) }));
+      if (path === picked) li.className = "on";
+      return li;
+    }));
+    if (!items.length) list.replaceChildren(el("li", { className: "empty", textContent: "Empty" }));
+  } catch (err) {
+    list.replaceChildren(el("li", { className: "empty", textContent: `Storage unavailable (${err.message || err})` }));
+  }
+}
+
+function hexdump(bytes) {
+  const lines = [];
+  for (let o = 0; o < bytes.length; o += 16) {
+    const row = bytes.subarray(o, o + 16);
+    const hex = [...row].map(b => b.toString(16).padStart(2, "0")).join(" ").padEnd(47);
+    const txt = [...row].map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : ".").join("");
+    lines.push(`${o.toString(16).padStart(6, "0")}  ${hex}  ${txt}`);
+  }
+  return lines.join("\n");
+}
+
+async function view(path, bytes, li) {
+  picked = path;
+  for (const x of document.querySelectorAll(".files li")) x.classList.toggle("on", x === li);
+  const viewer = document.getElementById("viewer");
+  const meta = el("div", { className: "meta" },
+    el("span", { textContent: `${path} · ${size(bytes)}` }),
+    el("a", { href: fileUrl(path, true), textContent: "Download" }));
+  if (/\.(jpe?g|png|gif)$/i.test(path)) {
+    viewer.replaceChildren(meta, el("img", { src: fileUrl(path) + `&t=${Date.now()}`, alt: path }));
+    return;
+  }
+  const data = new Uint8Array(await (await fetch(fileUrl(path), { cache: "no-store" })).arrayBuffer());
+  let text = null;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(data); } catch {}
+  if (text !== null && /\.json$/i.test(path)) { try { text = JSON.stringify(JSON.parse(text), null, 2); } catch {} }
+  const shown = text !== null && !/[\x00-\x08\x0e-\x1f]/.test(text) ? text : hexdump(data.subarray(0, 4096)) +
+    (data.length > 4096 ? `\n… ${size(data.length - 4096)} more` : "");
+  viewer.replaceChildren(meta, el("pre", { textContent: shown }));
+}
+
+document.getElementById("refresh").onclick = () => openDir(cwd);
+openDir("/");
+
+// The firmware counts power-on boots that end within 10 s; the third enters recovery.
+document.getElementById("recovery").onclick = async () => {
+  for (let i = 0; i < 3; i++) {
+    await post("/power");
+    await sleep(4000);
+  }
+};
+</script>
+</body>
+</html>

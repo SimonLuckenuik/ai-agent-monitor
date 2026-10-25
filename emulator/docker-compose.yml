@@ -1,0 +1,17 @@
+# docker compose -f emulator/docker-compose.yml up --build   (ports bound to 127.0.0.1)
+#   http://localhost:8080  the emulated screen
+#   http://localhost:8000  the clock's settings page and API (firmware port 80)
+services:
+  smartclock:
+    build:
+      context: ..
+      dockerfile: emulator/Dockerfile
+    ports:   # this computer only: port 8080 serves the clock's storage
+      - "127.0.0.1:8000:80"
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - clock-data:/data   # storage, EEPROM: survives restarts and rebuilds
+    restart: unless-stopped
+
+volumes:
+  clock-data:

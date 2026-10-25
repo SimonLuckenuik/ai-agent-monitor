@@ -7,11 +7,22 @@
 enum { TL_DATUM = 0, TC_DATUM, TR_DATUM, ML_DATUM, MC_DATUM, MR_DATUM, BL_DATUM, BC_DATUM, BR_DATUM,
        L_BASELINE, C_BASELINE, R_BASELINE };
 
+// The TFT_eSPI colours main.cpp's setup and recovery screens use.
+#define TFT_BLACK  0x0000
+#define TFT_WHITE  0xFFFF
+#define TFT_CYAN   0x07FF
+#define TFT_GREEN  0x07E0
+#define TFT_ORANGE 0xFDA0
+#define TFT_RED    0xF800
+#define TFT_YELLOW 0xFFE0
+
 class TFT_eSPI {
  public:
   static constexpr int W = 240, H = 240;
   uint16_t fb[W * H] = {};
 
+  void init() {}
+  void setRotation(uint8_t) {}   // the panel only ever runs at rotation 0
   void fillScreen(uint32_t c) { fillRect(0, 0, W, H, c); }
   void drawPixel(int32_t x, int32_t y, uint32_t c);
   void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c);

@@ -1,0 +1,6 @@
+.git
+.pio
+.pio-tools
+.vscode
+docs
+secrets.ini
