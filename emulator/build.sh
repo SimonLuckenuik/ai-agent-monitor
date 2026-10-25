@@ -17,7 +17,7 @@ cd /esp8266/tests/host
 make -j"$(nproc)" FORCE32=0 OPTZ=-O1 R=noexec \
   ULIBDIRS=/libs/ArduinoJson:/libs/PubSubClient \
   USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/src/faces.cpp \
-                  $root/src/integrations.cpp $root/src/weather.cpp $work/mock/TFT_eSPI.cpp" \
+                  $root/src/integrations.cpp $root/src/weather.cpp $root/src/ascii.cpp $work/mock/TFT_eSPI.cpp" \
   USERCSOURCES=/libs/TJpg_Decoder/src/tjpgd.c \
   USERCFLAGS="-I$root/src -I$root/include -I$work/mock -I$work/generated -I/libs/TFT_eSPI \
               -I/libs/TJpg_Decoder/src -DARDUINOJSON_USE_LONG_LONG=0 -DARDUINOJSON_USE_DOUBLE=0" \

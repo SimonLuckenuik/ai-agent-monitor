@@ -31,7 +31,7 @@
 #include "integrations.h"
 
 
-#define FW_VERSION "1.3.2"   // see CHANGELOG.md
+#define FW_VERSION "1.4.0-dev"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -801,9 +801,10 @@ void startAP() {
 }
 
 // WPA2 with the device password; open in recovery, so recovery is always reachable.
+constexpr const char* SETUP_SSID = "AI Agent Monitor";
 void restartAP() {
-  if (recoveryMode) WiFi.softAP("Smart Weather Clock");
-  else WiFi.softAP("Smart Weather Clock", devicePassword.c_str());
+  if (recoveryMode) WiFi.softAP(SETUP_SSID);
+  else WiFi.softAP(SETUP_SSID, devicePassword.c_str());
 }
 
 // While the STA side searches for a missing router the ESP8266 hops channels and AP
@@ -854,7 +855,7 @@ void drawSetupScreen() {
   clockDisplay().fillScreen(TFT_BLACK);
   centerText("Setup WiFi", 50, 4, TFT_WHITE);
   centerText("Join WiFi:", 88, 2, TFT_WHITE);
-  centerText("Smart Weather Clock", 110, 2, TFT_CYAN);
+  centerText(SETUP_SSID, 110, 2, TFT_CYAN);
   centerText("Password:", 140, 2, TFT_WHITE);
   centerText(devicePassword, 166, 4, TFT_YELLOW);
   centerText("then open " + WiFi.softAPIP().toString(), 206, 2, TFT_WHITE);
@@ -873,7 +874,7 @@ void drawRecoveryScreen() {
   clockDisplay().fillScreen(TFT_BLACK);
   centerText("Recovery", 60, 4, TFT_ORANGE);
   centerText("Join WiFi:", 105, 2, TFT_WHITE);
-  centerText("Smart Weather Clock", 130, 2, TFT_CYAN);
+  centerText(SETUP_SSID, 130, 2, TFT_CYAN);
   centerText(WiFi.softAPIP().toString(), 160, 4, TFT_YELLOW);
   centerText("Password: " + devicePassword, 190, 2, TFT_WHITE);
   if (WiFi.status() == WL_CONNECTED) centerText(WiFi.localIP().toString(), 210, 2, TFT_GREEN);

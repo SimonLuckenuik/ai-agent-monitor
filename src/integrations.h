@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "ascii.h"   // asciiFold()
 
 // Optional integrations, each off by default (settings page, Integrations card):
 //  - Custom faces: JSON-described faces over HTTP (/api/faces) and MQTT, with
@@ -30,7 +31,6 @@ bool messageUrgent(int slot);                       // warning or error: full ba
 int  messageShowing();                              // the slot the Message face shows
 void messageShowSlot(int slot);
 uint32_t messageVersion();                          // bumped whenever a message changes
-String asciiFold(const String& s);                  // the fonts are ASCII: e for é, ' for ’
 
 // Photos: per-photo slideshow switch, shared with the stock-compatible API.
 bool photoEnabled(const String& name);

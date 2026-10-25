@@ -34,6 +34,9 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Changed
 
+- The setup network is now **AI Agent Monitor** (was Smart Weather Clock), and the
+  settings page's project link and update check point to
+  github.com/SimonLuckenuik/ai-agent-monitor.
 - mDNS is now a build option (`pio run -e esp12e_mdns`): the default build leaves it
   out, which frees ~20 KB of the update budget. `/status` reports `mdns` only when it
   is built in.

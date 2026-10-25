@@ -1,0 +1,84 @@
+name: Build and test
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware:
+    name: Firmware, safety tests and face preview
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            .pio/libdeps
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+
+      - name: Install PlatformIO, Zig and Pillow
+        run: pip install platformio==6.2.0 ziglang==0.13.0 pillow
+
+      - name: Put Zig on PATH
+        run: python -c "import os, ziglang; print(os.path.dirname(ziglang.__file__))" >> "$GITHUB_PATH"
+
+      - name: Build the firmware (fails above the OTA size budget)
+        run: pio run
+
+      - name: Unit tests
+        run: python tests/unit/run_unit_tests.py
+
+      - name: Safety tests
+        run: python tests/run_safety_tests.py
+
+      - name: Face preview
+        run: python tests/face_preview/run_face_preview.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ github.sha }}
+          path: |
+            .pio/build/esp12e/firmware.bin
+            .pio/face-preview/sheet.png
+          if-no-files-found: error
+
+  emulator:
+    name: Emulator image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the emulator
+        run: docker build -f emulator/Dockerfile -t smartclock-emulator .
+
+  plugin:
+    name: Claude Code plugin
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Manifests, examples and helper
+        run: |
+          python - <<'EOF'
+          import glob, json
+          for path in [".claude-plugin/marketplace.json", "plugins/ai-agent-monitor/.claude-plugin/plugin.json",
+                       *glob.glob("plugins/ai-agent-monitor/skills/*/examples/*.json")]:
+              data = json.load(open(path, encoding="utf-8"))
+              if "examples" in path:
+                  size = len(json.dumps(data, separators=(",", ":")))
+                  assert size <= 4096 and len(data["items"]) <= 32, f"{path}: {size} bytes"
+              print("ok", path)
+          EOF
+          python plugins/ai-agent-monitor/skills/ai-agent-monitor/scripts/clock.py --help > /dev/null

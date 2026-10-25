@@ -36,7 +36,7 @@ backups. Release images come from `python scripts/make_release.py` and are alrea
 
 ## Recovery access
 
-The firmware starts an open AP, **Smart Weather Clock**, at **http://192.168.4.1/** and
+The firmware starts an open AP, **AI Agent Monitor**, at **http://192.168.4.1/** and
 starts its embedded web server before any storage or display initialization. The AP stays
 up in every mode, alongside home WiFi. No button is needed to reach it. While the saved
 network is missing, the STA side searches in 30 s windows every 5 minutes, because

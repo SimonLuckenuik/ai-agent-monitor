@@ -250,7 +250,7 @@ a{color:var(--accent)}
     <div class="field"><label for="pass">Password</label>
       <div class="pw"><input type="password" id="pass" autocomplete="off"><button type="button" onclick="reveal('pass',this)">Show</button></div></div>
     <div class="btns"><button class="btn primary" onclick="connect()">Connect &amp; restart</button></div>
-    <p class="note">2.4 GHz networks only. The setup network <strong>Smart Weather Clock</strong> stays on as a fallback.</p>
+    <p class="note">2.4 GHz networks only. The setup network <strong>AI Agent Monitor</strong> stays on as a fallback.</p>
   </section>
 
   <section class="card settings">
@@ -271,7 +271,7 @@ a{color:var(--accent)}
   <section class="card settings wide">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M4 17h6M14 17h6M18 7h2M14 4v6M10 14v6"/></svg>Integrations</h2>
     <p class="note" style="margin-top:0">All off unless you turn them on. Details and examples:
-      <a href="https://github.com/michaeldale/smartclock-oss/blob/main/docs/specifications/integrations-api.md" target="_blank" rel="noopener">integrations API</a>.</p>
+      <a href="https://github.com/SimonLuckenuik/ai-agent-monitor/blob/main/docs/specifications/integrations-api.md" target="_blank" rel="noopener">integrations API</a>.</p>
 
     <div class="integ">
       <div class="row"><label for="facesapi">Custom faces<span class="hint">Design faces as JSON and send them over HTTP or MQTT, with live values like {time} and {temp}</span></label>
@@ -324,10 +324,10 @@ a{color:var(--accent)}
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>System</h2>
     <dl>
       <dt>Firmware</dt><dd id="sVer">—</dd>
-      <dt>Project</dt><dd><a href="https://github.com/michaeldale/smartclock-oss" target="_blank" rel="noopener">github.com/michaeldale/smartclock-oss</a></dd>
+      <dt>Project</dt><dd><a href="https://github.com/SimonLuckenuik/ai-agent-monitor" target="_blank" rel="noopener">github.com/SimonLuckenuik/ai-agent-monitor</a></dd>
       <dt>LAN address</dt><dd id="sIp">—</dd>
       <dt>Hostname</dt><dd id="sHost">—</dd>
-      <dt>Setup network</dt><dd id="sAp">Smart Weather Clock</dd>
+      <dt>Setup network</dt><dd id="sAp">AI Agent Monitor</dd>
       <dt>Storage</dt><dd id="sFs">—</dd>
       <dt>Free memory</dt><dd id="sHeap">—</dd>
       <dt>Last reset</dt><dd id="sReset">—</dd>
@@ -338,7 +338,7 @@ a{color:var(--accent)}
 
     <div class="settings">
     <div class="sub">Password</div>
-    <p class="note" style="margin-top:0">One password protects this page and the <strong>Smart Weather Clock</strong> setup network.
+    <p class="note" style="margin-top:0">One password protects this page and the <strong>AI Agent Monitor</strong> setup network.
       It is not secret from anyone who can see the clock: the sign-in page has <strong>Show the password on the clock</strong>,
       which displays it on the clock's screen for up to a minute, and the clock also shows it while setting up WiFi.</p>
     <div class="field"><label for="newPass">New password</label>
@@ -403,11 +403,11 @@ $('restoreFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';
   try{const t=await req('/api/settings/import',{method:'POST',headers:{'Content-Type':'application/json'},body:await f.text()});
     toast(t);fillConfig(await(await fetch('/config')).json())}catch(err){toast(err.message,1)}};
 async function forgetWifi(){if(!confirm('Forget the saved WiFi network? The clock restarts and waits on its setup network.'))return;
-  try{await req('/api/wifi/forget',{method:'POST'});waitForReboot('Restarting','Join the Smart Weather Clock network to set up WiFi again.')}catch(e){toast(e.message,1)}}
+  try{await req('/api/wifi/forget',{method:'POST'});waitForReboot('Restarting','Join the AI Agent Monitor network to set up WiFi again.')}catch(e){toast(e.message,1)}}
 async function resetSettings(){if(!confirm('Reset all settings, including WiFi? Photos and the password are kept.'))return;
-  try{await req('/api/settings/reset',form({confirm:'reset'}));waitForReboot('Resetting','Join the Smart Weather Clock network to set up the clock again.')}catch(e){toast(e.message,1)}}
+  try{await req('/api/settings/reset',form({confirm:'reset'}));waitForReboot('Resetting','Join the AI Agent Monitor network to set up the clock again.')}catch(e){toast(e.message,1)}}
 // ---- Update check: the browser asks GitHub; the clock itself needs no internet access for this.
-const REPO='michaeldale/smartclock-oss';
+const REPO='SimonLuckenuik/ai-agent-monitor';
 const vnum=v=>(v||'').replace(/^v/,'').split('-')[0].split('.').map(n=>+n||0);
 const newer=(a,b)=>{const x=vnum(a),y=vnum(b);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false};
 async function checkUpdate(current){
@@ -503,7 +503,7 @@ function fillStatus(s){
   $('wxAge').textContent=ago===undefined?(s.weatherError?'Not yet: '+s.weatherError:'Not yet'):ago<60?'Just now':ago<3600?Math.floor(ago/60)+' min ago':Math.floor(ago/3600)+' h ago';
   $('wxLoc').textContent=s.weatherError&&!s.weather?'⚠ '+s.weatherError:s.location?'Found: '+s.location:'A city name, optionally with a country code: “Sydney, AU”.';
   $('tUp').textContent='Up '+up(s.uptime);$('tDev').textContent=(s.heap/1024).toFixed(1)+' KB free';
-  $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=s.mdns?`<a href="http://${s.mdns}/">${s.mdns}</a>`:(s.host||'—');$('sAp').textContent='Smart Weather Clock · '+s.apIp;
+  $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=s.mdns?`<a href="http://${s.mdns}/">${s.mdns}</a>`:(s.host||'—');$('sAp').textContent='AI Agent Monitor · '+s.apIp;
   $('sFs').textContent=s.storageReady?'Mounted':s.storageMountFailed?'Could not mount':'Not started';
   const kb=b=>(b/1024).toFixed(1)+' KB';
   $('sHeap').textContent=kb(s.heap)+(s.heapLow?' · lowest '+kb(s.heapLow):'');

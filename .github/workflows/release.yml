@@ -1,0 +1,64 @@
+name: Release
+
+# Push a tag named after FW_VERSION in src/main.cpp, e.g. v1.4.0 for "1.4.0":
+#   git tag v1.4.0 && git push origin v1.4.0
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO, Zig and Pillow
+        run: pip install platformio==6.2.0 ziglang==0.13.0 pillow
+
+      - name: Put Zig on PATH
+        run: python -c "import os, ziglang; print(os.path.dirname(ziglang.__file__))" >> "$GITHUB_PATH"
+
+      - name: Check the tag matches FW_VERSION
+        id: version
+        run: |
+          version=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' src/main.cpp | tr -d '\r')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match FW_VERSION $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The release build: no WiFi details, named for the stock update page (SDP...).
+      - name: Build the release image
+        run: python scripts/make_release.py
+
+      - name: Unit tests
+        run: python tests/unit/run_unit_tests.py
+
+      - name: Safety tests (on the release image)
+        run: python tests/run_safety_tests.py
+
+      - name: Face preview
+        run: python tests/face_preview/run_face_preview.py
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          tr -d '\r' < CHANGELOG.md | awk -v v="${{ steps.version.outputs.version }}" '
+            $0 ~ "^## " v "( |$)" { on = 1; next }
+            on && /^## / { exit }
+            on { print }' > notes.md
+          if [ ! -s notes.md ]; then echo "No '## ${{ steps.version.outputs.version }}' section in CHANGELOG.md" >&2; exit 1; fi
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/*.bin release/SHA256SUMS.txt \
+            --title "AI Agent Monitor ${{ steps.version.outputs.version }}" --notes-file notes.md

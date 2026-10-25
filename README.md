@@ -71,7 +71,7 @@ this firmware is not for your clock.
    starts), and find **Firmware Update (OTA)**.
 3. Choose the downloaded file and press **Start Update**. Confirm, then wait for
    "Update Success". The clock restarts by itself within about 30 seconds.
-4. On your phone or computer, join the WiFi network **Smart Weather Clock** with the
+4. On your phone or computer, join the WiFi network **AI Agent Monitor** with the
    password shown on the clock, and open **http://192.168.4.1/**. Sign in with the same
    password.
 5. In the **WiFi** card, pick your network, enter its password, and press
@@ -116,7 +116,7 @@ Custom faces) in `CLOCK_URL` and `CLOCK_API_KEY`. Without them it uses the emula
 
 ## Recovery
 
-- The **Smart Weather Clock** setup network stays on at all times, so you can always
+- The **AI Agent Monitor** setup network stays on at all times, so you can always
   reach **http://192.168.4.1/**, even when your home WiFi is down or wrong.
 - **Forgotten the password?** On the sign-in page, press **Show the password on the
   clock**, or use recovery mode below, which shows it on screen.
