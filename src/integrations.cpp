@@ -354,7 +354,7 @@ String faceLabel() {
 void publishConfig(const char* component, const char* object, const String& fields) {
   String id = nodeId(), b = base();
   String json = "{" + fields + F(",\"uniq_id\":\"") + id + "_" + object + F("\",\"avty_t\":\"") + b +
-                F("/status\",\"dev\":{\"ids\":[\"") + id + F("\"],\"name\":\"Smart Clock ") + deviceHost().substring(11) +
+                F("/status\",\"dev\":{\"ids\":[\"") + id + F("\"],\"name\":\"AI Agent Monitor ") + deviceHost().substring(11) +
                 F("\",\"mf\":\"SmartClock-OSS\",\"mdl\":\"SD Pro\",\"sw\":\"") + firmwareVersion() +
                 F("\",\"cu\":\"http://") + WiFi.localIP().toString() + F("/\"}}");
   String topic = String(F("homeassistant/")) + component + "/" + id + "/" + object + F("/config");
