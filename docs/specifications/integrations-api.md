@@ -35,7 +35,7 @@ Send the key as the header `X-Api-Key: <key>`, or as `?key=<key>`.
 | `POST /api/faces/vars` | `{"key":"value",...}` | Sets variables (merged with existing ones); values may be numbers |
 
 Names use 1–20 characters from `a-z 0-9 _ -`. Variables are kept in memory (up to
-24, keys up to 15 characters, values up to 40) and are lost on restart. Push them
+24, keys up to 15 characters, values up to 160) and are lost on restart. Push them
 again on a timer or whenever they change.
 
 ```bash

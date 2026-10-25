@@ -1,0 +1,10 @@
+{
+  "bg": {"stops": ["#3d0a0a", "#160404"], "angle": 180},
+  "items": [
+    {"type": "circle", "x": 120, "y": 70, "r": 44, "color": {"stops": ["#ff6b6b", "#c81e1e"], "angle": 160}},
+    {"type": "path", "x": 120, "y": 70, "size": 52, "align": "mc", "stroke": "#ffffff", "sw": 3,
+     "d": ["M18 6 6 18", "m6 6 12 12"]},
+    {"type": "text", "x": 120, "y": 132, "text": "{title}", "font": 4, "align": "tc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 166, "w": 216, "lines": 3, "text": "{msg}", "font": 2, "align": "tc", "color": "#ffd1d1"}
+  ]
+}

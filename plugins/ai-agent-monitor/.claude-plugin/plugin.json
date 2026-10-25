@@ -1,0 +1,13 @@
+{
+  "name": "ai-agent-monitor",
+  "version": "0.1.0",
+  "description": "Lets Claude show messages, progress, status and custom graphics (SVG icons, gradients, live values) on an AI Agent Monitor desk clock running SmartClock-OSS, or on its Docker emulator.",
+  "author": {
+    "name": "Simon Luckenuik",
+    "url": "https://github.com/SimonLuckenuik"
+  },
+  "homepage": "https://github.com/SimonLuckenuik/ai-agent-monitor",
+  "repository": "https://github.com/SimonLuckenuik/ai-agent-monitor",
+  "license": "GPL-3.0-only",
+  "keywords": ["esp8266", "smart-clock", "notifications", "display", "custom-faces", "svg-icons"]
+}

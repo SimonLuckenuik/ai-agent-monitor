@@ -87,6 +87,21 @@ mDNS out to make room in the update budget.
 Later updates are installed from the **Firmware update** card on our settings page. It
 accepts only SmartClock-OSS images and checks each one before writing.
 
+## Claude Code plugin
+
+This repository is also a Claude Code plugin marketplace. Its `ai-agent-monitor` skill
+teaches Claude to put messages, progress, status and custom graphics (SVG icons,
+gradients, live values) on the clock or on the [emulator](emulator/README.md):
+
+```
+/plugin install ai-agent-monitor --marketplace SimonLuckenuik/ai-agent-monitor
+```
+
+Then give Claude the clock's address and API key (settings page → Integrations →
+Custom faces) in `CLOCK_URL` and `CLOCK_API_KEY`. Without them it uses the emulator at
+`http://127.0.0.1:8000`. The skill is in
+[`plugins/ai-agent-monitor`](plugins/ai-agent-monitor/skills/ai-agent-monitor/SKILL.md).
+
 ## Recovery
 
 - The **Smart Weather Clock** setup network stays on at all times, so you can always

@@ -19,6 +19,7 @@ versioning. `/version` on the device reports the version it was built as; a
   rectangles, circles and paths.
 - Custom faces: `text` wraps with `w`, `lines` and `lh`.
 - `/status` reports the DHCP hostname as `host`.
+- Face variables hold up to 160 characters (was 40), enough for a short message.
 
 ### Changed
 

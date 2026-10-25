@@ -1,0 +1,19 @@
+{
+  "name": "ai-agent-monitor",
+  "owner": {
+    "name": "Simon Luckenuik",
+    "url": "https://github.com/SimonLuckenuik"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for the AI Agent Monitor desk clock (SmartClock-OSS firmware)."
+  },
+  "plugins": [
+    {
+      "name": "ai-agent-monitor",
+      "source": "./plugins/ai-agent-monitor",
+      "description": "Show messages, progress, status and custom graphics on an AI Agent Monitor desk clock or its emulator.",
+      "version": "0.1.0",
+      "category": "productivity"
+    }
+  ]
+}

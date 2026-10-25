@@ -1,0 +1,9 @@
+{
+  "bg": "#0b1220",
+  "items": [
+    {"type": "text", "x": 120, "y": 22, "text": "{title}", "font": 2, "align": "tc", "color": "#8e8e93"},
+    {"type": "ring", "x": 120, "y": 112, "r": 62, "w": 10, "value": "{pct}", "max": 100, "color": "{pct}>=100?#30d158:#0a84ff", "track": "#1c2a3f"},
+    {"type": "text", "x": 120, "y": 112, "text": "{pct}%", "font": 4, "align": "mc", "color": "#ffffff", "bg": "#0b1220", "pad": 90},
+    {"type": "text", "x": 120, "y": 192, "w": 216, "lines": 2, "text": "{step}", "font": 2, "align": "tc", "color": "#e5e5ea"}
+  ]
+}

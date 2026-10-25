@@ -1,0 +1,9 @@
+{
+  "bg": {"stops": ["#06351c", "#04160c"], "angle": 180},
+  "items": [
+    {"type": "path", "x": 120, "y": 72, "size": 96, "align": "mc", "stroke": "#30d158", "sw": 2,
+     "d": ["M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0", "m9 12 2 2 4-4"]},
+    {"type": "text", "x": 120, "y": 134, "text": "{title}", "font": 4, "align": "tc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 168, "w": 216, "lines": 3, "text": "{msg}", "font": 2, "align": "tc", "color": "#c7f9d4"}
+  ]
+}

@@ -60,16 +60,17 @@ String facePath(const String& name) { return "/faces/" + name + ".json"; }
 
 struct Var { String key, value; };
 constexpr int VARS_MAX = 24;
+constexpr unsigned VAR_VALUE_MAX = 160;   // a short message; strings hold only their length
 Var vars[VARS_MAX];
 
 void setVar(const String& key, const String& value) {
   if (key.isEmpty() || key.length() > 15) return;
   int freeSlot = -1;
   for (int i = 0; i < VARS_MAX; ++i) {
-    if (vars[i].key == key) { vars[i].value = value.substring(0, 40); return; }
+    if (vars[i].key == key) { vars[i].value = value.substring(0, VAR_VALUE_MAX); return; }
     if (freeSlot < 0 && vars[i].key.isEmpty()) freeSlot = i;
   }
-  if (freeSlot >= 0) { vars[freeSlot].key = key; vars[freeSlot].value = value.substring(0, 40); }
+  if (freeSlot >= 0) { vars[freeSlot].key = key; vars[freeSlot].value = value.substring(0, VAR_VALUE_MAX); }
 }
 
 void showFace(const String& name) {
