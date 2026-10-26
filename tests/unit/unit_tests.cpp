@@ -241,10 +241,9 @@ static void testMonoFont() {
       y0 = std::min(y0, P.y[i]); y1 = std::max(y1, P.y[i]);
     }
     bool digit = g.c >= '0' && g.c <= '9';
-    float slack = digit ? 0.05f : 0.6f;   // letters may overshoot a little (G's curve, Q's tail)
-    bool inside = x0 >= -0.05f && x1 <= g.w + 0.05f && y0 >= -slack && y1 <= MONO_H + slack;
+    bool inside = x0 >= 0 && x1 <= MONO_ADV && y0 >= -0.05f && y1 <= MONO_H + 0.05f;
     bool full = !digit || (y0 <= 0.5f && y1 >= MONO_H - 0.5f);
-    if (!inside || !full) printf("  glyph %c: x %.2f..%.2f (slot %d) y %.2f..%.2f\n", g.c, x0, x1, g.w, y0, y1);
+    if (!inside || !full) printf("  glyph %c: x %.2f..%.2f y %.2f..%.2f\n", g.c, x0, x1, y0, y1);
     CHECK(inside && full);
   }
 }

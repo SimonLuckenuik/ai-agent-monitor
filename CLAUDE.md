@@ -29,12 +29,13 @@ branch has **not run on hardware yet**.
 - **Fonts are ASCII.** TFT_eSPI fonts 2 (16 px) and 4 (26 px) have letters; 6 (48 px)
   and 8 (75 px) are digits only. No accents: incoming text goes through `asciiFold()`
   (src/ascii.cpp). French is written without accents. Larger type uses the monoline
-  stroke font in faces.cpp (`monoText()`, glyphs A–Z, 0–9, `-`, space, `*` = degree).
+  stroke font in faces.cpp (`monoText()`, glyphs A–Z, 0–9, `-`, space, `*` = degree),
+  traced from Roboto Mono's centre lines: monospaced, 16.9-unit cells, plain zero.
 - **Flash layout** must stay `eagle.flash.4m3m.ld` (LittleFS at 0x100000–0x3FA000), the
   stock layout, or an OTA over stock lands on the wrong filesystem. LittleFS never
   auto-formats on the device.
 - **Face ids are an API.** 0–6 are the stock theme numbers (geekmagic-hacs and
-  `/api/set?key=theme` use them): 0 Classic, 1 Weather, 2 Photo, 3 Date (was Dial),
+  `/api/set?key=theme` use them): 0 Classic, 1 Weather, 2 Photo, 3 Big date (was Dial),
   4 Simple, 5 Forecast, 6 Flip; then 7 Big time, 8 Big weather, 9 Agents board;
   `FACE_CUSTOM` 10, `FACE_MESSAGE` 11 (never saved). Renumbering needs a migration in
   `Config::load()` (`facesv`, now 3).
@@ -73,7 +74,7 @@ tests (`python -m pip install ziglang==0.13.0 --target .pio-tools`).
 
 ```bash
 python -m platformio run                        # firmware + size guard
-python tests/unit/run_unit_tests.py             # 135 checks
+python tests/unit/run_unit_tests.py             # 173 checks
 python tests/run_safety_tests.py                # needs the firmware.bin from pio run
 python tests/face_preview/run_face_preview.py   # .pio/face-preview/*.png, sheet.png
 claude plugin validate .                        # plugin and marketplace manifests
@@ -151,7 +152,7 @@ change.
 
 Done on `faces-v2` (see CHANGELOG Unreleased): emulator, custom faces v2 (expressions,
 `show`, `fps`, SVG paths, gradients, wrapping, `{name|fallback}`), agent messages
-(`/api/message`, 8 icons, rotation turns, backlight boost), French, Big tiles (Date,
+(`/api/message`, 8 icons, rotation turns, backlight boost), French, Big tiles (Big date,
 Big time, Big weather) and the Agents board, night tile option, hostname and setup
 network `agentmonitor-XXXXXX` / `AI Agent Monitor XXXXXX`, unit tests, CI, plugin 0.2.0.
 

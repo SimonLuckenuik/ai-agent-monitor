@@ -1419,61 +1419,60 @@ void message(const struct tm& t, bool force) {
   if (customLoaded) renderItems(t, force);
 }
 
-// ---- The Big tiles (Date, Big time, Big weather): one thing each, as large as the
+// ---- The Big tiles (Big date, Big time, Big weather): one thing each, as large as the
 // screen allows, in one style. The fonts stop at 26 px for letters, so the tiles use
 // a monoline sans: each glyph a few round-capped strokes on a 20-unit-high grid,
-// drawn by the path renderer (the same outline style as the icons).
-const char MG_0[] PROGMEM = "M5.5 0a5.5 10 0 1 0 0 20a5.5 10 0 1 0 0-20";
-const char MG_1[] PROGMEM = "M.5 4.2L5 0v20";
-const char MG_2[] PROGMEM = "M.5 5.5a5.25 5.5 0 0 1 10.5 0c0 2.8-2 4.6-4.4 6.9L.2 20H11";
-const char MG_3[] PROGMEM = "M1 0h9.5L5 7.2c3.6-.2 6 2.4 6 6.3 0 3.9-2.5 6.5-5.8 6.5-2.4 0-4.3-1.2-5.2-3.2";
-const char MG_4[] PROGMEM = "M9 20V0L0 14h12";
-const char MG_5[] PROGMEM = "M10.6 0H1.4L.8 8.4c1.3-1.1 2.8-1.6 4.5-1.6 3.4 0 5.7 2.6 5.7 6.6 0 4-2.4 6.6-5.8 6.6-2.4 0-4.2-1.1-5.2-3";
-const char MG_6[] PROGMEM = "M8.3 0L2.2 9.3M0 14a5.5 6 0 1 0 11 0a5.5 6 0 1 0-11 0";
-const char MG_7[] PROGMEM = "M0 0h11L4 20";
-const char MG_8[] PROGMEM = "M5.5 0a4.5 4.6 0 1 0 0 9.2a4.5 4.6 0 1 0 0-9.2M5.5 9.2a5.5 5.4 0 1 0 0 10.8a5.5 5.4 0 1 0 0-10.8";
-const char MG_9[] PROGMEM = "M2.7 20l6.1-9.3M11 6a5.5 6 0 1 0-11 0a5.5 6 0 1 0 11 0";
-const char MG_MINUS[] PROGMEM = "M0 11h7";
-const char MG_DEG[] PROGMEM = "M0 3a3 3 0 1 0 6 0a3 3 0 1 0-6 0";
+// drawn by the path renderer (the same outline style as the icons). The shapes and
+// spacing follow Roboto Mono's centre lines: every glyph sits in a 16.9-unit cell.
+const char MG_0[] PROGMEM = "M8.45 0C12 0 14.2 3.7 14.2 8.6v2.8c0 4.9-2.2 8.6-5.75 8.6S2.7 16.3 2.7 11.4V8.6C2.7 3.7 4.9 0 8.45 0";
+const char MG_1[] PROGMEM = "M3.4 3.6L9.4 0v20";
+const char MG_2[] PROGMEM = "M1.9 5.5C1.9 2.5 4.4 0 7.4 0s5.1 2.4 5.1 5.4c0 1.8-1.2 3.2-2.5 4.6L2.2 20H14";
+const char MG_3[] PROGMEM = "M2.1 5.1C2.1 2.2 4.6 0 7.8 0s5.1 2.2 5.1 5c0 2.9-2.3 4.9-5.3 4.9H5.6M7.6 9.9c3.4 0 5.8 2.1 5.8 5.1S11 20 7.9 20s-6.2-2.2-6.2-5.4";
+const char MG_4[] PROGMEM = "M11.3 20V0L1.2 14.2H15.1";
+const char MG_5[] PROGMEM = "M14.5 0H5.1L4.2 9.4C5.4 8.3 7.2 7.8 9.3 7.8c2.9 0 4.9 2.6 4.9 6s-2 6.2-5 6.2-5.6-2.1-5.6-5.3";
+const char MG_6[] PROGMEM = "M11.9 0C6.4 0 2.5 4.4 2.5 12v1.5a5.75 6.3 0 1 0 11.5 0a5.75 6.3 0 1 0-11.5 0";
+const char MG_7[] PROGMEM = "M1.8 0H14.4L5.4 20";
+const char MG_8[] PROGMEM = "M8.7 0a5.4 4.85 0 1 0 0 9.7a5.4 4.85 0 1 0 0-9.7M8.7 9.7a5.95 5.15 0 1 0 0 10.3a5.95 5.15 0 1 0 0-10.3";
+const char MG_9[] PROGMEM = "M2.5 6.55a5.75 6.55 0 1 0 11.5 0a5.75 6.55 0 1 0-11.5 0M14 6.55V8.5C14 15.6 10.2 20 4.9 20";
+const char MG_MINUS[] PROGMEM = "M4.5 10.8H12.4";
+const char MG_DEG[] PROGMEM = "M5.55 3a2.85 2.85 0 1 0 5.7 0a2.85 2.85 0 1 0-5.7 0";
 const char MG_SPACE[] PROGMEM = "";
-const char MG_A[] PROGMEM = "M0 20L6.5 0 13 20M2.6 13h7.8";
-const char MG_B[] PROGMEM = "M0 0v20h6a5 5 0 0 0 0-10H0M0 0h5.2a5 5 0 0 1 0 10";
-const char MG_C[] PROGMEM = "M11.4 3.8A6.2 10 0 1 0 11.4 16.2";
-const char MG_D[] PROGMEM = "M0 0v20h3.5a8.5 10 0 0 0 0-20z";
-const char MG_E[] PROGMEM = "M10 0H0v20h10M0 10h8.5";
-const char MG_F[] PROGMEM = "M10 0H0v20M0 10h8.5";
-const char MG_G[] PROGMEM = "M11.6 3.8A6.4 10 0 1 0 12.8 12H7.5";
-const char MG_H[] PROGMEM = "M0 0v20M12 0v20M0 10h12";
-const char MG_I[] PROGMEM = "M0 0v20";
-const char MG_J[] PROGMEM = "M9 0v14a4.5 6 0 0 1-9 0";
-const char MG_K[] PROGMEM = "M0 0v20M11 0L0 12.5M3.6 8.6L11 20";
-const char MG_L[] PROGMEM = "M0 0v20h9";
-const char MG_M[] PROGMEM = "M0 20V0l7.5 13L15 0v20";
-const char MG_N[] PROGMEM = "M0 20V0l12 20V0";
-const char MG_O[] PROGMEM = "M6.5 0a6.5 10 0 1 0 0 20a6.5 10 0 1 0 0-20";
-const char MG_P[] PROGMEM = "M0 20V0h5.5a5.5 5.5 0 0 1 0 11H0";
-const char MG_Q[] PROGMEM = "M6.5 0a6.5 10 0 1 0 0 20a6.5 10 0 1 0 0-20M8.5 14.5l4.5 6";
-const char MG_R[] PROGMEM = "M0 20V0h5.5a5.5 5.5 0 0 1 0 11H0M5.5 11l5.5 9";
-const char MG_S[] PROGMEM = "M10.5 3.2C9.6 1.2 7.8 0 5.5 0 2.6 0 .6 2 .6 4.8c0 6.2 10.4 3.7 10.4 10.3 0 3-2.4 4.9-5.5 4.9-2.7 0-4.6-1.3-5.5-3.6";
-const char MG_T[] PROGMEM = "M0 0h12M6 0v20";
-const char MG_U[] PROGMEM = "M0 0v13.5a6 6.5 0 0 0 12 0V0";
-const char MG_V[] PROGMEM = "M0 0l6.5 20L13 0";
-const char MG_W[] PROGMEM = "M0 0l4.2 20L9 6l4.8 14L18 0";
-const char MG_X[] PROGMEM = "M0 0l12 20M12 0L0 20";
-const char MG_Y[] PROGMEM = "M0 0l6 10 6-10M6 10v10";
-const char MG_Z[] PROGMEM = "M0 0h11L0 20h11";
-struct MonoGlyph { char c; uint8_t w; const char* path; };
+const char MG_A[] PROGMEM = "M2 20L8.6 0 15.2 20M4.1 13.6h9";
+const char MG_B[] PROGMEM = "M3.3 0V20H9.3c3 0 5.3-2.3 5.3-5.15S12.3 9.7 9.3 9.7H3.3M3.3 0h5.1c3 0 5.3 2 5.3 4.85S11.4 9.7 8.4 9.7";
+const char MG_C[] PROGMEM = "M14.4 6.1C14 2.4 11.6 0 8.6 0 5 0 2.3 3.5 2.3 8.5v3C2.3 16.5 5 20 8.6 20c3 0 5.4-2.4 5.8-6.1";
+const char MG_D[] PROGMEM = "M3.1 0V20H7.8C11.8 20 14.8 16 14.8 11.5v-3C14.8 4 11.8 0 7.8 0z";
+const char MG_E[] PROGMEM = "M14.2 0H3.3V20H14.2M3.3 9.7H13";
+const char MG_F[] PROGMEM = "M14.5 0H3.5V20M3.5 9.7H13.2";
+const char MG_G[] PROGMEM = "M14.4 5.3C13.8 2.2 11.6 0 8.6 0 5 0 2.2 3.5 2.2 8.5v3C2.2 16.5 5 20 8.8 20c2.3 0 4.5-.7 5.7-2.1v-6.6H8.6";
+const char MG_H[] PROGMEM = "M2.7 0v20M14 0v20M2.7 9.7H14";
+const char MG_I[] PROGMEM = "M2.9 0h11M8.4 0v20M2.9 20h11";
+const char MG_J[] PROGMEM = "M13.3 0V14C13.3 17.4 10.8 20 7.6 20S2 17.6 2 14.5";
+const char MG_K[] PROGMEM = "M3.5 0v20M15 0L3.5 11.9M7 9.3L15.7 20";
+const char MG_L[] PROGMEM = "M3.7 0V20H14.6";
+const char MG_M[] PROGMEM = "M2.9 20V0l5.5 13.1L14.2 0v20";
+const char MG_N[] PROGMEM = "M2.8 20V0L14 20V0";
+const char MG_O[] PROGMEM = "M8.45 0C12.3 0 14.6 3.6 14.6 8.5v3c0 4.9-2.3 8.5-6.15 8.5S2.3 16.4 2.3 11.5v-3C2.3 3.6 4.6 0 8.45 0";
+const char MG_P[] PROGMEM = "M3.7 20V0H10c2.9 0 5 2.4 5 5.6s-2.1 5.6-5 5.6H3.7";
+const char MG_Q[] PROGMEM = "M8.45 0C12.3 0 14.6 3.6 14.6 8.5v3c0 4.9-2.3 8.5-6.15 8.5S2.3 16.4 2.3 11.5v-3C2.3 3.6 4.6 0 8.45 0M10.4 16.4L14.2 20";
+const char MG_R[] PROGMEM = "M3.4 20V0H9c2.9 0 5.1 2.3 5.1 5.5s-2.2 5.6-5.1 5.6H3.4M9.9 11.1L14.9 20";
+const char MG_S[] PROGMEM = "M14.5 5.3C14 2.2 11.6 0 8.8 0 5.5 0 3 2.1 3 4.9c0 3 2.6 4.1 5.7 5 3.5 1 6 2.5 6 5.3 0 2.8-2.5 4.8-5.8 4.8S2.8 17.7 2.5 14.6";
+const char MG_T[] PROGMEM = "M1.5 0H15.3M8.4 0V20";
+const char MG_U[] PROGMEM = "M2.8 0V14c0 3.5 2.5 6 5.65 6s5.65-2.5 5.65-6V0";
+const char MG_V[] PROGMEM = "M1.8 0L8.4 20 15 0";
+const char MG_W[] PROGMEM = "M1.6 0L4.8 20 8.7 1 12.5 20 15.8 0";
+const char MG_X[] PROGMEM = "M2.2 0L15.1 20M14.9 0L2.1 20";
+const char MG_Y[] PROGMEM = "M1.6 0L8.2 12.2 14.6 0M8.2 12.2V20";
+const char MG_Z[] PROGMEM = "M2.4 0H13.6L2.4 20H14.3";
+struct MonoGlyph { char c; const char* path; };
 const MonoGlyph MONO[] = {
-    {'0', 11, MG_0}, {'1', 5, MG_1}, {'2', 11, MG_2}, {'3', 11, MG_3}, {'4', 12, MG_4},
-    {'5', 11, MG_5}, {'6', 11, MG_6}, {'7', 11, MG_7}, {'8', 11, MG_8}, {'9', 11, MG_9},
-    {'-', 7, MG_MINUS}, {'*', 6, MG_DEG}, {' ', 5, MG_SPACE},
-    {'A', 13, MG_A}, {'B', 11, MG_B}, {'C', 12, MG_C}, {'D', 12, MG_D}, {'E', 10, MG_E},
-    {'F', 10, MG_F}, {'G', 13, MG_G}, {'H', 12, MG_H}, {'I', 0, MG_I}, {'J', 9, MG_J},
-    {'K', 11, MG_K}, {'L', 9, MG_L}, {'M', 15, MG_M}, {'N', 12, MG_N}, {'O', 13, MG_O},
-    {'P', 11, MG_P}, {'Q', 13, MG_Q}, {'R', 11, MG_R}, {'S', 11, MG_S}, {'T', 12, MG_T},
-    {'U', 12, MG_U}, {'V', 13, MG_V}, {'W', 18, MG_W}, {'X', 12, MG_X}, {'Y', 12, MG_Y},
-    {'Z', 11, MG_Z}};
-constexpr float MONO_H = 20, MONO_GAP = 3.2f, MONO_STROKE = 2.3f;   // grid units ('*' is the degree sign)
+    {'0', MG_0}, {'1', MG_1}, {'2', MG_2}, {'3', MG_3}, {'4', MG_4}, {'5', MG_5}, {'6', MG_6},
+    {'7', MG_7}, {'8', MG_8}, {'9', MG_9}, {'-', MG_MINUS}, {'*', MG_DEG}, {' ', MG_SPACE},
+    {'A', MG_A}, {'B', MG_B}, {'C', MG_C}, {'D', MG_D}, {'E', MG_E}, {'F', MG_F}, {'G', MG_G},
+    {'H', MG_H}, {'I', MG_I}, {'J', MG_J}, {'K', MG_K}, {'L', MG_L}, {'M', MG_M}, {'N', MG_N},
+    {'O', MG_O}, {'P', MG_P}, {'Q', MG_Q}, {'R', MG_R}, {'S', MG_S}, {'T', MG_T}, {'U', MG_U},
+    {'V', MG_V}, {'W', MG_W}, {'X', MG_X}, {'Y', MG_Y}, {'Z', MG_Z}};
+// Grid units ('*' is the degree sign). MONO_SB: the side bearing left out when centring.
+constexpr float MONO_H = 20, MONO_ADV = 16.9f, MONO_SB = 1.5f, MONO_STROKE = 2.3f;
 
 const MonoGlyph* monoGlyph(char c) {
   c = toupper((unsigned char)c);
@@ -1482,16 +1481,15 @@ const MonoGlyph* monoGlyph(char c) {
 }
 
 float monoWidth(const char* s) {
-  float w = 0;
   int n = 0;
-  for (; *s; ++s) if (const MonoGlyph* g = monoGlyph(*s)) { w += g->w; ++n; }
-  return n ? w + MONO_GAP * (n - 1) : 0;
+  for (; *s; ++s) if (monoGlyph(*s)) ++n;
+  return n ? n * MONO_ADV - 2 * MONO_SB : 0;
 }
 
 // Draws s centred on cx in the box from y to y+maxH, as large as maxW and maxH allow.
 void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) {
   float k = std::min(maxH / (MONO_H + MONO_STROKE), maxW / (monoWidth(s) + MONO_STROKE));
-  float x = cx - monoWidth(s) * k / 2, top = y + (maxH - MONO_H * k) / 2;
+  float x = cx - (monoWidth(s) / 2 + MONO_SB) * k, top = y + (maxH - MONO_H * k) / 2;
   Paint paint;
   paint.c[0] = color;
   for (; *s; ++s) {
@@ -1506,7 +1504,7 @@ void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) 
       P.close();
       strokePoly(P, MONO_STROKE * k, paint, BG);
     }
-    x += (g->w + MONO_GAP) * k;
+    x += MONO_ADV * k;
   }
 }
 
@@ -1539,7 +1537,7 @@ const char* weatherOutline(const String& icon) {
 // The tiles' layout: the main element white, the others in the accent colour.
 constexpr int TILE_W = 226;
 
-// ---- 3 Date: the day of the week, the day, the month
+// ---- 3 Big date: the day of the week, the day, the month
 void bigDate(const struct tm& t, bool force) {
   static int day = -1;
   if (!force && t.tm_yday == day) return;

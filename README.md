@@ -11,7 +11,7 @@ are needed.
 ## Features
 
 - **Ten clock faces:** Classic, Weather, Forecast, Flip (with a fold
-  animation), Simple, Photo, Date, Big time, Big weather and the Agents board (every
+  animation), Simple, Photo, Big date, Big time, Big weather and the Agents board (every
   active agent message at a glance). Faces rotate automatically if you want them to,
   and skip any that have nothing to show yet.
 - **Weather and a 4-day forecast with no API key**, from

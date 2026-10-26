@@ -197,7 +197,7 @@ a{color:var(--accent)}
     <div class="row hoursRow"><span class="lbl">Until</span><select class="sm hours" id="stoptime" data-key="stoptime"></select></div>
     <div class="row"><span class="lbl">At night show<span class="hint">One face all night, instead of the rotation</span></span>
       <select class="sm" id="nightface" data-key="nightface"><option value="-1">The rotation</option><option value="7">Big time</option>
-        <option value="3">Date</option><option value="8">Big weather</option><option value="0">Classic</option><option value="4">Simple</option>
+        <option value="3">Big date</option><option value="8">Big weather</option><option value="0">Classic</option><option value="4">Simple</option>
         <option value="6">Flip</option><option value="9">Agents</option></select></div>
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
@@ -386,8 +386,8 @@ const THEMES=[[0,'Classic','<rect x="4" y="8" width="30" height="16" rx="3"/><pa
  [5,'Forecast','<rect x="5" y="9" width="28" height="20" rx="3"/><path d="M5 16h28M14 9v20M24 9v20"/>'],
  [6,'Flip','<rect x="6" y="8" width="11" height="22" rx="2"/><rect x="21" y="8" width="11" height="22" rx="2"/><path d="M6 19h11M21 19h11"/>'],
  [4,'Simple','<path d="M9 19h20"/>'],[2,'Photo','<rect x="6" y="8" width="26" height="22" rx="3"/><circle cx="14" cy="16" r="3"/><path d="M6 27l8-7 6 5 4-3 8 6"/>'],
- [3,'Date','<rect x="6" y="9" width="26" height="22" rx="3"/><path d="M6 16h26M13 6v6M25 6v6"/>'],
- [7,'Big time','<path d="M11 9h6M11 18h6M11 27h6M21 9h6M21 18h6M21 27h6M11 9v18M27 9v18"/>'],
+ [3,'Big date','<rect x="6" y="9" width="26" height="22" rx="3"/><path d="M6 16h26M13 6v6M25 6v6"/>'],
+ [7,'Big time','<g transform="translate(9.7 5) scale(.55)" stroke-width="3.6"><path d="M1.9 5.5C1.9 2.5 4.4 0 7.4 0s5.1 2.4 5.1 5.4c0 1.8-1.2 3.2-2.5 4.6L2.2 20H14"/><path transform="translate(16.9)" d="M3.4 3.6L9.4 0v20"/><path transform="translate(0 29)" d="M14.5 0H5.1L4.2 9.4C5.4 8.3 7.2 7.8 9.3 7.8c2.9 0 4.9 2.6 4.9 6s-2 6.2-5 6.2-5.6-2.1-5.6-5.3"/><path transform="translate(16.9 29)" d="M11.3 20V0L1.2 14.2H15.1"/></g>'],
  [8,'Big weather','<circle cx="14" cy="15" r="5"/><path d="M14 6v2M5 15h2M8 9l1.5 1.5M24 30a5 5 0 1 0-1-9.9A7 7 0 0 0 10 22a4 4 0 0 0 1 8z"/>'],
  [9,'Agents','<rect x="6" y="8" width="26" height="9" rx="2"/><rect x="6" y="21" width="26" height="9" rx="2"/><path d="M10 12.5h1M10 25.5h1"/>']];
 

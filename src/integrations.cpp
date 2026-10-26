@@ -26,7 +26,7 @@ String mqttStatus();
 
 namespace {
 
-const char* const FACE_NAMES[FACE_COUNT] = {"Classic", "Weather", "Photo", "Date", "Simple", "Forecast", "Flip", "Big time", "Big weather", "Agents"};
+const char* const FACE_NAMES[FACE_COUNT] = {"Classic", "Weather", "Photo", "Big date", "Simple", "Forecast", "Flip", "Big time", "Big weather", "Agents"};
 uint32_t facesVersion = 1;
 
 bool saveConfig() {
@@ -368,7 +368,7 @@ void publishDiscovery() {
   publishConfig("light", "backlight", q("name", "Backlight") + "," + q("schema", "json") +
                 F(",\"brightness\":true,\"brightness_scale\":100,") + q("cmd_t", b + "/backlight/set") + "," +
                 q("stat_t", b + "/backlight"));
-  String options = "\"Classic\",\"Weather\",\"Photo\",\"Date\",\"Simple\",\"Forecast\",\"Flip\",\"Big time\",\"Big weather\",\"Agents\"";
+  String options = "\"Classic\",\"Weather\",\"Photo\",\"Big date\",\"Simple\",\"Forecast\",\"Flip\",\"Big time\",\"Big weather\",\"Agents\"";
   if (cfg.facesApi) for (int i = 0, n = customFaceCount(); i < n; ++i) options += ",\"" + customFaceAt(i) + "\"";
   publishConfig("select", "face", q("name", "Face") + "," + q("cmd_t", b + "/face/set") + "," +
                 q("stat_t", b + "/face") + ",\"options\":[" + options + "]");

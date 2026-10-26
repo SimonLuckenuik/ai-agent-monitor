@@ -9,8 +9,8 @@ versioning. `/version` on the device reports the version it was built as; a
 ### Added
 
 - Faces: three **Big tiles** that each show one thing as large as the screen allows,
-  in one modern monoline style (a stroke font and outline icons drawn by the path
-  renderer): **Date** (id 3: day of the week, the day, the month), **Big time** (7:
+  in one modern monoline style (a monospaced stroke font that follows Roboto Mono's
+  shapes and spacing, and outline icons, drawn by the path renderer): **Big date** (id 3: day of the week, the day, the month), **Big time** (7:
   hours above minutes) and **Big weather** (8: the conditions' icon above the
   temperature). And the **Agents board** (9, last: every active agent message with its
   icon, title, first line and time left; "All quiet" when there are none, in the
