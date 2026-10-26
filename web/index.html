@@ -621,6 +621,7 @@ async function saveMqtt(){const keys=['mqtthost','mqttport','mqttuser','mqttbase
 // ---- Photos: crop to 240x240 and encode as a baseline JPEG in the browser
 async function loadPhotos(){
   try{const d=await(await fetch('/api/photos')).json(),list=$('phList');
+    d.files=d.files.filter(f=>/\.(jpe?g|png|gif)$/i.test(f.name));   // not the stock firmware's other leftovers
     list.innerHTML=d.files.length?'':'<p class="note" style="grid-column:1/-1;margin:0">No photos yet.</p>';
     d.files.forEach(f=>{const el=document.createElement('div');el.className='ph';
       const shown=/\.jpe?g$/i.test(f.name);if(f.enabled===false)el.classList.add('off');
