@@ -227,6 +227,28 @@ static void testMessageFace() {
   CHECK(face["items"].size() == 5);
 }
 
+// The Big tiles' font: every glyph inside its slot, digits the full cap height, so
+// numbers line up.
+static void testMonoFont() {
+  for (const MonoGlyph& g : MONO) {
+    String d = pgmString(g.path);
+    if (d.isEmpty()) continue;
+    Poly P;
+    parse(P, d.c_str());
+    float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
+    for (int i = 0; i < P.n; ++i) {
+      x0 = std::min(x0, P.x[i]); x1 = std::max(x1, P.x[i]);
+      y0 = std::min(y0, P.y[i]); y1 = std::max(y1, P.y[i]);
+    }
+    bool digit = g.c >= '0' && g.c <= '9';
+    float slack = digit ? 0.05f : 0.6f;   // letters may overshoot a little (G's curve, Q's tail)
+    bool inside = x0 >= -0.05f && x1 <= g.w + 0.05f && y0 >= -slack && y1 <= MONO_H + slack;
+    bool full = !digit || (y0 <= 0.5f && y1 >= MONO_H - 0.5f);
+    if (!inside || !full) printf("  glyph %c: x %.2f..%.2f (slot %d) y %.2f..%.2f\n", g.c, x0, x1, g.w, y0, y1);
+    CHECK(inside && full);
+  }
+}
+
 static void testAsciiFold() {
   CHECK_STR(asciiFold("plain ASCII 123"), "plain ASCII 123");
   CHECK_STR(asciiFold("d\xC3\xA9j\xC3\xA0 vu"), "deja vu");
@@ -246,6 +268,7 @@ int main() {
   testColours();
   testPaths();
   testMessageFace();
+  testMonoFont();
   testAsciiFold();
   printf(failures ? "FAIL: %d of %d checks\n" : "PASS: %d checks\n", failures ? failures : checks, checks);
   return failures ? 1 : 0;

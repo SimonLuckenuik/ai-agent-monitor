@@ -1424,11 +1424,11 @@ void message(const struct tm& t, bool force) {
 // a monoline sans: each glyph a few round-capped strokes on a 20-unit-high grid,
 // drawn by the path renderer (the same outline style as the icons).
 const char MG_0[] PROGMEM = "M5.5 0a5.5 10 0 1 0 0 20a5.5 10 0 1 0 0-20";
-const char MG_1[] PROGMEM = "M1 4.5L6 0v20";
-const char MG_2[] PROGMEM = "M.6 5A5.2 5 0 0 1 10.6 5.5c0 2.8-2.2 4.6-4.6 6.9L0 20h11";
-const char MG_3[] PROGMEM = "M.5 0h10l-5.2 7.6a6.2 6.2 0 1 1-4.8 9.9";
+const char MG_1[] PROGMEM = "M.5 4.2L5 0v20";
+const char MG_2[] PROGMEM = "M.5 5.5a5.25 5.5 0 0 1 10.5 0c0 2.8-2 4.6-4.4 6.9L.2 20H11";
+const char MG_3[] PROGMEM = "M1 0h9.5L5 7.2c3.6-.2 6 2.4 6 6.3 0 3.9-2.5 6.5-5.8 6.5-2.4 0-4.3-1.2-5.2-3.2";
 const char MG_4[] PROGMEM = "M9 20V0L0 14h12";
-const char MG_5[] PROGMEM = "M10 0H1.5L.8 8.6a6.2 6 0 1 1-.3 8.6";
+const char MG_5[] PROGMEM = "M10.6 0H1.4L.8 8.4c1.3-1.1 2.8-1.6 4.5-1.6 3.4 0 5.7 2.6 5.7 6.6 0 4-2.4 6.6-5.8 6.6-2.4 0-4.2-1.1-5.2-3";
 const char MG_6[] PROGMEM = "M8.3 0L2.2 9.3M0 14a5.5 6 0 1 0 11 0a5.5 6 0 1 0-11 0";
 const char MG_7[] PROGMEM = "M0 0h11L4 20";
 const char MG_8[] PROGMEM = "M5.5 0a4.5 4.6 0 1 0 0 9.2a4.5 4.6 0 1 0 0-9.2M5.5 9.2a5.5 5.4 0 1 0 0 10.8a5.5 5.4 0 1 0 0-10.8";
@@ -1464,7 +1464,7 @@ const char MG_Y[] PROGMEM = "M0 0l6 10 6-10M6 10v10";
 const char MG_Z[] PROGMEM = "M0 0h11L0 20h11";
 struct MonoGlyph { char c; uint8_t w; const char* path; };
 const MonoGlyph MONO[] = {
-    {'0', 11, MG_0}, {'1', 7, MG_1}, {'2', 11, MG_2}, {'3', 11, MG_3}, {'4', 12, MG_4},
+    {'0', 11, MG_0}, {'1', 5, MG_1}, {'2', 11, MG_2}, {'3', 11, MG_3}, {'4', 12, MG_4},
     {'5', 11, MG_5}, {'6', 11, MG_6}, {'7', 11, MG_7}, {'8', 11, MG_8}, {'9', 11, MG_9},
     {'-', 7, MG_MINUS}, {'*', 6, MG_DEG}, {' ', 5, MG_SPACE},
     {'A', 13, MG_A}, {'B', 11, MG_B}, {'C', 12, MG_C}, {'D', 12, MG_D}, {'E', 10, MG_E},
