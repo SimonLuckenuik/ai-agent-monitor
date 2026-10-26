@@ -50,6 +50,7 @@ jobs:
           name: firmware-${{ github.sha }}
           path: |
             .pio/build/esp12e/firmware.bin
+            .pio/build/esp12e/firmware.bin.gz
             .pio/face-preview/sheet.png
           if-no-files-found: error
 

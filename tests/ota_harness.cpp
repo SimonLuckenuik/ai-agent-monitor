@@ -23,7 +23,8 @@ struct MockServer {
 } server;
 struct MockESP {
   unsigned restarts = 0;
-  uint32_t getFreeSketchSpace() { return 1500000; }
+  uint32_t freeSpace = 1500000;
+  uint32_t getFreeSketchSpace() { return freeSpace; }
   void restart() { ++restarts; }
 } ESP;
 struct MockUpdate {
@@ -47,6 +48,7 @@ struct MockUpdate {
   }
   bool isRunning() { return running; }
 } Update;
+#define FS_PHYS_ADDR 0x100000u   // 4m3m: the filesystem starts at 1 MB
 void delay(unsigned) {}
 void yield() {}
 void safeRestart() { ESP.restart(); }
@@ -90,10 +92,48 @@ void rejected() {
   finishOta();
   assert(server.code == 400 && !Update.committed && !Update.running && ESP.restarts == 0);
 }
+void accepted(std::vector<uint8_t>& image) {
+  upload(image); finishOta();
+  assert(server.code == 200 && Update.committed && ESP.restarts == 1 && Update.staged == image);
+}
+std::vector<uint8_t> load(const char* path) {
+  std::ifstream file(path, std::ios::binary);
+  return {std::istreambuf_iterator<char>(file), {}};
+}
+void put32(std::vector<uint8_t>& v, size_t at, uint32_t x) { for (int i = 0; i < 4; ++i) v[at + i] = uint8_t(x >> (8 * i)); }
+
+// Compressed .bin.gz (firmware.bin.gz from scripts/build_options.py).
+void compressedCases(std::vector<uint8_t>& gz) {
+  assert(gz.size() > FirmwareValidation::prefixSize && gz[0] == 0x1f);
+  for (size_t chunk : {size_t(1), size_t(2048), gz.size()}) {
+    reset(); upload(gz, chunk); assert(otaReady && Update.staged.size() == gz.size() - 1);
+    finishOta(); assert(server.code == 200 && Update.committed && Update.staged == gz);
+  }
+  for (size_t length : {size_t(27), size_t(4120), gz.size() - 1}) {
+    reset(); auto partial = gz; partial.resize(length); upload(partial); rejected();
+  }
+  reset(); auto corrupt = gz; corrupt[5000] ^= 1; upload(corrupt); rejected();            // CRC
+  reset(); auto trailer = gz; trailer.back() ^= 1; upload(trailer); rejected();           // CRC
+  reset(); auto longer = gz; longer.push_back(0); upload(longer); rejected();             // length
+  // Header fields outside the CRC: each still has a check.
+  reset(); auto raw = gz; put32(raw, 16, FirmwareValidation::word(&gz[16]) + 1); upload(raw); rejected();   // != ISIZE
+  reset(); auto size = gz; put32(size, 20, uint32_t(gz.size() - 1)); upload(size); rejected();
+  reset(); auto crc = gz; crc[24] ^= 1; upload(crc); rejected();
+  reset(); auto tag = gz; tag[12] = 'X'; upload(tag); rejected();
+  assert(server.message == "Unsupported compressed image");
+  reset(); auto flags = gz; flags[3] = 4 | 8; upload(flags); rejected();                 // FNAME too
+  // Too big: no room to stage it, or the unpacked image would reach the staged copy.
+  reset(); ESP.freeSpace = uint32_t(gz.size()); upload(gz); rejected();
+  assert(server.message == "Compressed image too big for this clock" && Update.staged.empty());
+  reset(); auto huge = gz; put32(huge, 16, 0xC0000); upload(huge); rejected();
+  assert(server.message == "Compressed image too big for this clock" && Update.staged.empty());
+  std::cout << "PASS: compressed: complete/chunked, truncated, corrupt, trailer, oversized, header fields "
+               "(unpacked size, length, CRC, tag, flags), no room, would overlap\n";
+}
+
 int main(int argc, char** argv) {
-  assert(argc == 2);
-  std::ifstream file(argv[1], std::ios::binary);
-  std::vector<uint8_t> image{std::istreambuf_iterator<char>(file), {}};
+  assert(argc == 3);
+  std::vector<uint8_t> image = load(argv[1]), gz = load(argv[2]);
   assert(image.size() > FirmwareValidation::prefixSize);
   for (size_t chunk : {size_t(1), size_t(511), size_t(2048), size_t(4096), image.size()}) {
     reset(); server.up.filename = "clock-lfs.bin"; upload(image, chunk);
@@ -122,9 +162,13 @@ int main(int argc, char** argv) {
   // Not signed in: rejected at the first chunk, nothing is staged.
   reset(); authOk = false; upload(image); assert(!Update.running && Update.staged.empty()); rejected();
   assert(server.message == "Sign in first"); authOk = true;
+  // Too big for a plain update: refused before anything is staged, with the way out.
+  reset(); ESP.freeSpace = uint32_t(image.size()); upload(image); rejected();
+  assert(server.message == "Too big to update uncompressed: upload the .bin.gz" && Update.staged.empty());
   reset(); Update.failBegin = true; upload(image); rejected();
   reset(); Update.failWrite = true; upload(image); rejected();
   reset(); Update.failEnd = true; upload(image); rejected();
+  compressedCases(gz);
   // Power-cycle recovery: boots shorter than the window count up; the third triggers.
   EEPROM = MockEEPROM{}; EEPROM.flash[0x10] = 0x5a;   // a stock byte elsewhere in the sector
   assert(!countPowerCycle() && !countPowerCycle() && countPowerCycle());
@@ -138,5 +182,5 @@ int main(int argc, char** argv) {
   assert(countPowerCycle());
   assert(EEPROM.flash[0x10] == 0x5a);                // stock byte preserved
   std::cout << "PASS: power-cycle counter (trigger on 3rd short boot, reset, clamp, no needless erase, sector preserved)\n";
-  std::cout << "PASS: complete/chunked/renamed, truncated, corrupt, oversized, invalid header, filesystem, multiple-file, empty, abort/retry, and updater failure cases\n";
+  std::cout << "PASS: complete/chunked/renamed, truncated, corrupt, oversized, invalid header, filesystem, multiple-file, empty, abort/retry, too big, and updater failure cases\n";
 }

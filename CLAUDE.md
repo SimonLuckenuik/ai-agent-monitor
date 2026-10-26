@@ -84,7 +84,11 @@ claude plugin validate .                        # plugin and marketplace manifes
 Run all four before committing firmware changes. The face preview's PNGs are worth
 looking at after any drawing change.
 
-Flash image for the owner: `cp .pio/build/esp12e/firmware.bin release/SDPro_AIAgentMonitor_v<FW_VERSION>.bin`
+Flash images for the owner: `cp .pio/build/esp12e/firmware.bin release/SDPro_AIAgentMonitor_v<FW_VERSION>.bin`,
+and the same for `firmware.bin.gz` (`.bin.gz`). The build writes both: the plain image
+for any updater (stock, older versions, serial), the compressed one (gzip with an "AM"
+header field: unpacked size, file size, CRC; `include/firmware_validation.h`) for
+clocks running 1.4.0 on. The bootloader unpacks it into place.
 (the name must start with `SDP` for the stock update page). Releases: bump
 `FW_VERSION` in src/main.cpp (no `-dev`), add its CHANGELOG section, tag `v<version>`:
 `release.yml` builds without WiFi details and publishes the image.
@@ -178,7 +182,9 @@ Next:
 2. Merge `faces-v2` into `main` (the README's plugin install line needs it).
 3. Claude Code hooks in the plugin (Notification → waiting, Stop → done,
    UserPromptSubmit → clear), using `/api/message`.
-4. Flash headroom: ~3.6 KB left (512,448 of 516,096) after Flip and font 8 left.
-   Next: compressed (gzip) updates, ~90 KB more: the core and the bootloader support
-   them; the upload check (`firmware_validation.h`) needs a trailer for .bin.gz.
+4. Flash headroom: the plain limit (516,096) has ~3 KB left, but compressed updates
+   raise the real limit to about 610 KB: the image plus its `.bin.gz` must fit the
+   1 MB area (`build_options.py` prints both). Past 516 KB, a clock updates only with
+   the `.bin.gz`, and only from a firmware that takes it: install one with
+   compressed-update support as a plain `.bin` first.
 5. The settings page stays English and self-contained (no CDN).

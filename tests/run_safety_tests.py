@@ -47,7 +47,8 @@ with (out / "compiler.log").open("w", encoding="utf-8") as log:
 if result.returncode:
     print((out / "compiler.log").read_text(encoding="utf-8", errors="replace")[-6000:])
     raise SystemExit(result.returncode)
-subprocess.run([str(out / "ota.exe"), str(root / ".pio/build/esp12e/firmware.bin")], check=True)
+subprocess.run([str(out / "ota.exe"), str(root / ".pio/build/esp12e/firmware.bin"),
+                str(root / ".pio/build/esp12e/firmware.bin.gz")], check=True)
 
 # Storage and recovery invariants that do not require flash hardware.
 import re
@@ -68,12 +69,20 @@ restarts = [m.start() for m in re.finditer(r"ESP\.restart\(\)", source)]
 safe = source[source.index("void safeRestart()"):]
 safe = safe[:safe.index("}")]
 assert len(restarts) == 1 and "ESP.restart()" in safe, "use safeRestart() for deliberate reboots"
-# The firmware image must fit the OTA budget enforced by build_options.py.
+# The firmware image must fit the OTA budget enforced by build_options.py: plain within
+# 0x7E000, or the image plus its .bin.gz within the 1 MB area (two sectors of slack).
 image = root / ".pio/build/esp12e/firmware.bin"
-assert image.stat().st_size <= 0x7E000, "image exceeds OTA budget"
-data = image.read_bytes()
-fs = data.find((0x405FA000).to_bytes(4, "little"))
-assert fs > 0 and (0x40300000).to_bytes(4, "little") in data[fs - 8:fs], "FS layout differs from stock"
+packed = image.with_suffix(".bin.gz")
+sectors = lambda n: (n + 0xFFF) // 0x1000
+assert packed.is_file(), "build_options.py writes firmware.bin.gz"
+assert sectors(image.stat().st_size) + sectors(packed.stat().st_size) <= 256 - 2, "image exceeds OTA budget"
+# The filesystem must sit where stock put it: read the linker's symbols from the ELF.
+nm = Path.home() / ".platformio/packages/toolchain-xtensa/bin/xtensa-lx106-elf-nm"
+nm = next((p for p in (nm, nm.with_suffix(".exe")) if p.is_file()), None) or shutil.which("xtensa-lx106-elf-nm")
+assert nm, "xtensa-lx106-elf-nm not found (PlatformIO's toolchain-xtensa)"
+listing = subprocess.run([str(nm), str(image.with_suffix(".elf"))], capture_output=True, text=True, check=True)
+symbols = {f[2]: int(f[0], 16) for f in (line.split() for line in listing.stdout.splitlines()) if len(f) == 3}
+assert symbols.get("_FS_start") == 0x40300000 and symbols.get("_FS_end") == 0x405FA000, "FS layout differs from stock"
 # Float printf/scanf are dropped from the link (scripts/link_options.py), so no source
 # may format or parse floats with them: %f/%e/%g would print nothing on the device.
 assert "post:scripts/link_options.py" in ini

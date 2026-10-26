@@ -31,6 +31,13 @@ versioning. `/version` on the device reports the version it was built as; a
   messages to 11; a saved configuration is migrated, and the new faces join an
   existing rotation.
 - Custom faces: `{name|fallback}` shows the fallback while a value is empty.
+- **Compressed firmware updates:** every build writes `firmware.bin.gz` next to
+  `firmware.bin` (about 70% of the size), and the Firmware update card takes either.
+  The `.gz` carries its own check (unpacked size, file size, CRC in the gzip header),
+  so a damaged or foreign file is refused before anything is written. The update
+  budget becomes the image plus its `.gz` within 1 MB: about 610 KB instead of 516 KB.
+  A `.bin` too big for a plain update is refused with a message pointing at the `.gz`.
+  Releases publish both.
 - **Classic and Simple** draw their time in the Big tiles' line font. **Flip** is gone
   and **font 8** left the build (3.6 KB of flash for new features): id 6 stays
   reserved and is skipped; custom faces asking for font 8 get font 6.

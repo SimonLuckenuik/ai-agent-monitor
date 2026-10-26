@@ -86,7 +86,10 @@ devices. A build with the `esp12e_mdns` environment also answers at
 mDNS out to make room in the update budget.
 
 Later updates are installed from the **Firmware update** card on our settings page. It
-accepts only SmartClock-OSS images and checks each one before writing.
+accepts only this firmware's images and checks each one before writing. Each release
+has two: the plain `.bin`, and a compressed `.bin.gz` (about 70% of the size) that
+clocks already running 1.4.0 or later take. Once the firmware outgrows 516 KB, only the
+`.bin.gz` can update a clock over the air; the page says so if you pick the `.bin`.
 
 ## Messages from agents and scripts
 

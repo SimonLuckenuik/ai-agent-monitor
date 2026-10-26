@@ -722,7 +722,8 @@ void sendIndex() {
 
 void handleVersion() { server.send(200, "text/plain", "SmartClock-OSS V" FW_VERSION); }
 
-// Firmware-only OTA. Stage bytes in free sketch space; never write U_FS.
+// Firmware-only OTA, plain .bin or compressed .bin.gz (firmware_validation.h). Stage
+// bytes in free sketch space; never write U_FS.
 FirmwareValidation firmware;
 bool otaStarted = false, otaReady = false, otaFailed = false;
 unsigned otaFiles = 0;
@@ -754,7 +755,7 @@ void handleOtaUpload() {
       if (firmware.received < FirmwareValidation::prefixSize) return;
       uint32_t freeSpace = ESP.getFreeSketchSpace();
       size_t capacity = freeSpace > 0x1000 ? (freeSpace - 0x1000) & 0xfffff000 : 0;
-      if (!firmware.headerValid(capacity)) { failOta("Unsupported image or invalid image length"); return; }
+      if (const char* why = firmware.check(capacity, FS_PHYS_ADDR)) { failOta(why); return; }
       if (!Update.begin(firmware.expectedSize, U_FLASH)) { failOta("Cannot stage firmware"); return; }
       otaStarted = true;
       if (Update.write(firmware.prefix, FirmwareValidation::prefixSize - 1) != FirmwareValidation::prefixSize - 1) {

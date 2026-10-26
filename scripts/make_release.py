@@ -45,7 +45,13 @@ if secrets.is_file():   # belt and braces: the local values must not be in the i
 out = root / "release"
 out.mkdir(exist_ok=True)
 name = f"SDPro_SmartClockOSS_v{version}.bin"
-shutil.copy(image, out / name)
-digest = hashlib.sha256(data).hexdigest()
-(out / "SHA256SUMS.txt").write_bytes(f"{digest}  {name}\n".encode())   # LF, or `sha256sum -c` fails
-print(f"{out / name}\n{len(data)} bytes, sha256 {digest}\nNo WiFi details in the image.")
+# Both images: the plain .bin (any updater, stock included, and serial flashing) and the
+# .bin.gz that build_options.py writes (smaller; needs a firmware that accepts it).
+sums = ""
+for src, dst in ((image, name), (image.with_suffix(".bin.gz"), name + ".gz")):
+    shutil.copy(src, out / dst)
+    blob = src.read_bytes()
+    sums += f"{hashlib.sha256(blob).hexdigest()}  {dst}\n"
+    print(f"{out / dst}: {len(blob)} bytes")
+(out / "SHA256SUMS.txt").write_bytes(sums.encode())   # LF, or `sha256sum -c` fails
+print("No WiFi details in the image.")

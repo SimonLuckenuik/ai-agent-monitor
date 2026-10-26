@@ -111,7 +111,7 @@ step with the work it does.
 | EEPROM (password, boot counter) | `/data/eeprom` |
 | RTC memory (crash marker) | `/data/rtc.bin`, cleared by **Power cycle** |
 | Reboot (`ESP.restart()`) | The process exits and `run.sh` starts it again |
-| Firmware update | The upload, its checks and the commit run; after the restart the emulator is still the same build |
+| Firmware update | The upload and all its checks run, plain `.bin` or `.bin.gz`, and the image is staged; the final commit fails ("Firmware commit failed": the host emulation has no flash outside the storage area), so the emulator keeps its build |
 | Free heap | Fixed at 30,000 bytes: memory limits are not emulated |
 
 The flash budget is not checked here: `pio run` still decides whether a change fits.

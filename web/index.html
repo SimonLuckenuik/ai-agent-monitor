@@ -321,8 +321,8 @@ a{color:var(--accent)}
 
   <section class="card">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Firmware update</h2>
-    <div class="drop" id="drop"><strong>Choose a firmware .bin</strong><br><span id="fwName">or drop it here</span></div>
-    <input type="file" id="fw" accept=".bin" hidden>
+    <div class="drop" id="drop"><strong>Choose a firmware .bin or .bin.gz</strong><br><span id="fwName">or drop it here</span></div>
+    <input type="file" id="fw" accept=".bin,.gz" hidden>
     <div class="progress" id="prog"><i></i></div>
     <div class="msg" id="fwMsg"></div>
     <div class="btns"><button class="btn primary" id="fwBtn" onclick="ota()" disabled>Install update</button></div>

@@ -74,22 +74,67 @@ write_if_changed(os.path.join(generated, "web_index.h"), "\n".join([
 print("build_options: web/index.html %d bytes -> %d gzipped" % (len(html), len(packed)))
 env.Append(CPPPATH=[generated])
 
-# ---- Size guard. The stock layout (4m3m, matched by platformio.ini) leaves 1 MB for the
-# running sketch plus the staged OTA copy, so an image must fit twice, sector-rounded,
-# with the updater's one-sector margin. 0x7e000 keeps a sector of slack below that.
-# The first flash through the stock updater allows ~0x87000 (1 MB - stock's 0x78000).
+# ---- Size guard and the compressed image. The stock layout (4m3m, matched by
+# platformio.ini) leaves 1 MB (AREA) for the running sketch plus the staged OTA copy.
+# Plain .bin: the image must fit twice, sector-rounded, with the updater's one-sector
+# margin; 0x7e000 keeps a sector of slack below that. (The first flash through the
+# stock updater allows ~0x87000: 1 MB - stock's 0x78000.)
+# Compressed .bin.gz (include/firmware_validation.h): the running sketch plus the
+# staged gzip file must fit, and the bootloader unpacks the image from address 0 up to
+# the staged copy, so the image plus the gzip file must fit the area; two sectors of
+# slack. A clock needs a firmware that knows the format before it takes a .bin.gz.
 MAX_IMAGE = 0x7E000
+AREA = 0x100000
+SECTOR = 0x1000
+
+
+def crc32_elf2bin(data):
+    """elf2bin.py's CRC (MSB first, poly 0x04c11db7, no final xor), table-driven."""
+    table = []
+    for i in range(256):
+        c = i << 24
+        for _ in range(8):
+            c = ((c << 1) ^ 0x04C11DB7) if c & 0x80000000 else (c << 1)
+        table.append(c & 0xFFFFFFFF)
+    crc = 0xFFFFFFFF
+    for b in data:
+        crc = ((crc << 8) & 0xFFFFFFFF) ^ table[((crc >> 24) ^ b) & 0xFF]
+    return crc
+
+
+def write_gzip(image, path):
+    """A standard gzip file whose header carries the "AM" extra field."""
+    import struct
+    import zlib
+    deflate = zlib.compressobj(9, zlib.DEFLATED, -15)
+    body = deflate.compress(image) + deflate.flush()
+    body += struct.pack("<II", zlib.crc32(image) & 0xFFFFFFFF, len(image))   # gzip trailer
+    size = 28 + len(body)
+    head = bytes([0x1F, 0x8B, 8, 4, 0, 0, 0, 0, 2, 3]) + struct.pack("<H", 16) + b"AM" + \
+        struct.pack("<HIII", 12, len(image), size, crc32_elf2bin(body))
+    with open(path, "wb") as f:
+        f.write(head + body)
+    return size
 
 
 def check_size(target, source, env):
     path = target[0].get_abspath()
     size = os.path.getsize(path)
-    print("build_options: firmware.bin %d bytes (limit %d, %.0f%% used)"
-          % (size, MAX_IMAGE, 100.0 * size / MAX_IMAGE))
-    if size > MAX_IMAGE:
-        os.remove(path)  # never leave an image on disk that cannot be updated again
+    with open(path, "rb") as f:
+        packed = write_gzip(f.read(), path + ".gz")
+    rounded = lambda n: (n + SECTOR - 1) // SECTOR * SECTOR
+    room = AREA - 2 * SECTOR - rounded(packed)
+    print("build_options: firmware.bin %d bytes (plain limit %d, %.0f%% used); firmware.bin.gz %d bytes "
+          "(compressed limit %d, %.0f%% used)"
+          % (size, MAX_IMAGE, 100.0 * size / MAX_IMAGE, packed, room, 100.0 * rounded(size) / room))
+    if rounded(size) > room:
+        for p in (path, path + ".gz"):
+            os.remove(p)  # never leave an image on disk that cannot be updated again
         print("ERROR: image exceeds the OTA limit; it could not be replaced over the air")
         return 1
+    if size > MAX_IMAGE:
+        print("WARNING: firmware.bin is too big to update uncompressed: update with firmware.bin.gz,"
+              " from a firmware that accepts it (1.4.0 on)")
     return 0
 
 
