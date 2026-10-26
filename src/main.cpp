@@ -36,11 +36,50 @@
 const char* firmwareVersion() { return FW_VERSION; }
 
 // ----------------------------------------------------------------------------
+// The panel with the night tint: while `tint` is set, every colour drawn becomes the
+// tint scaled by the colour's brightness, so white turns dark gray (or the chosen
+// colour) and the room stays darker. Every face draws through these virtual calls;
+// photos (pushImage) keep their colours. `depth` maps a colour once, at the outermost
+// call, as TFT_eSPI's shapes call each other.
+class NightPanel : public TFT_eSPI {
+ public:
+  uint16_t tint = 0;   // RGB565; 0 = off
+  using TFT_eSPI::drawChar;
+  void drawPixel(int32_t x, int32_t y, uint32_t c) override { Nest n(this); TFT_eSPI::drawPixel(x, y, n.ink(c)); }
+  void drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t c) override { Nest n(this); TFT_eSPI::drawFastHLine(x, y, w, n.ink(c)); }
+  void drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t c) override { Nest n(this); TFT_eSPI::drawFastVLine(x, y, h, n.ink(c)); }
+  void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c) override { Nest n(this); TFT_eSPI::fillRect(x, y, w, h, n.ink(c)); }
+  void pushColor(uint16_t c) override { Nest n(this); TFT_eSPI::pushColor(n.ink(c)); }
+  int16_t drawChar(uint16_t ch, int32_t x, int32_t y, uint8_t font) override {
+    Nest n(this);
+    uint32_t fg = textcolor, bg = textbgcolor;
+    textcolor = n.ink(fg); textbgcolor = n.ink(bg);
+    int16_t w = TFT_eSPI::drawChar(ch, x, y, font);
+    textcolor = fg; textbgcolor = bg;
+    return w;
+  }
+
+ private:
+  int depth = 0;
+  struct Nest {
+    NightPanel* p;
+    bool outer;
+    explicit Nest(NightPanel* p) : p(p), outer(p->depth++ == 0) {}
+    ~Nest() { --p->depth; }
+    uint16_t ink(uint32_t c) const {
+      if (!outer || !p->tint) return c;
+      // Brightness of the RGB565 colour, 0..16022 (red and blue doubled to 6 bits).
+      uint32_t l = ((c >> 11) & 31) * 154 + ((c >> 5) & 63) * 150 + (c & 31) * 58, t = p->tint;
+      return uint16_t(((t >> 11) * l / 16022) << 11 | (((t >> 5) & 63) * l / 16022) << 5 | (t & 31) * l / 16022);
+    }
+  };
+};
 // Construct the driver only during optional startup: even its constructor touches GPIO.
-TFT_eSPI& clockDisplay() {
-  static TFT_eSPI panel;
+NightPanel& nightPanel() {
+  static NightPanel panel;
   return panel;
 }
+TFT_eSPI& clockDisplay() { return nightPanel(); }
 ESP8266WebServer server(80);
 DNSServer dns;
 Config cfg;
@@ -164,6 +203,9 @@ bool wxRefresh = true;    // fetch at once: at boot, and when the city changes
 // Optional work waits for headroom instead of risking an allocation failure.
 constexpr uint32_t MDNS_MIN_HEAP = 28000, WEATHER_MIN_HEAP = 16000;
 uint32_t heapLow = UINT32_MAX;   // lowest free heap seen, for /status
+// Face draw times in ms, by face id, for /status: the latest draw over 1 ms and the
+// slowest. The line font and paths are float maths, and the chip has no FPU.
+uint16_t drawLast[FACE_MESSAGE + 1], drawMax[FACE_MESSAGE + 1];
 uint32_t faceHoldUntil = 0;   // keep a status screen (e.g. the IP) up until then
 bool brightnessDirty = false;  // settings changed: re-evaluate night dimming now
 bool backlightOff = false;     // switched off over MQTT (not saved)
@@ -385,6 +427,7 @@ String configJson() {
   doc["location"] = cfg.geoFor == cfg.city ? cfg.geoName : "";
   doc["nightmode"] = cfg.nightMode; doc["starttime"] = cfg.startHour; doc["stoptime"] = cfg.stopHour;
   doc["nightbrightness"] = cfg.nightBrightness; doc["nightface"] = cfg.nightFace; doc["ntp"] = cfg.ntp;
+  doc["nighttint"] = cfg.nightTint; doc["nightcolor"] = cfg.nightColor;
   doc["timezone"] = cfg.timezoneMin; doc["tz"] = cfg.tz; doc["themeInterval"] = cfg.themeInterval;
   doc["faces"] = cfg.faceMask; doc["nightauto"] = cfg.nightAuto;
   doc["photointerval"] = cfg.photoInterval; doc["photoclock"] = cfg.photoClock;
@@ -420,6 +463,8 @@ String applySetting(const String& key, const String& val) {
   else if (key == "nightmode")  cfg.nightMode = (val == "1" || val == "true");
   else if (key == "nightbrightness") cfg.nightBrightness = constrain(val.toInt(), 0, 100);
   else if (key == "nightface")  cfg.nightFace = constrain(val.toInt(), -1, FACE_COUNT - 1);
+  else if (key == "nighttint")  cfg.nightTint = (val == "1" || val == "true");
+  else if (key == "nightcolor") cfg.nightColor = (uint16_t)val.toInt();
   else if (key == "starttime")  cfg.startHour = constrain(val.toInt(), 0, 23);
   else if (key == "stoptime")   cfg.stopHour = constrain(val.toInt(), 0, 23);
   else if (key == "color1")     cfg.color1 = (uint16_t)val.toInt();
@@ -915,6 +960,13 @@ void handleStatus() {
   doc["version"] = FW_VERSION; doc["build"] = FW_BUILD; doc["uptime"] = millis() / 1000; doc["heap"] = ESP.getFreeHeap();
   doc["heapLow"] = heapLow;   // (getMaxFreeBlockSize() would add 1.6 KB of umm stats)
   doc["resetReason"] = ESP.getResetReason();
+  doc["cpuMHz"] = ESP.getCpuFreqMHz();
+  JsonObject draws = doc["drawMs"].to<JsonObject>();   // {"<face id>": [last, slowest]}
+  for (int i = 0; i <= FACE_MESSAGE; ++i) {
+    if (!drawMax[i]) continue;
+    JsonArray a = draws[String(i)].to<JsonArray>();
+    a.add(drawLast[i]); a.add(drawMax[i]);
+  }
   bool linked = WiFi.status() == WL_CONNECTED;
   doc["connected"] = linked;
   doc["ssid"] = linked ? WiFi.SSID() : staSsid;
@@ -1107,12 +1159,23 @@ void loop() {
       lastBrightMin = t.tm_min;
       nightNow = isNight(t);
       setBacklight(backlightOff ? 0 : boosted ? 100 : nightNow ? cfg.nightBrightness : cfg.brightness);
+      // Night colours too; an urgent message keeps its own.
+      uint16_t tint = nightNow && !boosted && cfg.nightTint ? std::max<uint16_t>(cfg.nightColor, 1) : 0;
+      if (tint != nightPanel().tint) { nightPanel().tint = tint; faceInvalidate(); }
     }
     if (revealUntil && (int32_t)(millis() - revealUntil) >= 0) { revealUntil = 0; faceInvalidate(); }
     // At night, one face of the user's choice instead of the rotation; a message shown
     // on purpose (show) still comes through.
     int shown = nightTile() && cfg.theme != FACE_MESSAGE ? cfg.nightFace : cfg.theme;
-    if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) faceDraw(shown, t, timeValid);
+    if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) {
+      uint32_t start = micros();
+      faceDraw(shown, t, timeValid);
+      uint32_t ms = (micros() - start) / 1000;
+      if (ms > 1 && shown >= 0 && shown <= FACE_MESSAGE) {
+        drawLast[shown] = std::min<uint32_t>(ms, 65535);
+        drawMax[shown] = std::max(drawMax[shown], drawLast[shown]);
+      }
+    }
   }
   delay(20);   // faces redraw only what changed, so a short tick is cheap
 }

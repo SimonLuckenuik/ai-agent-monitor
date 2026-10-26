@@ -30,6 +30,8 @@ struct Config {
   bool   nightAuto   = false;          // dim from sunset to sunrise instead of fixed hours
   int    nightBrightness = 15;       // 0..100
   int    nightFace   = -1;           // during night mode: this face only; -1 = the rotation
+  bool   nightTint   = true;         // during night mode: faces drawn in nightColor
+  uint16_t nightColor = 0x528A;      // RGB565: dark gray #525252
   int    startHour   = 23;           // night start
   int    stopHour    = 7;            // night end
   uint16_t color1 = 0xFD44;          // RGB565 accents: time and hands (amber #FFA826)
@@ -79,6 +81,8 @@ struct Config {
     nightAuto   = doc["nightauto"]   | nightAuto;
     nightBrightness = doc["nightbrightness"] | nightBrightness;
     nightFace   = doc["nightface"]   | nightFace;
+    nightTint   = doc["nighttint"]   | nightTint;
+    nightColor  = doc["nightcolor"]  | nightColor;
     startHour   = doc["starttime"]   | startHour;
     stopHour    = doc["stoptime"]    | stopHour;
     color1      = doc["color1"]      | color1;
@@ -124,6 +128,7 @@ struct Config {
     doc["faces"] = faceMask;     doc["facesv"] = 3;
     doc["brightness"] = brightness;
     doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness; doc["nightface"] = nightFace;
+    doc["nighttint"] = nightTint; doc["nightcolor"] = nightColor;
     doc["starttime"] = startHour; doc["stoptime"] = stopHour;
     doc["color1"] = color1;       doc["color2"] = color2;   doc["color3"] = color3;
     doc["photointerval"] = photoInterval; doc["photoclock"] = photoClock; doc["photooff"] = photoOff; doc["customface"] = customFace;

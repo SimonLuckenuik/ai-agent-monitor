@@ -628,7 +628,7 @@ String messageValue(const String& key) {
   if (color.isEmpty()) color = def->color;
   if (key == "icon") return pgmString(def->path);
   if (key == "color") return color;
-  if (key == "bg") {   // the colour at a quarter strength, for the top of the background
+  if (key == "bg") {   // the colour at a quarter strength: a solid background in its hue
     uint16_t c = hex565(color.c_str(), WHITE);
     char b[8];
     snprintf(b, sizeof(b), "#%02x%02x%02x", ((c >> 11) * 255 / 31) / 4, (((c >> 5) & 63) * 255 / 63) / 4, ((c & 31) * 255 / 31) / 4);
@@ -1101,6 +1101,7 @@ void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
   float xs[MAX_X];
   int8_t dir[MAX_X];
   for (int y = y0; y <= y1; ++y) {
+    yield();   // see strokePoly
     memset(cov, 0, sizeof(cov));
     int lo = SCR_W, hi = -1;
     for (int s = 0; s < SUB; ++s) {
@@ -1141,10 +1142,16 @@ void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
 // segment, so joints overlap without seams and ends and corners come out round.
 void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) {
   float r = std::max(0.5f, width / 2);
+  // Coverage is r + 0.5 - distance: none beyond rOut, full within rIn. Comparing squared
+  // distances leaves the square root to the edge pixels (floats are software here).
+  float rOut = r + 0.5f, rIn = r - 0.5f, out2 = rOut * rOut, in2 = rIn * rIn;
   float minY = 1e9f, maxY = -1e9f;
   for (int i = 0; i < P.n; ++i) { minY = std::min(minY, P.y[i]); maxY = std::max(maxY, P.y[i]); }
   int y0 = std::max(0, (int)floorf(minY - r - 1)), y1 = std::min(SCR_H - 1, (int)ceilf(maxY + r + 1));
   for (int y = y0; y <= y1; ++y) {
+    // A large glyph takes over a second without an FPU; the software watchdog resets
+    // the chip after about 3 s without a yield.
+    yield();
     memset(cov, 0, sizeof(cov));
     int lo = SCR_W, hi = -1;
     float py = y + 0.5f;
@@ -1154,16 +1161,21 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
         int j = i + 1 < a1 ? i + 1 : i;   // a lone point still draws a dot
         float ax = P.x[i], ay = P.y[i], dx = P.x[j] - ax, dy = P.y[j] - ay;
         if (py < std::min(ay, ay + dy) - r - 1 || py > std::max(ay, ay + dy) + r + 1) continue;
-        float len2 = dx * dx + dy * dy;
-        int xa = std::max(0, (int)floorf(std::min(ax, ax + dx) - r - 1));
-        int xb = std::min(SCR_W - 1, (int)ceilf(std::max(ax, ax + dx) + r + 1));
+        float len2 = dx * dx + dy * dy, inv = len2 ? 1 / len2 : 0;
+        float left = std::min(ax, ax + dx) - r - 1, right = std::max(ax, ax + dx) + r + 1;
+        if (dy != 0) {   // only where this row is within rOut of the segment's line
+          float mid = ax + (py - ay) * dx / dy, half = (rOut + 1) * sqrtf(len2) / fabsf(dy);
+          left = std::max(left, mid - half); right = std::min(right, mid + half);
+        }
+        int xa = std::max(0, (int)floorf(left)), xb = std::min(SCR_W - 1, (int)ceilf(right));
         for (int x = xa; x <= xb; ++x) {
-          float px = x + 0.5f, u = len2 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+          float px = x + 0.5f, u = ((px - ax) * dx + (py - ay) * dy) * inv;
           u = std::min(1.0f, std::max(0.0f, u));
-          float ex = px - ax - u * dx, ey = py - ay - u * dy;
-          float c = r + 0.5f - sqrtf(ex * ex + ey * ey);
+          float ex = px - ax - u * dx, ey = py - ay - u * dy, d2 = ex * ex + ey * ey;
+          if (d2 >= out2) continue;
+          int c = rIn >= 0 && d2 <= in2 ? 255 : (int)((rOut - sqrtf(d2)) * 255);
           if (c <= 0) continue;
-          cov[x] = std::max<int>(cov[x], c >= 1 ? 255 : (int)(c * 255));
+          cov[x] = std::max<int>(cov[x], std::min(c, 255));
           lo = std::min(lo, x); hi = std::max(hi, x);
         }
         if (j == i) break;
@@ -1393,7 +1405,7 @@ void renderItems(const struct tm& t, bool force) {
 
 // ---- The Message face: the message messageShowing() points at, drawn from this
 // template by the custom-face renderer ({msg.*} placeholders, see messageValue).
-const char MESSAGE_FACE[] PROGMEM = R"({"bg":{"stops":["{msg.bg}","#000000"],"angle":180},"items":[
+const char MESSAGE_FACE[] PROGMEM = R"({"bg":"{msg.bg}","items":[
 {"type":"path","x":120,"y":56,"size":76,"align":"mc","stroke":"{msg.color}","sw":2,"d":"{msg.icon}"},
 {"type":"text","x":120,"y":108,"w":228,"lines":1,"text":"{msg.title}","font":4,"align":"tc","color":"{msg.color}"},
 {"type":"text","x":120,"y":142,"w":220,"lines":"{msg.pct}>=0?3:4","text":"{msg.text}","font":2,"align":"tc","color":"#f2f2f7"},

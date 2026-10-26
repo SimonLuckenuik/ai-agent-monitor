@@ -24,9 +24,14 @@ class TFT_eSPI {
   void init() {}
   void setRotation(uint8_t) {}   // the panel only ever runs at rotation 0
   void fillScreen(uint32_t c) { fillRect(0, 0, W, H, c); }
-  void drawPixel(int32_t x, int32_t y, uint32_t c);
-  void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c);
-  void drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t c) { fillRect(x, y, w, 1, c); }
+  virtual ~TFT_eSPI() = default;
+  // Virtual as in TFT_eSPI, so main.cpp's NightPanel can tint what is drawn.
+  virtual void drawPixel(int32_t x, int32_t y, uint32_t c);
+  virtual void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c);
+  virtual void drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t c) { fillRect(x, y, w, 1, c); }
+  virtual void drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t c) { fillRect(x, y, 1, h, c); }
+  virtual void pushColor(uint16_t) {}   // TFT_eSPI's window writes; nothing here uses them
+  virtual int16_t drawChar(uint16_t ch, int32_t x, int32_t y, uint8_t font);
   void fillCircle(int32_t x, int32_t y, int32_t r, uint32_t c);
   void fillRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint32_t c);
   void drawRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c) {
@@ -45,8 +50,9 @@ class TFT_eSPI {
   void setViewport(int32_t x, int32_t y, int32_t w, int32_t h, bool = true) { vx = x; vy = y; vw = x + w; vh = y + h; }
   void resetViewport() { vx = vy = 0; vw = W; vh = H; }
 
-  void setTextColor(uint16_t c) { fg = bgc = c; }
-  void setTextColor(uint16_t c, uint16_t b) { fg = c; bgc = b; }
+  void setTextColor(uint16_t c) { textcolor = textbgcolor = c; }
+  void setTextColor(uint16_t c, uint16_t b) { textcolor = c; textbgcolor = b; }
+  uint32_t textcolor = 0xffff, textbgcolor = 0;   // public, as in TFT_eSPI
   void setTextDatum(uint8_t d) { datum = d; }
   void setTextPadding(uint16_t p) { padX = p; }
   int16_t textWidth(const char* s, uint8_t font);
@@ -57,10 +63,8 @@ class TFT_eSPI {
 
  private:
   int32_t vx = 0, vy = 0, vw = W, vh = H;
-  uint16_t fg = 0xffff, bgc = 0;
   uint8_t datum = 0;
   uint16_t padX = 0;
   bool swap = false;
   void blend(int32_t x, int32_t y, float a, uint32_t c, uint32_t bg);
-  int16_t drawChar(uint16_t ch, int32_t x, int32_t y, uint8_t font);
 };

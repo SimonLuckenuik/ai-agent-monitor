@@ -201,6 +201,9 @@ a{color:var(--accent)}
         <option value="6">Flip</option><option value="9">Agents</option></select></div>
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
+    <div class="row"><label for="nighttint">Night color<span class="hint">Faces drawn in one dim color; photos keep theirs</span></label>
+      <span><input type="color" id="nightcolor" data-key="nightcolor" data-rgb565>
+      <label class="switch"><input type="checkbox" id="nighttint" data-key="nighttint"><span></span></label></span></div>
   </section>
 
   <section class="card settings">
@@ -470,10 +473,10 @@ function fillConfig(c){
   cfg=c;renderThemes();
   for(const k of ['themeInterval','brightness','nightbrightness','nightface','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
   if(![...$('themeInterval').options].some(o=>o.value==String(c.themeInterval))){const o=new Option(c.themeInterval+' s',c.themeInterval);$('themeInterval').add(o);$('themeInterval').value=c.themeInterval}
-  $('nightmode').checked=!!c.nightmode;$('photoclock').checked=c.photoclock!==false;
+  $('nightmode').checked=!!c.nightmode;$('nighttint').checked=c.nighttint!==false;$('photoclock').checked=c.photoclock!==false;
   ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
   ['mqtthost','mqttuser','mqttbase'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
-  ['color1','color2','color3'].forEach(k=>$(k).value=hex565(c[k]||0));
+  ['color1','color2','color3','nightcolor'].forEach(k=>$(k).value=hex565(c[k]||0));
   paintSeg(document.querySelector('[data-key=hour12]'),c.hour12?1:0);paintSeg(document.querySelector('[data-key=lang]'),c.lang||'en');
   paintSeg(document.querySelector('[data-key=celsius]'),c.celsius?1:0);
   paintSeg(document.querySelector('[data-key=mile]'),c.mile?1:0);

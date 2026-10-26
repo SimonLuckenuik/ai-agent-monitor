@@ -17,6 +17,7 @@ inline uint8_t pgm_read_byte(const void* p) { return *static_cast<const uint8_t*
 template <class T, class L, class H> T constrain(T x, L lo, H hi) { return x < lo ? lo : x > hi ? hi : x; }
 uint32_t millis();
 void delay(unsigned long ms);
+inline void yield() {}
 
 class String {
   std::string s;

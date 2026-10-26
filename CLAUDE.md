@@ -126,6 +126,9 @@ change.
   hung process (its reset goes over HTTP): restart the container after the swap.
 - **Logs:** `docker logs emulator-smartclock-1`; state: `GET /status`; storage: the
   screen page's Storage panel or `GET :8080/fs?path=/`.
+- **Drawing speed:** `GET /status` has `cpuMHz` and `drawMs`, `{"<face id>": [last,
+  slowest]}` in ms (draws over 1 ms only; the slowest is usually the full redraw when
+  the face comes up). Only real-clock numbers count: the emulator's CPU has an FPU.
 - **Isolate:** run the binary inside `emu-dev` (`/tmp/smartclock -P /tmp/x -L 3048 -S 0`)
   where no browser can reach it.
 - **What uses flash:**

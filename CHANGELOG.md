@@ -8,6 +8,15 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- `/status` reports `cpuMHz` and each face's drawing time (`drawMs`: the latest and
+  the slowest draw in ms, by face id), to measure the line font and paths on the clock.
+- Stroked paths (the line font, outline icons) yield every row, so a large glyph no
+  longer trips the software watchdog (Big date reset the clock), and skip most of the
+  float maths: only pixels near each segment are tested, and only edge pixels take a
+  square root. Output is pixel-identical.
+- The CPU runs at 160 MHz (was 80) to speed up the line font and paths.
+- Message screens have a solid background in a dark shade of the message color,
+  instead of a gradient to black.
 - Faces: three **Big tiles** that each show one thing as large as the screen allows,
   in one modern monoline style (a monospaced stroke font that follows Roboto Mono's
   shapes and spacing, and outline icons, drawn by the path renderer): **Big date** (id 3: day of the week, the day, the month), **Big time** (7:
@@ -18,6 +27,9 @@ versioning. `/version` on the device reports the version it was built as; a
   messages to 11; a saved configuration is migrated, and the new faces join an
   existing rotation.
 - Custom faces: `{name|fallback}` shows the fallback while a value is empty.
+- **Night color** (Night mode card, `nighttint`, `nightcolor`): at night every face is
+  drawn in one dim color, dark gray by default, so the screen lights the room less.
+  Each color keeps its brightness; photos and urgent messages keep their colors.
 - **At night show** (Night mode card, `nightface`): one face all night instead of the
   rotation, for example Big time. A message shown on purpose still comes through.
 

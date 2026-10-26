@@ -60,13 +60,13 @@ void TFT_eSPI::fillTriangle(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int3
 
 void TFT_eSPI::blend(int32_t x, int32_t y, float a, uint32_t c, uint32_t bg) {
   if (a <= 0.02f || x < vx || y < vy || x >= vw || y >= vh) return;
-  if (a >= 0.98f) { fb[y * W + x] = c; return; }
+  if (a >= 0.98f) { drawPixel(x, y, c); return; }
   uint16_t b = bg == 0x00FFFFFF ? fb[y * W + x] : bg;
   auto ch = [&](int shift, int mask) {
     float f = ((c >> shift) & mask) * a + ((b >> shift) & mask) * (1 - a);
     return (uint16_t)((int)(f + 0.5f) & mask) << shift;
   };
-  fb[y * W + x] = ch(11, 31) | ch(5, 63) | ch(0, 31);
+  drawPixel(x, y, ch(11, 31) | ch(5, 63) | ch(0, 31));
 }
 
 void TFT_eSPI::fillSmoothCircle(int32_t x0, int32_t y0, int32_t r, uint32_t c, uint32_t bg) {
@@ -133,14 +133,14 @@ int16_t TFT_eSPI::drawChar(uint16_t ch, int32_t x, int32_t y, uint8_t font) {
   if (!f.chars) return 0;
   int width = f.widths[ch - 32], height = f.height;
   const uint8_t* p = f.chars[ch - 32];
-  bool transparent = fg == bgc;
+  bool transparent = textcolor == textbgcolor;
   if (font == 2) {
     int bytes = (width + 6) / 8;
     for (int i = 0; i < height; ++i) {
-      if (!transparent) fillRect(x, y + i, width, 1, bgc);
+      if (!transparent) fillRect(x, y + i, width, 1, textbgcolor);
       for (int k = 0; k < bytes; ++k) {
         uint8_t line = p[bytes * i + k];
-        for (int b = 0; b < 8; ++b) if (line & (0x80 >> b)) drawPixel(x + k * 8 + b, y + i, fg);
+        for (int b = 0; b < 8; ++b) if (line & (0x80 >> b)) drawPixel(x + k * 8 + b, y + i, textcolor);
       }
     }
     return width;
@@ -151,7 +151,7 @@ int16_t TFT_eSPI::drawChar(uint16_t ch, int32_t x, int32_t y, uint8_t font) {
     bool on = line & 0x80;
     int run = (line & 0x7f) + 1;
     for (int n = 0; n < run && pc < total; ++n, ++pc)
-      if (on || !transparent) drawPixel(x + pc % width, y + pc / width, on ? fg : bgc);
+      if (on || !transparent) drawPixel(x + pc % width, y + pc / width, on ? textcolor : textbgcolor);
   }
   return width;
 }
@@ -174,17 +174,17 @@ int16_t TFT_eSPI::drawString(const char* s, int32_t x, int32_t y, uint8_t font) 
   }
   int sum = 0;
   for (const char* c = s; *c; ++c) sum += drawChar((uint8_t)*c, x + sum, y, font);
-  if (padX > cw && fg != bgc) {
+  if (padX > cw && textcolor != textbgcolor) {
     int padXc = x + cw;
     switch (padding) {
-      case 1: fillRect(padXc, y, padX - cw, chh, bgc); break;
+      case 1: fillRect(padXc, y, padX - cw, chh, textbgcolor); break;
       case 2:
-        fillRect(padXc, y, (padX - cw) >> 1, chh, bgc);
-        fillRect(x - ((padX - cw) >> 1), y, (padX - cw) >> 1, chh, bgc);
+        fillRect(padXc, y, (padX - cw) >> 1, chh, textbgcolor);
+        fillRect(x - ((padX - cw) >> 1), y, (padX - cw) >> 1, chh, textbgcolor);
         break;
       case 3:
         if (padXc > padX) padXc = padX;
-        fillRect(x + cw - padXc, y, padXc - cw, chh, bgc);
+        fillRect(x + cw - padXc, y, padXc - cw, chh, textbgcolor);
         break;
     }
   }
