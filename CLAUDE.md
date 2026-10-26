@@ -125,7 +125,12 @@ change.
   `docker restart emulator-smartclock-1`. Note that `dev-reload.sh` cannot reset a
   hung process (its reset goes over HTTP): restart the container after the swap.
 - **Logs:** `docker logs emulator-smartclock-1`; state: `GET /status`; storage: the
-  screen page's Storage panel or `GET :8080/fs?path=/`.
+  screen page's Storage panel or the screen server's API, no sign-in:
+  `GET :8080/fs?path=/dir` (one directory: `{"path","total","used","entries":[{"name",
+  "dir","size"}]}`) and `GET :8080/fs/file?path=/config.json`. It shows the emulator's
+  own storage (volume `emulator_clock-data`), which starts empty: none of the stock
+  firmware's files. The firmware itself has no storage listing (flash is full); on the
+  real clock only `/api/photos` lists a folder (`/photo`).
 - **Drawing speed:** `GET /status` has `cpuMHz` and `drawMs`, `{"<face id>": [last,
   slowest]}` in ms (draws over 1 ms only; the slowest is usually the full redraw when
   the face comes up). Only real-clock numbers count: the emulator's CPU has an FPU.
