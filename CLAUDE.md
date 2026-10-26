@@ -91,7 +91,10 @@ Flash image for the owner: `cp .pio/build/esp12e/firmware.bin release/SDPro_AIAg
 ## Emulator
 
 The firmware source on the esp8266/Arduino core's host emulation, in Docker. Screen,
-settings page and API all work; WiFi is always "connected", time is the host's.
+settings page and API all work; WiFi is always "connected", time is the host's. It runs
+the real TFT_eSPI on a simulated ST7789 (`emulator/panel.cpp`), so drawing is the
+clock's, and draws take about the clock's time at `board_build.f_cpu` (calibrated,
+±20%; `emulator/README.md` "Drawing speed"). `EMU_TIMING=0` makes them instant.
 
 ```bash
 docker compose -f emulator/docker-compose.yml up -d --build
@@ -133,7 +136,8 @@ change.
   real clock only `/api/photos` lists a folder (`/photo`).
 - **Drawing speed:** `GET /status` has `cpuMHz` and `drawMs`, `{"<face id>": [last,
   slowest]}` in ms (draws over 1 ms only; the slowest is usually the full redraw when
-  the face comes up). Only real-clock numbers count: the emulator's CPU has an FPU.
+  the face comes up). The emulator's numbers are modelled (`GET :8080/timing` has the
+  breakdown); the clock's are the truth. New clock numbers: `emulator/calibrate.py`.
 - **Isolate:** run the binary inside `emu-dev` (`/tmp/smartclock -P /tmp/x -L 3048 -S 0`)
   where no browser can reach it.
 - **What uses flash:**
@@ -152,8 +156,10 @@ change.
 - Plugin changes: bump the version in both `plugin.json` and `marketplace.json`.
 - New source files: add them to `emulator/build.sh`; headers used by faces.cpp to the
   copy lists in `tests/face_preview/run_face_preview.py` and `tests/unit/run_unit_tests.py`.
-- Face preview mocks (`tests/face_preview/mock/`) are shared with the emulator and unit
-  tests: new TFT_eSPI or String calls need a mock.
+- Face preview mocks (`tests/face_preview/mock/`) are shared with the unit tests (the
+  emulator uses the real TFT_eSPI): new TFT_eSPI or String calls need a mock.
+- Path loops in `faces.cpp` (`strokePoly`, `fillPoly`): keep their `EMU_WORK` cycle
+  counts in step with the work; after a big change, `emulator/calibrate.py`.
 - Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## Status and next priorities

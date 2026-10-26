@@ -6,6 +6,7 @@
 //              GET /ws        WebSocket: the screen as it changes (see wsPush)
 //              GET /fb        the 240x240 RGB565 framebuffer (little-endian, 115,200 B);
 //                             X-Backlight: percent, X-Frame: frame counter
+//              GET /timing    the drawing-speed model's totals (panel.cpp); &reset=1 zeroes them
 //              POST /power    power cycle (the supervisor restarts with a power-on reset)
 //              POST /reset    external reset (same reset reason as the EN pin)
 //              GET /password  the device password, for the settings link's auto sign-in
@@ -25,7 +26,9 @@
 
 void fw_setup();
 void fw_loop();
-TFT_eSPI& clockDisplay();   // main.cpp
+extern uint16_t emuPanel[240 * 240];   // panel.cpp: what the panel's glass shows
+String emuTimingJson(bool reset);       // panel.cpp
+constexpr int PANEL_W = 240, PANEL_H = 240;
 extern String devicePassword;
 
 namespace {
@@ -166,7 +169,7 @@ void serveFile(WiFiClient& c, const String& path, bool download) {
 constexpr int WS_MAX = 4;
 constexpr uint32_t WS_INTERVAL_MS = 33;
 WiFiClient wsClients[WS_MAX];
-uint16_t wsSent[TFT_eSPI::W * TFT_eSPI::H];   // what the clients have
+uint16_t wsSent[PANEL_W * PANEL_H];   // what the clients have
 int wsSentBacklight = -1;
 uint32_t wsLastPush = 0;
 
@@ -199,7 +202,7 @@ void sha1(const uint8_t* msg, size_t len, uint8_t out[20]) {
 int backlightPercent() { return backlightRange ? 100 - backlightDuty * 100 / backlightRange : 0; }
 
 bool wsSend(WiFiClient& c, int firstRow, int rows) {
-  size_t payload = 6 + size_t(rows) * TFT_eSPI::W * 2;
+  size_t payload = 6 + size_t(rows) * PANEL_W * 2;
   uint8_t head[10] = {0x82};   // FIN, binary; server frames are not masked
   size_t headLen;
   if (payload < 126) { head[1] = uint8_t(payload); headLen = 2; }
@@ -208,7 +211,7 @@ bool wsSend(WiFiClient& c, int firstRow, int rows) {
   uint8_t info[6] = {1, uint8_t(backlightPercent()), uint8_t(firstRow), uint8_t(firstRow >> 8), uint8_t(rows), uint8_t(rows >> 8)};
   // A half-sent frame would corrupt the stream: a viewer that falls behind is dropped.
   return writeAll(c, head, headLen) && writeAll(c, info, sizeof(info)) &&
-         writeAll(c, reinterpret_cast<const uint8_t*>(clockDisplay().fb + firstRow * TFT_eSPI::W), size_t(rows) * TFT_eSPI::W * 2) &&
+         writeAll(c, reinterpret_cast<const uint8_t*>(emuPanel + firstRow * PANEL_W), size_t(rows) * PANEL_W * 2) &&
          c.connected();
 }
 
@@ -225,7 +228,7 @@ void wsAccept(WiFiClient& c, const String& key) {
           "Sec-WebSocket-Accept: " + base64::encode(digest, 20, false) + "\r\n\r\n");
   c.setTimeout(100);           // a stalled viewer costs the clock at most a moment
   wsPush(true);                 // bring the other viewers (and wsSent) up to date first,
-  if (wsSend(c, 0, TFT_eSPI::H)) wsClients[slot] = c;   // so the newcomer's whole frame is the shared baseline
+  if (wsSend(c, 0, PANEL_H)) wsClients[slot] = c;   // so the newcomer's whole frame is the shared baseline
   else c.stop();
 }
 
@@ -243,15 +246,15 @@ void wsPush(bool now) {
   }
   if (!now && millis() - wsLastPush < WS_INTERVAL_MS) return;
   wsLastPush = millis();
-  const uint16_t* fb = clockDisplay().fb;
+  const uint16_t* fb = emuPanel;
   int first = -1, last = -1;
-  for (int y = 0; y < TFT_eSPI::H; ++y)
-    if (memcmp(fb + y * TFT_eSPI::W, wsSent + y * TFT_eSPI::W, TFT_eSPI::W * 2) != 0) { if (first < 0) first = y; last = y; }
+  for (int y = 0; y < PANEL_H; ++y)
+    if (memcmp(fb + y * PANEL_W, wsSent + y * PANEL_W, PANEL_W * 2) != 0) { if (first < 0) first = y; last = y; }
   if (first < 0 && backlightPercent() == wsSentBacklight) return;
   int rows = first < 0 ? 0 : last - first + 1;
   for (WiFiClient& c : wsClients)
     if (c && !wsSend(c, first < 0 ? 0 : first, rows)) { c.stop(); c = WiFiClient(); }
-  if (rows) memcpy(wsSent + first * TFT_eSPI::W, fb + first * TFT_eSPI::W, size_t(rows) * TFT_eSPI::W * 2);
+  if (rows) memcpy(wsSent + first * PANEL_W, fb + first * PANEL_W, size_t(rows) * PANEL_W * 2);
   wsSentBacklight = backlightPercent();
 }
 
@@ -305,9 +308,11 @@ void handleRequest(WiFiClient& c, const String& head) {
     wsAccept(c, wsKey);
     return;   // the connection stays open
   } else if (path == "/fb") {
-    sendHeaders(c, "application/octet-stream", sizeof(clockDisplay().fb),
+    sendHeaders(c, "application/octet-stream", sizeof(emuPanel),
                 "X-Backlight: " + String(backlightPercent()) + "\r\nX-Frame: " + String(frames) + "\r\n");
-    writeAll(c, reinterpret_cast<const uint8_t*>(clockDisplay().fb), sizeof(clockDisplay().fb));
+    writeAll(c, reinterpret_cast<const uint8_t*>(emuPanel), sizeof(emuPanel));
+  } else if (path == "/timing") {
+    sendText(c, 200, "application/json", emuTimingJson(queryArg(query, "reset") == "1"));
   } else if (path == "/password") {   // for the screen page's sign-in link
     sendText(c, 200, "text/plain; charset=utf-8", devicePassword);
   } else if (path == "/fs") {
@@ -345,6 +350,9 @@ bool rtcAccess(uint8_t block, uint32_t* data, size_t size, bool write) {
 }
 
 }  // namespace
+
+// panel.cpp, while it sleeps off a slow draw: the screen page sees it as it happens.
+void emuScreenPush() { wsPush(false); }
 
 // ---- Hardware the core's host emulation leaves out
 uint32_t EspClass::random() {   // the chip's hardware RNG: device password, API key

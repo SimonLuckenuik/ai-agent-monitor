@@ -54,10 +54,53 @@ version PlatformIO uses (3.1.2) and the library versions `platformio.ini` resolv
 | `emulator.cpp` | Wraps `setup()`/`loop()`, serves the screen on port 8080, and provides the RTC user memory, reset reason, hardware RNG and button interrupt |
 | `run.sh` | The power supply: restarts the firmware when it reboots, with the matching reset reason |
 | `screen.html` | The screen page |
-| `build.sh`, `gen_headers.py` | The build, with the headers `scripts/build_options.py` would generate, plus the settings page's `#password=` sign-in |
+| `build.sh`, `gen_headers.py` | The build, with the headers `scripts/build_options.py` would generate, plus the settings page's `#password=` sign-in, and `emu_build_flags.h`: `platformio.ini`'s build flags (the panel config) and `board_build.f_cpu` |
+| `tft_host/` | TFT_eSPI's processor layer for the PC: `build.sh` swaps it in for the ESP8266 one (SPI registers) in its copy of the library |
+| `panel.cpp` | The simulated ST7789 and the clock's drawing speed (below) |
+| `calibrate.py` | Fits the drawing speed to times measured on the real clock |
 
-The display is `tests/face_preview/mock/TFT_eSPI`, the same stand-in the face preview
-uses, drawing the real TFT_eSPI fonts into a 240×240 RGB565 framebuffer.
+## Display
+
+The emulator runs the clock's real TFT_eSPI (the version `platformio.ini` resolves, with
+its panel config), so it draws exactly what the clock draws: the same fonts, smooth
+shapes, padding and pixel order. Only the last step differs: instead of the ESP8266's
+SPI registers, each byte goes to `panel.cpp`, which decodes the ST7789 commands the
+panel would receive (column/row window, memory write, colour inversion) into a 240×240
+RGB565 framebuffer. The screen page shows that framebuffer, dimmed by the backlight.
+
+What it cannot show is the glass itself: an IPS panel is brighter, more saturated and
+has another gamma than a monitor.
+
+## Drawing speed
+
+Draws take about as long as on the clock, at the CPU frequency in `platformio.ini`
+(`board_build.f_cpu`; `/status` reports it as `cpuMHz`), and the screen page shows them
+as they happen, like the clock's panel. `panel.cpp` charges, per TFT_eSPI call:
+
+- **SPI:** every byte at `SPI_FREQUENCY` (40 MHz). Exact, and independent of the CPU.
+- **CPU:** the firmware's time on the PC since the previous call, times `CPU_FACTOR`
+  (6.4 at 160 MHz, twice that at 80).
+- **Path loops** (`strokePoly`/`fillPoly` in `faces.cpp`: the Big tiles' line font,
+  icons, custom paths): float maths, software on the ESP8266. Timing them on the PC
+  varies 2× from run to run, so they count their work instead (`EMU_WORK`, estimated
+  ESP8266 cycles per pixel and per segment; compiled out on the clock), charged at
+  `F_CPU` × `WORK_SCALE` (1.0).
+
+Then it sleeps the time off, pushing screen updates meanwhile. Time between draws is not
+charged. `GET :8080/timing` lists the last draws (PC time, counted cycles, SPI time,
+modelled clock time); `EMU_TIMING=0` makes draws instant.
+
+Measured against the clock at 160 MHz (firmware 865c672): Classic 52 vs 54 ms, Weather
+65 vs 68, Simple 40 vs 47, Forecast 96 vs 98, Flip 91 vs 87, Agents 59 vs 54, Big time
+719 vs 722, a path-heavy custom face 312 vs 315. Big date and Big weather came out 20%
+and 50% low, with different content on the two screens (another day name, another
+weather icon). Expect about ±20%; the PC part varies a little from run to run.
+
+To calibrate again (after changing the path loops, or with new numbers from the clock):
+put the clock's `/status` drawMs in `CLOCK_MS` in `calibrate.py`, run
+`python emulator/calibrate.py` (twice), and copy the printed constants into
+`panel.cpp`. When changing a path loop in `faces.cpp`, keep its `EMU_WORK` counts in
+step with the work it does.
 
 | On the clock | In the emulator |
 |---|---|

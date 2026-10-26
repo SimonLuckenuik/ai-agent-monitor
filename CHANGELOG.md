@@ -8,6 +8,10 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- Emulator: runs the clock's real TFT_eSPI on a simulated ST7789 instead of a
+  stand-in, so it draws exactly what the clock draws; draws take about the clock's
+  time at the CPU frequency in `platformio.ini`, calibrated against the clock
+  (`emulator/calibrate.py`, `GET :8080/timing`, `EMU_TIMING=0` for instant draws).
 - `/status` reports `cpuMHz` and each face's drawing time (`drawMs`: the latest and
   the slowest draw in ms, by face id), to measure the line font and paths on the clock.
 - Stroked paths (the line font, outline icons) yield every row, so a large glyph no

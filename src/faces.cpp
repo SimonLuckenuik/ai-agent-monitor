@@ -15,6 +15,15 @@
 
 TFT_eSPI& clockDisplay();   // main.cpp
 static TFT_eSPI& D() { return clockDisplay(); }
+// For the emulator's drawing speed: the path loops below are float maths, software on
+// the ESP8266 and hardware on the PC, so they count their work in estimated ESP8266
+// cycles instead of being timed (emulator/panel.cpp). Nothing on the clock.
+#ifdef HOST_MOCK
+void emuWork(uint32_t cycles);   // emulator/panel.cpp
+#define EMU_WORK(cycles) emuWork(cycles)
+#else
+#define EMU_WORK(cycles)
+#endif
 
 namespace {
 
@@ -1102,6 +1111,7 @@ void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
   int8_t dir[MAX_X];
   for (int y = y0; y <= y1; ++y) {
     yield();   // see strokePoly
+    EMU_WORK(150);
     memset(cov, 0, sizeof(cov));
     int lo = SCR_W, hi = -1;
     for (int s = 0; s < SUB; ++s) {
@@ -1112,7 +1122,9 @@ void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
         for (int i = a0; i < a1; ++i) {
           int j = i + 1 < a1 ? i + 1 : a0;   // rings close implicitly
           float ya = P.y[i], yb = P.y[j];
+          EMU_WORK(150);
           if ((ya <= sy) == (yb <= sy) || k >= MAX_X) continue;
+          EMU_WORK(800);
           float xa = P.x[i] + (sy - ya) * (P.x[j] - P.x[i]) / (yb - ya);
           int m = k++;   // insertion sort by x
           while (m > 0 && xs[m - 1] > xa) { xs[m] = xs[m - 1]; dir[m] = dir[m - 1]; --m; }
@@ -1127,7 +1139,7 @@ void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
         if (xb <= xa) continue;
         int ia = (int)xa, ib = (int)xb;
         lo = std::min(lo, ia); hi = std::max(hi, std::min(ib, SCR_W - 1));
-        auto addCov = [&](int x, float amount) { if (x >= 0 && x < SCR_W) cov[x] = std::min(255, cov[x] + (int)(amount * 255 / SUB + 0.5f)); };
+        auto addCov = [&](int x, float amount) { EMU_WORK(400); if (x >= 0 && x < SCR_W) cov[x] = std::min(255, cov[x] + (int)(amount * 255 / SUB + 0.5f)); };
         if (ia == ib) { addCov(ia, xb - xa); continue; }
         addCov(ia, 1 - (xa - ia));
         for (int x = ia + 1; x < ib; ++x) addCov(x, 1);
@@ -1152,6 +1164,7 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
     // A large glyph takes over a second without an FPU; the software watchdog resets
     // the chip after about 3 s without a yield.
     yield();
+    EMU_WORK(150);
     memset(cov, 0, sizeof(cov));
     int lo = SCR_W, hi = -1;
     float py = y + 0.5f;
@@ -1160,7 +1173,9 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
       for (int i = a0; i < a1; ++i) {
         int j = i + 1 < a1 ? i + 1 : i;   // a lone point still draws a dot
         float ax = P.x[i], ay = P.y[i], dx = P.x[j] - ax, dy = P.y[j] - ay;
+        EMU_WORK(300);
         if (py < std::min(ay, ay + dy) - r - 1 || py > std::max(ay, ay + dy) + r + 1) continue;
+        EMU_WORK(2000);
         float len2 = dx * dx + dy * dy, inv = len2 ? 1 / len2 : 0;
         float left = std::min(ax, ax + dx) - r - 1, right = std::max(ax, ax + dx) + r + 1;
         if (dy != 0) {   // only where this row is within rOut of the segment's line
@@ -1169,10 +1184,12 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
         }
         int xa = std::max(0, (int)floorf(left)), xb = std::min(SCR_W - 1, (int)ceilf(right));
         for (int x = xa; x <= xb; ++x) {
+          EMU_WORK(900);
           float px = x + 0.5f, u = ((px - ax) * dx + (py - ay) * dy) * inv;
           u = std::min(1.0f, std::max(0.0f, u));
           float ex = px - ax - u * dx, ey = py - ay - u * dy, d2 = ex * ex + ey * ey;
           if (d2 >= out2) continue;
+          if (!(rIn >= 0 && d2 <= in2)) EMU_WORK(600);
           int c = rIn >= 0 && d2 <= in2 ? 255 : (int)((rOut - sqrtf(d2)) * 255);
           if (c <= 0) continue;
           cov[x] = std::max<int>(cov[x], std::min(c, 255));
