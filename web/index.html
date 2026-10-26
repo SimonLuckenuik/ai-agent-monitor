@@ -93,6 +93,7 @@ code.key{font:12.5px ui-monospace,Consolas,monospace;background:var(--surface2);
 .switch input:checked+span{background:var(--accent)}
 .switch input:checked+span:after{transform:translateX(18px)}
 .colors{display:flex;gap:14px;flex-wrap:wrap}
+.pair{display:flex;align-items:center;gap:12px}
 .colors label{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:550;cursor:pointer}
 input[type=color]{width:34px;height:34px;padding:0;border:1px solid var(--line);border-radius:9px;background:none;cursor:pointer}
 input[type=color]::-webkit-color-swatch-wrapper{padding:3px}input[type=color]::-webkit-color-swatch{border:0;border-radius:6px}
@@ -202,8 +203,8 @@ a{color:var(--accent)}
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
     <div class="row"><label for="nighttint">Night color<span class="hint">Faces drawn in one dim color; photos keep theirs</span></label>
-      <span><input type="color" id="nightcolor" data-key="nightcolor" data-rgb565>
-      <label class="switch"><input type="checkbox" id="nighttint" data-key="nighttint"><span></span></label></span></div>
+      <div class="pair"><input type="color" id="nightcolor" data-key="nightcolor" data-rgb565>
+      <label class="switch"><input type="checkbox" id="nighttint" data-key="nighttint"><span></span></label></div></div>
   </section>
 
   <section class="card settings">
