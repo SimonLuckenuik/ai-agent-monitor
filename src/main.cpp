@@ -261,7 +261,9 @@ bool nightTile() { return nightNow && cfg.nightFace >= 0 && cfg.nightFace < FACE
 // then each active agent message, one turn each.
 void advanceFace(bool rotation) {
   int customs = cfg.facesApi ? customFaceCount() : 0, n = FACE_COUNT + customs + MESSAGE_MAX;
-  int cur = cfg.theme < FACE_COUNT ? cfg.theme : FACE_COUNT - 1;
+  // Built-in faces in the user's order, then custom faces, then messages.
+  static_assert(FACE_COUNT == 10, "Config::orderOf() handles face ids 0-9");
+  int cur = cfg.theme < FACE_COUNT ? cfg.faceOrder.indexOf(char('0' + cfg.theme)) : FACE_COUNT - 1;
   if (cfg.theme == FACE_CUSTOM)
     for (int i = 0; i < customs; ++i) if (customFaceAt(i) == cfg.customFace) cur = FACE_COUNT + i;
   if (cfg.theme == FACE_MESSAGE) cur = FACE_COUNT + customs + messageShowing();
@@ -277,8 +279,9 @@ void advanceFace(bool rotation) {
       if (name.length()) { cfg.theme = FACE_CUSTOM; cfg.customFace = name; return; }
       continue;
     }
-    if (rotation && !(cfg.faceMask >> pos & 1)) continue;
-    if (faceAvailable(pos)) { cfg.theme = pos; return; }
+    int face = cfg.faceOrder[pos] - '0';
+    if (rotation && !(cfg.faceMask >> face & 1)) continue;
+    if (faceAvailable(face)) { cfg.theme = face; return; }
   }
 }
 
@@ -429,7 +432,7 @@ String configJson() {
   doc["nightbrightness"] = cfg.nightBrightness; doc["nightface"] = cfg.nightFace; doc["ntp"] = cfg.ntp;
   doc["nighttint"] = cfg.nightTint; doc["nightcolor"] = cfg.nightColor;
   doc["timezone"] = cfg.timezoneMin; doc["tz"] = cfg.tz; doc["themeInterval"] = cfg.themeInterval;
-  doc["faces"] = cfg.faceMask; doc["nightauto"] = cfg.nightAuto;
+  doc["faces"] = cfg.faceMask; doc["faceorder"] = cfg.faceOrder; doc["nightauto"] = cfg.nightAuto;
   doc["photointerval"] = cfg.photoInterval; doc["photoclock"] = cfg.photoClock;
   doc["facesapi"] = cfg.facesApi; doc["hacompat"] = cfg.haCompat; doc["mqtt"] = cfg.mqttOn;
   doc["mqtthost"] = cfg.mqttHost; doc["mqttport"] = cfg.mqttPort; doc["mqttuser"] = cfg.mqttUser;
@@ -471,6 +474,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == "color2")     cfg.color2 = (uint16_t)val.toInt();
   else if (key == "color3")     cfg.color3 = (uint16_t)val.toInt();
   else if (key == "faces")      cfg.faceMask = constrain(val.toInt(), 0, (1 << FACE_COUNT) - 1);
+  else if (key == "faceorder")  cfg.faceOrder = Config::orderOf(val);
   else if (key == "mile")       cfg.mile = (val == "1" || val == "true");
   else if (key == "nightauto")  cfg.nightAuto = (val == "1" || val == "true");
   else if (key == "lcd_brightness") cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key

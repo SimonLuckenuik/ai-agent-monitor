@@ -25,8 +25,10 @@ import urllib.request
 FIRMWARE = "http://127.0.0.1:8000"
 SCREEN = "http://127.0.0.1:8080"
 # The real clock, 160 MHz, firmware 865c672 (2026-10-25): face -> slowest draw, ms.
-CLOCK_MS = {0: 54, 1: 68, 3: 808, 4: 47, 5: 98, 6: 87, 7: 722, 8: 498, 9: 54, "nightlake": 315}
-NAMES = {0: "Classic", 1: "Weather", 3: "Big date", 4: "Simple", 5: "Forecast", 6: "Flip",
+# Classic (0, 54 ms) and Simple (4, 47 ms) were measured with font 8; their time is
+# now the line font, so measure them again before adding them back.
+CLOCK_MS = {1: 68, 3: 808, 5: 98, 7: 722, 8: 498, 9: 54, "nightlake": 315}
+NAMES = {0: "Classic", 1: "Weather", 3: "Big date", 4: "Simple", 5: "Forecast",
          7: "Big time", 8: "Big weather", 9: "Agents", "nightlake": "nightlake"}
 
 jar = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))

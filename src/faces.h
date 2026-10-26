@@ -4,7 +4,7 @@
 // Clock faces. Ids 0-6 match the stock theme numbers (3 was the stock Dial) and
 // /api/set?key=theme; the others were added after them, the Agents board last.
 enum Face { FACE_CLASSIC = 0, FACE_WEATHER = 1, FACE_PHOTO = 2, FACE_DATE = 3,
-            FACE_SIMPLE = 4, FACE_FORECAST = 5, FACE_FLIP = 6, FACE_BIGTIME = 7,
+            FACE_SIMPLE = 4, FACE_FORECAST = 5, FACE_FLIP = 6 /* retired: Flip left (flash), the id stays reserved */, FACE_BIGTIME = 7,
             FACE_BIGWEATHER = 8, FACE_AGENTS = 9, FACE_COUNT = 10,
             FACE_CUSTOM = 10,    // cfg.customFace, from /faces/<name>.json (integrations)
             FACE_MESSAGE = 11 }; // an agent message (integrations), never saved as the face

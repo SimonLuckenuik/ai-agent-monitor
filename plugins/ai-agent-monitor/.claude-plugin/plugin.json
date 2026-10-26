@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-monitor",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Lets Claude show messages, progress, status and custom graphics (SVG icons, gradients, live values) on an AI Agent Monitor desk clock running SmartClock-OSS, or on its Docker emulator.",
   "author": {
     "name": "Simon Luckenuik",

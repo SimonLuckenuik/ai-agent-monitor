@@ -260,6 +260,13 @@ static void testAsciiFold() {
   CHECK_STR(asciiFold("\xE6\x97\xA5\xE6\x9C\xAC"), "??");
 }
 
+// The rotation order (setting "faceorder"): every face id once, in the given order first.
+static void testFaceOrder() {
+  CHECK_STR(Config::orderOf("7801234569"), "7801234569");
+  CHECK_STR(Config::orderOf("73x8807"), "7380124569");   // junk and repeats dropped, rest appended
+  CHECK_STR(Config::orderOf(""), "0123456789");
+}
+
 int main() {
   testNumbers();
   testExpressions();
@@ -269,6 +276,7 @@ int main() {
   testMessageFace();
   testMonoFont();
   testAsciiFold();
+  testFaceOrder();
   printf(failures ? "FAIL: %d of %d checks\n" : "PASS: %d checks\n", failures ? failures : checks, checks);
   return failures ? 1 : 0;
 }

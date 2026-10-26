@@ -101,29 +101,13 @@ void temp(int cx, int cy, int value, uint8_t font, uint16_t fg, uint16_t bg) {
 }
 
 void colon(int cx, int cy, uint16_t c, uint16_t bg) {
-  D().fillSmoothCircle(cx, cy - 15, 5, c, bg);
-  D().fillSmoothCircle(cx, cy + 15, 5, c, bg);
+  D().fillSmoothCircle(cx, cy - 13, 4, c, bg);
+  D().fillSmoothCircle(cx, cy + 13, 4, c, bg);
 }
 
-// HH:MM in font 8 (55 px digits). "12:34" is 249 px wide in that font, so the colon
-// is drawn as two dots to fit the 240 px panel. The group is centred, so "9:41"
-// sits in the middle too; the band is cleared only when the width changes.
-int bigTimeColonX(int cx, const struct tm& t) {
-  char h[4]; snprintf(h, sizeof(h), cfg.hour12 ? "%d" : "%02d", clockHour(t));
-  return cx + (D().textWidth(h, 8) - 110) / 2;   // 110 = two digits
-}
-
-void bigTime(int cx, int cy, const struct tm& t, uint16_t fg, uint16_t bg) {
-  static int lastColon = -1;
-  char h[4], m[4];
-  snprintf(h, sizeof(h), cfg.hour12 ? "%d" : "%02d", clockHour(t));
-  snprintf(m, sizeof(m), "%02d", t.tm_min);
-  int c = bigTimeColonX(cx, t);
-  if (c != lastColon) { D().fillRect(0, cy - 38, 240, 76, bg); lastColon = c; }
-  text(h, c - 10, cy, 8, fg, bg, MR_DATUM);
-  text(m, c + 10, cy, 8, fg, bg, ML_DATUM);
-  colon(c, cy, fg, bg);
-}
+// Classic's and Simple's HH:MM, in the Big tiles' line font (defined with them).
+int bigTimeColonX(int cx, const struct tm& t);
+void bigTime(int cx, int cy, const struct tm& t, uint16_t fg, uint16_t bg, bool force);
 
 void smallTime(char* out, size_t n, const struct tm& t) {
   snprintf(out, n, cfg.hour12 ? "%d:%02d" : "%02d:%02d", clockHour(t), t.tm_min);
@@ -247,7 +231,7 @@ void classic(const struct tm& t, bool force) {
     day = t.tm_yday;
   }
   if (t.tm_min != min) {
-    bigTime(120, 112, t, cfg.color1, BG);
+    bigTime(120, 112, t, cfg.color1, BG, force);
     D().fillRect(0, barY - 8, 240, 20, BG);
     D().fillRoundRect(barX, barY, barW, barH, 2, PANEL_HI);
     if (cfg.hour12) text(ampm(t), 210, barY + 2, 2, MUTED, BG, MC_DATUM);
@@ -352,71 +336,11 @@ void forecast(const struct tm& t, bool force) {
   }
 }
 
-// ---- 6 Flip: split-flap cards with a fold animation ---------------------------------
-constexpr int FLIP_Y = 34, FLIP_H = 136, FLIP_W = 114, FLIP_MID = FLIP_Y + FLIP_H / 2;
-
-void flipCard(int x, const char* digits, const char* tag) {
-  D().fillSmoothRoundRect(x, FLIP_Y, FLIP_W, FLIP_H, 12, PANEL, BG);
-  D().fillSmoothRoundRect(x, FLIP_Y, FLIP_W, FLIP_H / 2 + 12, 12, PANEL_HI, BG);
-  D().fillRect(x, FLIP_MID, FLIP_W, 13, PANEL);
-  textClear(digits, x + FLIP_W / 2, FLIP_MID + 3, 8, WHITE, MC_DATUM);
-  if (tag && *tag) textClear(tag, x + 12, FLIP_Y + 10, 2, MUTED, TL_DATUM);
-  D().fillRect(x, FLIP_MID - 1, FLIP_W, 3, BG);   // the hinge
-  D().fillCircle(x, FLIP_MID, 4, BG);
-  D().fillCircle(x + FLIP_W - 1, FLIP_MID, 4, BG);
-}
-
-// The top flap falls: the new top half is revealed from the top edge down, then the
-// flap's back shows the new bottom half growing from the hinge.
-void flipAnimate(int x, const char* digits, const char* tag) {
-  const int steps = 6, half = FLIP_H / 2;
-  for (int k = 1; k <= steps; ++k) {
-    D().setViewport(x, FLIP_Y, FLIP_W, half * k / steps, false);
-    flipCard(x, digits, tag);
-    D().resetViewport();
-    delay(10);
-  }
-  for (int k = 1; k <= steps; ++k) {
-    D().setViewport(x, FLIP_MID, FLIP_W, (half + 1) * k / steps, false);
-    flipCard(x, digits, tag);
-    D().resetViewport();
-    delay(10);
-  }
-}
-
-void flip(const struct tm& t, bool force) {
-  static char ph[4] = "", pm[4] = "";
-  static int day = -1;
-  static uint32_t wxv = ~0u;
-  if (force) { ph[0] = pm[0] = 0; day = -1; wxv = ~0u; }
-  char h[4], m[4];
-  snprintf(h, sizeof(h), cfg.hour12 ? "%d" : "%02d", clockHour(t));
-  snprintf(m, sizeof(m), "%02d", t.tm_min);
-  const char* tag = ampm(t);
-  if (strcmp(h, ph)) { if (force || !ph[0]) flipCard(4, h, tag); else flipAnimate(4, h, tag); strcpy(ph, h); }
-  if (strcmp(m, pm)) { if (force || !pm[0]) flipCard(122, m, nullptr); else flipAnimate(122, m, nullptr); strcpy(pm, m); }
-  if (t.tm_yday != day) {
-    char db[28];
-    snprintf(db, sizeof(db), "%s %d %s", dayLong(t.tm_wday), t.tm_mday, monthLong(t.tm_mon));
-    if (D().textWidth(db, 4) > 228) snprintf(db, sizeof(db), "%.3s %d %s", dayLong(t.tm_wday), t.tm_mday, monthShort(t.tm_mon));
-    text(db, 120, 194, 4, cfg.color2, BG, MC_DATUM, 236);
-    day = t.tm_yday;
-  }
-  if (wx.version != wxv) {
-    D().fillRect(0, 210, 240, 30, BG);
-    if (wx.valid) {
-      weatherIcon(96, 224, 24, wx.icon, BG);
-      temp(130, 225, displayTemp(wx.temp), 2, MUTED, BG);
-    }
-    wxv = wx.version;
-  }
-}
-
 // ---- 4 Simple: the time and the date, nothing else -------------------------------
 void simple(const struct tm& t, bool force) {
   static int min = -1, sec = -1, day = -1;
   if (force) { min = sec = day = -1; }
-  if (t.tm_min != min) { bigTime(120, 104, t, WHITE, BG); min = t.tm_min; }
+  if (t.tm_min != min) { bigTime(120, 104, t, WHITE, BG, force); min = t.tm_min; }
   if (t.tm_sec != sec) { colon(bigTimeColonX(120, t), 104, t.tm_sec % 2 ? DIM : WHITE, BG); sec = t.tm_sec; }
   if (t.tm_yday != day) {
     char db[32];
@@ -1254,6 +1178,7 @@ void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
 void drawText(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
   String s = resolve(js(it, "text", ""), t);
   int font = inum(it, "font", 4, t);
+  if (font == 8) font = 6;   // font 8 left the build (flash); 6 is the next digit font
   if (font != 2 && font != 4 && font != 6 && font != 8) font = 4;
   static const char* const names[] = {"tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"};
   uint8_t datum = TL_DATUM;
@@ -1563,6 +1488,43 @@ const char* weatherOutline(const String& icon) {
   return WI_CLOUD;
 }
 
+// ---- Classic's and Simple's HH:MM: digits as tall as font 8's were (55 px), the colon
+// as two dots between them. The group is centred, so "9:41" sits in the middle too.
+// Only the half that changed is redrawn: a line-font digit takes about 0.1 s.
+constexpr int TIME_H = 61;   // the digits' box: 55 px plus the stroke
+constexpr float TIME_K = TIME_H / (MONO_H + MONO_STROKE);   // monoText's scale for it
+
+void clockDigits(char* h, char* m, const struct tm& t) {
+  snprintf(h, 4, cfg.hour12 ? "%d" : "%02d", clockHour(t));
+  snprintf(m, 4, "%02d", t.tm_min);
+}
+
+int bigTimeColonX(int cx, const struct tm& t) {
+  char h[4], m[4];
+  clockDigits(h, m, t);
+  return cx + int((monoWidth(h) - monoWidth(m)) * TIME_K) / 2;
+}
+
+void bigTime(int cx, int cy, const struct tm& t, uint16_t fg, uint16_t bg, bool force) {
+  static char lastH[4], lastM[4];
+  static int lastColon = -1;
+  char h[4], m[4];
+  clockDigits(h, m, t);
+  int c = bigTimeColonX(cx, t), top = cy - TIME_H / 2;
+  bool all = force || c != lastColon;
+  if (all) { D().fillRect(0, cy - 38, SCR_W, 76, bg); colon(c, cy, fg, bg); lastColon = c; }
+  if (all || strcmp(h, lastH)) {
+    if (!all) D().fillRect(0, cy - 38, c - 6, 76, bg);
+    monoText(h, c - 12 - int(monoWidth(h) * TIME_K) / 2, top, SCR_W, TIME_H, fg);
+    strcpy(lastH, h);
+  }
+  if (all || strcmp(m, lastM)) {
+    if (!all) D().fillRect(c + 6, cy - 38, SCR_W - c - 6, 76, bg);
+    monoText(m, c + 12 + int(monoWidth(m) * TIME_K) / 2, top, SCR_W, TIME_H, fg);
+    strcpy(lastM, m);
+  }
+}
+
 // The tiles' layout: the main element white, the others in the accent colour.
 constexpr int TILE_W = 226;
 
@@ -1688,6 +1650,7 @@ bool faceAvailable(int face) {
     case FACE_PHOTO:    return photoCount() > 0;
     case FACE_BIGWEATHER: return wx.valid;
     case FACE_AGENTS: for (int s = 0; s < MESSAGE_MAX; ++s) if (messageActive(s)) return true; return false;
+    case FACE_FLIP:     return false;   // retired; its id stays reserved
     case FACE_CUSTOM:   return cfg.facesApi && customFaceExists(cfg.customFace);
     case FACE_MESSAGE:  return messageActive(messageShowing());
     default:            return face >= 0 && face < FACE_COUNT;
@@ -1708,7 +1671,6 @@ void faceDraw(int face, const struct tm& t, bool timeValid) {
     case FACE_PHOTO:    photo(t, force);    break;
     case FACE_SIMPLE:   simple(t, force);   break;
     case FACE_FORECAST: forecast(t, force); break;
-    case FACE_FLIP:     flip(t, force);     break;
     case FACE_DATE:     bigDate(t, force);  break;
     case FACE_BIGTIME:  bigTimeFace(t, force); break;
     case FACE_BIGWEATHER: bigWeather(t, force); break;

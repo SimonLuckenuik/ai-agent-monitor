@@ -26,7 +26,7 @@ String mqttStatus();
 
 namespace {
 
-const char* const FACE_NAMES[FACE_COUNT] = {"Classic", "Weather", "Photo", "Big date", "Simple", "Forecast", "Flip", "Big time", "Big weather", "Agents"};
+const char* const FACE_NAMES[FACE_COUNT] = {"Classic", "Weather", "Photo", "Big date", "Simple", "Forecast", "", "Big time", "Big weather", "Agents"};
 uint32_t facesVersion = 1;
 
 bool saveConfig() {
@@ -293,6 +293,7 @@ void handleThemeList() {
   JsonDocument doc;
   JsonArray themes = doc["themes"].to<JsonArray>();
   for (int i = 0; i < FACE_COUNT; ++i) {
+    if (!*FACE_NAMES[i]) continue;   // a retired face (6, Flip)
     JsonObject t = themes.add<JsonObject>();
     t["id"] = i; t["name"] = FACE_NAMES[i]; t["enabled"] = (cfg.faceMask >> i & 1) != 0;
   }
@@ -368,7 +369,7 @@ void publishDiscovery() {
   publishConfig("light", "backlight", q("name", "Backlight") + "," + q("schema", "json") +
                 F(",\"brightness\":true,\"brightness_scale\":100,") + q("cmd_t", b + "/backlight/set") + "," +
                 q("stat_t", b + "/backlight"));
-  String options = "\"Classic\",\"Weather\",\"Photo\",\"Big date\",\"Simple\",\"Forecast\",\"Flip\",\"Big time\",\"Big weather\",\"Agents\"";
+  String options = "\"Classic\",\"Weather\",\"Photo\",\"Big date\",\"Simple\",\"Forecast\",\"Big time\",\"Big weather\",\"Agents\"";
   if (cfg.facesApi) for (int i = 0, n = customFaceCount(); i < n; ++i) options += ",\"" + customFaceAt(i) + "\"";
   publishConfig("select", "face", q("name", "Face") + "," + q("cmd_t", b + "/face/set") + "," +
                 q("stat_t", b + "/face") + ",\"options\":[" + options + "]");
@@ -412,7 +413,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     brightnessDirty = true;
   } else if (topic == b + "/face/set") {
     for (int i = 0; i < FACE_COUNT; ++i)
-      if (body == FACE_NAMES[i]) { cfg.theme = i; faceSince = millis(); faceInvalidate(); saveConfig(); }
+      if (*FACE_NAMES[i] && body == FACE_NAMES[i]) { cfg.theme = i; faceSince = millis(); faceInvalidate(); saveConfig(); }
     if (cfg.facesApi && customFaceExists(body)) { showFace(body); saveConfig(); }
   } else if (topic == b + "/sync") {
     syncWeather();

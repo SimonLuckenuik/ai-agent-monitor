@@ -71,6 +71,7 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:99px;cursor:pointer}
 .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
+#rotChips .chip{touch-action:none}.chip.drag{opacity:.5}
 .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:12px}
 .ph{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surface2)}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
@@ -175,7 +176,7 @@ a{color:var(--accent)}
         <option value="0">Off</option><option value="10">10 s</option><option value="30">30 s</option>
         <option value="60">1 min</option><option value="300">5 min</option></select>
     </div>
-    <div id="rotBox"><span style="font-size:12.5px;color:var(--muted)">Include in rotation (faces without weather or photos are skipped)</span>
+    <div id="rotBox"><span style="font-size:12.5px;color:var(--muted)">Include in rotation (faces without weather or photos are skipped). Drag to change the order</span>
       <div class="chips" id="rotChips"></div></div>
     <div class="row"><span class="lbl">Brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="brightness" data-key="brightness" data-live><output></output></div></div>
@@ -199,7 +200,7 @@ a{color:var(--accent)}
     <div class="row"><span class="lbl">At night show<span class="hint">One face all night, instead of the rotation</span></span>
       <select class="sm" id="nightface" data-key="nightface"><option value="-1">The rotation</option><option value="7">Big time</option>
         <option value="3">Big date</option><option value="8">Big weather</option><option value="0">Classic</option><option value="4">Simple</option>
-        <option value="6">Flip</option><option value="9">Agents</option></select></div>
+        <option value="9">Agents</option></select></div>
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
     <div class="row"><label for="nighttint">Night color<span class="hint">Faces drawn in one dim color; photos keep theirs</span></label>
@@ -388,7 +389,6 @@ let cfg={},st={},recovery=false,fwFile=null;
 const THEMES=[[0,'Classic','<rect x="4" y="8" width="30" height="16" rx="3"/><path d="M10 14v4M14 14v4M19 13v1M19 18v1M24 14v4M28 14v4M10 28h18"/>'],
  [1,'Weather','<path d="M12 27a6 6 0 1 1 1.4-11.8A8 8 0 0 1 29 17a5 5 0 0 1-1 10z"/>'],
  [5,'Forecast','<rect x="5" y="9" width="28" height="20" rx="3"/><path d="M5 16h28M14 9v20M24 9v20"/>'],
- [6,'Flip','<rect x="6" y="8" width="11" height="22" rx="2"/><rect x="21" y="8" width="11" height="22" rx="2"/><path d="M6 19h11M21 19h11"/>'],
  [4,'Simple','<path d="M9 19h20"/>'],[2,'Photo','<rect x="6" y="8" width="26" height="22" rx="3"/><circle cx="14" cy="16" r="3"/><path d="M6 27l8-7 6 5 4-3 8 6"/>'],
  [3,'Big date','<rect x="6" y="9" width="26" height="22" rx="3"/><path d="M6 16h26M13 6v6M25 6v6"/>'],
  [7,'Big time','<g transform="translate(9.7 5) scale(.55)" stroke-width="3.6"><path d="M1.9 5.5C1.9 2.5 4.4 0 7.4 0s5.1 2.4 5.1 5.4c0 1.8-1.2 3.2-2.5 4.6L2.2 20H14"/><path transform="translate(16.9)" d="M3.4 3.6L9.4 0v20"/><path transform="translate(0 29)" d="M14.5 0H5.1L4.2 9.4C5.4 8.3 7.2 7.8 9.3 7.8c2.9 0 4.9 2.6 4.9 6s-2 6.2-5 6.2-5.6-2.1-5.6-5.3"/><path transform="translate(16.9 29)" d="M11.3 20V0L1.2 14.2H15.1"/></g>'],
@@ -459,14 +459,25 @@ function bindInputs(){
 function nightRows(auto){auto=['1','true'].includes(String(auto));all('.hoursRow').forEach(r=>r.hidden=auto);$('sunRow').hidden=!auto}
 function paintSeg(el,v){el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v)))}
 
+let dragged=0;
 function renderThemes(){
   $('themes').innerHTML=THEMES.map(([id,name,svg])=>
     `<button class="theme${cfg.theme==id?' on':''}" data-id="${id}"><svg viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>${name}</button>`).join('');
   all('.theme').forEach(b=>b.onclick=async()=>{if(await set('theme',b.dataset.id)){cfg.theme=+b.dataset.id;renderThemes()}});
   const mask=cfg.faces===undefined?127:+cfg.faces;
-  $('rotChips').innerHTML=THEMES.map(([id,name])=>`<button class="chip${mask>>id&1?' on':''}" data-id="${id}">${name}</button>`).join('');
-  all('#rotChips .chip').forEach(b=>b.onclick=async()=>{const m=(cfg.faces===undefined?127:+cfg.faces)^(1<<b.dataset.id);
-    if(!m){toast('Keep at least one face',1);return}if(await set('faces',m)){cfg.faces=m;renderThemes()}});
+  // In rotation order; a tap toggles, a drag moves (pointer events: phones too).
+  $('rotChips').innerHTML=[...(cfg.faceorder||'0123456789')].map(id=>THEMES.find(t=>t[0]==id)).filter(Boolean)
+    .map(([id,name])=>`<button class="chip${mask>>id&1?' on':''}" data-id="${id}">${name}</button>`).join('');
+  all('#rotChips .chip').forEach(b=>{
+    b.onclick=async()=>{if(dragged){dragged=0;return}const m=(cfg.faces===undefined?127:+cfg.faces)^(1<<b.dataset.id);
+      if(!m){toast('Keep at least one face',1);return}if(await set('faces',m)){cfg.faces=m;renderThemes()}};
+    // On window: moving the chip in the page would drop its pointer capture.
+    b.onpointerdown=e=>{const x=e.clientX,y=e.clientY;dragged=0;
+      onpointermove=m=>{if(!dragged&&Math.hypot(m.clientX-x,m.clientY-y)<8)return;dragged=1;b.classList.add('drag');
+        const t=document.elementFromPoint(m.clientX,m.clientY)?.closest('#rotChips .chip');
+        if(t&&t!=b){const r=t.getBoundingClientRect();t.before(b);if(m.clientX>r.left+r.width/2)t.after(b)}};
+      onpointerup=async()=>{onpointermove=onpointerup=null;b.classList.remove('drag');if(!dragged)return;
+        const o=[...$('rotChips').children].map(c=>c.dataset.id).join('');if(await set('faceorder',o))cfg.faceorder=o}}});
   $('rotBox').hidden=!(+cfg.themeInterval>0);
 }
 

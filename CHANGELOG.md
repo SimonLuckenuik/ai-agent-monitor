@@ -31,6 +31,13 @@ versioning. `/version` on the device reports the version it was built as; a
   messages to 11; a saved configuration is migrated, and the new faces join an
   existing rotation.
 - Custom faces: `{name|fallback}` shows the fallback while a value is empty.
+- **Classic and Simple** draw their time in the Big tiles' line font. **Flip** is gone
+  and **font 8** left the build (3.6 KB of flash for new features): id 6 stays
+  reserved and is skipped; custom faces asking for font 8 get font 6.
+- **Rotation order** (Faces card, `faceorder`): drag the rotation chips to set the
+  order the built-in faces come in; custom faces and messages follow them. The setting
+  is the face ids as digits (`"7801234569"`); unknown ones are dropped and missing ones
+  appended.
 - **Night color** (Night mode card, `nighttint`, `nightcolor`): at night every face is
   drawn in one dim color, dark gray by default, so the screen lights the room less.
   Each color keeps its brightness; photos and urgent messages keep their colors.

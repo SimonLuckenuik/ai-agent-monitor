@@ -22,7 +22,8 @@ struct Config {
   bool   hour12      = false;        // 24 h by default
   bool   mile        = false;
   String lang        = "en";         // the faces' language: "en" or "fr"
-  int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Date 4=Simple 5=Forecast 6=Flip
+  String faceOrder   = "0123456789"; // the rotation's order: face ids as digits
+  int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Date 4=Simple 5=Forecast (6 retired)
   int    themeInterval = 10;         // seconds; 0 = no rotation
   int    faceMask    = 0x3ff;        // bit n set = face n takes part in rotation
   int    brightness  = 60;           // 0..100
@@ -50,6 +51,19 @@ struct Config {
   int    mqttPort = 1883;
   String apiKey;                     // for scripts calling the faces API; never exported
 
+  // Face ids (0-9, FACE_COUNT in faces.h) as digits: unknown and repeated ones dropped,
+  // missing ones appended, so every face has a place and new faces join at the end.
+  static String orderOf(const String& s) {
+    String out;
+    uint16_t seen = 0;
+    for (unsigned i = 0; i < s.length(); ++i) {
+      char c = s[i];
+      if (c >= '0' && c <= '9' && !(seen >> (c - '0') & 1)) { seen |= 1 << (c - '0'); out += c; }
+    }
+    for (char c = '0'; c <= '9'; ++c) if (!(seen >> (c - '0') & 1)) out += c;
+    return out;
+  }
+
   bool load() {
     if (!LittleFS.exists("/config.json")) return false;
     File f = LittleFS.open("/config.json", "r");
@@ -73,6 +87,7 @@ struct Config {
     hour12      = doc["hour12"]      | hour12;
     mile        = doc["mile"]        | mile;
     lang        = doc["lang"]        | lang;
+    faceOrder   = orderOf(doc["faceorder"] | faceOrder);
     theme       = doc["theme"]       | theme;
     themeInterval = doc["themeInterval"] | themeInterval;
     faceMask    = doc["faces"]       | faceMask;
@@ -124,6 +139,7 @@ struct Config {
     doc["geoname"] = geoName; doc["geofor"] = geoFor;
     doc["tz"] = tz;
     doc["celsius"] = celsius;     doc["hour12"] = hour12;   doc["mile"] = mile;   doc["lang"] = lang;
+    doc["faceorder"] = faceOrder;
     doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
     doc["faces"] = faceMask;     doc["facesv"] = 3;
     doc["brightness"] = brightness;

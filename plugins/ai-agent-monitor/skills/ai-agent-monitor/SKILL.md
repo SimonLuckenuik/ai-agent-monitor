@@ -84,8 +84,9 @@ keys up to 15 characters, values up to 160; they are lost on restart.
 
 ## Rules of the screen
 
-- **Text is ASCII.** Font `2` (16 px) and `4` (26 px) are text; `6` (48 px) and `8`
-  (75 px) are **digits only**. There is no degree sign: write `{temp} {unit}`.
+- **Text is ASCII.** Font `2` (16 px) and `4` (26 px) are text; `6` (48 px) is
+  **digits only** (`8` is gone and draws as `6`). There is no degree sign: write
+  `{temp} {unit}`.
 - **Redraws.** There is no frame buffer. An item whose content changes in place (text
   with a `bg`, ring, bar) redraws alone; any other change redraws the whole face,
   which flickers. Keep moving parts few, and give changing text a `bg` and a `pad`.

@@ -36,7 +36,8 @@ branch has **not run on hardware yet**.
   auto-formats on the device.
 - **Face ids are an API.** 0–6 are the stock theme numbers (geekmagic-hacs and
   `/api/set?key=theme` use them): 0 Classic, 1 Weather, 2 Photo, 3 Big date (was Dial),
-  4 Simple, 5 Forecast, 6 Flip; then 7 Big time, 8 Big weather, 9 Agents board;
+  4 Simple, 5 Forecast, 6 (Flip, retired to save flash: reserved, never shown); then
+  7 Big time, 8 Big weather, 9 Agents board;
   `FACE_CUSTOM` 10, `FACE_MESSAGE` 11 (never saved). Renumbering needs a migration in
   `Config::load()` (`facesv`, now 3).
 - **Line endings.** Upstream files are stored **CRLF** in git; keep them CRLF when
@@ -177,6 +178,7 @@ Next:
 2. Merge `faces-v2` into `main` (the README's plugin install line needs it).
 3. Claude Code hooks in the plugin (Notification → waiting, Stop → done,
    UserPromptSubmit → clear), using `/api/message`.
-4. Flash headroom: ~4 KB left. Candidates: drop unused fonts or faces, trim
-   integrations (MQTT discovery), shorten strings.
+4. Flash headroom: ~3.6 KB left (512,448 of 516,096) after Flip and font 8 left.
+   Next: compressed (gzip) updates, ~90 KB more: the core and the bootloader support
+   them; the upload check (`firmware_validation.h`) needs a trailer for .bin.gz.
 5. The settings page stays English and self-contained (no CDN).

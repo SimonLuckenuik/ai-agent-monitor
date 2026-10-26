@@ -99,17 +99,18 @@ static void fresh(int face, const struct tm& t, const std::string& name) {
 
 int main(int argc, char** argv) {
   outDir = argc > 1 ? argv[1] : ".";
-  const char* names[] = {"classic", "weather", "photo", "date", "simple", "forecast", "flip", "bigtime", "bigweather", "agents"};
+  const char* names[] = {"classic", "weather", "photo", "date", "simple", "forecast", "", "bigtime", "bigweather", "agents"};
   setWeather("03d", "Clouds", "scattered clouds", 21.4f);
   setForecast({"10d", "01d", "04d", "11d"});
 
   // 1. Every face at 9:54:26 pm.
-  for (int f = 0; f < FACE_COUNT; ++f) fresh(f, at(21, 54, 26), std::string("face_") + std::to_string(f) + "_" + names[f]);
+  for (int f = 0; f < FACE_COUNT; ++f)
+    if (f != FACE_FLIP) fresh(f, at(21, 54, 26), std::string("face_") + std::to_string(f) + "_" + names[f]);   // 6: retired
 
   // 2. Incremental vs full redraw.
   int failures = 0;
   for (int f = 0; f < FACE_COUNT; ++f) {
-    if (f == FACE_PHOTO) continue;   // the photo advances on a timer by design
+    if (f == FACE_PHOTO || f == FACE_FLIP) continue;   // the photo advances on a timer by design; 6 is retired
     struct tm t = at(21, 58, 50);
     faceInvalidate();
     faceDraw(f, t, true);
@@ -140,7 +141,7 @@ int main(int argc, char** argv) {
   cfg.hour12 = false; cfg.celsius = false;
   setWeather("02d", "Clouds", "few clouds", 21.4f);
   fresh(FACE_CLASSIC, at(9, 5, 7), "variant_classic_24h_fahrenheit");
-  fresh(FACE_FLIP, at(9, 5, 7), "variant_flip_24h");
+  fresh(FACE_SIMPLE, at(9, 5, 7), "variant_simple_24h");
   cfg.hour12 = true; cfg.celsius = true;
 
   // 4. Custom faces (integrations): the settings page's example, and one using
@@ -230,7 +231,6 @@ int main(int argc, char** argv) {
   fresh(FACE_CLASSIC, at(21, 54, 26), "french_classic");
   fresh(FACE_WEATHER, at(21, 54, 26), "french_weather");
   fresh(FACE_FORECAST, at(21, 54, 26), "french_forecast");
-  fresh(FACE_FLIP, at(9, 5, 7), "french_flip");
   fresh(FACE_DATE, at(9, 5, 7), "french_date");
   fresh(FACE_BIGWEATHER, at(9, 5, 7), "french_bigweather");
   cfg.lang = "en";

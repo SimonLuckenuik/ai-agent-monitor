@@ -40,9 +40,10 @@ hidden item is not drawn.
 Face-level fields: `bg` (colour or gradient), `items`, and `fps` (4): how often the
 face is re-evaluated, 1 to 20. Raise it only for animation.
 
-- **Fonts.** `2` is small text (16 px). `4` is medium text (26 px). `6` (48 px) and
-  `8` (75 px) are large **digits only** (`0-9 : . -`). Fonts have no degree sign;
-  write `"{temp} {unit}"`, or draw a small circle.
+- **Fonts.** `2` is small text (16 px). `4` is medium text (26 px). `6` (48 px) is
+  large **digits only** (`0-9 : . -`). `8` (75 px digits) left the build to save
+  flash: it now draws as `6`. Fonts have no degree sign; write `"{temp} {unit}"`, or
+  draw a small circle. For larger digits, draw them as paths.
 - **`align`** sets which point of the item `x`,`y` refers to: `tl`, `tc`, `tr`, `ml`,
   `mc`, `mr`, `bl`, `bc`, `br` (top/middle/bottom, left/centre/right). For wrapped
   text it places the whole block.
