@@ -3,7 +3,7 @@
 #include <time.h>
 
 // Weather state shared by the web API and the clock faces, filled from Open-Meteo.
-// Icons use OpenWeatherMap-style codes ("10d"), mapped from WMO weather codes.
+// Icons are Weather Icons names ("wi-day-rain"), mapped from WMO weather codes.
 struct Weather {
   bool valid = false;
   float temp = 0, feels = 0, tempMin = 0, tempMax = 0, wind = 0;   // metric: C, m/s
@@ -35,6 +35,10 @@ struct Forecast {
 };
 
 extern Weather wx;
+
+// The Weather Icons name for a WMO weather code: "wi-day-rain", "wi-night-rain", or
+// "wi-tornado" for icons with no day/night variant (faces.cpp, with the icon data).
+String weatherIconName(int wmo, bool day);
 
 // The words for a WMO weather code: English, or French (without accents).
 void wmoText(int code, bool fr, String& main, String& desc);

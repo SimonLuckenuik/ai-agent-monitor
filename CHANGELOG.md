@@ -8,6 +8,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- Weather icons: Erik Flowers' Weather Icons (SIL OFL 1.1) on every face, chosen from the
+  WMO code with the companion app's table (day and night variants). `scripts/gen_weather_icons.py`
+  turns the SVGs into polygons (`src/weather_icons.h`, 7.5 KB) that the path filler draws at
+  any size. `{icon}` is now a name such as `wi-day-rain`; the icon item takes a `color`.
+  The plain image is now over its limit: update with the `.bin.gz`.
 - Day tiles (faces 10-13): today, tomorrow and the two days after, one forecast day
   per screen in the Big tiles' style. Each shows the day's name, its icon and its high,
   then the feels-like high, the low and the chance of precipitation, with the same

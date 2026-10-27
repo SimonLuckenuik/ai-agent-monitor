@@ -10,6 +10,7 @@
 #include <tjpgd.h>   // the decoder core only: the TJpg_Decoder wrapper links SPIFFS (~32 KB)
 #include "config.h"
 #include "weather.h"
+#include "weather_icons.h"
 #include "integrations.h"
 #include <ArduinoJson.h>
 
@@ -31,8 +32,7 @@ constexpr int SCR_W = 240, SCR_H = 240;   // the panel
 
 // ---- Palette (RGB565). Accents come from the user's color1..3.
 constexpr uint16_t BG = 0x0000, PANEL = 0x18E3, PANEL_HI = 0x2945, DIM = 0x528A,
-                   MUTED = 0x9D14, WHITE = 0xFFFF, CLOUD = 0xE75D, CLOUD_DARK = 0xA536,
-                   RAIN = 0x5D9F, SUN = 0xFD84, BOLT = 0xFEA1, MOON = 0xF738;
+                   MUTED = 0x9D14, WHITE = 0xFFFF, CLOUD = 0xE75D, RAIN = 0x5D9F;
 
 const char* const DAY_LONG[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 const char* const DAY_SHORT[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
@@ -115,9 +115,9 @@ void smallTime(char* out, size_t n, const struct tm& t) {
 
 const char* ampm(const struct tm& t) { return cfg.hour12 ? (t.tm_hour < 12 ? "AM" : "PM") : ""; }
 
-// ---- Weather icons, drawn from primitives at any size ----------------------------
-// Anti-aliased shapes blend their edges into a single background colour, so where
-// circles overlap the seams are painted over with a plain fill afterwards.
+// The placeholders' cloud, drawn from primitives. Anti-aliased shapes blend their edges
+// into a single background colour, so where circles overlap the seams are painted over
+// with a plain fill afterwards.
 void cloud(int cx, int cy, int s, uint16_t c, uint16_t bg) {
   struct { float x, y, r; } puffs[] = {{-0.22f, 0.04f, 0.22f}, {0.02f, -0.08f, 0.30f}, {0.26f, 0.06f, 0.20f}};
   int bx = cx - s * 0.44f, by = cy + s * 0.02f, bw = s * 0.88f, bh = s * 0.24f;
@@ -127,68 +127,8 @@ void cloud(int cx, int cy, int s, uint16_t c, uint16_t bg) {
   D().fillRoundRect(bx + 1, by + 1, bw - 2, bh - 2, bh / 2 - 1, c);
 }
 
-void sun(int cx, int cy, int R, uint16_t bg) {
-  D().fillSmoothCircle(cx, cy, R * 0.55f, SUN, bg);
-  float w = R > 30 ? 2.2f : R > 14 ? 1.5f : 1.0f;
-  for (int i = 0; i < 8; ++i) {
-    float a = i * PI / 4;
-    D().drawWedgeLine(cx + sinf(a) * R * 0.72f, cy - cosf(a) * R * 0.72f,
-                      cx + sinf(a) * R, cy - cosf(a) * R, w, w, SUN, bg);
-  }
-}
-
-void moon(int cx, int cy, int r, uint16_t bg) {
-  D().fillSmoothCircle(cx, cy, r, MOON, bg);
-  D().fillCircle(cx + r * 0.45f, cy - r * 0.35f, r * 0.8f, bg);   // the cut-out
-}
-
-void weatherIcon(int cx, int cy, int s, const String& icon, uint16_t bg) {
-  int code = icon.length() >= 2 ? icon.substring(0, 2).toInt() : 0;
-  bool night = icon.endsWith("n");
-  auto drops = [&](uint16_t c, bool snow) {
-    float pos[][2] = {{-0.22f, 0.20f}, {0.0f, 0.26f}, {0.22f, 0.20f}};
-    for (auto& p : pos) {
-      int x = cx + p[0] * s, y = cy + p[1] * s;
-      if (snow) D().fillSmoothCircle(x, y + s * 0.06f, std::max(2, s / 22), c, bg);
-      else D().drawWedgeLine(x, y, x - s * 0.06f, y + s * 0.16f, std::max(1.0f, s / 44.0f), std::max(1.0f, s / 44.0f), c, bg);
-    }
-  };
-  switch (code) {
-    case 1: if (night) moon(cx, cy, s * 0.30f, bg); else sun(cx, cy, s * 0.42f, bg); break;
-    case 2:
-      if (night) moon(cx - s * 0.14f, cy - s * 0.14f, s * 0.22f, bg); else sun(cx - s * 0.14f, cy - s * 0.16f, s * 0.30f, bg);
-      cloud(cx + s * 0.08f, cy + s * 0.06f, s * 0.78f, CLOUD, bg);
-      break;
-    case 3: cloud(cx, cy, s * 0.9f, CLOUD, bg); break;
-    case 4:
-      cloud(cx + s * 0.14f, cy - s * 0.12f, s * 0.68f, CLOUD_DARK, bg);
-      cloud(cx - s * 0.06f, cy + s * 0.06f, s * 0.80f, CLOUD, bg);
-      break;
-    case 9: case 10:
-      if (code == 10 && !night) sun(cx + s * 0.18f, cy - s * 0.24f, s * 0.24f, bg);
-      cloud(cx, cy - s * 0.12f, s * 0.86f, CLOUD, bg);
-      drops(RAIN, false);
-      break;
-    case 11: {
-      cloud(cx, cy - s * 0.12f, s * 0.86f, CLOUD_DARK, bg);
-      D().fillTriangle(cx + s * 0.06f, cy + s * 0.08f, cx - s * 0.12f, cy + s * 0.30f, cx + s * 0.02f, cy + s * 0.30f, BOLT);
-      D().fillTriangle(cx + s * 0.08f, cy + s * 0.24f, cx - s * 0.06f, cy + s * 0.46f, cx - s * 0.04f, cy + s * 0.24f, BOLT);
-      break;
-    }
-    case 13: cloud(cx, cy - s * 0.12f, s * 0.86f, CLOUD, bg); drops(WHITE, true); break;
-    case 50:
-      for (int i = 0; i < 3; ++i) {
-        int w = s * (i == 1 ? 0.86f : 0.66f), h = std::max(3, s / 12);
-        D().fillSmoothRoundRect(cx - w / 2 + (i == 2 ? s * 0.08f : 0), cy + (i - 1) * s * 0.2f - h / 2, w, h, h / 2, CLOUD_DARK, bg);
-      }
-      break;
-    default: cloud(cx, cy, s * 0.9f, CLOUD_DARK, bg); break;
-  }
-}
-
-String dayIcon(const String& icon) {   // forecast days always use the day variant
-  return icon.length() >= 2 ? icon.substring(0, 2) + "d" : icon;
-}
+// A weather icon (s px square, centred), defined with the path filler below.
+void weatherIcon(int cx, int cy, int s, const String& icon, uint16_t bg, uint16_t color);
 
 void placeholder(int iconY, const char* title, const char* line1, const char* line2) {
   text(title, 120, iconY + 62, 4, WHITE, BG, MC_DATUM);
@@ -247,7 +187,7 @@ void classic(const struct tm& t, bool force) {
       char tb[8]; snprintf(tb, sizeof(tb), "%d", displayTemp(wx.temp));
       int tw = D().textWidth(tb, 4) + 12, mw = D().textWidth(wxMain(), 2);
       int x = 120 - (36 + 8 + tw + 8 + mw) / 2;
-      weatherIcon(x + 18, 206, 36, wx.icon, BG);
+      weatherIcon(x + 18, 206, 36, wx.icon, BG, cfg.color1);
       temp(x + 44 + tw / 2, 207, displayTemp(wx.temp), 4, cfg.color3, BG);
       text(wxMain().c_str(), x + 44 + tw + 8, 208, 2, MUTED, BG, ML_DATUM);
     }
@@ -275,7 +215,7 @@ void weather(const struct tm& t, bool force) {
     weatherPlaceholder(tr("No weather yet", "Pas encore de meteo"));
     return;
   }
-  weatherIcon(64, 104, 100, wx.icon, BG);
+  weatherIcon(64, 104, 100, wx.icon, BG, cfg.color1);
   char tb[8]; snprintf(tb, sizeof(tb), "%d", displayTemp(wx.temp));
   int w = D().textWidth(tb, 6);
   text(tb, 126, 96, 6, WHITE, BG, ML_DATUM);
@@ -324,7 +264,7 @@ void forecast(const struct tm& t, bool force) {
     if (i >= fc.count) continue;
     const ForecastDay& d = fc.days[i];
     text(d.today ? tr("TODAY", "AUJ.") : dayShort(d.wday), cx, 70, 2, d.today ? cfg.color2 : MUTED, PANEL, MC_DATUM);
-    weatherIcon(cx, 110, 44, dayIcon(d.icon), PANEL);
+    weatherIcon(cx, 110, 44, d.icon, PANEL, cfg.color1);
     temp(cx, 152, displayTemp(d.hi), 4, WHITE, PANEL);
     temp(cx, 178, displayTemp(d.lo), 2, MUTED, PANEL);
     if (d.pop >= 10) {
@@ -1291,7 +1231,7 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
   } else if (!strcmp(type, "icon")) {
     int size = inum(it, "size", 48, t);
     if (jhas(it, "bg")) D().fillRect(x - size / 2 - 2, y - size / 2 - 2, size + 4, size + 4, bg);
-    weatherIcon(x, y, size, resolve(js(it, "icon", "{icon}"), t), bg);
+    weatherIcon(x, y, size, resolve(js(it, "icon", "{icon}"), t), bg, colorOf(it["color"], cfg.color1, t));
   } else if (!strcmp(type, "image")) {
     drawJpeg(String("/photo/") + resolve(js(it, "src", ""), t), x, y);
   }
@@ -1462,30 +1402,49 @@ void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) 
   }
 }
 
-// Weather icons in the same outline style, on a 24x24 grid, for OpenWeatherMap codes.
-const char WI_SUN[] PROGMEM = "M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41";
-const char WI_MOON[] PROGMEM = "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z";
-const char WI_CLOUD[] PROGMEM = "M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z";
-const char WI_CLOUD_SUN[] PROGMEM = "M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41M15.95 12.65a4 4 0 0 0-5.93-4.13M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6z";
-const char WI_CLOUD_MOON[] PROGMEM = "M13 16a3 3 0 1 1 0 6H7a5 5 0 1 1 4.9-6zM10.1 9A6 6 0 0 1 16 4a4.24 4.24 0 0 0 6 6 6 6 0 0 1-3 5.2";
-#define WI_CLOUD_TOP "M4 14.9A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.24"
-const char WI_DRIZZLE[] PROGMEM = WI_CLOUD_TOP "M8 19v1M8 14v1M16 19v1M16 14v1M12 21v1M12 16v1";
-const char WI_RAIN[] PROGMEM = WI_CLOUD_TOP "M16 14v6M8 14v6M12 16v6";
-const char WI_STORM[] PROGMEM = "M6 16.33A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.97M13 12l-3 5h4l-3 5";
-const char WI_SNOW[] PROGMEM = WI_CLOUD_TOP "M8 15h.01M8 19h.01M12 17h.01M12 21h.01M16 15h.01M16 19h.01";
-const char WI_FOG[] PROGMEM = WI_CLOUD_TOP "M16 17H7M17 21H9";
+// ---- Weather icons: Erik Flowers' Weather Icons (weather_icons.h), filled as paths.
+// A name is "wi-day-<base>", "wi-night-<base>" or "wi-<base>"; custom faces may still
+// give OpenWeatherMap-style codes ("10d"), read as the WMO code they came from.
+String wiBase(int b) {   // the b-th name in WI_BASE_NAMES
+  String s;
+  for (const char* p = WI_BASE_NAMES; ; ++p) {
+    char c = pgm_read_byte(p);
+    if (!c) { if (!b--) return s; s = ""; continue; }
+    s += c;
+  }
+}
 
-const char* weatherOutline(const String& icon) {
-  bool night = icon.endsWith("n");
-  String c = icon.substring(0, 2);
-  if (c == "01") return night ? WI_MOON : WI_SUN;
-  if (c == "02") return night ? WI_CLOUD_MOON : WI_CLOUD_SUN;
-  if (c == "09") return WI_DRIZZLE;
-  if (c == "10") return WI_RAIN;
-  if (c == "11") return WI_STORM;
-  if (c == "13") return WI_SNOW;
-  if (c == "50") return WI_FOG;
-  return WI_CLOUD;
+int wiIndex(const String& name) {
+  bool night = name.endsWith("n");
+  int base = -1;
+  if (name.length() >= 2 && isdigit((unsigned char)name[0])) {
+    static const uint8_t legacy[][2] = {{1, 0}, {2, 2}, {3, 3}, {4, 3}, {9, 61}, {10, 63}, {11, 95}, {13, 71}, {50, 4}};
+    int c = name.substring(0, 2).toInt();
+    for (auto& l : legacy) if (l[0] == c) base = pgm_read_byte(&WI_WMO[l[1]]);
+  } else if (name.startsWith("wi-")) {
+    String b = name.substring(3);
+    night = b.startsWith("night-");
+    if (night) b.remove(0, 6);
+    else if (b.startsWith("day-")) b.remove(0, 4);
+    for (int i = 0; i < WI_BASES && base < 0; ++i) if (b == wiBase(i)) base = i;
+  }
+  if (base < 0) return -1;
+  return pgm_read_byte(&WI_FIRST[base]) + (night && base < WI_BASES - WI_AGNOSTIC ? 1 : 0);
+}
+
+void weatherIcon(int cx, int cy, int s, const String& icon, uint16_t bg, uint16_t color) {
+  int k = wiIndex(icon);
+  Poly P;
+  if (k < 0 || !P.ok()) return;
+  P.sx = P.sy = s / (30.0f * WI_UNIT); P.ox = cx - s / 2.0f; P.oy = cy - s / 2.0f;
+  for (int i = pgm_read_word(&WI_START[k]), e = pgm_read_word(&WI_START[k + 1]); i < e;) {
+    uint8_t x = pgm_read_byte(&WI_DATA[i++]);
+    if (x == 0xFF) P.close();
+    else P.add(x, pgm_read_byte(&WI_DATA[i++]));
+  }
+  Paint paint;
+  paint.c[0] = color;
+  fillPoly(P, paint, bg, false);
 }
 
 // ---- Classic's and Simple's HH:MM: digits as tall as font 8's were (55 px), the colon
@@ -1570,15 +1529,7 @@ void bigWeather(const struct tm& t, bool force) {
   if (!force && seen == wx.version) return;
   if (!force) D().fillScreen(BG);
   seen = wx.version;
-  Poly P;
-  if (P.ok()) {   // the icon fills the top half
-    P.sx = P.sy = 124 / 24.0f; P.ox = 120 - 62; P.oy = 0;   // the grid's margins stay empty
-    parsePath(P, pgmString(weatherOutline(wx.icon)).c_str());
-    P.close();
-    Paint paint;
-    paint.c[0] = cfg.color1;
-    strokePoly(P, 2 * P.sx, paint, BG);
-  }
+  weatherIcon(120, 62, 124, wx.icon, BG, cfg.color1);   // the icon fills the top half
   char b[8]; snprintf(b, sizeof(b), "%d*", displayTemp(wx.temp));   // '*' draws the degree sign
   monoText(b, 120, 126, TILE_W, 106, WHITE);
 }
@@ -1598,15 +1549,7 @@ void dayTile(int k, const struct tm& t, bool force) {
   seen = fc.version;
   const ForecastDay& d = fc.days[k];
   monoText(dayLong(d.wday), 120, 6, TILE_W, 40, cfg.color1);
-  Poly P;
-  if (P.ok()) {   // a 96 px icon on the left
-    P.sx = P.sy = 4; P.ox = 6; P.oy = 56;
-    parsePath(P, pgmString(weatherOutline(dayIcon(d.icon))).c_str());
-    P.close();
-    Paint paint;
-    paint.c[0] = cfg.color1;
-    strokePoly(P, 2 * P.sx, paint, BG);
-  }
+  weatherIcon(54, 104, 96, d.icon, BG, cfg.color1);   // a 96 px icon on the left
   char b[8];
   snprintf(b, sizeof(b), "%d*", displayTemp(d.hi));   // '*' draws the degree sign
   monoText(b, 170, 58, 134, 72, WHITE);
@@ -1666,6 +1609,11 @@ void agents(const struct tm& t, bool force) {
 }
 
 }  // namespace
+
+String weatherIconName(int wmo, bool day) {
+  int base = pgm_read_byte(&WI_WMO[wmo >= 0 && wmo < 100 ? wmo : 0]);
+  return String(base >= WI_BASES - WI_AGNOSTIC ? "wi-" : day ? "wi-day-" : "wi-night-") + wiBase(base);
+}
 
 // ---- Public -----------------------------------------------------------------------
 void faceInvalidate() { dirty = true; }

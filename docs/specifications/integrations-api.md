@@ -119,7 +119,7 @@ Coordinates are pixels from the top left of the 240×240 screen. Colours are
 | `ring` | `x`, `y` (centre), `r` (50), `w` thickness (8), `value`, `max` (100), `color`, `track`: a progress ring from 12 o'clock |
 | `bar` | `x`, `y`, `w` (100), `h` (8), `value`, `max` (100), `color`, `track` |
 | `path` | SVG path data drawn into a box: see [Paths](#paths) |
-| `icon` | `x`, `y` (centre), `size` (48), `icon` (`"{icon}"`): weather icon code such as `"10d"`, `bg` |
+| `icon` | `x`, `y` (centre), `size` (48), `icon` (`"{icon}"`): a [Weather Icons](https://erikflowers.github.io/weather-icons/) name such as `"wi-day-rain"` (older codes such as `"10d"` still work), `color` (accent 1), `bg` |
 | `image` | `x`, `y`, `src`: a JPEG from the Photos card, by file name |
 
 Every item also takes `show`: `false`, or a condition such as `"{state}==warn"`. A
@@ -155,7 +155,7 @@ weather stay current without the face being sent again.
 | `{ampm}` | `PM` (12 h only) | | `{hum}` | `64` |
 | `{dow}` `{dow3}` | `Monday` `MON` | | `{wind}` `{wunit}` | `15` `km/h` |
 | `{day}` `{month}` `{mon3}` `{year}` | `5` `October` `Oct` `2026` | | `{desc}` `{main}` | `light rain` `Rain` |
-| `{date}` | `5 October` | | `{city}` `{icon}` | `Sydney` `10d` |
+| `{date}` | `5 October` | | `{city}` `{icon}` | `Sydney` `wi-day-rain` |
 | `{sunrise}` `{sunset}` | `05:41` `18:12` | | | |
 
 Any other name is a **variable** set with `/api/faces/vars`, or over MQTT. An unknown

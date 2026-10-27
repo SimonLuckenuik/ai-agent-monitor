@@ -43,20 +43,8 @@ static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter 
 }
 
 // ---- Open-Meteo: no key; one request gives current conditions + 4 days ----------
-// WMO weather code -> OpenWeatherMap icon code and wording. Written as a switch
-// with F() strings: on the ESP8266 a table of literals would sit in RAM.
-static const char* wmoIcon(int code) {
-  if (code == 0) return "01";
-  if (code == 1) return "02";
-  if (code == 2) return "03";
-  if (code == 45 || code == 48) return "50";
-  if ((code >= 51 && code <= 57) || (code >= 80 && code <= 82)) return "09";
-  if (code >= 61 && code <= 65) return "10";
-  if (code == 66 || code == 67 || (code >= 71 && code <= 77) || code == 85 || code == 86) return "13";
-  if (code >= 95) return "11";
-  return "04";   // 3 = overcast, and anything unknown
-}
-
+// WMO weather code -> wording. Written as a switch with F() strings: on the ESP8266 a
+// table of literals would sit in RAM. The icon name comes from weatherIconName().
 void wmoText(int code, bool fr, String& main, String& desc) {
 #define W(m, d, mf, df) do { main = fr ? F(mf) : F(m); desc = fr ? F(df) : F(d); } while (0)
   switch (code) {
@@ -169,7 +157,7 @@ static bool fetchOpenMeteo() {
   wx.tempMin = los[0] | wx.temp;
   wmoText(code, false, wx.main, wx.desc);
   wx.code = code;
-  wx.icon = String(wmoIcon(code)) + (day ? "d" : "n");
+  wx.icon = weatherIconName(code, day);
   int comma = cfg.geoName.indexOf(',');
   wx.cityName = comma > 0 ? cfg.geoName.substring(0, comma) : cfg.geoName;
   wx.valid = true; wx.error = ""; wx.version++;
@@ -184,7 +172,7 @@ static bool fetchOpenMeteo() {
     d.lo = los[i] | 0.0f;
     d.feels = feels[i] | d.hi;
     d.pop = pops[i] | 0;
-    d.icon = String(wmoIcon(codes[i] | 3)) + "d";
+    d.icon = weatherIconName(codes[i] | 3, true);
   }
   next.valid = next.count > 0;
   next.lastFetch = millis();

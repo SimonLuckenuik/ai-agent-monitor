@@ -13,6 +13,7 @@
 #define PI 3.1415926535897932384626433832795
 #define DEG_TO_RAD 0.017453292519943295769236907684886
 inline uint8_t pgm_read_byte(const void* p) { return *static_cast<const uint8_t*>(p); }
+inline uint16_t pgm_read_word(const void* p) { return *static_cast<const uint16_t*>(p); }
 
 template <class T, class L, class H> T constrain(T x, L lo, H hi) { return x < lo ? lo : x > hi ? hi : x; }
 uint32_t millis();

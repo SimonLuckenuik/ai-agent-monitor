@@ -34,7 +34,7 @@ config = re.sub(r"\n  bool load\(\) \{.*?\n  \}\n", "\n", config, flags=re.S)
 config = re.sub(r"\n  bool save\(\) \{.*?\n  \}\n", "\n", config, flags=re.S)
 config = config.replace("#include <ArduinoJson.h>\n", "").replace("#include <LittleFS.h>\n", "")
 (build / "config.h").write_text(config, encoding="utf-8")
-for name in ("faces.cpp", "faces.h", "weather.h", "integrations.h", "ascii.h"):
+for name in ("faces.cpp", "faces.h", "weather.h", "weather_icons.h", "integrations.h", "ascii.h"):
     shutil.copy(root / "src" / name, build / name)
 # tjpgd.h hand-rolls stdint types under _WIN32; Zig's headers already define them.
 header = (tjpg / "tjpgd.h").read_text(encoding="utf-8").replace("#if defined(_WIN32)", "#if 0")
