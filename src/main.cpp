@@ -262,8 +262,8 @@ bool nightTile() { return nightNow && cfg.nightFace >= 0 && cfg.nightFace < FACE
 void advanceFace(bool rotation) {
   int customs = cfg.facesApi ? customFaceCount() : 0, n = FACE_COUNT + customs + MESSAGE_MAX;
   // Built-in faces in the user's order, then custom faces, then messages.
-  static_assert(FACE_COUNT == 10, "Config::orderOf() handles face ids 0-9");
-  int cur = cfg.theme < FACE_COUNT ? cfg.faceOrder.indexOf(char('0' + cfg.theme)) : FACE_COUNT - 1;
+  static_assert(FACE_COUNT <= 32, "Config::orderOf() keeps a 32-bit set");
+  int cur = cfg.theme < FACE_COUNT ? cfg.faceOrder.indexOf(Config::faceChar(cfg.theme)) : FACE_COUNT - 1;
   if (cfg.theme == FACE_CUSTOM)
     for (int i = 0; i < customs; ++i) if (customFaceAt(i) == cfg.customFace) cur = FACE_COUNT + i;
   if (cfg.theme == FACE_MESSAGE) cur = FACE_COUNT + customs + messageShowing();
@@ -279,7 +279,7 @@ void advanceFace(bool rotation) {
       if (name.length()) { cfg.theme = FACE_CUSTOM; cfg.customFace = name; return; }
       continue;
     }
-    int face = cfg.faceOrder[pos] - '0';
+    int face = Config::faceId(cfg.faceOrder[pos]);
     if (rotation && !(cfg.faceMask >> face & 1)) continue;
     if (faceAvailable(face)) { cfg.theme = face; return; }
   }

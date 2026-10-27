@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include "faces.h"
 
 // Persistent configuration. Mirrors the stock /config JSON keys so the existing
 // web UI (and expectations) line up. Stored at /config.json in LittleFS.
@@ -22,10 +23,10 @@ struct Config {
   bool   hour12      = false;        // 24 h by default
   bool   mile        = false;
   String lang        = "en";         // the faces' language: "en" or "fr"
-  String faceOrder   = "0123456789"; // the rotation's order: face ids as digits
+  String faceOrder   = "0123456789abcd"; // the rotation's order: face ids in base 36 (faceChar)
   int    theme       = 0;            // 0=Classic 1=Weather 2=Photo 3=Date 4=Simple 5=Forecast (6 retired)
   int    themeInterval = 10;         // seconds; 0 = no rotation
-  int    faceMask    = 0x3ff;        // bit n set = face n takes part in rotation
+  int    faceMask    = (1 << FACE_COUNT) - 1;   // bit n set = face n takes part in rotation
   int    brightness  = 60;           // 0..100
   bool   nightMode   = true;
   bool   nightAuto   = false;          // dim from sunset to sunrise instead of fixed hours
@@ -51,16 +52,20 @@ struct Config {
   int    mqttPort = 1883;
   String apiKey;                     // for scripts calling the faces API; never exported
 
-  // Face ids (0-9, FACE_COUNT in faces.h) as digits: unknown and repeated ones dropped,
+  // A face id in faceOrder: one base-36 character, 0-9 then a-d.
+  static char faceChar(int id) { return id < 10 ? '0' + id : 'a' + id - 10; }
+  static int faceId(char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'z' ? c - 'a' + 10 : -1; }
+
+  // Face ids (below FACE_COUNT) in faceChar form: unknown and repeated ones dropped,
   // missing ones appended, so every face has a place and new faces join at the end.
   static String orderOf(const String& s) {
     String out;
-    uint16_t seen = 0;
+    uint32_t seen = 0;
     for (unsigned i = 0; i < s.length(); ++i) {
-      char c = s[i];
-      if (c >= '0' && c <= '9' && !(seen >> (c - '0') & 1)) { seen |= 1 << (c - '0'); out += c; }
+      int id = faceId(s[i]);
+      if (id >= 0 && id < FACE_COUNT && !(seen >> id & 1)) { seen |= 1u << id; out += s[i]; }
     }
-    for (char c = '0'; c <= '9'; ++c) if (!(seen >> (c - '0') & 1)) out += c;
+    for (int id = 0; id < FACE_COUNT; ++id) if (!(seen >> id & 1)) out += faceChar(id);
     return out;
   }
 
@@ -108,14 +113,19 @@ struct Config {
     photoOff    = doc["photooff"]    | photoOff;
     customFace  = doc["customface"]  | customFace;
     // Face ids moved: 1.3.x had custom faces at 7 (facesv 1); 1.4 development builds
-    // had the Agents board at 7 and custom faces at 8 (facesv 2). The new faces join
-    // the rotation.
+    // had the Agents board at 7 and custom faces at 8 (facesv 2), then custom faces at
+    // 10 and messages at 11 (facesv 3). The new faces join the rotation.
     int facesv = doc["facesv"] | 1;
     if (facesv < 3) {
       if (facesv < 2 && theme == 7) theme = 10;
       else if (facesv == 2 && theme == 7) theme = 9;
       else if (facesv == 2 && theme == 8) theme = 10;
       faceMask = (faceMask & 0x7f) | 0x380;
+    }
+    if (facesv < 4) {
+      if (theme == 10) theme = FACE_CUSTOM;
+      else if (theme == 11) theme = FACE_MESSAGE;
+      faceMask |= 0xf << FACE_DAY0;
     }
     facesApi    = doc["facesapi"]    | facesApi;
     haCompat    = doc["hacompat"]    | haCompat;
@@ -141,7 +151,7 @@ struct Config {
     doc["celsius"] = celsius;     doc["hour12"] = hour12;   doc["mile"] = mile;   doc["lang"] = lang;
     doc["faceorder"] = faceOrder;
     doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
-    doc["faces"] = faceMask;     doc["facesv"] = 3;
+    doc["faces"] = faceMask;     doc["facesv"] = 4;
     doc["brightness"] = brightness;
     doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness; doc["nightface"] = nightFace;
     doc["nighttint"] = nightTint; doc["nightcolor"] = nightColor;

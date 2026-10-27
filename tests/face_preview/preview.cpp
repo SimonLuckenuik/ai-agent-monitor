@@ -88,6 +88,7 @@ static void setForecast(std::vector<const char*> icons) {
   for (int i = 0; i < fc.count; ++i) {
     fc.days[i].wday = (1 + i) % 7; fc.days[i].today = i == 0;
     fc.days[i].hi = hi[i]; fc.days[i].lo = lo[i]; fc.days[i].pop = pop[i]; fc.days[i].icon = icons[i];
+    fc.days[i].feels = hi[i] - 2;
   }
 }
 
@@ -99,7 +100,8 @@ static void fresh(int face, const struct tm& t, const std::string& name) {
 
 int main(int argc, char** argv) {
   outDir = argc > 1 ? argv[1] : ".";
-  const char* names[] = {"classic", "weather", "photo", "date", "simple", "forecast", "", "bigtime", "bigweather", "agents"};
+  const char* names[] = {"classic", "weather", "photo", "date", "simple", "forecast", "", "bigtime", "bigweather", "agents",
+                         "today", "tomorrow", "tomorrow1", "tomorrow2"};
   setWeather("03d", "Clouds", "scattered clouds", 21.4f);
   setForecast({"10d", "01d", "04d", "11d"});
 
@@ -138,6 +140,11 @@ int main(int argc, char** argv) {
   fresh(FACE_WEATHER, at(21, 54, 26), "variant_weather_storm_negative");
   setForecast({"02d", "09d", "13d", "50d"});
   fresh(FACE_FORECAST, at(21, 54, 26), "variant_forecast_icons");
+  setForecast({"13d", "13d", "01d", "02d"});   // deep cold: the widest numbers
+  fc.days[0].hi = -24; fc.days[0].lo = -43; fc.days[0].feels = -31; fc.days[0].pop = 90;
+  fc.days[1].hi = -38; fc.days[1].lo = -46; fc.days[1].feels = -51; fc.days[1].pop = 100;
+  fresh(FACE_DAY0, at(21, 54, 26), "variant_today_snow_cold");
+  fresh(FACE_DAY0 + 1, at(21, 54, 26), "variant_tomorrow_snow_colder");
   cfg.hour12 = false; cfg.celsius = false;
   setWeather("02d", "Clouds", "few clouds", 21.4f);
   fresh(FACE_CLASSIC, at(9, 5, 7), "variant_classic_24h_fahrenheit");
@@ -233,6 +240,7 @@ int main(int argc, char** argv) {
   fresh(FACE_FORECAST, at(21, 54, 26), "french_forecast");
   fresh(FACE_DATE, at(9, 5, 7), "french_date");
   fresh(FACE_BIGWEATHER, at(9, 5, 7), "french_bigweather");
+  fresh(FACE_DAY0 + 2, at(9, 5, 7), "french_tomorrow1");
   cfg.lang = "en";
 
   // 7. No data yet.

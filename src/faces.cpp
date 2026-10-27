@@ -1583,6 +1583,43 @@ void bigWeather(const struct tm& t, bool force) {
   monoText(b, 120, 126, TILE_W, 106, WHITE);
 }
 
+// ---- 10-13 Day tiles: one forecast day each, today first ----------------------------
+// All four alike: the day's name, its icon and its high, then the feels-like high, the
+// low and the chance of precipitation. The current temperature is Big weather's.
+void dayTile(int k, const struct tm& t, bool force) {
+  static uint32_t seen = 0;
+  bool ok = fc.valid && k < fc.count;
+  if (!ok) {
+    if (force) weatherPlaceholder(tr("No forecast yet", "Pas encore de previsions"));
+    return;
+  }
+  if (!force && seen == fc.version) return;
+  if (!force) D().fillScreen(BG);
+  seen = fc.version;
+  const ForecastDay& d = fc.days[k];
+  monoText(dayLong(d.wday), 120, 6, TILE_W, 40, cfg.color1);
+  Poly P;
+  if (P.ok()) {   // a 96 px icon on the left
+    P.sx = P.sy = 4; P.ox = 6; P.oy = 56;
+    parsePath(P, pgmString(weatherOutline(dayIcon(d.icon))).c_str());
+    P.close();
+    Paint paint;
+    paint.c[0] = cfg.color1;
+    strokePoly(P, 2 * P.sx, paint, BG);
+  }
+  char b[8];
+  snprintf(b, sizeof(b), "%d*", displayTemp(d.hi));   // '*' draws the degree sign
+  monoText(b, 170, 58, 134, 72, WHITE);
+  text(tr("HIGH", "MAX"), 170, 146, 2, MUTED, BG, MC_DATUM);
+  D().drawFastHLine(16, 166, 208, PANEL_HI);
+  const char* labels[] = {tr("FEELS", "RESSENTI"), tr("LOW", "MIN"), tr("PRECIP", "PRECIP.")};
+  for (int i = 0; i < 3; ++i) text(labels[i], 44 + 76 * i, 184, 2, MUTED, BG, MC_DATUM);
+  temp(44, 214, displayTemp(d.feels), 4, WHITE, BG);
+  temp(120, 214, displayTemp(d.lo), 4, WHITE, BG);
+  snprintf(b, sizeof(b), "%d%%", std::min(d.pop, 100));
+  text(b, 196, 214, 4, WHITE, BG, MC_DATUM);
+}
+
 // ---- 9 Agents: every active agent message on one screen --------------------------
 // Text cut to a width, with "..." when it does not fit.
 String fit(String s, int width, uint8_t font) {
@@ -1651,6 +1688,8 @@ bool faceAvailable(int face) {
     case FACE_BIGWEATHER: return wx.valid;
     case FACE_AGENTS: for (int s = 0; s < MESSAGE_MAX; ++s) if (messageActive(s)) return true; return false;
     case FACE_FLIP:     return false;   // retired; its id stays reserved
+    case FACE_DAY0: case FACE_DAY0 + 1: case FACE_DAY0 + 2: case FACE_DAY3:
+      return fc.valid && face - FACE_DAY0 < fc.count;
     case FACE_CUSTOM:   return cfg.facesApi && customFaceExists(cfg.customFace);
     case FACE_MESSAGE:  return messageActive(messageShowing());
     default:            return face >= 0 && face < FACE_COUNT;
@@ -1675,6 +1714,8 @@ void faceDraw(int face, const struct tm& t, bool timeValid) {
     case FACE_BIGTIME:  bigTimeFace(t, force); break;
     case FACE_BIGWEATHER: bigWeather(t, force); break;
     case FACE_AGENTS:   agents(t, force);   break;
+    case FACE_DAY0: case FACE_DAY0 + 1: case FACE_DAY0 + 2: case FACE_DAY3:
+      dayTile(face - FACE_DAY0, t, force); break;
     case FACE_CUSTOM:   custom(t, force);   break;
     case FACE_MESSAGE:  message(t, force);  break;
     default:            classic(t, force);  break;

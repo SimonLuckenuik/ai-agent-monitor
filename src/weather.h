@@ -22,6 +22,7 @@ struct ForecastDay {
   int wday = 0;          // 0 = Sunday
   bool today = false;
   float lo = 0, hi = 0;  // C
+  float feels = 0;       // the feels-like high, C
   int pop = 0;           // highest chance of precipitation, %
   String icon;
 };

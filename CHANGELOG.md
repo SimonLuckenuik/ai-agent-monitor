@@ -8,6 +8,12 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- Day tiles (faces 10-13): today, tomorrow and the two days after, one forecast day
+  per screen in the Big tiles' style. Each shows the day's name, its icon and its high,
+  then the feels-like high, the low and the chance of precipitation, with the same
+  labels in the same places on all four. The forecast now also fetches the daily
+  feels-like high. Custom faces moved to id 14 and messages to 15 (`facesv` 4), and
+  `faceorder` writes ids 10-13 as `a`-`d`.
 - Emulator: runs the clock's real TFT_eSPI on a simulated ST7789 instead of a
   stand-in, so it draws exactly what the clock draws; draws take about the clock's
   time at the CPU frequency in `platformio.ini`, calibrated against the clock

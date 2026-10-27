@@ -37,9 +37,10 @@ branch has **not run on hardware yet**.
 - **Face ids are an API.** 0–6 are the stock theme numbers (geekmagic-hacs and
   `/api/set?key=theme` use them): 0 Classic, 1 Weather, 2 Photo, 3 Big date (was Dial),
   4 Simple, 5 Forecast, 6 (Flip, retired to save flash: reserved, never shown); then
-  7 Big time, 8 Big weather, 9 Agents board;
-  `FACE_CUSTOM` 10, `FACE_MESSAGE` 11 (never saved). Renumbering needs a migration in
-  `Config::load()` (`facesv`, now 3).
+  7 Big time, 8 Big weather, 9 Agents board, 10-13 Day tiles (today, tomorrow, +1, +2);
+  `FACE_CUSTOM` 14, `FACE_MESSAGE` 15 (never saved). Renumbering needs a migration in
+  `Config::load()` (`facesv`, now 4). `faceorder` writes each id as one base-36
+  character (`Config::faceChar`: 0-9, then a-d).
 - **Line endings.** Upstream files are stored **CRLF** in git; keep them CRLF when
   editing (a whole-file LF rewrite shows every line changed: check
   `git ls-files --eol <file>`). Files under `emulator/` that run in Linux (`*.sh`,

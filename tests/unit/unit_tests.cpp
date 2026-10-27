@@ -262,9 +262,12 @@ static void testAsciiFold() {
 
 // The rotation order (setting "faceorder"): every face id once, in the given order first.
 static void testFaceOrder() {
-  CHECK_STR(Config::orderOf("7801234569"), "7801234569");
-  CHECK_STR(Config::orderOf("73x8807"), "7380124569");   // junk and repeats dropped, rest appended
-  CHECK_STR(Config::orderOf(""), "0123456789");
+  CHECK_STR(Config::orderOf("7801234569"), "7801234569abcd");   // an older order: the Day tiles join at the end
+  CHECK_STR(Config::orderOf("73x8807"), "7380124569abcd");   // junk and repeats dropped, rest appended
+  CHECK_STR(Config::orderOf(""), "0123456789abcd");
+  CHECK_STR(Config::orderOf("dcba9876543210"), "dcba9876543210");
+  CHECK_STR(Config::orderOf("a7ezA"), "a7012345689bcd");   // e and A are no face ids
+  CHECK(Config::faceChar(FACE_DAY3) == 'd' && Config::faceId('d') == FACE_DAY3 && Config::faceId('5') == 5);
 }
 
 int main() {
