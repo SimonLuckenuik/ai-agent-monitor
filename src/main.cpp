@@ -1037,8 +1037,8 @@ void recoveryLoop() {
 
 // mDNS waits for the station link and 28 KB of free heap (its responder allocates
 // on start), then advertises the web UI with a few identifying TXT records.
-// Built only with SMARTCLOCK_MDNS (env:esp12e_mdns): the responder costs ~20 KB of
-// the OTA budget, and the DHCP hostname already names the clock in the router.
+// Built with SMARTCLOCK_MDNS (the full image; the no-MQTT plain image leaves it out
+// for size). The DHCP hostname also names the clock in the router.
 void serviceMdns() {
 #if SMARTCLOCK_MDNS
   static bool started = false;
@@ -1048,10 +1048,10 @@ void serviceMdns() {
   String host = deviceHost();
   if (!MDNS.begin(host.c_str())) return;
   MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "tcp", "model", "SmartClock-OSS");
+  MDNS.addServiceTxt("http", "tcp", "model", "AI Agent Monitor");
   MDNS.addServiceTxt("http", "tcp", "version", FW_VERSION);
   MDNS.addServiceTxt("http", "tcp", "board", "SD Pro (GeekMagic-style)");
-  MDNS.addServiceTxt("http", "tcp", "api", "smartclock-oss");
+  MDNS.addServiceTxt("http", "tcp", "api", "ai-agent-monitor");
   MDNS.addServiceTxt("http", "tcp", "path", "/");
   started = true;
 #endif
