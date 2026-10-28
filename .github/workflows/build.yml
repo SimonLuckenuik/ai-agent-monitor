@@ -61,12 +61,22 @@ jobs:
           if-no-files-found: error
 
   emulator:
-    name: Emulator image
+    name: Emulator and integration tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Build the emulator
-        run: docker build -f emulator/Dockerfile -t smartclock-emulator .
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Pillow
+        run: pip install pillow
+      - name: Integration tests (builds the emulator image)
+        run: python tests/integration/run_integration_tests.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-screens-${{ github.sha }}
+          path: .pio/integration/
 
   plugin:
     name: Claude Code plugin
@@ -81,7 +91,8 @@ jobs:
           python - <<'EOF'
           import glob, json
           for path in [".claude-plugin/marketplace.json", "plugins/ai-agent-monitor/.claude-plugin/plugin.json",
-                       *glob.glob("plugins/ai-agent-monitor/skills/*/examples/*.json")]:
+                       *glob.glob("plugins/ai-agent-monitor/skills/*/examples/*.json"),
+                       *glob.glob("examples/faces/*.json")]:
               data = json.load(open(path, encoding="utf-8"))
               if "examples" in path:
                   size = len(json.dumps(data, separators=(",", ":")))

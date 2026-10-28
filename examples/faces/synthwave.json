@@ -1,0 +1,18 @@
+{
+  "bg": "#120626",
+  "items": [
+    {"type": "rect", "x": 0, "y": 0, "w": 240, "h": 150, "color": {"stops": ["#140a33", "#6b1b6b"], "angle": 180}},
+    {"type": "circle", "x": 34, "y": 46, "r": 1, "color": "#ffd6f5"},
+    {"type": "circle", "x": 70, "y": 22, "r": 1, "color": "#ffffff"},
+    {"type": "circle", "x": 196, "y": 30, "r": 1, "color": "#ffd6f5"},
+    {"type": "circle", "x": 216, "y": 70, "r": 1, "color": "#ffffff"},
+    {"type": "circle", "x": 120, "y": 112, "r": 50, "color": {"stops": ["#ffe66d", "#ff7b54", "#ff2e88"], "angle": 180}},
+    {"type": "rect", "x": 60, "y": 118, "w": 120, "h": 3, "color": "#59175f"},
+    {"type": "rect", "x": 60, "y": 128, "w": 120, "h": 4, "color": "#5f1964"},
+    {"type": "rect", "x": 60, "y": 139, "w": 120, "h": 5, "color": "#661a68"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "fill": "#2a0d45", "d": "M0 150L28 128L52 140L84 116L104 150zM136 150L162 122L184 138L212 114L240 132V150z"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "stroke": "#ff3dbd", "sw": 1.2, "d": "M120 150L-20 185M120 150L26.7 185M120 150L73.3 185M120 150L96.7 185M120 150L120 185M120 150L143.3 185M120 150L166.7 185M120 150L213.3 185M120 150L260 185M0 150H240M0 156H240M0 164H240M0 174H240M0 185H240"},
+    {"type": "text", "x": 120, "y": 14, "text": "{dow3} {day} {mon3}", "font": 2, "align": "mc", "color": "#ffb3e6"},
+    {"type": "text", "x": 120, "y": 212, "text": "{time}", "font": 6, "align": "mc", "color": "#5ef2ff", "bg": "#120626", "pad": 200}
+  ]
+}

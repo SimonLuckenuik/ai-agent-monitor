@@ -1,0 +1,16 @@
+# The integration tests' own emulator: other ports, and storage that `down -v` wipes,
+# so each run starts from a blank clock and leaves the development emulator alone.
+#   docker compose -p aam-itest -f tests/integration/docker-compose.yml up -d --build
+services:
+  smartclock:
+    build:
+      context: ../..
+      dockerfile: emulator/Dockerfile
+    ports:
+      - "127.0.0.1:18000:80"
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - clock-data:/data
+
+volumes:
+  clock-data:

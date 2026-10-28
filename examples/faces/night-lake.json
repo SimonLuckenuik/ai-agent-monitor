@@ -1,0 +1,27 @@
+{
+  "bg": {"stops": ["#0a0f2e", "#2a2352", "#5c3b62"], "angle": 180},
+  "items": [
+    {"type": "circle", "x": 22, "y": 18, "r": 1, "color": "#ffffff"},
+    {"type": "circle", "x": 58, "y": 40, "r": 1, "color": "#c9c6ff"},
+    {"type": "circle", "x": 96, "y": 14, "r": 2, "color": "#ffffff"},
+    {"type": "circle", "x": 128, "y": 52, "r": 1, "color": "#c9c6ff"},
+    {"type": "circle", "x": 140, "y": 22, "r": 1, "color": "#ffffff"},
+    {"type": "circle", "x": 214, "y": 86, "r": 1, "color": "#c9c6ff"},
+    {"type": "circle", "x": 34, "y": 74, "r": 1, "color": "#ffffff"},
+    {"type": "circle", "x": 226, "y": 20, "r": 1, "color": "#ffffff"},
+    {"type": "path", "x": 186, "y": 46, "size": 40, "align": "mc", "fill": "#f4e9c8", "d": "M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "fill": "#3b3362", "d": "M0 150L30 118L55 134L92 92L122 128L152 104L186 136L216 110L240 128V172H0z"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "fill": "#1d1a38", "d": "M0 172V150L40 138L80 152L120 140L170 156L210 146L240 154V172z"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "fill": "#0f1124", "d": "M16 172L26 140L36 172zM32 172L40 150L48 172zM190 172L201 134L212 172zM208 172L216 148L224 172z"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "fill": "#2b2238", "d": "M98 172V157L111 146L124 157V172z"},
+    {"type": "rect", "x": 107, "y": 160, "w": 8, "h": 7, "color": "#ffc861"},
+    {"type": "rect", "x": 0, "y": 172, "w": 240, "h": 68, "color": "#121936"},
+    {"type": "line", "x": 172, "y": 180, "x2": 200, "y2": 180, "w": 2, "color": "#b8ad8e"},
+    {"type": "line", "x": 177, "y": 187, "x2": 195, "y2": 187, "w": 2, "color": "#857c66"},
+    {"type": "line", "x": 182, "y": 194, "x2": 190, "y2": 194, "w": 2, "color": "#5c5648"},
+    {"type": "line", "x": 108, "y": 178, "x2": 114, "y2": 178, "w": 2, "color": "#7a6430"},
+    {"type": "text", "x": 16, "y": 216, "text": "{time}", "font": 4, "align": "ml", "color": "#e8e6f5", "bg": "#121936", "pad": 96},
+    {"type": "text", "x": 224, "y": 206, "text": "{dow3} {day}", "font": 2, "align": "mr", "color": "#9aa3d0", "bg": "#121936", "pad": 80},
+    {"type": "text", "x": 224, "y": 226, "text": "{temp|--} {unit}", "font": 2, "align": "mr", "color": "#9aa3d0", "bg": "#121936", "pad": 80}
+  ]
+}
