@@ -18,16 +18,16 @@ tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
   card to add MQTT. Only the first has the `SDP` prefix the stock update page asks
   for: the stock firmware cannot unpack the compressed image.
 - **From then on:** install the `.bin.gz`. The full firmware is too big for a plain
-  update; `AIAgentMonitor_v1.4.0_usb.bin` is the plain image, for USB-serial flashing.
+  update.
 - The setup network, hostname and MQTT topics change names (see Changed): with MQTT
   on, remove the old device in Home Assistant.
 
 ### Added
 
 - Release files: a no-MQTT plain image (`esp12e_nomqtt`, `SMARTCLOCK_MQTT=0`) as the
-  stepping stone from plain-only updaters, the full firmware as `.bin.gz`, and the full
-  plain image for USB only. `scripts/make_release.py` builds all three; CI checks that
-  the no-MQTT image fits a plain update.
+  stepping stone from plain-only updaters, and the full firmware as `.bin.gz`.
+  `scripts/make_release.py` builds both; CI checks that the no-MQTT image fits a plain
+  update.
 - Weather icons: Erik Flowers' Weather Icons (SIL OFL 1.1) on every face, chosen from the
   WMO code with the companion app's table (day and night variants). `scripts/gen_weather_icons.py`
   turns the SVGs into polygons (`src/weather_icons.h`, 7.5 KB) that the path filler draws at

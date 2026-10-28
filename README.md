@@ -75,7 +75,6 @@ only be sent compressed, and only a clock running 1.4.0 or later can unpack it.
 |---|---|---|
 | `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` | Everything except MQTT, as a plain image small enough for any updater | **The first install**: from the stock firmware, or from SmartClock-OSS before 1.4.0 |
 | `AIAgentMonitor_v<version>.bin.gz` | The full firmware, compressed | **Every update after that** (and adding MQTT after the first install), from this firmware's own Firmware update card |
-| `AIAgentMonitor_v<version>_usb.bin` | The full firmware, plain | Flashing over USB-serial only; too big for any updater over WiFi |
 | `SHA256SUMS.txt` | Checksums | `sha256sum -c SHA256SUMS.txt` |
 
 Keep the file names. The stock update page only accepts names starting with `SDP`, so

@@ -89,7 +89,9 @@ Flash images for the owner: `cp .pio/build/esp12e/firmware.bin.gz release/AIAgen
 The build writes both the plain image and the compressed one (gzip with an "AM" header
 field: unpacked size, file size, CRC; `include/firmware_validation.h`) for clocks
 running 1.4.0 on; the bootloader unpacks it into place. Since the Weather Icons the
-full plain image is over the plain limit (516,096 B): it is for USB only.
+full plain image is over the plain limit (516,096 B): it can only be flashed over UART
+(a USB-serial adapter on the board's pads; the clock's USB port is power only), so it is
+not a release file.
 `pio run -e esp12e_nomqtt` (`SMARTCLOCK_MQTT=0`) is the plain stepping stone for clocks
 that only take plain images (stock, SmartClock-OSS before 1.4.0). File names: only the
 image the stock update page can install starts with `SDP` (that page refuses other
@@ -106,7 +108,6 @@ on the pushed commit, and publishes:
 |---|---|
 | `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` | The first install, from stock or SmartClock-OSS before 1.4.0 |
 | `AIAgentMonitor_v<version>.bin.gz` | Every update after that |
-| `AIAgentMonitor_v<version>_usb.bin` | USB-serial flashing only |
 | `SHA256SUMS.txt` | Checksums |
 
 The release notes are the version's `## <version> - <date>` section of `CHANGELOG.md`;
