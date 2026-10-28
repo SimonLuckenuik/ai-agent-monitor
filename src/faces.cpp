@@ -1537,7 +1537,8 @@ void bigWeather(const struct tm& t, bool force) {
 // ---- 10-13 Day tiles: one forecast day each, today first ----------------------------
 // The forecast days show the day's name, its icon and its high, then the feels-like
 // high, the low and the chance of precipitation. Today is not a forecast: it shows the
-// current conditions' icon and temperature, then the day's low, high and precipitation.
+// current conditions' icon, temperature and feels-like, then the day's low, high and
+// precipitation.
 void dayTile(int k, const struct tm& t, bool force) {
   static uint32_t seen = 0, seenWx = 0;
   bool ok = fc.valid && k < fc.count;
@@ -1555,7 +1556,15 @@ void dayTile(int k, const struct tm& t, bool force) {
   char b[8];
   snprintf(b, sizeof(b), "%d*", displayTemp(now ? wx.temp : d.hi));   // '*' draws the degree sign
   monoText(b, 170, 58, 134, 72, WHITE);
-  text(now ? tr("NOW", "ACTUEL") : tr("HIGH", "MAX"), 170, 146, 2, MUTED, BG, MC_DATUM);
+  if (now) {   // "NOW, FEELS -4°", kept clear of the screen's right edge
+    char lb[32];
+    snprintf(lb, sizeof(lb), "%s %d", tr("NOW, FEELS", "ACTUEL, RESS."), displayTemp(wx.feels));
+    int w = D().textWidth(lb, 2), x0 = std::min(170 - (w + 8) / 2, 234 - (w + 8));
+    text(lb, x0, 146, 2, MUTED, BG, ML_DATUM);
+    ring(x0 + w + 5, 146 - D().fontHeight(2) / 2 + 5, 3, MUTED, BG);
+  } else {
+    text(tr("HIGH", "MAX"), 170, 146, 2, MUTED, BG, MC_DATUM);
+  }
   D().drawFastHLine(16, 166, 208, PANEL_HI);
   const char* labels[] = {now ? tr("LOW", "MIN") : tr("FEELS", "RESSENTI"),
                           now ? tr("HIGH", "MAX") : tr("LOW", "MIN"), tr("PRECIP", "PRECIP.")};

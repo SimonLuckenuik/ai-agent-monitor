@@ -26,8 +26,8 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
 - **A Claude Code plugin** that teaches Claude the API, with examples. See
   [Claude Code plugin](#claude-code-plugin).
 - **Clock faces:** Classic, Simple, Weather, Forecast, Photo, and the **Big tiles**:
-  Big time, Big date, Big weather and four **Day tiles** (Weather today, Weather
-  tomorrow, +1 and +2), each showing one thing as large as the screen allows. Weather
+  Big time, Big date, Big weather and four **Day tiles** (Weather today, then
+  Weather forecast - Day 1, 2 and 3), each showing one thing as large as the screen allows. Weather
   today shows the current conditions; the other three are the forecast. You choose which
   faces rotate, in what order and how often; faces with nothing to show are skipped.
 - **Weather and a 4-day forecast with no API key**, from

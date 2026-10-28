@@ -35,10 +35,11 @@ tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
 - Day tiles (faces 10-13): today, tomorrow and the two days after, one forecast day
   per screen in the Big tiles' style. Each shows the day's name, its icon and its high,
   then the feels-like high, the low and the chance of precipitation. Today is not a
-  forecast: its tile shows the current conditions' icon and temperature (NOW), then the
-  day's low, high and chance of precipitation.
-  On the settings page and in Home Assistant they are named Weather today, Weather
-  tomorrow, Weather tomorrow +1 and Weather tomorrow +2. The forecast now also fetches the daily
+  forecast: its tile shows the current conditions' icon and temperature, with the
+  feels-like temperature under it (NOW, FEELS), then the day's low, high and chance of
+  precipitation.
+  On the settings page and in Home Assistant they are named Weather today and
+  Weather forecast - Day 1, Day 2 and Day 3. The forecast now also fetches the daily
   feels-like high. Custom faces moved to id 14 and messages to 15 (`facesv` 4), and
   `faceorder` writes ids 10-13 as `a`-`d`.
 - Emulator: runs the clock's real TFT_eSPI on a simulated ST7789 instead of a
