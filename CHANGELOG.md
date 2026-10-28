@@ -5,7 +5,7 @@ SmartClock-OSS, which it is forked from. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
-## 1.4.0 - 2026-10-27
+## 1.4.0 - 2026-10-28
 
 The first AI Agent Monitor release: messages and custom faces for AI agents, the Big
 tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
