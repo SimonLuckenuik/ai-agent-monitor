@@ -124,7 +124,17 @@ static String coord(float v) {
   return out + String(q / 10000) + "." + frac;
 }
 
+#if SMARTCLOCK_EMULATOR
+String emuWeather();   // emulator.cpp: a fixed reply set on its port 8080, or ""
+#endif
+
 static bool fetchOpenMeteo() {
+  JsonDocument doc;   // ~1 KB response
+#if SMARTCLOCK_EMULATOR
+  String fixedJson = emuWeather();   // tests: the same weather every run, no network
+  bool fixed = fixedJson.length() && !deserializeJson(doc, fixedJson);
+  if (!fixed) {
+#endif
   if (cfg.geoFor != cfg.city || isnan(cfg.lat) || isnan(cfg.lon)) {
     if (!geocode()) return false;
   }
@@ -134,8 +144,10 @@ static bool fetchOpenMeteo() {
                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
                "wind_speed_10m_max,relative_humidity_2m_mean"
                "&forecast_days=4&timezone=auto&wind_speed_unit=ms";
-  JsonDocument doc;   // ~1 KB response
   if (!httpJson(url, doc)) return false;
+#if SMARTCLOCK_EMULATOR
+  }
+#endif
   JsonObject cur = doc["current"];
   JsonObject daily = doc["daily"];
   if (cur.isNull() || daily.isNull()) { wx.error = F("Unreadable weather data"); return false; }
@@ -162,6 +174,9 @@ static bool fetchOpenMeteo() {
   wx.icon = weatherIconName(code, day);
   int comma = cfg.geoName.indexOf(',');
   wx.cityName = comma > 0 ? cfg.geoName.substring(0, comma) : cfg.geoName;
+#if SMARTCLOCK_EMULATOR
+  if (fixed && doc["city"].is<const char*>()) wx.cityName = (const char*)doc["city"];
+#endif
   wx.valid = true; wx.error = ""; wx.version++;
   wx.lastSuccess = millis();
 

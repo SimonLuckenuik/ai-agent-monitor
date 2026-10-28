@@ -20,6 +20,8 @@
 #include <TFT_eSPI.h>
 #include <base64.h>
 #include <user_interface.h>
+#include <ArduinoJson.h>
+#include "weather.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -40,6 +42,35 @@ uint32_t frames = 0;
 const char* dataDir() { const char* d = getenv("EMU_DATA"); return d && *d ? d : "."; }
 
 String dataPath(const char* name) { return String(dataDir()) + "/" + name; }
+
+String readFile(const char* path);
+
+}  // namespace
+
+// ---- Fixed time and weather, for tests that need the same screens every run. Both
+// are files in $EMU_DATA, so they survive the firmware's restarts.
+// POST /time?epoch=N stops the clock at N (Unix seconds; 0 lets it run again).
+time_t emuFixedTime = -1;   // -1: not read yet
+extern "C" time_t time(time_t* out) {   // replaces libc's for the firmware's time(nullptr)
+  if (emuFixedTime < 0) {
+    FILE* f = fopen(dataPath("emu_time").c_str(), "r");
+    long long v = 0;
+    if (!f || fscanf(f, "%lld", &v) != 1) v = 0;
+    if (f) fclose(f);
+    emuFixedTime = v;
+  }
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  time_t now = emuFixedTime ? emuFixedTime : ts.tv_sec;
+  if (out) *out = now;
+  return now;
+}
+
+// POST /weather with an Open-Meteo forecast reply (plus an optional "city") replaces
+// the network fetch until DELETE /weather; weather.cpp asks through emuWeather().
+String emuWeather() { return readFile(dataPath("emu_weather.json").c_str()); }
+
+namespace {
 
 String readFile(const char* path) {
   FILE* f = fopen(path, "rb");
@@ -267,6 +298,18 @@ Pending pending[PENDING_MAX];
 
 void handleRequest(WiFiClient& c, const String& head);
 
+// The headers, and the body when Content-Length announces one.
+int contentLength(const String& head) {
+  String lower = head;
+  lower.toLowerCase();
+  int at = lower.indexOf("\r\ncontent-length:");
+  return at < 0 ? 0 : atoi(lower.c_str() + at + 17);
+}
+bool requestComplete(const String& head) {
+  int end = head.indexOf("\r\n\r\n");
+  return end >= 0 && int(head.length()) >= end + 4 + contentLength(head);
+}
+
 void serveScreen() {
   for (WiFiClient fresh = screenServer.accept(); fresh; fresh = screenServer.accept()) {
     Pending* slot = nullptr;
@@ -276,8 +319,8 @@ void serveScreen() {
   }
   for (Pending& p : pending) {
     if (!p.c) continue;
-    while (p.c.available() && p.head.length() < 8192) p.head += char(p.c.read());
-    if (p.head.indexOf("\r\n\r\n") >= 0) {
+    while (p.c.available() && p.head.length() < 16384) p.head += char(p.c.read());
+    if (requestComplete(p.head)) {
       WiFiClient c = p.c;
       String head = p.head;
       p.c = WiFiClient(); p.head = String();
@@ -319,6 +362,26 @@ void handleRequest(WiFiClient& c, const String& head) {
     serveDir(c, queryArg(query, "path"));
   } else if (path == "/fs/file") {
     serveFile(c, queryArg(query, "path"), queryArg(query, "download") == "1");
+  } else if (method == "POST" && path == "/time") {
+    emuFixedTime = atoll(queryArg(query, "epoch").c_str());
+    FILE* f = fopen(dataPath("emu_time").c_str(), "w");
+    if (f) { fprintf(f, "%lld\n", (long long)emuFixedTime); fclose(f); }
+    sendText(c, 200, "text/plain", "OK");
+  } else if ((method == "POST" || method == "DELETE") && path == "/weather") {
+    String body = head.substring(head.indexOf("\r\n\r\n") + 4);
+    JsonDocument doc;
+    if (method == "POST" && (deserializeJson(doc, body) || doc["current"].isNull())) {
+      sendText(c, 400, "text/plain", "Expected an Open-Meteo forecast reply (JSON with current and daily)");
+    } else {
+      if (method == "POST") {
+        FILE* f = fopen(dataPath("emu_weather.json").c_str(), "w");
+        if (f) { fwrite(body.c_str(), 1, body.length(), f); fclose(f); }
+      } else {
+        remove(dataPath("emu_weather.json").c_str());
+      }
+      bool ok = fetchWeather();   // applied now; the faces redraw on their next pass
+      sendText(c, ok ? 200 : 502, "text/plain", ok ? String("OK") : wx.error);
+    }
   } else if (method == "POST" && (path == "/power" || path == "/reset")) {
     sendHeaders(c, "text/plain", 2);
     c.print("OK");

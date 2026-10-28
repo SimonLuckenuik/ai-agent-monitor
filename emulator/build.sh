@@ -46,7 +46,7 @@ make -j"$(nproc)" FORCE32=0 OPTZ=-O1 R=noexec USERLDFLAGS=-no-pie \
                   $root/src/faces.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/ascii.cpp \
                   $work/TFT_eSPI/TFT_eSPI.cpp" \
   USERCSOURCES=/libs/TJpg_Decoder/src/tjpgd.c \
-  USERCFLAGS="-UF_CPU -DF_CPU=$fcpu -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \
+  USERCFLAGS="-UF_CPU -DF_CPU=$fcpu -DSMARTCLOCK_EMULATOR=1 -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \
               -I$work/TFT_eSPI -I/libs/TJpg_Decoder/src" \
   "$work/sketch/smartclock"
 cp -L bin/smartclock/smartclock "$out"

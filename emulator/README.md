@@ -27,8 +27,13 @@ The screen server's endpoints, for scripts:
 | `GET /fs?path=/faces` | A directory: `{"path","total","used","entries":[{"name","dir","size"}]}` |
 | `GET /fs/file?path=/config.json` | A file; `&download=1` as an attachment |
 | `POST /power`, `POST /reset` | Power cycle, external reset |
+| `POST /time?epoch=N` | Stops the firmware's clock at Unix time N, across restarts (`0`: the real time again) |
+| `POST /weather` | An Open-Meteo forecast reply (the clock's own request: `current` and `daily`, plus an optional `"city"`) used instead of the network, and applied now; `DELETE /weather` goes back to fetching |
 
 Storage is read-only from here. Change it through the firmware's own API, as on the clock.
+
+The fixed time and weather are for tests that need the same screens on every run
+(`tests/integration/`, `scripts/screenshots.py`); both are files in the data volume.
 
 **Screen size:** the buttons under the screen show it at **Real** size (the 1.54" panel
 is a 1.09" square, about 105 CSS pixels; how close that is to life depends on the
