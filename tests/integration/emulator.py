@@ -91,13 +91,17 @@ class Emulator:
         self.compose("down", "-v", "--remove-orphans", check=False)
 
     def wait_ready(self, timeout=120):
+        """Until the API answers and the settings are loaded: storage mounts, and the
+        settings load, a few seconds into the boot (the API refuses them until then)."""
         end = time.time() + timeout
         while time.time() < end:
             try:
-                self.status()
-                return
-            except (OSError, HttpError):
-                time.sleep(1)
+                s = self.status()
+                if s["storageReady"] and not s["recovery"] and s["uptime"] >= 8:
+                    return
+            except (OSError, HttpError, ValueError, KeyError):
+                pass
+            time.sleep(1)
         raise TimeoutError(f"No emulator at {self.api} after {timeout} s")
 
     # ---- HTTP
