@@ -32,16 +32,18 @@ tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
   turns the SVGs into polygons (`src/weather_icons.h`, 7.5 KB) that the path filler draws at
   any size. `{icon}` is now a name such as `wi-day-rain`; the icon item takes a `color`.
   The plain image is now over its limit: update with the `.bin.gz`.
-- Day tiles (faces 10-13): today, tomorrow and the two days after, one forecast day
-  per screen in the Big tiles' style. Each shows the day's name, its icon and its high,
-  then the feels-like high, the low and the chance of precipitation. Today is not a
-  forecast: its tile shows the current conditions' icon and temperature, with the
-  feels-like temperature under it (NOW, FEELS), then the day's low, high and chance of
-  precipitation.
-  On the settings page and in Home Assistant they are named Weather today and
-  Weather forecast - Day 1, Day 2 and Day 3. The forecast now also fetches the daily
-  feels-like high. Custom faces moved to id 14 and messages to 15 (`facesv` 4), and
-  `faceorder` writes ids 10-13 as `a`-`d`.
+- Day tiles (faces 10-13): Weather today, then Weather forecast - Day 1, Day 2 and
+  Day 3 (their names on the settings page and in Home Assistant), one day per screen
+  in the Big tiles' style. Each shows the day's name, its icon and, as the big number,
+  the feels-like temperature: what it is like to go out. Under it a line of facts:
+  wind, humidity and two sun times (W 22 km/h | H 74% | sunrise | sunset), then the
+  low, high and chance of precipitation. Weather today is not a forecast: its icon,
+  feels-like and wind and humidity are the current ones, the actual temperature is
+  under the big number (NOW -1), and its sun times are the next two (before sunrise:
+  sunrise, sunset; after: sunset, tomorrow's sunrise; after sunset: tomorrow's two).
+  The forecast now also fetches each day's feels-like high, highest wind, mean
+  humidity, sunrise and sunset. Custom faces moved to id 14 and messages to 15
+  (`facesv` 4), and `faceorder` writes ids 10-13 as `a`-`d`.
 - Emulator: runs the clock's real TFT_eSPI on a simulated ST7789 instead of a
   stand-in, so it draws exactly what the clock draws; draws take about the clock's
   time at the CPU frequency in `platformio.ini`, calibrated against the clock

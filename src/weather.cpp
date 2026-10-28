@@ -131,7 +131,8 @@ static bool fetchOpenMeteo() {
   String url = "http://api.open-meteo.com/v1/forecast?latitude=" + coord(cfg.lat) +
                "&longitude=" + coord(cfg.lon) +
                "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day"
-               "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset"
+               "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
+               "wind_speed_10m_max,relative_humidity_2m_mean"
                "&forecast_days=4&timezone=auto&wind_speed_unit=ms";
   JsonDocument doc;   // ~1 KB response
   if (!httpJson(url, doc)) return false;
@@ -147,12 +148,13 @@ static bool fetchOpenMeteo() {
   wx.wind = cur["wind_speed_10m"] | 0.0f;
   JsonArray dates = daily["time"], codes = daily["weather_code"], his = daily["temperature_2m_max"],
             los = daily["temperature_2m_min"], pops = daily["precipitation_probability_max"],
-            feels = daily["apparent_temperature_max"];
+            feels = daily["apparent_temperature_max"], winds = daily["wind_speed_10m_max"],
+            hums = daily["relative_humidity_2m_mean"], rises = daily["sunrise"], sets = daily["sunset"];
   auto minutes = [](const char* iso) -> int16_t {   // "2026-10-06T05:41"
     return iso && strlen(iso) >= 16 ? atoi(iso + 11) * 60 + atoi(iso + 14) : -1;
   };
-  wx.sunrise = minutes(daily["sunrise"][0] | "");
-  wx.sunset = minutes(daily["sunset"][0] | "");
+  wx.sunrise = minutes(rises[0] | "");
+  wx.sunset = minutes(sets[0] | "");
   wx.tempMax = his[0] | wx.temp;
   wx.tempMin = los[0] | wx.temp;
   wmoText(code, false, wx.main, wx.desc);
@@ -172,6 +174,10 @@ static bool fetchOpenMeteo() {
     d.lo = los[i] | 0.0f;
     d.feels = feels[i] | d.hi;
     d.pop = pops[i] | 0;
+    d.wind = winds[i] | 0.0f;
+    d.humidity = lroundf(hums[i] | 0.0f);
+    d.sunrise = minutes(rises[i] | "");
+    d.sunset = minutes(sets[i] | "");
     d.icon = weatherIconName(codes[i] | 3, true);
   }
   next.valid = next.count > 0;

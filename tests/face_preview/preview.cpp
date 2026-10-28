@@ -85,10 +85,14 @@ static void setForecast(std::vector<const char*> icons) {
   fc.valid = true; fc.count = (int)icons.size(); fc.version++;
   const float hi[] = {24, 27, 19, 22}, lo[] = {15, 17, 12, 13};
   const int pop[] = {60, 0, 20, 80};
+  const float wind[] = {4.2f, 15.5f, 2.0f, 27.8f};   // the last: 100 km/h, the widest fact line
+  const int hum[] = {64, 100, 45, 100}, rise[] = {361, 363, 364, 623}, set[] = {1076, 1074, 1073, 1256};
   for (int i = 0; i < fc.count; ++i) {
     fc.days[i].wday = (1 + i) % 7; fc.days[i].today = i == 0;
     fc.days[i].hi = hi[i]; fc.days[i].lo = lo[i]; fc.days[i].pop = pop[i]; fc.days[i].icon = icons[i];
     fc.days[i].feels = hi[i] - 2;
+    fc.days[i].wind = wind[i]; fc.days[i].humidity = hum[i];
+    fc.days[i].sunrise = rise[i]; fc.days[i].sunset = set[i];
   }
 }
 
@@ -144,6 +148,16 @@ int main(int argc, char** argv) {
   fc.days[0].hi = -24; fc.days[0].lo = -43; fc.days[0].feels = -31; fc.days[0].pop = 90;
   fc.days[1].hi = -38; fc.days[1].lo = -46; fc.days[1].feels = -51; fc.days[1].pop = 100;
   fresh(FACE_DAY0, at(21, 54, 26), "variant_today_snow_cold");
+  fresh(FACE_DAY0, at(5, 30, 0), "variant_today_before_sunrise");
+  fresh(FACE_DAY0, at(13, 0, 0), "variant_today_afternoon");
+  fresh(FACE_DAY0 + 3, at(13, 0, 0), "variant_day3_widest_facts");
+  for (int i = 0; i < 2; ++i) {   // the worst case: -NN everywhere, 100 km/h wind, 100% humidity
+    ForecastDay& d = fc.days[i];
+    d.hi = -38; d.lo = -46; d.feels = -52; d.wind = 27.8f; d.humidity = 100; d.sunrise = 623; d.sunset = 1256;
+  }
+  wx.temp = -44; wx.feels = -58; wx.wind = 27.8f; wx.humidity = 100; wx.version++;
+  fresh(FACE_DAY0, at(5, 30, 0), "variant_today_worst");
+  fresh(FACE_DAY0 + 1, at(5, 30, 0), "variant_day1_worst");
   fresh(FACE_DAY0 + 1, at(21, 54, 26), "variant_tomorrow_snow_colder");
   cfg.hour12 = false; cfg.celsius = false;
   setWeather("02d", "Clouds", "few clouds", 21.4f);

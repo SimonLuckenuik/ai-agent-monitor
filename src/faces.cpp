@@ -1534,45 +1534,101 @@ void bigWeather(const struct tm& t, bool force) {
   monoText(b, 120, 126, TILE_W, 106, WHITE);
 }
 
-// ---- 10-13 Day tiles: one forecast day each, today first ----------------------------
-// The forecast days show the day's name, its icon and its high, then the feels-like
-// high, the low and the chance of precipitation. Today is not a forecast: it shows the
-// current conditions' icon, temperature and feels-like, then the day's low, high and
-// precipitation.
+// ---- 10-13 Day tiles: Weather today, then one forecast day each ---------------------
+// The big number is the feels-like temperature, unlabelled: what it is like to go out.
+// Today adds the actual temperature under it. Then a line of small facts split by drawn rules (a space in font 2 is 6 px; typed " | "
+// separators do not fit), then the day's low, high and chance of precipitation.
+
+// One item of a fact line: its text, with a sun arrow before it or a degree ring after.
+struct Fact { char s[16]; int8_t arrow; bool deg; };   // arrow: 1 sunrise, -1 sunset
+constexpr int ARROW_W = 11;   // the arrow and the space after it
+
+int factWidth(const Fact* f, int n, int gap) {   // gap: either side of each rule
+  int w = (n - 1) * (2 * gap + 1);
+  for (int i = 0; i < n; ++i) w += D().textWidth(f[i].s, 2) + (f[i].arrow ? ARROW_W : 0) + (f[i].deg ? 9 : 0);
+  return w;
+}
+
+// The facts in font 2, centred on cx but kept on the screen.
+void factLine(int cx, int cy, const Fact* f, int n, int gap, uint16_t fg) {
+  int w = factWidth(f, n, gap), x = std::max(4, std::min(cx - w / 2, SCR_W - 4 - w));
+  for (int i = 0; i < n; ++i) {
+    if (f[i].arrow) {   // a small arrow: up before a sunrise, down before a sunset
+      int tip = cy - 5 * f[i].arrow;
+      D().drawWedgeLine(x + 3.5f, cy - 5, x + 3.5f, cy + 5, 0.75f, 0.75f, fg, BG);
+      D().drawWedgeLine(x + 0.5f, tip + 3 * f[i].arrow, x + 3.5f, tip, 0.75f, 0.75f, fg, BG);
+      D().drawWedgeLine(x + 6.5f, tip + 3 * f[i].arrow, x + 3.5f, tip, 0.75f, 0.75f, fg, BG);
+      x += ARROW_W;
+    }
+    text(f[i].s, x, cy, 2, fg, BG, ML_DATUM);
+    x += D().textWidth(f[i].s, 2);
+    if (f[i].deg) { ring(x + 5, cy - D().fontHeight(2) / 2 + 5, 3, fg, BG); x += 9; }
+    if (i < n - 1) { D().drawFastVLine(x + gap, cy - 7, 14, DIM); x += 2 * gap + 1; }
+  }
+}
+
+void sunFact(Fact& f, int minutes, bool rise) {
+  f.arrow = rise ? 1 : -1; f.deg = false;
+  if (minutes < 0) { strcpy(f.s, "--"); return; }
+  int h = minutes / 60 % 24;
+  if (cfg.hour12) h = h % 12 ? h % 12 : 12;
+  snprintf(f.s, sizeof(f.s), "%d:%02d", h, minutes % 60);
+}
+
+// Wind, humidity and two sun times. When the line is too wide the rules move closer,
+// then the wind loses its unit.
+void weatherFacts(int cy, float wind, int humidity, const Fact& sun1, const Fact& sun2) {
+  Fact f[4] = {};
+  int speed = lroundf(cfg.mile ? wind * 2.237f : wind * 3.6f);
+  snprintf(f[0].s, sizeof(f[0].s), "%s %d %s", tr("W", "V"), speed, cfg.mile ? "mph" : "km/h");
+  snprintf(f[1].s, sizeof(f[1].s), "H %d%%", humidity);
+  f[2] = sun1; f[3] = sun2;
+  int gap = factWidth(f, 4, 6) <= SCR_W - 8 ? 6 : 4;
+  if (factWidth(f, 4, gap) > SCR_W - 8) snprintf(f[0].s, sizeof(f[0].s), "%s %d", tr("W", "V"), speed);
+  factLine(120, cy, f, 4, gap, WHITE);
+}
+
 void dayTile(int k, const struct tm& t, bool force) {
   static uint32_t seen = 0, seenWx = 0;
+  static int seenPhase = -1;
   bool ok = fc.valid && k < fc.count;
   if (!ok) {
     if (force) weatherPlaceholder(tr("No forecast yet", "Pas encore de previsions"));
     return;
   }
-  bool now = k == 0 && wx.valid;   // today, from the current conditions
-  if (!force && seen == fc.version && (!now || seenWx == wx.version)) return;
-  if (!force) D().fillScreen(BG);
-  seen = fc.version; seenWx = wx.version;
   const ForecastDay& d = fc.days[k];
+  bool now = k == 0 && wx.valid;   // today, from the current conditions
+  // Today shows the next two sun events: before sunrise, today's sunrise and sunset;
+  // after it, the sunset and tomorrow's sunrise; after sunset, tomorrow's two.
+  int mins = t.tm_hour * 60 + t.tm_min;
+  int phase = !now ? 0 : d.sunset >= 0 && mins >= d.sunset ? 2 : d.sunrise >= 0 && mins >= d.sunrise ? 1 : 0;
+  if (!force && seen == fc.version && (!now || (seenWx == wx.version && seenPhase == phase))) return;
+  if (!force) D().fillScreen(BG);
+  seen = fc.version; seenWx = wx.version; seenPhase = phase;
+  const ForecastDay& next = fc.days[fc.count > 1 ? 1 : 0];
   monoText(dayLong(d.wday), 120, 6, TILE_W, 40, cfg.color1);
   weatherIcon(54, 104, 96, now ? wx.icon : d.icon, BG, cfg.color1);   // a 96 px icon on the left
   char b[8];
-  snprintf(b, sizeof(b), "%d*", displayTemp(now ? wx.temp : d.hi));   // '*' draws the degree sign
+  snprintf(b, sizeof(b), "%d*", displayTemp(now ? wx.feels : d.feels));   // '*' draws the degree sign
   monoText(b, 170, 58, 134, 72, WHITE);
-  if (now) {   // "NOW, FEELS -4°", kept clear of the screen's right edge
-    char lb[32];
-    snprintf(lb, sizeof(lb), "%s %d", tr("NOW, FEELS", "ACTUEL, RESS."), displayTemp(wx.feels));
-    int w = D().textWidth(lb, 2), x0 = std::min(170 - (w + 8) / 2, 234 - (w + 8));
-    text(lb, x0, 146, 2, MUTED, BG, ML_DATUM);
-    ring(x0 + w + 5, 146 - D().fontHeight(2) / 2 + 5, 3, MUTED, BG);
-  } else {
-    text(tr("HIGH", "MAX"), 170, 146, 2, MUTED, BG, MC_DATUM);
+  if (now) {   // the actual temperature under the feels-like one: "NOW -1", with a ring
+    Fact f = {};
+    snprintf(f.s, sizeof(f.s), "%s %d", tr("NOW", "ACTUEL"), displayTemp(wx.temp));
+    f.deg = true;
+    factLine(170, 140, &f, 1, 6, MUTED);
   }
-  D().drawFastHLine(16, 166, 208, PANEL_HI);
-  const char* labels[] = {now ? tr("LOW", "MIN") : tr("FEELS", "RESSENTI"),
-                          now ? tr("HIGH", "MAX") : tr("LOW", "MIN"), tr("PRECIP", "PRECIP.")};
-  for (int i = 0; i < 3; ++i) text(labels[i], 44 + 76 * i, 184, 2, MUTED, BG, MC_DATUM);
-  temp(44, 214, displayTemp(now ? d.lo : d.feels), 4, WHITE, BG);
-  temp(120, 214, displayTemp(now ? d.hi : d.lo), 4, WHITE, BG);
+  Fact sun1, sun2;
+  if (phase == 0) { sunFact(sun1, d.sunrise, true); sunFact(sun2, d.sunset, false); }
+  else if (phase == 1) { sunFact(sun1, d.sunset, false); sunFact(sun2, next.sunrise, true); }
+  else { sunFact(sun1, next.sunrise, true); sunFact(sun2, next.sunset, false); }
+  weatherFacts(166, now ? wx.wind : d.wind, now ? wx.humidity : d.humidity, sun1, sun2);
+  D().drawFastHLine(0, 179, SCR_W, PANEL_HI);
+  const char* labels[] = {tr("LOW", "MIN"), tr("HIGH", "MAX"), tr("PRECIP", "PRECIP.")};
+  for (int i = 0; i < 3; ++i) text(labels[i], 44 + 76 * i, 194, 2, MUTED, BG, MC_DATUM);
+  temp(44, 222, displayTemp(d.lo), 4, WHITE, BG);
+  temp(120, 222, displayTemp(d.hi), 4, WHITE, BG);
   snprintf(b, sizeof(b), "%d%%", std::min(d.pop, 100));
-  text(b, 196, 214, 4, WHITE, BG, MC_DATUM);
+  text(b, 196, 222, 4, WHITE, BG, MC_DATUM);
 }
 
 // ---- 9 Agents: every active agent message on one screen --------------------------

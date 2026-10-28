@@ -24,6 +24,9 @@ struct ForecastDay {
   float lo = 0, hi = 0;  // C
   float feels = 0;       // the feels-like high, C
   int pop = 0;           // highest chance of precipitation, %
+  float wind = 0;        // the highest wind speed, m/s
+  int humidity = 0;      // the mean relative humidity, %
+  int16_t sunrise = -1, sunset = -1;   // minutes after local midnight; -1 unknown
   String icon;
 };
 struct Forecast {
