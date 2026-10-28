@@ -14,8 +14,9 @@ tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
 
 - **From the stock firmware, or SmartClock-OSS 1.3.x or earlier:** install
   `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` first (everything but MQTT, small enough
-  for a plain update), then `SDPro_AIAgentMonitor_v1.4.0.bin.gz` from the Firmware
-  update card to add MQTT.
+  for a plain update), then `AIAgentMonitor_v1.4.0.bin.gz` from the Firmware update
+  card to add MQTT. Only the first has the `SDP` prefix the stock update page asks
+  for: the stock firmware cannot unpack the compressed image.
 - **From then on:** install the `.bin.gz`. The full firmware is too big for a plain
   update; `AIAgentMonitor_v1.4.0_usb.bin` is the plain image, for USB-serial flashing.
 - The setup network, hostname and MQTT topics change names (see Changed): with MQTT

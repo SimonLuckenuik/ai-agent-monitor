@@ -74,11 +74,13 @@ only be sent compressed, and only a clock running 1.4.0 or later can unpack it.
 | File | What it is | Use it for |
 |---|---|---|
 | `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` | Everything except MQTT, as a plain image small enough for any updater | **The first install**: from the stock firmware, or from SmartClock-OSS before 1.4.0 |
-| `SDPro_AIAgentMonitor_v<version>.bin.gz` | The full firmware, compressed | **Every update after that** (and adding MQTT after the first install) |
+| `AIAgentMonitor_v<version>.bin.gz` | The full firmware, compressed | **Every update after that** (and adding MQTT after the first install), from this firmware's own Firmware update card |
 | `AIAgentMonitor_v<version>_usb.bin` | The full firmware, plain | Flashing over USB-serial only; too big for any updater over WiFi |
 | `SHA256SUMS.txt` | Checksums | `sha256sum -c SHA256SUMS.txt` |
 
-Keep the file names: the stock update page only accepts names starting with `SDP`.
+Keep the file names. The stock update page only accepts names starting with `SDP`, so
+only the first-install image has that prefix: the stock firmware cannot unpack the
+compressed image, and its name keeps it from being tried there.
 
 ## Install
 
@@ -101,7 +103,7 @@ Keep the file names: the stock update page only accepts names starting with `SDP
 5. In the **WiFi** card, pick your network, enter its password, and press
    **Connect & restart**. The clock shows its new address when it connects.
 6. Open that address. In **Firmware update**, install
-   **`SDPro_AIAgentMonitor_v<version>.bin.gz`** from the same release. This adds MQTT;
+   **`AIAgentMonitor_v<version>.bin.gz`** from the same release. This adds MQTT;
    skip it if you will never use MQTT (you can do it any time later).
 7. Set your city and time zone, and choose your faces.
 
@@ -267,7 +269,8 @@ to PNG and checks the screen-update logic.
 
 For your own builds you can compile in fallback WiFi details: copy
 `secrets.example.ini` to `secrets.ini` (git-ignored). Release images are built with
-`python scripts/make_release.py` (or by GitHub Actions when a `v*` tag is pushed),
+`python scripts/make_release.py` (or by GitHub Actions on a push to `main` whose
+`FW_VERSION` has no release yet: it publishes that version's release),
 which ignores `secrets.ini` and refuses to finish if an image contains its values.
 The weather icons are generated from the SVGs by `python scripts/gen_weather_icons.py`.
 

@@ -4,14 +4,15 @@
 
 Builds with SMARTCLOCK_RELEASE=1, which makes build_options.py ignore secrets.ini,
 then refuses to finish if an image contains the SSID or password from a local
-secrets.ini. Writes to release/ (the stock update page only accepts names starting
-with "SDP"):
+secrets.ini. Writes to release/. The stock update page only accepts names starting
+with "SDP", so only the image it can install has that prefix:
 
-- SDPro_AIAgentMonitor_v<version>.bin.gz: the full firmware, compressed. For clocks
-  already running 1.4.0 or later, or the no-MQTT image below.
 - SDPro_AIAgentMonitor_v<version>_nomqtt.bin: everything but MQTT, as a plain image
   small enough for any updater (stock, or this firmware before 1.4.0). The first step
   on a new clock; then update with the .bin.gz.
+- AIAgentMonitor_v<version>.bin.gz: the full firmware, compressed. For clocks already
+  running 1.4.0 or later (the no-MQTT image included). No "SDP": a stock clock cannot
+  unpack it, so its update page refuses the name.
 - AIAgentMonitor_v<version>_usb.bin: the full firmware, plain, for flashing over USB
   only. It is too big for the clock's own updater, and its name keeps the stock page
   from taking it.
@@ -66,7 +67,7 @@ out = root / "release"
 out.mkdir(exist_ok=True)
 for old in out.glob("*AIAgentMonitor_v*"):
     old.unlink()   # one release's files at a time
-files = ((full.with_suffix(".bin.gz"), f"SDPro_AIAgentMonitor_v{version}.bin.gz"),
+files = ((full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),
          (lite, f"SDPro_AIAgentMonitor_v{version}_nomqtt.bin"),
          (full, f"AIAgentMonitor_v{version}_usb.bin"))
 sums = ""

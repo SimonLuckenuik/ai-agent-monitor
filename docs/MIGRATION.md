@@ -7,7 +7,8 @@ Going back to stock still needs UART, so a full flash backup over UART beforehan
 only way to keep the vendor firmware; the vendor update binaries are not full-device
 backups. Release images come from `python scripts/make_release.py`: the first install over stock
 uses `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` (a plain image without MQTT), and
-every update after it the full `SDPro_AIAgentMonitor_v<version>.bin.gz`.
+every update after it the full `AIAgentMonitor_v<version>.bin.gz` (no `SDP` prefix, so the
+stock page, which cannot unpack it, refuses it).
 
 ## Build and first flash
 

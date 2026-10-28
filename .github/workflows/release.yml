@@ -1,10 +1,17 @@
 name: Release
 
-# Push a tag named after FW_VERSION in src/main.cpp, e.g. v1.4.0 for "1.4.0":
-#   git tag v1.4.0 && git push origin v1.4.0
+# Every push to main releases FW_VERSION (src/main.cpp) if it has no release yet: bump
+# FW_VERSION and add its "## <version>" CHANGELOG section, and the push publishes
+# v<version> (the tag is created on the pushed commit). Pushes with a released version
+# only run the checks in build.yml. Run by hand from the Actions tab to retry.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -15,40 +22,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Is FW_VERSION released yet?
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' src/main.cpp | tr -d '\r')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          case "$version" in *-*) echo "FW_VERSION $version is a pre-release: not published"; echo "new=false" >> "$GITHUB_OUTPUT"; exit 0;; esac
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "v$version is already released: nothing to do"; echo "new=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.version.outputs.new == 'true'
         with:
           python-version: "3.12"
 
       - name: Install PlatformIO, Zig and Pillow
+        if: steps.version.outputs.new == 'true'
         run: pip install platformio==6.2.0 ziglang==0.13.0 pillow
 
       - name: Put Zig on PATH
+        if: steps.version.outputs.new == 'true'
         run: python -c "import os, ziglang; print(os.path.dirname(ziglang.__file__))" >> "$GITHUB_PATH"
 
-      - name: Check the tag matches FW_VERSION
-        id: version
-        run: |
-          version=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' src/main.cpp | tr -d '\r')
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match FW_VERSION $version" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      # The release build: no WiFi details, named for the stock update page (SDP...).
+      # The release build: no WiFi details; only the plain first-install image is named
+      # for the stock update page (SDP...).
       - name: Build the release image
+        if: steps.version.outputs.new == 'true'
         run: python scripts/make_release.py
 
       - name: Unit tests
+        if: steps.version.outputs.new == 'true'
         run: python tests/unit/run_unit_tests.py
 
       - name: Safety tests (on the release image)
+        if: steps.version.outputs.new == 'true'
         run: python tests/run_safety_tests.py
 
       - name: Face preview
+        if: steps.version.outputs.new == 'true'
         run: python tests/face_preview/run_face_preview.py
 
       - name: Release notes from CHANGELOG.md
+        if: steps.version.outputs.new == 'true'
         run: |
           tr -d '\r' < CHANGELOG.md | awk -v v="${{ steps.version.outputs.version }}" '
             $0 ~ "^## " v "( |$)" { on = 1; next }
@@ -57,8 +77,10 @@ jobs:
           if [ ! -s notes.md ]; then echo "No '## ${{ steps.version.outputs.version }}' section in CHANGELOG.md" >&2; exit 1; fi
 
       - name: Publish the release
+        if: steps.version.outputs.new == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/*.bin release/*.bin.gz release/SHA256SUMS.txt \
+          gh release create "v${{ steps.version.outputs.version }}" --target "$GITHUB_SHA" \
+            release/*.bin release/*.bin.gz release/SHA256SUMS.txt \
             --title "AI Agent Monitor ${{ steps.version.outputs.version }}" --notes-file notes.md
