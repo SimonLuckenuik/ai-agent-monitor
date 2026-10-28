@@ -85,14 +85,17 @@ claude plugin validate .                        # plugin and marketplace manifes
 Run all four before committing firmware changes. The face preview's PNGs are worth
 looking at after any drawing change.
 
-Flash images for the owner: `cp .pio/build/esp12e/firmware.bin release/SDPro_AIAgentMonitor_v<FW_VERSION>.bin`,
-and the same for `firmware.bin.gz` (`.bin.gz`). The build writes both: the plain image
-for any updater (stock, older versions, serial), the compressed one (gzip with an "AM"
-header field: unpacked size, file size, CRC; `include/firmware_validation.h`) for
-clocks running 1.4.0 on. The bootloader unpacks it into place.
-(the name must start with `SDP` for the stock update page). Releases: bump
-`FW_VERSION` in src/main.cpp (no `-dev`), add its CHANGELOG section, tag `v<version>`:
-`release.yml` builds without WiFi details and publishes the image.
+Flash images for the owner: `cp .pio/build/esp12e/firmware.bin.gz release/SDPro_AIAgentMonitor_v<FW_VERSION>.bin.gz`
+(the name must start with `SDP` for the stock update page). The build writes both the
+plain image and the compressed one (gzip with an "AM" header field: unpacked size, file
+size, CRC; `include/firmware_validation.h`) for clocks running 1.4.0 on; the
+bootloader unpacks it into place. Since the Weather Icons the full plain image is over
+the plain limit (516,096 B): it is for USB only. `pio run -e esp12e_nomqtt`
+(`SMARTCLOCK_MQTT=0`) is the plain stepping stone for clocks that only take plain
+images (stock, SmartClock-OSS before 1.4.0). Releases: bump `FW_VERSION` in
+src/main.cpp (no `-dev`), add its CHANGELOG section, tag `v<version>`: `release.yml`
+runs `scripts/make_release.py` (no WiFi details) and publishes the `.bin.gz`, the
+`_nomqtt.bin`, the `_usb.bin` and SHA256SUMS.txt.
 
 ## Emulator
 

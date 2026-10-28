@@ -1,13 +1,32 @@
 # Changelog
 
-All notable SmartClock-OSS changes are recorded here. Versions follow semantic
+All notable AI Agent Monitor changes are recorded here; versions up to 1.3.2 are
+SmartClock-OSS, which it is forked from. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
-## Unreleased
+## 1.4.0 - 2026-10-27
+
+The first AI Agent Monitor release: messages and custom faces for AI agents, the Big
+tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
+
+### Upgrading
+
+- **From the stock firmware, or SmartClock-OSS 1.3.x or earlier:** install
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` first (everything but MQTT, small enough
+  for a plain update), then `SDPro_AIAgentMonitor_v1.4.0.bin.gz` from the Firmware
+  update card to add MQTT.
+- **From then on:** install the `.bin.gz`. The full firmware is too big for a plain
+  update; `AIAgentMonitor_v1.4.0_usb.bin` is the plain image, for USB-serial flashing.
+- The setup network, hostname and MQTT topics change names (see Changed): with MQTT
+  on, remove the old device in Home Assistant.
 
 ### Added
 
+- Release files: a no-MQTT plain image (`esp12e_nomqtt`, `SMARTCLOCK_MQTT=0`) as the
+  stepping stone from plain-only updaters, the full firmware as `.bin.gz`, and the full
+  plain image for USB only. `scripts/make_release.py` builds all three; CI checks that
+  the no-MQTT image fits a plain update.
 - Weather icons: Erik Flowers' Weather Icons (SIL OFL 1.1) on every face, chosen from the
   WMO code with the companion app's table (day and night variants). `scripts/gen_weather_icons.py`
   turns the SVGs into polygons (`src/weather_icons.h`, 7.5 KB) that the path filler draws at

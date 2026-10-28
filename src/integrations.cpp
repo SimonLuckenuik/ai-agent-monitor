@@ -3,7 +3,12 @@
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#ifndef SMARTCLOCK_MQTT
+#define SMARTCLOCK_MQTT 1   // 0: no MQTT (esp12e_nomqtt, the plain stepping-stone image)
+#endif
+#if SMARTCLOCK_MQTT
 #include <PubSubClient.h>
+#endif
 #include "config.h"
 #include "faces.h"
 #include "weather.h"
@@ -335,6 +340,7 @@ void handlePhotoInterval() {
 }
 
 // ---------------------------------------------------------------- MQTT
+#if SMARTCLOCK_MQTT
 WiFiClient mqttNet;
 PubSubClient mqtt(mqttNet);
 uint32_t mqttRetryAt = 0, mqttStateAt = 0, mqttFacesSent = 0;
@@ -434,6 +440,8 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
   publishState();
 }
 
+#endif  // SMARTCLOCK_MQTT
+
 }  // namespace
 
 // ---------------------------------------------------------------- public
@@ -490,11 +498,19 @@ void messageShowSlot(int slot) { messageSlot = slot; }
 uint32_t messageVersion() { return messagesVersion; }
 
 String mqttStatus() {
+#if SMARTCLOCK_MQTT
   if (!cfg.mqttOn) return "off";
   return mqtt.connected() ? "connected" : mqttLastError;
+#else
+  return "not in this build";
+#endif
 }
 
-void integrationsSettingsChanged() { mqttReconnect = true; }
+void integrationsSettingsChanged() {
+#if SMARTCLOCK_MQTT
+  mqttReconnect = true;
+#endif
+}
 
 void integrationsRoutes() {
   server.on("/api/faces", handleFaces);
@@ -516,6 +532,7 @@ void integrationsRoutes() {
 }
 
 void integrationsLoop() {
+#if SMARTCLOCK_MQTT
   if (mqttReconnect || !cfg.mqttOn || WiFi.status() != WL_CONNECTED) {
     if (mqtt.connected()) { mqtt.publish((base() + "/status").c_str(), "offline", true); mqtt.disconnect(); }
     if (mqttReconnect) { mqttReconnect = false; mqttRetryAt = 0; }
@@ -544,4 +561,5 @@ void integrationsLoop() {
   mqtt.loop();
   if (mqttFacesSent != customFacesVersion()) publishDiscovery();   // face list changed
   if (millis() - mqttStateAt > 60000) publishState();
+#endif
 }

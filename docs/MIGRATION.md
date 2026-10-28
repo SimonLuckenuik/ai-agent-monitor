@@ -5,8 +5,9 @@ through our own updater several times since
 ([record](decisions/2026-10-05-first-flash-over-stock.md)). One unit has been tested.
 Going back to stock still needs UART, so a full flash backup over UART beforehand is the
 only way to keep the vendor firmware; the vendor update binaries are not full-device
-backups. Release images come from `python scripts/make_release.py` and are already named
-`SDPro_SmartClockOSS_v<version>.bin`.
+backups. Release images come from `python scripts/make_release.py`: the first install over stock
+uses `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` (a plain image without MQTT), and
+every update after it the full `SDPro_AIAgentMonitor_v<version>.bin.gz`.
 
 ## Build and first flash
 
@@ -27,7 +28,7 @@ backups. Release images come from `python scripts/make_release.py` and are alrea
 4. Establish recovery and back up the device before using its stock OTA page. The stock
    updater controls the first transfer; our validation applies only to subsequent uploads.
 5. If proceeding with the stock updater, use the built firmware image and stable power.
-   **Rename it to start with `SDP`** (for example `SDPro_SmartClockOSS.bin`): the stock
+   **Rename it to start with `SDP`** (for example `SDPro_AIAgentMonitor.bin`): the stock
    page refuses any other filename in the browser, with "Please use the correct
    firmware". It does not check the contents
    ([record](decisions/2026-10-05-first-flash-over-stock.md)). Our own update page

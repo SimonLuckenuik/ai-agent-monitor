@@ -36,6 +36,11 @@ jobs:
       - name: Build the firmware (fails above the OTA size budget)
         run: pio run
 
+      - name: Build the no-MQTT image (must fit a plain update)
+        run: |
+          pio run -e esp12e_nomqtt
+          python -c "import os, sys; n = os.path.getsize('.pio/build/esp12e_nomqtt/firmware.bin'); print(n); sys.exit(n > 0x7E000)"
+
       - name: Unit tests
         run: python tests/unit/run_unit_tests.py
 
@@ -51,6 +56,7 @@ jobs:
           path: |
             .pio/build/esp12e/firmware.bin
             .pio/build/esp12e/firmware.bin.gz
+            .pio/build/esp12e_nomqtt/firmware.bin
             .pio/face-preview/sheet.png
           if-no-files-found: error
 
