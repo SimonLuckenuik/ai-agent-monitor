@@ -1535,30 +1535,33 @@ void bigWeather(const struct tm& t, bool force) {
 }
 
 // ---- 10-13 Day tiles: one forecast day each, today first ----------------------------
-// All four alike: the day's name, its icon and its high, then the feels-like high, the
-// low and the chance of precipitation. The current temperature is Big weather's.
+// The forecast days show the day's name, its icon and its high, then the feels-like
+// high, the low and the chance of precipitation. Today is not a forecast: it shows the
+// current conditions' icon and temperature, then the day's low, high and precipitation.
 void dayTile(int k, const struct tm& t, bool force) {
-  static uint32_t seen = 0;
+  static uint32_t seen = 0, seenWx = 0;
   bool ok = fc.valid && k < fc.count;
   if (!ok) {
     if (force) weatherPlaceholder(tr("No forecast yet", "Pas encore de previsions"));
     return;
   }
-  if (!force && seen == fc.version) return;
+  bool now = k == 0 && wx.valid;   // today, from the current conditions
+  if (!force && seen == fc.version && (!now || seenWx == wx.version)) return;
   if (!force) D().fillScreen(BG);
-  seen = fc.version;
+  seen = fc.version; seenWx = wx.version;
   const ForecastDay& d = fc.days[k];
   monoText(dayLong(d.wday), 120, 6, TILE_W, 40, cfg.color1);
-  weatherIcon(54, 104, 96, d.icon, BG, cfg.color1);   // a 96 px icon on the left
+  weatherIcon(54, 104, 96, now ? wx.icon : d.icon, BG, cfg.color1);   // a 96 px icon on the left
   char b[8];
-  snprintf(b, sizeof(b), "%d*", displayTemp(d.hi));   // '*' draws the degree sign
+  snprintf(b, sizeof(b), "%d*", displayTemp(now ? wx.temp : d.hi));   // '*' draws the degree sign
   monoText(b, 170, 58, 134, 72, WHITE);
-  text(tr("HIGH", "MAX"), 170, 146, 2, MUTED, BG, MC_DATUM);
+  text(now ? tr("NOW", "ACTUEL") : tr("HIGH", "MAX"), 170, 146, 2, MUTED, BG, MC_DATUM);
   D().drawFastHLine(16, 166, 208, PANEL_HI);
-  const char* labels[] = {tr("FEELS", "RESSENTI"), tr("LOW", "MIN"), tr("PRECIP", "PRECIP.")};
+  const char* labels[] = {now ? tr("LOW", "MIN") : tr("FEELS", "RESSENTI"),
+                          now ? tr("HIGH", "MAX") : tr("LOW", "MIN"), tr("PRECIP", "PRECIP.")};
   for (int i = 0; i < 3; ++i) text(labels[i], 44 + 76 * i, 184, 2, MUTED, BG, MC_DATUM);
-  temp(44, 214, displayTemp(d.feels), 4, WHITE, BG);
-  temp(120, 214, displayTemp(d.lo), 4, WHITE, BG);
+  temp(44, 214, displayTemp(now ? d.lo : d.feels), 4, WHITE, BG);
+  temp(120, 214, displayTemp(now ? d.hi : d.lo), 4, WHITE, BG);
   snprintf(b, sizeof(b), "%d%%", std::min(d.pop, 100));
   text(b, 196, 214, 4, WHITE, BG, MC_DATUM);
 }
