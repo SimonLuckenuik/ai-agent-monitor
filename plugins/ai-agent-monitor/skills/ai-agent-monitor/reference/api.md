@@ -1,6 +1,7 @@
 # Clock API
 
-Base URL: `CLOCK_URL` (the clock's address, or `http://127.0.0.1:8000` for the
+Base URL: `CLOCK_URL` (the clock's address; `http://agentmonitor-xxxxxx.local` also
+works from the same network on the full firmware; `http://127.0.0.1:8000` for the
 emulator).
 
 ## Messages (no key)
@@ -80,3 +81,5 @@ firmware repository) also serves, on port 8080:
 | `GET /fb` | The screen: 240×240 RGB565 little-endian, 115,200 bytes (`clock.py screenshot` turns it into a PNG) |
 | `GET /password` | The emulator's device password (for signing in without an API key) |
 | `GET /fs?path=/faces` | The clock's storage, read-only |
+| `POST /time?epoch=N` | Stops the clock at Unix time N (`0`: the real time again) |
+| `POST /weather` | An Open-Meteo forecast reply (plus an optional `"city"`) used instead of the network; `DELETE /weather` undoes it |

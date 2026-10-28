@@ -124,9 +124,9 @@ anything; a `.bin` that is too big for a plain update is refused with a pointer 
 
 The clock names itself `agentmonitor-XXXXXX` (unique per clock) in your router's list
 of devices, and its setup network **AI Agent Monitor XXXXXX** carries the same suffix.
-A build with the `esp12e_mdns` environment also answers at
-`http://agentmonitor-XXXXXX.local/` (same network only); release builds leave mDNS out
-to make room.
+The full firmware also answers at `http://agentmonitor-XXXXXX.local/` (mDNS, same
+network only). The first-install `_nomqtt.bin` leaves mDNS out to stay small; it comes
+with the `.bin.gz` update.
 
 ## Messages from agents and scripts
 
@@ -145,6 +145,13 @@ curl -X POST http://<clock>/api/message -d '{"id":"build","title":"Build","text"
 | `pct` | A progress bar, 0 to 100 |
 | `ttl` | Seconds to keep it (600 by default, up to a day) |
 | `show` | `true` puts it on screen now; otherwise it waits for its turn in the rotation |
+
+Up to four messages are kept at once. Each one can be shown on its own (the Message
+face, coloured by its icon) and all of them appear together on the **Agents** board,
+one row per id. The [Claude Code plugin](#claude-code-plugin) also brings small status
+faces of its own (attention, progress, done, error) that agents fill with variables:
+
+![Messages, the Agents board and the plugin's status faces](docs/images/agent-screens.png)
 
 `GET /api/message` lists the messages and `DELETE /api/message?id=build` clears one.
 With MQTT on, the same JSON on `<base>/message` does the same. Details:
@@ -166,6 +173,16 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"progress":64}'
 The format, placeholders and expressions are in
 [docs/specifications/integrations-api.md](docs/specifications/integrations-api.md#custom-faces).
 
+[`examples/faces/`](examples/faces) has six ready-made faces to start from or to show
+what the format can do: scenes drawn with paths and gradients, an analog clock whose
+hands are expressions, a terminal, and a sea view with the live weather icon.
+
+![Example custom faces: bauhaus, night-lake, orbit, seaside, synthwave, terminal](docs/images/custom-faces.png)
+
+```bash
+curl -X POST "http://<clock>/api/faces?name=synthwave&show=1&key=<api key>" --data-binary @examples/faces/synthwave.json
+```
+
 ## Claude Code plugin
 
 This repository is also a Claude Code plugin marketplace. Its `ai-agent-monitor` skill
@@ -176,7 +193,9 @@ the [emulator](#emulator):
 /plugin install ai-agent-monitor --marketplace SimonLuckenuik/ai-agent-monitor
 ```
 
-Then give Claude the clock's address and API key in `CLOCK_URL` and `CLOCK_API_KEY`.
+Working in this repository, Claude Code offers the plugin by itself: the project's
+`.claude/settings.json` lists the marketplace and enables it. Then give Claude the
+clock's address and API key in `CLOCK_URL` and `CLOCK_API_KEY`.
 Without them it uses the emulator at `http://127.0.0.1:8000`. The skill is in
 [`plugins/ai-agent-monitor`](plugins/ai-agent-monitor/skills/ai-agent-monitor/SKILL.md).
 
@@ -242,9 +261,8 @@ pio run
 
 | Environment | Image |
 |---|---|
-| `esp12e` (default) | The full firmware: `.pio/build/esp12e/firmware.bin` and `firmware.bin.gz` |
-| `esp12e_nomqtt` | Without MQTT, small enough for a plain update |
-| `esp12e_mdns` | With mDNS (`agentmonitor-XXXXXX.local`) |
+| `esp12e` (default) | The full firmware, with MQTT and mDNS: `.pio/build/esp12e/firmware.bin` and `firmware.bin.gz` |
+| `esp12e_nomqtt` | Without MQTT or mDNS, small enough for a plain update |
 
 The build reports how much of the update budget each image uses, and fails if an image
 could not be replaced over the air. The CPU runs at 160 MHz (`board_build.f_cpu`).
@@ -265,6 +283,29 @@ python tests/face_preview/run_face_preview.py
 The unit tests cover settings, expressions and text handling; the safety tests check
 update validation, recovery and the flash layout; the face preview renders every face
 to PNG and checks the screen-update logic.
+
+With Docker, the integration tests run the firmware in its own emulator and drive it
+over the real HTTP API:
+
+```bash
+python tests/integration/run_integration_tests.py
+```
+
+They fix the emulator's clock (Monday 5 October 2026, 10:09) and its weather, so every
+run draws the same screens, then go through every built-in face, French, imperial
+units, extreme cold, the sun-time phases, night mode, every message layout, a full
+Agents board, the example faces and the API's limits and errors, and a restart. Each
+screen is saved to `.pio/integration/` (with `sheet.png`), and a run lists the screens
+that changed since the one before.
+
+The images in this README come from the same emulator:
+
+```bash
+python scripts/screenshots.py
+```
+
+It needs Pillow, and Playwright (`pip install playwright`) for the settings page; it
+uses an installed Edge or Chrome.
 
 For your own builds you can compile in fallback WiFi details: copy
 `secrets.example.ini` to `secrets.ini` (git-ignored). Release images are built with
@@ -303,7 +344,8 @@ clock.
 
 ```
 platformio.ini        build environments and panel configuration
-scripts/              build options (size guard, compression), release, weather icons
+scripts/              build options (size guard, compression), release, weather icons,
+                      README screenshots
 include/              pin map, update validation
 src/main.cpp          boot, recovery, WiFi, web API, updates
 src/faces.cpp         the clock faces, custom faces and the path renderer
@@ -313,6 +355,7 @@ src/config.h          settings stored on the clock (/config.json)
 web/index.html        settings page (compressed into the firmware at build time)
 emulator/             the Docker emulator
 plugins/              the Claude Code plugin
-tests/                unit, safety and face preview tests
+examples/faces/       example custom faces
+tests/                unit, safety, face preview and integration tests
 docs/                 status, migration, specifications, decisions, issues, plans
 ```

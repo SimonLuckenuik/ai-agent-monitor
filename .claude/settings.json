@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "ai-agent-monitor": {
+      "source": {
+        "source": "github",
+        "repo": "SimonLuckenuik/ai-agent-monitor"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ai-agent-monitor@ai-agent-monitor": true
+  }
+}

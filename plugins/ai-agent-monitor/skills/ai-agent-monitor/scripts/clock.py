@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Talk to an AI Agent Monitor clock (SmartClock-OSS firmware) or its emulator.
+"""Talk to an AI Agent Monitor clock (AI Agent Monitor firmware) or its emulator.
 
     python clock.py message TITLE TEXT [--icon NAME] [--id ID] [--ttl S] [--pct N] [--color #hex] [--show]
     python clock.py messages

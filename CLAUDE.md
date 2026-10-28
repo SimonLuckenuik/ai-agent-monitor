@@ -21,7 +21,8 @@ branch has **not run on hardware yet**.
   (~9 KB of libc: use `parseNum()` in faces.cpp), `atan2f`/`fmodf`, any `%f`/`%g`
   in printf (also forbidden by the safety tests: float printf is not linked), inlined
   ArduinoJson lookups (go through the `noinline` helpers `js()`, `num()`, `colorOf()`).
-  mDNS is out of the default build for space (`env:esp12e_mdns` adds it back, ~20 KB).
+  mDNS (`SMARTCLOCK_MDNS`, ~21 KB) is in the full image only: `esp12e_nomqtt` unflags it
+  so the plain first-install image fits; the emulator leaves it out (no multicast).
 - **RAM.** ~24 KB free heap at run time. No frame buffer (240×240×2 = 115 KB): faces
   redraw only what changed, text needs a `bg`/`pad` to overwrite itself, and anything
   that moves redraws the face (flicker). Paths allocate 3.2 KB while drawing
@@ -80,10 +81,19 @@ python tests/unit/run_unit_tests.py             # 173 checks
 python tests/run_safety_tests.py                # needs the firmware.bin from pio run
 python tests/face_preview/run_face_preview.py   # .pio/face-preview/*.png, sheet.png
 claude plugin validate .                        # plugin and marketplace manifests
+python tests/integration/run_integration_tests.py   # Docker: the firmware in the emulator
+python scripts/screenshots.py                   # Docker + Playwright: docs/images/*.png
 ```
 
-Run all four before committing firmware changes. The face preview's PNGs are worth
-looking at after any drawing change.
+Run the first four before committing firmware changes. The face preview's PNGs are
+worth looking at after any drawing change. The integration tests build the emulator
+image and start their own container (ports 18000/18080, blank storage; `--no-build`,
+`--keep`, `--reuse`, `-k <case>`). They fix the clock and weather through the
+emulator's `POST /time` and `POST /weather`, so screens are the same every run: add a
+case to `tests/integration/run_integration_tests.py` for each new feature or edge
+case, look at `.pio/integration/sheet.png`, and read the "changed since the last run"
+line. After a visible change, run `scripts/screenshots.py` so the README's images
+match the firmware.
 
 Flash images for the owner: `cp .pio/build/esp12e/firmware.bin.gz release/AIAgentMonitor_v<FW_VERSION>.bin.gz`.
 The build writes both the plain image and the compressed one (gzip with an "AM" header
@@ -189,10 +199,20 @@ change.
 
 ## Things to keep in step
 
-- A face or API change: `CHANGELOG.md` (Unreleased), `docs/specifications/integrations-api.md`,
-  then regenerate the skill's `reference/face-format.md` from it (the "Face JSON"
-  section to "Home Assistant dashboards"), and the skill's `SKILL.md` / `reference/api.md`.
-- Plugin changes: bump the version in both `plugin.json` and `marketplace.json`.
+- **The Claude Code skill must match the firmware.** Any change to messages, faces,
+  placeholders, the API, limits, the emulator's endpoints or how the clock is reached
+  (`plugins/ai-agent-monitor/skills/ai-agent-monitor/`): update `CHANGELOG.md`,
+  `docs/specifications/integrations-api.md`, then regenerate the skill's
+  `reference/face-format.md` from it (the "Face JSON" section to "Home Assistant
+  dashboards", headings one level up), and update the skill's `SKILL.md`,
+  `reference/api.md`, `scripts/clock.py` and `examples/`. Check the skill's examples
+  still render (`agent_faces` in the integration tests).
+- Plugin changes: bump the version in both `plugin.json` and `marketplace.json`. The
+  repository's `.claude/settings.json` enables the plugin from the GitHub marketplace,
+  so sessions here get the published (`main`) version; try local skill edits with
+  `claude --plugin-dir plugins/ai-agent-monitor`.
+- Example faces (`examples/faces/`): at most 4 KB minified and 32 items each; the
+  integration tests push and capture every file there.
 - New source files: add them to `emulator/build.sh`; headers used by faces.cpp to the
   copy lists in `tests/face_preview/run_face_preview.py` and `tests/unit/run_unit_tests.py`.
 - Face preview mocks (`tests/face_preview/mock/`) are shared with the unit tests (the

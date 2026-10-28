@@ -24,6 +24,22 @@ tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
 
 ### Added
 
+- mDNS is back in the full firmware: `http://agentmonitor-XXXXXX.local/` from the same
+  network, with an HTTP service record (model, version, API). It fits now that updates
+  are compressed; the first-install `_nomqtt.bin` still leaves it out.
+- Example custom faces in `examples/faces/`: bauhaus (an analog clock), night-lake,
+  orbit, seaside (with the live weather icon), synthwave and terminal.
+- Integration tests (`tests/integration/run_integration_tests.py`): the firmware in its
+  own emulator container, driven over HTTP with a fixed clock and weather, through every
+  face, language and unit setting, extreme values, night mode, messages, the Agents
+  board, custom faces and the API's limits; each screen is saved and compared with the
+  previous run.
+- `scripts/screenshots.py` regenerates the README's images (clock screens, custom faces,
+  agent screens and the settings page, the latter through Playwright).
+- Emulator: `POST /time?epoch=N` stops the clock and `POST /weather` replaces the
+  Open-Meteo fetch with a given reply, both kept across restarts.
+- The repository's `.claude/settings.json` enables the Claude Code plugin; the plugin
+  (0.3.0) knows the Agents board, mDNS addresses and the example faces.
 - Release files: a no-MQTT plain image (`esp12e_nomqtt`, `SMARTCLOCK_MQTT=0`) as the
   stepping stone from plain-only updaters, and the full firmware as `.bin.gz`.
   `scripts/make_release.py` builds both; CI checks that the no-MQTT image fits a plain

@@ -1,12 +1,12 @@
 ---
 name: ai-agent-monitor
-description: Show messages, status, progress and custom graphics on the user's AI Agent Monitor desk clock (SmartClock-OSS firmware, 240x240 screen) over HTTP, or on its Docker emulator. Use when the user wants to be alerted or kept informed on the clock (needs input, done, failed, progress), asks for a screen or icon to be designed or pushed to it, or mentions the agent monitor, the smart clock or its emulator.
+description: Show messages, status, progress and custom graphics on the user's AI Agent Monitor desk clock (AI Agent Monitor firmware, 240x240 screen) over HTTP, or on its Docker emulator. Use when the user wants to be alerted or kept informed on the clock (needs input, done, failed, progress), asks for a screen or icon to be designed or pushed to it, or mentions the agent monitor, the smart clock or its emulator.
 ---
 
 # AI Agent Monitor
 
-The clock is an ESP8266 with a 240×240 colour screen running SmartClock-OSS. There
-are two ways to put something on it:
+The clock is an ESP8266 with a 240×240 colour screen running the AI Agent Monitor
+firmware (a fork of SmartClock-OSS). There are two ways to put something on it:
 
 1. **Messages** (start here): a title, a short text and one of 8 built-in icons, drawn
    by the clock's built-in Message face. One call, no key, nothing to design.
@@ -20,7 +20,7 @@ this skill's directory, or call the API directly (`reference/api.md`).
 
 | Variable | Value |
 |---|---|
-| `CLOCK_URL` | The clock, e.g. `http://192.168.1.50`. Default `http://127.0.0.1:8000`: the emulator |
+| `CLOCK_URL` | The clock, e.g. `http://192.168.1.50`, or `http://agentmonitor-xxxxxx.local` from the same network (mDNS, full firmware 1.4.0 on). Default `http://127.0.0.1:8000`: the emulator |
 | `CLOCK_API_KEY` | Only for custom faces: settings page → **Integrations** → turn on **Custom faces** → the key is shown there |
 
 Never ask for, or store, the device password of a real clock.
@@ -54,6 +54,9 @@ python scripts/clock.py message "my-project" "Waiting for your approval to deplo
 - Keep the title to a couple of words (one line of large text) and the text to one
   sentence (up to 4 short lines). Accents are dropped: `é` shows as `e`.
 - Posting a message needs no key, and messages are lost when the clock restarts.
+- Every active message also appears on the clock's **Agents** face: one row per id,
+  with its icon, title, text and minutes left. Distinct ids are what make that board
+  useful when several agents or projects run at once.
 
 ## Custom faces
 
@@ -62,7 +65,9 @@ saved on the clock. A face uses **variables** (`{title}`, `{pct}`, …) pushed
 separately, so it is saved once and then updated with values only.
 
 1. **Pick or write a face.** `examples/` has `attention`, `progress`, `done` and
-   `error`. Adapt one, or design a new face with `reference/face-format.md`.
+   `error`. Adapt one, or design a new face with `reference/face-format.md`. The
+   firmware repository's `examples/faces/` has decorative clock faces (scenes,
+   an analog clock, a terminal) that show what paths, gradients and expressions can do.
 2. **Save it once:** `python scripts/clock.py push status examples/progress.json`
 3. **Set values and show it:**
    ```bash
