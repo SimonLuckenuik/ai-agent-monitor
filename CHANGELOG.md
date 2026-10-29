@@ -7,8 +7,20 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 1.5.0 - 2026-10-29
+
+A richer custom face model: grouped placeholders, modifiers, maps, palettes, sprites,
+sparklines, repeats, borders, faces that join the rotation only when they have
+something to show, variable options, up to 40 faces and 40 variables, and 32 example
+faces.
+
 ### Upgrading
 
+- **From 1.4.0:** install `AIAgentMonitor_v1.5.0.bin.gz` from the Firmware update
+  card. Settings, saved faces and photos are kept.
+- **A new clock** (stock firmware, or SmartClock-OSS 1.3.x or earlier): install
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
+  `AIAgentMonitor_v1.5.0.bin.gz`.
 - **Placeholders have new names** (`{time}` is now `{time.hm}`, `{temp}` is
   `{now.temp}`, …): custom faces saved on a clock show the old ones as empty until they
   are sent again with the new names. The example faces and the plugin's faces are
