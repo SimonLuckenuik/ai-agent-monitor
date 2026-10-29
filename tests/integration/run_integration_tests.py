@@ -32,6 +32,12 @@ FACES = {0: "classic", 1: "weather", 2: "photo", 3: "big-date", 4: "simple", 5: 
          7: "big-time", 8: "big-weather", 9: "agents", 10: "weather-today",
          11: "forecast-day-1", 12: "forecast-day-2", 13: "forecast-day-3"}
 ICONS = ["info", "success", "warning", "error", "waiting", "running", "bell", "done"]
+DEFAULT_PALETTES = {"day": {"accent1": "#ffa826", "accent2": "#6ab7ff", "accent3": "#4cd9a0", "black": "#000000",
+                            "white": "#ffffff", "rain": "#5ab2ff", "green": "#30d158", "orange": "#ff9f0a",
+                            "red": "#ff453a", "blue": "#0a84ff"},
+                    "night": {"accent1": "#a86a14", "accent2": "#3a6694", "accent3": "#2a7a5c", "black": "#000000",
+                              "white": "#8e8e93", "rain": "#2f6496", "green": "#1e7a35", "orange": "#a85f0a",
+                              "red": "#a3271f", "blue": "#0a4f99"}}
 COLD = open_meteo(temp=-38.4, feels=-51.6, humidity=100, wind=27.8, code=75, is_day=1,
                   city="Iqaluit", days=[
                       (75, -38, -46, -52, 100, 27.8, 100, "10:23", "20:56"),
@@ -81,7 +87,8 @@ def baseline(emu):
     emu.fix_time(FIXED_TIME)
     emu.fix_weather(open_meteo())
     emu.settings(lang="en", celsius=1, hour12=0, mile=0, nightmode=0, themeInterval=0,
-                 brightness=100, color1=0xFD20, facesapi=1)   # 0xFD20: the default orange
+                 brightness=100, palettes=json.dumps(DEFAULT_PALETTES), palette="day", nightpalette="night",
+                 roles="{}", order="", customoff="", turns="", orientation=0, facesapi=1)
     for name in emu.faces()["faces"]:   # no custom faces, variables or messages left from a case
         emu.delete_face(name)
     emu.clear_vars()
@@ -251,12 +258,12 @@ def example_faces(emu):
     """Every face in examples/faces, with its sample values (samples.json), one at a time
     (as a user would try them)."""
     emu.set("facesapi", 1)
-    samples = json.loads((EXAMPLES / "samples.json").read_text())
+    samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
     names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
-    check(len(names) >= 32, f"examples: {names}")
+    check(len(names) >= 37, f"examples: {names}")
     check(set(samples) <= set(names), f"samples for missing faces: {set(samples) - set(names)}")
     for name in names:
-        face = json.loads((EXAMPLES / f"{name}.json").read_text())
+        face = json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8"))
         emu.clear_vars()
         emu.clear_messages()
         emu.apply_sample(samples.get(name, {}))
@@ -330,6 +337,126 @@ def rotation_when(emu):
     emu.settings(faces=mask, themeInterval=0)
 
 
+def showing(emu, seconds):
+    """The faces shown in turn over that many seconds: built-in as "#<id>", custom by name."""
+    names, end = [], time.time() + seconds
+    while time.time() < end:
+        s = emu.status()
+        e = s.get("customFace") if s["face"] == 14 else "#%d" % s["face"]
+        if not names or names[-1] != e:
+            names.append(e)
+        time.sleep(0.2)
+    return names
+
+
+@case
+def rotation_list(emu):
+    """One rotation list: custom faces anywhere in it, turned off, with their own time."""
+    face = lambda s: {"items": [{"type": "text", "x": 120, "y": 120, "text": s, "align": "mc"}]}
+    emu.push_face("alpha", face("alpha"))
+    emu.push_face("beta", face("beta"))
+    order = emu.config()["order"].split(",")
+    check(order[-2:] == ["alpha", "beta"] and order[0] == "#0", f"new faces join at the end: {order}")
+    emu.settings(faces=1, order="beta,#0,alpha", themeInterval=1)   # Classic, then the custom faces
+    check(emu.config()["order"].startswith("beta,#0,alpha,#1"), emu.config()["order"])
+    seen = showing(emu, 6)
+    joined = ",".join(seen)
+    check("beta,#0,alpha" in joined or "#0,alpha,beta" in joined or "alpha,beta,#0" in joined, f"order: {seen}")
+    emu.set("customoff", "alpha")
+    seen = showing(emu, 5)
+    check("alpha" not in seen[1:] and "beta" in seen, f"alpha off: {seen}")
+    emu.settings(customoff="", turns="beta=4")
+    seen, end, last, spans = [], time.time() + 12, None, {}
+    while time.time() < end:   # how long each face stays
+        s = emu.status()
+        e = s.get("customFace") if s["face"] == 14 else "#%d" % s["face"]
+        if e != last:
+            last, start = e, time.time()
+        spans[e] = max(spans.get(e, 0), time.time() - start)
+        time.sleep(0.2)
+    check(spans.get("beta", 0) >= 3, f"beta's own 4 s: {spans}")
+    check(spans.get("alpha", 9) < 2.5, f"alpha the rotation's 1 s: {spans}")
+    expect_error(400, "Unknown face", emu.set, "nightface", "Bad Name")
+    emu.settings(themeInterval=0, faces=0x3fbf, order="", turns="")
+    emu.set("customface", "beta")
+    check(emu.faces()["showing"] == "beta", "customface shows it")
+    expect_error(400, "No such face", emu.set, "customface", "gamma")
+
+
+@case
+def night_custom_face(emu):
+    """A custom face all night, its "when" aside."""
+    emu.push_face("nightowl", {"when": "{nope}==1", "bg": "#0b1026", "items": [
+        {"type": "text", "x": 120, "y": 90, "text": "{time.hm}", "font": "big", "size": 60, "align": "mc", "color": "#c9d3ff"},
+        {"type": "text", "x": 120, "y": 170, "text": "OWL", "font": "big", "size": 30, "align": "mc", "color": "#5e5ce6"}]})
+    emu.fix_time(epoch(2026, 10, 5, 23, 30))
+    emu.settings(nightmode=1, starttime=22, stoptime=7, nightface="nightowl", nighttint=0)
+    time.sleep(1.5)
+    check(emu.config()["nightface"] == "nightowl", "night face saved")
+    shot(emu, "night_custom_face", min_lit=50)
+    emu.settings(nightmode=0, nightface="#7", nighttint=1)
+    emu.fix_time(FIXED_TIME)
+
+
+@case
+def palettes_and_roles(emu):
+    """Palettes of named colours, roles bound to them, the night palette, @role in faces."""
+    pals = {"day": dict(DEFAULT_PALETTES["day"], navy="#0b1d33", paper="#f4efe6", ink="#1c1c1e"),
+            "night": {"accent1": "#8a5a14", "navy": "#000000"}}
+    emu.set("palettes", json.dumps(pals))
+    emu.set("roles", json.dumps({"bg": "navy", "time": "@warn", "date": "{now.temp}<0?@blue:@accent3"}))
+    c = emu.config()
+    check(c["palettes"]["day"]["navy"] == "#0b1d33" and c["roles"]["bg"] == "navy", f"saved: {c['roles']}")
+    for fid in (0, 5, 10):
+        emu.show(fid)
+        shot(emu, f"roles_navy_{fid:02d}_{FACES[fid]}")
+    emu.set("roles", json.dumps({"bg": "paper", "text": "ink", "panel": "#e4ddd0"}))
+    for fid in (0, 7, 10, 9):
+        emu.show(fid)
+        shot(emu, f"roles_paper_{fid:02d}_{FACES[fid]}")
+    # A custom face that uses the roles follows them.
+    emu.push_face("roleface", {"items": [
+        {"type": "rect", "x": 20, "y": 20, "w": 200, "h": 200, "r": 16, "color": "@panel"},
+        {"type": "text", "x": 120, "y": 100, "text": "{time.hm}", "font": "big", "size": 50, "align": "mc", "color": "@time"},
+        {"type": "text", "x": 120, "y": 160, "text": "{theme.palette}", "font": 4, "align": "mc", "color": "@muted"}]}, show=True)
+    shot(emu, "roles_custom_face")
+    # The night palette at night.
+    emu.fix_time(epoch(2026, 10, 5, 23, 30))
+    emu.settings(roles=json.dumps({"bg": "navy"}), nightmode=1, starttime=22, stoptime=7, nightface="", nighttint=0)
+    emu.show(0)
+    shot(emu, "roles_night_palette", min_lit=50)
+    emu.settings(nightmode=0, nighttint=1, nightface="#7")
+    emu.fix_time(FIXED_TIME)
+    # Refused: a palette set without day, a bad colour, an unknown role, an unknown palette.
+    expect_error(400, "day palette", emu.set, "palettes", json.dumps({"night": {}}))
+    expect_error(400, "Bad colour", emu.set, "palettes", json.dumps({"day": {"x": "red"}}))
+    expect_error(400, "Unknown role", emu.set, "roles", json.dumps({"hands": "red"}))
+    expect_error(400, "No such palette", emu.set, "palette", "nope")
+    # A backup restores the palettes and roles.
+    backup = emu.get("/api/settings/export")
+    emu.settings(palettes=json.dumps(DEFAULT_PALETTES), roles="{}")
+    emu.post("/api/settings/import", backup)
+    check(emu.config()["roles"].get("bg") == "navy", "roles restored")
+    check("navy" in emu.config()["palettes"]["day"], "palettes restored")
+
+
+@case
+def orientation(emu):
+    """The screen turned by the display controller: the same picture, rotated."""
+    emu.show(4)   # Simple: nothing on it moves at the fixed time
+    upright = emu.screenshot(OUT / "orientation_0.png")
+    for deg in (90, 180, 270):
+        emu.set("orientation", deg)
+        time.sleep(0.6)
+        img = shot(emu, f"orientation_{deg}")
+        want = upright.rotate(-deg)   # PIL turns counter-clockwise
+        diff = sum(1 for a, b in zip(img.getdata(), want.getdata()) if a != b)
+        check(diff < 200, f"{deg}: {diff} pixels differ from the upright picture turned")
+    expect_error(400, "Orientation", emu.set, "orientation", 45)
+    emu.set("orientation", 0)
+    check(emu.config()["orientation"] == 0, "back upright")
+
+
 @case
 def agent_faces(emu):
     """The skill's example faces, with the variables an agent would push."""
@@ -338,7 +465,7 @@ def agent_faces(emu):
               "done": {"title": "Release 1.4.0", "msg": "Published"},
               "error": {"title": "CI", "msg": "2 tests failed"}}
     for name, v in values.items():
-        face = json.loads((SKILL_EXAMPLES / f"{name}.json").read_text())
+        face = json.loads((SKILL_EXAMPLES / f"{name}.json").read_text(encoding="utf-8"))
         emu.vars(**v)
         emu.push_face(f"agent-{name}", face, show=True)
         shot(emu, f"agent_{name}")
@@ -391,7 +518,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for old in OUT.glob("*.png"):
         old.unlink()
-    previous = json.loads((OUT / "screens.json").read_text()) if (OUT / "screens.json").exists() else {}
+    previous = json.loads((OUT / "screens.json").read_text(encoding="utf-8")) if (OUT / "screens.json").exists() else {}
     if not args.reuse:
         emu.start(build=not args.no_build)
     failed = []
