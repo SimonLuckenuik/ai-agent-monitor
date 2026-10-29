@@ -6,6 +6,7 @@
 #include <LittleFS.h>
 #include <TFT_eSPI.h>
 #include <map>
+#include <vector>
 #include <string>
 #include "faces.cpp"
 
@@ -23,6 +24,17 @@ bool messageActive(int) { return false; }
 int messageShowing() { return 0; }
 uint32_t messageVersion() { return 1; }
 String messageField(int, const String&) { return String(); }
+static std::map<std::string, std::string> device;   // net.*, sys.*, ...
+String deviceValue(const String& key) { auto it = device.find(key.c_str()); return it == device.end() ? String() : String(it->second); }
+long faceVarAge(const String& key) { return vars.count(key.c_str()) ? 30 : -1; }
+static std::vector<float> history;   // the "load" variable's
+int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {
+  if (key != "load") return 0;
+  if (pushes) *pushes = history.size();
+  int n = std::min<int>(history.size(), max);
+  for (int i = 0; i < n && out; ++i) out[i] = history[history.size() - n + i];
+  return n;
+}
 void wmoText(int, bool fr, String& main, String& desc) { main = fr ? "Nuageux" : "Clouds"; desc = main; }
 uint32_t millis() { return 0; }
 void delay(unsigned long) {}
@@ -118,7 +130,7 @@ static void testFields() {
   CHECK_STR(resolve("{nope}!", t), "!");
   CHECK_STR(resolve("{nope|waiting}", t), "waiting");   // the fallback while empty
   CHECK_STR(resolve("{state|none}", t), "warn");
-  CHECK_STR(resolve("{ss}", t), "07");
+  CHECK_STR(resolve("{time.sec}", t), "07");
   CHECK_STR(resolve("{not a placeholder because it is too long}", t), "{not a placeholder because it is too long}");
 
   CHECK_NUM(num(item(R"({"x":"120+{n}"})"), "x", 0, t), 162);
@@ -270,6 +282,113 @@ static void testFaceOrder() {
   CHECK(Config::faceChar(FACE_DAY3) == 'd' && Config::faceId('d') == FACE_DAY3 && Config::faceId('5') == 5);
 }
 
+// Placeholder names, modifiers, maps, expressions in braces, palettes, repeats.
+static void testPlaceholders() {
+  struct tm t = now();   // Monday 26 October 2026, 09:05:07
+  t.tm_wday = 1; t.tm_yday = 298;
+  cfg.hour12 = false; cfg.celsius = true; cfg.mile = false;
+  vars = {{"state", "warn"}, {"n", "42"}, {"pi", "3.14159"}, {"neg", "-3"}};
+  device = {{"net.ip", "10.0.0.2"}};
+  wx.valid = true; wx.temp = 21.4f; wx.feels = 19.6f; wx.humidity = 64; wx.wind = 4.2f;
+  wx.sunrise = 7 * 60; wx.sunset = 18 * 60; wx.pressure = 1013; wx.icon = "wi-day-rain";
+  fc.valid = true; fc.count = 2;
+  fc.days[0].hi = 24.6f; fc.days[0].lo = 15.2f; fc.days[0].pop = 40; fc.days[0].wday = 1;
+  fc.days[1].hi = 12; fc.days[1].lo = 3; fc.days[1].wday = 2; fc.days[1].sunrise = 7 * 60 + 2; fc.days[1].icon = "wi-day-snow";
+
+  // Names.
+  CHECK_STR(resolve("{time.hm}", t), "09:05");
+  CHECK_STR(resolve("{time.hour}:{time.min}:{time.sec}", t), "09:05:07");
+  CHECK_STR(resolve("{time.daymin}", t), "545");
+  CHECK_STR(resolve("{date.wday} {date.wday3} {date.day} {date.month} {date.month3}", t), "Monday MON 26 October Oct");
+  CHECK_STR(resolve("{date.monthnum}/{date.year} {date.yday} w{date.week}", t), "10/2026 299 w44");
+  CHECK_STR(resolve("{date.text}", t), "26 October");
+  CHECK_STR(resolve("{date.wdaynum} {date.mdays}", t), "1 31");
+  struct tm feb = t; feb.tm_mon = 1; feb.tm_wday = 0;
+  CHECK_STR(resolve("{date.wdaynum} {date.mdays}", feb), "7 28");
+  feb.tm_year = 128;   // 2028: a leap year
+  CHECK_STR(resolve("{date.mdays}", feb), "29");
+  struct tm months = t;
+  std::string lengths;
+  for (int m = 0; m < 12; ++m) { months.tm_mon = m; lengths += resolve("{date.mdays}", months).c_str(); lengths += " "; }
+  CHECK_STR(String(lengths), "31 28 31 30 31 30 31 31 30 31 30 31 ");
+  CHECK_STR(resolve("{now.temp} {now.feels} {now.hum} {now.wind} {now.press}", t), "21 20 64 15 1013");
+  CHECK_STR(resolve("{now.icon}", t), "wi-day-rain");
+  CHECK_STR(resolve("{units.temp} {units.wind}", t), "C km/h");
+  CHECK_STR(resolve("{day0.high}/{day0.low} {day0.rain}% {day1.wday3} {day1.icon}", t), "25/15 40% TUE wi-day-snow");
+  CHECK_STR(resolve("{day3.high}", t), "--");    // no such day
+  CHECK_STR(resolve("{sun.up} {sun.next} {sun.rise} {sun.set}", t), "1 set 07:00 18:00");
+  CHECK_STR(resolve("{sun.until_set} {sun.until_rise} {sun.daylen}", t), "535 1317 660");   // tomorrow's 7:02
+  CHECK_STR(resolve("{theme.color1}", t), "#ffaa20");
+  CHECK_STR(resolve("{net.ip}", t), "10.0.0.2");
+  CHECK_STR(resolve("{age.state}|{age.nope}", t), "30|");
+  CHECK_STR(resolve("{msg.count}", t), "0");
+  CHECK_STR(resolve("{nope.name}", t), "");
+  int phase = resolve("{moon.phase}", t).toInt(), lit = resolve("{moon.lit}", t).toInt();
+  CHECK(phase >= 0 && phase <= 7);
+  CHECK(lit >= 0 && lit <= 100);
+  cfg.hour12 = true;
+  CHECK_STR(resolve("{time.hm} {time.ampm} {sun.set}", t), "9:05 AM 6:00");
+  cfg.hour12 = false;
+  struct tm ny = t; ny.tm_year = 127; ny.tm_mon = 0; ny.tm_mday = 1; ny.tm_wday = 5; ny.tm_yday = 0;
+  CHECK_STR(resolve("{date.week}", ny), "53");   // 1 January 2027 is in 2026's week 53
+  struct tm dec = t; dec.tm_mon = 11; dec.tm_mday = 28; dec.tm_wday = 1; dec.tm_yday = 361;
+  CHECK_STR(resolve("{date.week}", dec), "53");
+
+  // Modifiers, then the fallback.
+  CHECK_STR(resolve("{state:u} {state:2} {n:+} {n:05} {neg:03} {pi:.2} {pi:.0}", t), "WARN wa +42 00042 -03 3.14 3");
+  CHECK_STR(resolve("{date.wday:u:3}", t), "MON");
+  CHECK_STR(resolve("{nope:u|none}", t), "none");
+  CHECK_STR(resolve("{neg:+}", t), "-3");
+
+  // Maps, from the face.
+  customDoc.clear();
+  deserializeJson(customDoc, R"({"maps":{"lbl":{"warn":"Careful","*":"?"},"num":{"42":7}},
+    "palette":"{n}>40?day:night","palettes":{"day":{"fg":"#00ff00","ref":"@fg"},"night":{"fg":"#ff0000"}}})");
+  CHECK_STR(resolve("{state:lbl} {nope:lbl} {n:num} {state:nomap}", t), "Careful ? 7 warn");
+
+  // Expressions in braces; plain words in braces stay as they are.
+  CHECK_STR(resolve("{{n}>40?big:small}", t), "big");
+  CHECK_STR(resolve("Build {{state}==warn?FAILED:OK}!", t), "Build FAILED!");
+  CHECK_STR(resolve("{{n}*2+1}", t), "85");
+  CHECK_STR(resolve("{rand(1)}", t), "0");
+  vars["until"] = "1791223740";   // Unix times: a float would be up to a minute out
+  CHECK_STR(evalStr("1791223740-1791222630"), "1110");
+  CHECK_STR(evalStr("1791222630+0"), "1791222630");
+  CHECK_STR(evalStr("1791223740%60"), "0");
+  CHECK_STR(resolve("{{until}-1791222630}", t), "1110");
+  CHECK_STR(resolve("{a b}", t), "{a b}");
+  CHECK_STR(resolve("{x", t), "{x");
+  CHECK_NUM(evalNum("rand(5)") < 5, 1);
+
+  // Palettes: "@name", picked by an expression.
+  paletteName = evalStr(resolve(customDoc["palette"], t));
+  CHECK_STR(paletteName, "day");
+  CHECK(colorOf(item(R"({"c":"@fg"})")["c"], 0, t) == 0x07E0);
+  CHECK(colorOf(item(R"({"c":"{n}>40?@fg:#000000"})")["c"], 0, t) == 0x07E0);
+  CHECK(colorOf(item(R"({"c":"@nope"})")["c"], 5, t) == 5);
+  CHECK(colorOf(item(R"({"c":"@ref"})")["c"], 5, t) == 5);   // an entry naming another is refused
+  paletteName = "night";
+  CHECK(colorOf(item(R"({"c":"@fg"})")["c"], 0, t) == 0xF800);
+
+  // Repeat entries.
+  CHECK(repeatCount(item(R"({"of":3})"), t) == 3);
+  repeatAt(2);
+  CHECK_STR(resolve("{it.index}/{it.count}", t), "2/3");
+  CHECK(repeatCount(item(R"({"of":"days"})"), t) == 2);
+  repeatAt(1);
+  CHECK_STR(resolve("{it.wday3} {it.high}", t), "TUE 12");
+  CHECK(repeatCount(item(R"({"of":"msgs"})"), t) == 0);
+  CHECK(repeatCount(item(R"({"of":"500"})"), t) == 60);   // at most 60
+  rep = Repeat();
+
+  // "when" follows "show".
+  CHECK(visibleField(item(R"({"w":"{sun.up}"})")["w"], t));
+  CHECK(!visibleField(item(R"({"w":"{state}==ok"})")["w"], t));
+  customDoc.clear();
+  paletteName = "";
+  fc = Forecast(); wx = Weather();
+}
+
 int main() {
   testNumbers();
   testExpressions();
@@ -280,6 +399,7 @@ int main() {
   testMonoFont();
   testAsciiFold();
   testFaceOrder();
+  testPlaceholders();
   printf(failures ? "FAIL: %d of %d checks\n" : "PASS: %d checks\n", failures ? failures : checks, checks);
   return failures ? 1 : 0;
 }

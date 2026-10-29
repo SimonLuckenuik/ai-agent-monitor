@@ -283,7 +283,7 @@ a{color:var(--accent)}
       <a href="https://github.com/SimonLuckenuik/ai-agent-monitor/blob/main/docs/specifications/integrations-api.md" target="_blank" rel="noopener">integrations API</a>.</p>
 
     <div class="integ">
-      <div class="row"><label for="facesapi">Custom faces<span class="hint">Design faces as JSON and send them over HTTP or MQTT, with live values like {time} and {temp}</span></label>
+      <div class="row"><label for="facesapi">Custom faces<span class="hint">Design faces as JSON and send them over HTTP or MQTT, with live values like {time.hm} and {now.temp}</span></label>
         <label class="switch"><input type="checkbox" id="facesapi" data-key="facesapi"><span></span></label></div>
       <div id="facesBox" hidden>
         <div class="row"><span class="lbl">API key<span class="hint">Send as the X-Api-Key header (or ?key=) from scripts</span></span>
@@ -616,12 +616,12 @@ async function loadFaces(){try{const d=JSON.parse(await req('/api/faces')),box=$
     mk('delete',async()=>{if(!confirm('Delete face '+n+'?'))return;try{await req('/api/faces/delete',form({name:n}));loadFaces()}catch(e){toast(e.message,1)}});
     box.appendChild(c)})}catch(e){}}
 function faceExample(){$('faceName').value=$('faceName').value||'example';$('faceJson').value=JSON.stringify({bg:'#000000',items:[
-  {type:'text',x:120,y:24,text:'{dow} {day} {mon3}',font:2,color:'#9aa0a6',align:'mc',bg:'#000000',pad:200},
-  {type:'text',x:120,y:78,text:'{time}',font:6,color:'#ffa826',align:'mc',bg:'#000000',pad:220},
-  {type:'ring',x:60,y:170,r:44,w:8,value:'{hum}',max:100,color:'#6ab7ff'},
-  {type:'text',x:60,y:170,text:'{hum}%',font:4,color:'#ffffff',align:'mc',bg:'#000000',pad:60},
-  {type:'icon',x:180,y:155,size:56,icon:'{icon}',bg:'#000000'},
-  {type:'text',x:180,y:205,text:'{temp} {unit}',font:4,color:'#4cd9a0',align:'mc',bg:'#000000',pad:90}]},null,1)}
+  {type:'text',x:120,y:24,text:'{date.wday} {date.day} {date.month3}',font:2,color:'#9aa0a6',align:'mc',bg:'#000000',pad:200},
+  {type:'text',x:120,y:78,text:'{time.hm}',font:6,color:'#ffa826',align:'mc',bg:'#000000',pad:220},
+  {type:'ring',x:60,y:170,r:44,w:8,value:'{now.hum}',max:100,color:'#6ab7ff'},
+  {type:'text',x:60,y:170,text:'{now.hum}%',font:4,color:'#ffffff',align:'mc',bg:'#000000',pad:60},
+  {type:'icon',x:180,y:155,size:56,icon:'{now.icon}',bg:'#000000'},
+  {type:'text',x:180,y:205,text:'{now.temp} {units.temp}',font:4,color:'#4cd9a0',align:'mc',bg:'#000000',pad:90}]},null,1)}
 async function saveFace(show){const n=$('faceName').value.trim().toLowerCase();let body;
   if(!/^[a-z0-9_-]{1,20}$/.test(n)){toast('Name: 1-20 of a-z 0-9 _ -',1);return}
   try{body=JSON.stringify(JSON.parse($('faceJson').value))}catch(e){toast('The JSON is not valid: '+e.message,1);return}

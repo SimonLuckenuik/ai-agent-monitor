@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 #include <time.h>
 
 // Clock faces. Ids 0-6 match the stock theme numbers (3 was the stock Dial) and
@@ -18,3 +19,9 @@ void faceInvalidate();            // something else drew on the panel, or settin
 bool faceAvailable(int face);     // has something to show (weather, forecast, photos)
 void facePhotosChanged();         // a photo was added or removed
 int  photoCount();
+class String;
+// A custom face's rotation turn: false while its "when" is false; *seconds (if not
+// null) gets its "duration", 0 for the rotation's own interval.
+bool customFaceDue(const String& name, uint32_t* seconds);
+// main.cpp: {net.*}, {sys.*}, {theme.night}, {time.zone} for custom faces; "" if unknown.
+String deviceValue(const String& key);

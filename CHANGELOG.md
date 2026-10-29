@@ -5,6 +5,77 @@ SmartClock-OSS, which it is forked from. Versions follow semantic
 versioning. `/version` on the device reports the version it was built as; a
 `-dev` suffix marks a build from an unreleased checkout.
 
+## Unreleased
+
+### Upgrading
+
+- **Placeholders have new names** (`{time}` is now `{time.hm}`, `{temp}` is
+  `{now.temp}`, …): custom faces saved on a clock show the old ones as empty until they
+  are sent again with the new names. The example faces and the plugin's faces are
+  updated. Old to new: `time` `time.hm`, `hh` `time.hour`, `mm` `time.min`, `ss`
+  `time.sec`, `ms` `time.ms`, `ampm` `time.ampm`, `dow` `date.wday`, `dow3`
+  `date.wday3`, `day` `date.day`, `month` `date.month`, `mon3` `date.month3`, `year`
+  `date.year`, `date` `date.text`, `temp` `now.temp`, `feels` `now.feels`, `hi`
+  `day0.high`, `lo` `day0.low`, `hum` `now.hum`, `wind` `now.wind`, `unit`
+  `units.temp`, `wunit` `units.wind`, `desc` `now.text`, `main` `now.kind`, `city`
+  `loc.city`, `icon` `now.icon`, `sunrise` `sun.rise`, `sunset` `sun.set`.
+- **Variable names** are now 1-15 of `A-Z a-z 0-9 _` (no dots); other names are
+  refused.
+- **Releases have only the `.bin.gz`.** A new clock first installs
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release, then the latest
+  `.bin.gz`. The firmware is no longer held to the size of a plain image.
+
+### Added
+
+- **Placeholders** in groups: `time.` (also `epoch`, `daymin`, `zone`), `date.` (also
+  `monthnum`, `yday`, `week`, `wdaynum`, `mdays`), `now.` (also `press`, `clouds`,
+  `code`, `age`, `err`), `day0.` to `day3.` (the forecast), `sun.` (`up`, `next`,
+  `until_rise`, `until_set`, `daylen`), `moon.` (`phase`, `lit`, `age`), `units.`,
+  `loc.city`, `theme.` (`color1` to `color3`, `night`), `msg.count`, `net.` (`ip`,
+  `host`, `ssid`, `rssi`, `mqtt`), `sys.` (`version`, `uptime`, `heap`, `lang`) and
+  `age.<variable>`. Sunrise and sunset follow the 12/24 h setting.
+- **Modifiers** (`{title:u}`, `{n:03}`, `{name:12}`, `{load:.1}`, `{delta:+}`),
+  **maps** that turn a value into a colour or a label (`{build:state}`), and
+  **expressions in text** (`"Build {{build}==fail?FAILED:OK}"`), with `rand(n)`.
+  Expressions compute in double precision, so Unix times subtract to the second.
+- **Palettes**: `"@name"` colours, and a palette chosen by an expression
+  (`"palette": "{sun.up}?day:night"`).
+- **Items**: `sprite` (pixel art, animated by frames), `spark` (a chart of a variable's
+  history), `repeat` (items per forecast day, agent message, or number), and `border`
+  and `bw` on rectangles and circles.
+- **Rotation**: `when` (a face joins the rotation only while a condition holds) and
+  `duration` (its own time on screen).
+- **Variable options**: `$ttl` (expire), `$persist` (kept across restarts), `$history`
+  (for `spark`), `$add` (counters); `null` deletes a variable.
+- **32 example faces** in `examples/faces/` (26 new: agent inbox, CI pipeline,
+  heartbeat watchdog, pomodoro, countdown, commit streak, KPI, homelab, battery, pixel
+  pet, Claude mascot, calendar, binary clock, retro watch, forecast strip, weather
+  poster, sun arc, daylight, moon phase, aquarium, night light, what to wear, sky
+  window, golden hour, block world, retro runner), with `samples.json` and a gallery
+  (`examples/faces/README.md`).
+- **The plugin (0.4.0)**: `reference/face.schema.json`, the JSON Schema of a face;
+  `clock.py check` validates faces and their placeholder names, and `push` checks
+  first; `clock.py vars` takes `--ttl`, `--persist`, `--history`, `--add`.
+  `scripts/gen_face_format.py` keeps the skill's face format in step with the
+  specification (checked in CI).
+- Weather: pressure and cloud cover.
+
+### Changed
+
+- **Up to 40 custom faces** on the clock (was 12), and up to 40 variables (was 24).
+
+### Fixed
+
+- A custom face item whose `show` condition uses a changing value (such as
+  `{at}-{time.epoch}>0`) no longer redraws the whole face every second (countdown
+  flickered); the face is redrawn only when the item appears or disappears.
+- An animated `sprite` with a `bg` no longer blinks when its frame changes: each pixel
+  is painted once, instead of clearing its box first.
+
+### Removed
+
+- The `esp12e_nomqtt` build and the plain first-install image from future releases.
+
 ## 1.4.0 - 2026-10-28
 
 The first AI Agent Monitor release: messages and custom faces for AI agents, the Big

@@ -394,9 +394,9 @@ void photo(const struct tm& t, bool force) {
 }
 
 // ---- Custom faces (integrations): a JSON list of items --------------------------
-// Items draw in order. Any string field may hold placeholders ({ss}, {temp}, pushed
+// Items draw in order. Any string field may hold placeholders ({time.sec}, {now.temp}, pushed
 // variables). Number and colour fields may also hold an expression, evaluated after
-// the placeholders: "120+60*sin({ss}*6)", "{state}==warn?#ff9f0a:#30d158".
+// the placeholders: "120+60*sin({time.sec}*6)", "{state}==warn?#ff9f0a:#30d158".
 // Only items whose placeholder-dependent content changed are redrawn: an opaque item
 // (text or icon with "bg", ring, bar) whose content changed is redrawn alone; a change
 // to anything else (position, size, visibility, a transparent item) redraws the face.
@@ -425,47 +425,191 @@ uint16_t hex565(const char* s, uint16_t fallback) {
   return ((n >> 8) & 0xF800) | ((n >> 5) & 0x07E0) | ((n >> 3) & 0x001F);
 }
 
-String messageValue(const String& key);
+String messageValueAt(int slot, const String& key);
 
-// {name} -> its current value: clock and weather fields, else a pushed variable.
+// The entry a repeat item is drawing, for {it.*}: of 'd' days, 'm' messages, 'n' numbers.
+struct Repeat { char of = 0; int index = 0, count = 0, slot = 0; } rep;
+
+String hex565Text(uint16_t c, int div = 1) {   // RGB565 -> "#rrggbb" (div 4: a quarter strength)
+  char b[8];
+  snprintf(b, sizeof(b), "#%02x%02x%02x", ((c >> 11) * 255 / 31) / div, (((c >> 5) & 63) * 255 / 63) / div, ((c & 31) * 255 / 31) / div);
+  return b;
+}
+
+// Minutes after midnight -> "7:21" (12 h) or "07:21" (24 h), as the clock is set.
+String clockText(int m) {
+  if (m < 0) return "--";
+  char b[8];
+  int h = (m / 60) % 24;
+  if (cfg.hour12) { h %= 12; if (!h) h = 12; }
+  snprintf(b, sizeof(b), cfg.hour12 ? "%d:%02d" : "%02d:%02d", h, m % 60);
+  return b;
+}
+
+// The index of s in a null-terminated list of names, or -1. Placeholder names are looked
+// up through these tables: a chain of comparisons costs more flash.
+int pick(const String& s, const char* const* names) {
+  for (int i = 0; names[i]; ++i) if (s == names[i]) return i;
+  return -1;
+}
+const char* const DAY_F[] = {"wday", "wday3", "low", "high", "feels", "rain", "wind", "hum", "rise", "set", "icon", nullptr};
+
+String numText(long v) { char b[12]; snprintf(b, sizeof(b), "%ld", v); return b; }
+int windSpeed(float ms) { return lroundf(cfg.mile ? ms * 2.237f : ms * 3.6f); }
+
+// One forecast day's field: {day1.high}, or {it.high} in a repeat over "days".
+String dayValue(int k, const String& f) {
+  if (!fc.valid || k < 0 || k >= fc.count) return "--";
+  const ForecastDay& d = fc.days[k];
+  switch (pick(f, DAY_F)) {
+    case 0: return dayLong(d.wday);
+    case 1: return dayShort(d.wday);
+    case 2: return numText(displayTemp(d.lo));
+    case 3: return numText(displayTemp(d.hi));
+    case 4: return numText(displayTemp(d.feels));
+    case 5: return numText(d.pop);
+    case 6: return numText(windSpeed(d.wind));
+    case 7: return numText(d.humidity);
+    case 8: return clockText(d.sunrise);
+    case 9: return clockText(d.sunset);
+    case 10: return d.icon;
+  }
+  return "";
+}
+
+// The moon's age in days since a new moon (2000-01-06 18:14 UTC), 0 to 29.53.
+float moonAge() {
+  float d = (time(nullptr) - 947182440L) / 86400.0f;
+  return d - 29.530589f * floorf(d / 29.530589f);
+}
+
+// ISO 8601 week number.
+int isoWeek(const struct tm& t) {
+  auto weeks = [](int y) {   // 52 or 53
+    auto p = [](int y) { return (y + y / 4 - y / 100 + y / 400) % 7; };
+    return 52 + (p(y) == 4 || p(y - 1) == 3);
+  };
+  int y = t.tm_year + 1900, w = (t.tm_yday - (t.tm_wday + 6) % 7 + 10) / 7;
+  if (w < 1) return weeks(y - 1);
+  return w > weeks(y) ? 1 : w;
+}
+
+const char* const GROUPS[] = {"time", "date", "now", "it", "sun", "moon", "units", "loc", "theme", "msg", "age", nullptr};
+const char* const TIME_F[] = {"hm", "hour", "min", "sec", "ms", "ampm", "epoch", "daymin", nullptr};
+const char* const DATE_F[] = {"text", "day", "wday", "wday3", "month", "month3", "monthnum", "year", "yday", "week", "wdaynum", "mdays", nullptr};
+const char* const NOW_F[] = {"text", "kind", "icon", "err", "temp", "feels", "hum", "wind", "press", "clouds", "code", "age", nullptr};
+const char* const SUN_F[] = {"up", "next", "rise", "set", "until_rise", "until_set", "daylen", nullptr};
+const char* const MOON_F[] = {"phase", "lit", "age", nullptr};
+
+// {group.name} -> its current value; a name without a dot is a pushed variable.
 String fieldValue(const String& key, const struct tm& t) {
   char b[24];
-  auto num = [&](int v) { snprintf(b, sizeof(b), "%d", v); return String(b); };
-  auto two = [&](int v) { snprintf(b, sizeof(b), "%02d", v); return String(b); };
-  if (key == "time") { smallTime(b, sizeof(b), t); return b; }
-  if (key == "hh") { snprintf(b, sizeof(b), cfg.hour12 ? "%d" : "%02d", clockHour(t)); return b; }
-  if (key == "mm") return two(t.tm_min);
-  if (key == "ss") return two(t.tm_sec);
-  if (key == "ms") return num(millis() % 1000);
-  if (key == "ampm") return ampm(t);
-  if (key == "day") return num(t.tm_mday);
-  if (key == "dow") return dayLong(t.tm_wday);
-  if (key == "dow3") return dayShort(t.tm_wday);
-  if (key == "month") return monthLong(t.tm_mon);
-  if (key == "mon3") return monthShort(t.tm_mon);
-  if (key == "year") return num(t.tm_year + 1900);
-  if (key == "date") { snprintf(b, sizeof(b), "%d %s", t.tm_mday, monthLong(t.tm_mon)); return b; }
-  if (key == "unit") return cfg.celsius ? "C" : "F";
-  if (key == "wunit") return cfg.mile ? "mph" : "km/h";
-  bool w = wx.valid;
-  if (key == "temp") return w ? num(displayTemp(wx.temp)) : "--";
-  if (key == "feels") return w ? num(displayTemp(wx.feels)) : "--";
-  if (key == "hi") return w ? num(displayTemp(wx.tempMax)) : "--";
-  if (key == "lo") return w ? num(displayTemp(wx.tempMin)) : "--";
-  if (key == "hum") return w ? num(wx.humidity) : "--";
-  if (key == "wind") return w ? num((int)lroundf(cfg.mile ? wx.wind * 2.237f : wx.wind * 3.6f)) : "--";
-  if (key == "desc") return wxDesc();
-  if (key == "main") return wxMain();
-  if (key == "city") return wx.cityName;
-  if (key == "icon") return wx.icon;
-  if (key == "sunrise" || key == "sunset") {
-    int m = key == "sunrise" ? wx.sunrise : wx.sunset;
-    if (m < 0) return "--";
-    snprintf(b, sizeof(b), "%02d:%02d", (m / 60) % 24, m % 60);
-    return b;
+  int dot = key.indexOf('.');
+  if (dot < 0) return faceVar(key);
+  String g = key.substring(0, dot), f = key.substring(dot + 1);
+  int mod = t.tm_hour * 60 + t.tm_min, k;
+  if (g.length() == 4 && g.startsWith("day") && isdigit((unsigned char)g[3])) return dayValue(g[3] - '0', f);
+  switch (pick(g, GROUPS)) {
+    case 0:   // time
+      switch (pick(f, TIME_F)) {
+        case 0: smallTime(b, sizeof(b), t); return b;
+        case 1: snprintf(b, sizeof(b), cfg.hour12 ? "%d" : "%02d", clockHour(t)); return b;
+        case 2: snprintf(b, sizeof(b), "%02d", t.tm_min); return b;
+        case 3: snprintf(b, sizeof(b), "%02d", t.tm_sec); return b;
+        case 4: return numText(millis() % 1000);
+        case 5: return ampm(t);
+        case 6: return numText(time(nullptr));
+        case 7: return numText(mod);
+      }
+      break;
+    case 1:   // date
+      switch (pick(f, DATE_F)) {
+        case 0: snprintf(b, sizeof(b), "%d %s", t.tm_mday, monthLong(t.tm_mon)); return b;
+        case 1: return numText(t.tm_mday);
+        case 2: return dayLong(t.tm_wday);
+        case 3: return dayShort(t.tm_wday);
+        case 4: return monthLong(t.tm_mon);
+        case 5: return monthShort(t.tm_mon);
+        case 6: return numText(t.tm_mon + 1);
+        case 7: return numText(t.tm_year + 1900);
+        case 8: return numText(t.tm_yday + 1);
+        case 9: return numText(isoWeek(t));
+        case 10: return numText(t.tm_wday ? t.tm_wday : 7);   // ISO: 1 Monday .. 7 Sunday
+        case 11: {   // days in the month
+          int m = t.tm_mon, y = t.tm_year + 1900;
+          return numText(m == 1 ? 28 + (y % 4 == 0 && (y % 100 || y % 400 == 0)) : 30 + ((m + (m > 6)) % 2 == 0));
+        }
+      }
+      break;
+    case 2:   // now: the current weather
+      k = pick(f, NOW_F);
+      if (k == 0) return wxDesc();
+      if (k == 1) return wxMain();
+      if (k == 2) return wx.icon;
+      if (k == 3) return wx.error;
+      if (k < 0) break;
+      if (!wx.valid) return "--";
+      switch (k) {
+        case 4: return numText(displayTemp(wx.temp));
+        case 5: return numText(displayTemp(wx.feels));
+        case 6: return numText(wx.humidity);
+        case 7: return numText(windSpeed(wx.wind));
+        case 8: return numText(wx.pressure);
+        case 9: return numText(wx.clouds);
+        case 10: return numText(wx.code);
+        case 11: return numText((millis() - wx.lastSuccess) / 60000);
+      }
+      break;
+    case 3:   // it: the repeat entry being drawn
+      if (f == "index") return numText(rep.index);
+      if (f == "count") return numText(rep.count);
+      if (rep.of == 'd') return dayValue(rep.slot, f);
+      if (rep.of == 'm') return messageValueAt(rep.slot, f);
+      break;
+    case 4: {   // sun
+      int rise = wx.sunrise, set = wx.sunset;
+      const ForecastDay* next = fc.valid && fc.count > 1 ? &fc.days[1] : nullptr;
+      int rise2 = next && next->sunrise >= 0 ? next->sunrise : rise, set2 = next && next->sunset >= 0 ? next->sunset : set;
+      bool up = rise >= 0 && set >= 0 ? mod >= rise && mod < set : t.tm_hour >= 6 && t.tm_hour < 18;
+      k = pick(f, SUN_F);
+      if (k == 0) return up ? "1" : "0";
+      if (k == 1) return up ? "set" : "rise";
+      if (k == 2) return clockText(rise);
+      if (k == 3) return clockText(set);
+      if (k < 0) break;
+      if (rise < 0 || set < 0) return "--";
+      if (k == 4) return numText(mod < rise ? rise - mod : rise2 + 1440 - mod);
+      if (k == 5) return numText(mod < set ? set - mod : set2 + 1440 - mod);
+      return numText(set - rise);
+    }
+    case 5: {   // moon
+      float a = moonAge();
+      k = pick(f, MOON_F);
+      if (k == 0) return numText((int)(a / 29.530589f * 8 + 0.5f) % 8);
+      if (k == 1) return numText(lroundf((1 - cosf(a / 29.530589f * 2 * PI)) * 50));
+      if (k == 2) return numText((int)a);
+      break;
+    }
+    case 6:   // units
+      if (f == "temp") return cfg.celsius ? "C" : "F";
+      if (f == "wind") return cfg.mile ? "mph" : "km/h";
+      break;
+    case 7:   // loc
+      if (f == "city") return wx.cityName;
+      break;
+    case 8:   // theme
+      if (f.startsWith("color") && f.length() == 6 && f[5] >= '1' && f[5] <= '3')
+        return hex565Text(f[5] == '1' ? cfg.color1 : f[5] == '2' ? cfg.color2 : cfg.color3);
+      break;
+    case 9:   // msg: the message on screen
+      if (f == "count") { int n = 0; for (int i = 0; i < MESSAGE_MAX; ++i) n += messageActive(i); return numText(n); }
+      return messageValueAt(messageShowing(), f);
+    case 10: {   // age: seconds since a variable was pushed
+      long a = faceVarAge(f);
+      return a < 0 ? "" : numText(a);
+    }
   }
-  if (key.startsWith("msg.")) return messageValue(key.substring(4));
-  return faceVar(key);
+  return deviceValue(key);
 }
 
 // ---- The Message face's icons: Lucide-style outlines on a 24x24 grid, in flash.
@@ -492,8 +636,7 @@ String pgmString(const char* p) {
 
 // A message field for the Message face's template: the icon's path and colours come
 // from the icon set, the rest from the message.
-String messageValue(const String& key) {
-  int slot = messageShowing();
+String messageValueAt(int slot, const String& key) {
   String icon = messageField(slot, "icon");
   const MessageIcon* def = &MESSAGE_ICON_SET[0];
   for (const MessageIcon& m : MESSAGE_ICON_SET) if (icon == m.name) def = &m;
@@ -501,27 +644,91 @@ String messageValue(const String& key) {
   if (color.isEmpty()) color = def->color;
   if (key == "icon") return pgmString(def->path);
   if (key == "color") return color;
-  if (key == "bg") {   // the colour at a quarter strength: a solid background in its hue
-    uint16_t c = hex565(color.c_str(), WHITE);
-    char b[8];
-    snprintf(b, sizeof(b), "#%02x%02x%02x", ((c >> 11) * 255 / 31) / 4, (((c >> 5) & 63) * 255 / 63) / 4, ((c & 31) * 255 / 31) / 4);
-    return b;
-  }
+  if (key == "bg") return hex565Text(hex565(color.c_str(), WHITE), 4);   // a solid background in its hue
   return messageField(slot, key);
 }
 
-// {name} is replaced by its value; {name|fallback} uses the fallback while the value
-// is empty (a variable not pushed yet, for instance after a restart).
+String resolve(const char* tpl, const struct tm& t);
+String evalStr(const String& s);
+float parseNum(const char*& s, bool* ok = nullptr);
+double parseNumD(const char*& s, bool* ok = nullptr);
+
+// {key:mod:mod}: u upper case, l lower case, + a sign on positive numbers, 0N zero-padded
+// to N, N cut to N characters, .N N decimals; any other word names a map in the face's
+// "maps" ({"state": {"ok": "All good", "*": "Unknown"}}).
+String floatText(double n);
+String applyMod(String v, const String& m) {
+  if (m == "u") { v.toUpperCase(); return v; }
+  if (m == "l") { v.toLowerCase(); return v; }
+  const char* s = v.c_str();
+  bool isNum;
+  double n = parseNumD(s, &isNum);
+  isNum = isNum && !*s;
+  if (m == "+") return isNum && n > 0 ? "+" + v : v;
+  if (m[0] == '.' && isNum) {
+    int d = std::min(3, std::max(0, (int)m.substring(1).toInt())), p = d == 3 ? 1000 : d == 2 ? 100 : d == 1 ? 10 : 1;
+    if (fabs(n) * p > 2e9) return v;
+    long q = (long)(fabs(n) * p + 0.5);
+    char b[20];
+    if (d) snprintf(b, sizeof(b), "%s%ld.%0*ld", n < 0 && q ? "-" : "", q / p, d, q % p);
+    else snprintf(b, sizeof(b), "%s%ld", n < 0 && q ? "-" : "", q);
+    return b;
+  }
+  if (isdigit((unsigned char)m[0])) {
+    unsigned width = std::min(64, (int)m.toInt());
+    if (m[0] != '0') return v.length() > width ? v.substring(0, width) : v;
+    bool neg = v[0] == '-';
+    String digits = neg ? v.substring(1) : v;
+    while (digits.length() + neg < width) digits = "0" + digits;
+    return neg ? "-" + digits : digits;
+  }
+  JsonVariantConst map = customDoc["maps"][m];
+  if (!map.is<JsonObjectConst>()) return v;
+  JsonVariantConst e = map[v];
+  if (e.isNull()) e = map["*"];
+  if (e.isNull()) return v;
+  return e.is<const char*>() ? String(e.as<const char*>()) : floatText(e.as<float>());
+}
+
+bool hasOperator(const String& s);
+
+// The inside of one {...}: a key (letters, digits, _ and .), with :modifiers and a
+// |fallback for an empty value; an expression (an operator, or {...} inside, resolved
+// first); anything else is left as it is, braces included.
+String placeholder(const String& in, const struct tm& t) {
+  unsigned k = 0;
+  while (k < in.length() && (isalnum((unsigned char)in[k]) || in[k] == '_' || in[k] == '.')) ++k;
+  if (k && (k == in.length() || in[k] == ':' || in[k] == '|')) {
+    int bar = in.indexOf('|', k);
+    String mods = in.substring(k, bar < 0 ? in.length() : bar), v = fieldValue(in.substring(0, k), t);
+    for (int a = 0; a >= 0 && a < (int)mods.length();) {
+      int next = mods.indexOf(':', a + 1);
+      v = applyMod(v, mods.substring(a + 1, next < 0 ? mods.length() : next));
+      a = next;
+    }
+    if (v.isEmpty() && bar >= 0) v = in.substring(bar + 1);
+    return v;
+  }
+  if (in.indexOf('{') < 0 && !hasOperator(in)) return "{" + in + "}";
+  return evalStr(resolve(in.c_str(), t));
+}
+
+// Every {...} in a string replaced by its value.
 String resolve(const char* tpl, const struct tm& t) {
   String out;
   for (const char* p = tpl; *p; ++p) {
-    const char* end = *p == '{' ? strchr(p, '}') : nullptr;
-    const char* bar = end ? (const char*)memchr(p, '|', end - p) : nullptr;
-    const char* keyEnd = bar ? bar : end;
-    if (!end || keyEnd - p > 16 || end - p > 96) { out += *p; continue; }
-    String value = fieldValue(String(p + 1).substring(0, keyEnd - p - 1), t);
-    if (value.isEmpty() && bar) value = String(bar + 1).substring(0, end - bar - 1);
-    out += value;
+    const char* end = nullptr;
+    if (*p == '{') {
+      int depth = 0;
+      for (const char* q = p; *q && q - p < 240; ++q) {
+        if (*q == '{') ++depth;
+        else if (*q == '}' && !--depth) { end = q; break; }
+      }
+    }
+    if (!end) { out += *p; continue; }
+    String inner;
+    inner.concat(p + 1, end - p - 1);
+    out += placeholder(inner, t);
     p = end;
   }
   return out;
@@ -532,15 +739,17 @@ String resolve(const char* tpl, const struct tm& t) {
 // it reads as its leading number. Errors give 0 / "". Values are slices of the
 // expression text, so evaluating allocates nothing.
 // Numbers are parsed here rather than with strtof/atof, which link ~9 KB of libc.
-float parseNum(const char*& s, bool* ok = nullptr) {
+// Expressions compute in double: a float cannot hold a Unix time to the second
+// ({until}-{time.epoch}); paths stay in float, which is faster.
+template <typename T> T parseNumT(const char*& s, bool* ok) {
   const char* p = s;
   while (*p == ' ') ++p;
   bool neg = *p == '-';
   if (*p == '-' || *p == '+') ++p;
-  float v = 0, f = 0.1f;
+  T v = 0, f = T(0.1);
   bool digits = false;
   while (isdigit((unsigned char)*p)) { v = v * 10 + (*p++ - '0'); digits = true; }
-  if (*p == '.') for (++p; isdigit((unsigned char)*p); f *= 0.1f) { v += (*p++ - '0') * f; digits = true; }
+  if (*p == '.') for (++p; isdigit((unsigned char)*p); f *= T(0.1)) { v += (*p++ - '0') * f; digits = true; }
   if (digits && (*p == 'e' || *p == 'E') && (isdigit((unsigned char)p[1]) || (strchr("+-", p[1]) && isdigit((unsigned char)p[2])))) {
     bool en = p[1] == '-';
     p += isdigit((unsigned char)p[1]) ? 1 : 2;
@@ -553,25 +762,37 @@ float parseNum(const char*& s, bool* ok = nullptr) {
   s = p;
   return neg ? -v : v;
 }
-float toNum(const char* s) { return parseNum(s); }
+float parseNum(const char*& s, bool* ok) { return parseNumT<float>(s, ok); }
+double parseNumD(const char*& s, bool* ok) { return parseNumT<double>(s, ok); }
+float toNum(const char* s) { return (float)parseNumD(s); }
 
-String numText(float n) {
-  char b[16];
-  long m = lroundf(n * 1000);
+// A number as text: up to 3 decimals; large ones (Unix times) whole, without printf's %f.
+String floatText(double n) {
+  char b[24];
+  if (fabs(n) >= 1e6 && fabs(n) < 9e15) {
+    long long m = (long long)(n + (n < 0 ? -0.5 : 0.5));
+    unsigned long long u = m < 0 ? -m : m;
+    char* e = b + sizeof(b);
+    *--e = 0;
+    do { *--e = '0' + u % 10; u /= 10; } while (u);
+    if (m < 0) *--e = '-';
+    return e;
+  }
+  long m = (long)floor(n * 1000 + 0.5);
   if (m % 1000 == 0) snprintf(b, sizeof(b), "%ld", m / 1000);
   else snprintf(b, sizeof(b), "%s%ld.%03ld", m < 0 ? "-" : "", labs(m) / 1000, labs(m) % 1000);
   return b;
 }
 
-struct Val { float n = 0; const char* s = nullptr; uint8_t len = 0; bool num = true; };
+struct Val { double n = 0; const char* s = nullptr; uint8_t len = 0; bool num = true; };
 
 bool sliceIs(const Val& v, const char* w) { return !v.num && strlen(w) == v.len && !strncmp(v.s, w, v.len); }
 bool truth(const Val& v) {
   if (v.num) return v.n != 0;
   return v.len && !sliceIs(v, "0") && !sliceIs(v, "false") && !sliceIs(v, "off");
 }
-float numOf(const Val& v) { const char* s = v.s; return v.num ? v.n : parseNum(s); }
-Val number(float n) { Val v; v.n = n; return v; }
+double numOf(const Val& v) { const char* s = v.s; return v.num ? v.n : parseNumD(s); }
+Val number(double n) { Val v; v.n = n; return v; }
 
 class Expr {
  public:
@@ -615,7 +836,7 @@ class Expr {
         bool same = !a.num && !b.num && a.len == b.len && !strncmp(a.s, b.s, a.len);
         return number(same == (i == 0));
       }
-      float x = numOf(a), y = numOf(b);
+      double x = numOf(a), y = numOf(b);
       bool r[] = {x == y, x != y, x <= y, x >= y, x < y, x > y};
       return number(r[i]);
     }
@@ -624,8 +845,8 @@ class Expr {
   Val add() {
     Val a = mul();
     for (;;) {
-      if (eat("+")) { float l = numOf(a); a = number(l + numOf(mul())); }
-      else if (eat("-")) { float l = numOf(a); a = number(l - numOf(mul())); }
+      if (eat("+")) { double l = numOf(a); a = number(l + numOf(mul())); }
+      else if (eat("-")) { double l = numOf(a); a = number(l - numOf(mul())); }
       else return a;
     }
   }
@@ -636,8 +857,8 @@ class Expr {
       char op = *p;
       if (op != '*' && op != '/' && op != '%') return a;
       ++p;
-      float l = numOf(a), r = numOf(unary());
-      a = number(op == '*' ? l * r : !r ? 0 : op == '/' ? l / r : l - r * (long)(l / r));
+      double l = numOf(a), r = numOf(unary());
+      a = number(op == '*' ? l * r : !r ? 0 : op == '/' ? l / r : l - r * (long long)(l / r));
     }
   }
   Val unary() {
@@ -657,19 +878,20 @@ class Expr {
     ws();
     if (*p == '(' && v.len) {   // a function call
       ++p;
-      float a = numOf(ternary()), b = eat(",") ? numOf(ternary()) : 0;
+      double a = numOf(ternary()), b = eat(",") ? numOf(ternary()) : 0;
       eat(")");
-      if (sliceIs(v, "sin")) return number(sinf(a * DEG_TO_RAD));
-      if (sliceIs(v, "cos")) return number(cosf(a * DEG_TO_RAD));
+      if (sliceIs(v, "sin")) return number(sinf((float)(a * DEG_TO_RAD)));
+      if (sliceIs(v, "cos")) return number(cosf((float)(a * DEG_TO_RAD)));
       if (sliceIs(v, "min")) return number(std::min(a, b));
       if (sliceIs(v, "max")) return number(std::max(a, b));
-      if (sliceIs(v, "abs")) return number(fabsf(a));
-      if (sliceIs(v, "round")) return number(lroundf(a));
+      if (sliceIs(v, "abs")) return number(fabs(a));
+      if (sliceIs(v, "round")) return number(floor(a + 0.5));
+      if (sliceIs(v, "rand")) return number(a >= 1 ? random((long)a) : 0);
       return number(0);
     }
     const char* s = start;
     bool ok;
-    float n = parseNum(s, &ok);
+    double n = parseNumD(s, &ok);
     if (ok && s == end) return number(n);   // the whole word is a number
     return v;
   }
@@ -679,11 +901,11 @@ bool hasOperator(const String& s) {
   for (unsigned i = 0; i < s.length(); ++i) if (strchr("+-*/%()?:<>=!&|", s[i]) && !(i == 0 && s[i] == '-')) return true;
   return false;
 }
-float evalNum(const String& s) { return hasOperator(s) ? numOf(Expr(s.c_str()).parse()) : toNum(s.c_str()); }
+float evalNum(const String& s) { return hasOperator(s) ? (float)numOf(Expr(s.c_str()).parse()) : toNum(s.c_str()); }
 String evalStr(const String& s) {
   if (!hasOperator(s)) return s;
   Val v = Expr(s.c_str()).parse();
-  if (v.num) return numText(v.n);
+  if (v.num) return floatText(v.n);
   String out;
   out.concat(v.s, v.len);
   return out;
@@ -698,8 +920,7 @@ __attribute__((noinline)) float num(JsonObjectConst o, const char* k, float d, c
 }
 int inum(JsonObjectConst o, const char* k, int d, const struct tm& t) { return (int)lroundf(num(o, k, d, t)); }
 
-__attribute__((noinline)) bool visible(JsonObjectConst it, const struct tm& t) {
-  JsonVariantConst v = it["show"];
+bool visibleField(JsonVariantConst v, const struct tm& t) {   // "show", "when": true when absent
   if (v.is<bool>()) return v.as<bool>();
   const char* s = v;
   if (!s) return true;
@@ -707,6 +928,7 @@ __attribute__((noinline)) bool visible(JsonObjectConst it, const struct tm& t) {
   if (hasOperator(r)) return truth(Expr(r.c_str()).parse());
   return r.length() && r != "0" && r != "false" && r != "off";
 }
+__attribute__((noinline)) bool visible(JsonObjectConst it, const struct tm& t) { return visibleField(it["show"], t); }
 
 // ---- Paint: a solid colour or a linear gradient ({"stops":[..],"angle":deg} or
 // {"from":..,"to":..}; angle as in CSS: 180 = top to bottom, 90 = left to right).
@@ -717,12 +939,27 @@ struct Paint {
   uint16_t first() const { return c[0]; }
 };
 
+// The face's palette: "palette" as an object, or a name (placeholders and an expression
+// allowed: "{sun.up}?day:night") from "palettes". renderItems() picks it once per pass.
+String paletteName;
+uint16_t colorOf(JsonVariantConst v, uint16_t fallback, const struct tm& t);
+uint16_t paletteColor(const char* name, uint16_t fallback, const struct tm& t) {
+  JsonVariantConst p = customDoc["palette"];
+  JsonVariantConst e = p[name];
+  if (!p.is<JsonObjectConst>()) e = customDoc["palettes"][paletteName][name];
+  const char* s = e;
+  if (s && *s == '@') return fallback;   // no palette entry points at another
+  return e.isNull() ? fallback : colorOf(e, fallback, t);
+}
+
 uint16_t colorOf(JsonVariantConst v, uint16_t fallback, const struct tm& t) {
   if (v.is<int>()) return (uint16_t)v.as<int>();   // already RGB565
   const char* s = v;
   if (!s) return fallback;
-  if (strchr(s, '{') || hasOperator(s)) return hex565(evalStr(resolve(s, t)).c_str(), fallback);
-  return hex565(s, fallback);
+  if (*s == '@' && !strchr(s, '{')) return paletteColor(s + 1, fallback, t);
+  if (!strchr(s, '{') && !hasOperator(s)) return hex565(s, fallback);
+  String r = evalStr(resolve(s, t));
+  return r[0] == '@' ? paletteColor(r.c_str() + 1, fallback, t) : hex565(r.c_str(), fallback);
 }
 
 // The gradient spans the box (x, y, w, h) the paint is used for.
@@ -1066,6 +1303,15 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
   }
 }
 
+int offX = 0, offY = 0;   // where the repeat entry being drawn starts
+
+uint8_t alignOf(JsonObjectConst it) {   // "align": tl tc tr ml mc mr bl bc br -> 0..8
+  static const char* const names[] = {"tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"};
+  const char* a = it["align"];
+  if (a) for (uint8_t i = 0; i < 9; ++i) if (!strcmp(a, names[i])) return i;
+  return 0;
+}
+
 // {"type":"path","d":"M..." or ["M...","M..."],"x","y","size" (or "w","h"),
 //  "vb":"0 0 24 24","align","rotate","fill","stroke","sw","rule":"evenodd"}
 void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
@@ -1074,12 +1320,8 @@ void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
 
   if (vb[2] <= 0 || vb[3] <= 0) return;
   float size = num(it, "size", 48, t), w = num(it, "w", size, t), h = num(it, "h", size, t);
-  float x = num(it, "x", 0, t), y = num(it, "y", 0, t);
-  uint8_t datum = 0;
-  if (const char* a = it["align"]) {
-    static const char* const names[] = {"tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"};
-    for (uint8_t i = 0; i < 9; ++i) if (!strcmp(a, names[i])) datum = i;
-  }
+  float x = num(it, "x", 0, t) + offX, y = num(it, "y", 0, t) + offY;
+  uint8_t datum = alignOf(it);
   x -= (datum % 3) * w / 2;
   y -= (datum / 3) * h / 2;
   Poly P;
@@ -1159,7 +1401,7 @@ void drawText(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, 
 bool itemOpaque(JsonObjectConst it) {
   const char* type = js(it, "type", "");
   if (!strcmp(type, "ring") || !strcmp(type, "bar")) return true;
-  return jhas(it, "bg") && (!strcmp(type, "text") || !strcmp(type, "icon"));
+  return jhas(it, "bg") && (!strcmp(type, "text") || !strcmp(type, "icon") || !strcmp(type, "sprite") || !strcmp(type, "spark"));
 }
 
 // FNV-1a over the resolved values of every placeholder-bearing string in an item.
@@ -1170,13 +1412,38 @@ void mixValues(JsonVariantConst v, const char* key, const struct tm& t, uint32_t
   if (v.is<JsonArrayConst>()) { for (JsonVariantConst e : v.as<JsonArrayConst>()) mixValues(e, key, t, content, geo); return; }
   const char* s = v;
   if (!s || !strchr(s, '{')) return;
-  static const char* const contentKeys[] = {"text", "value", "max", "icon", "color", "track", "fill", "stroke"};
+  static const char* const contentKeys[] = {"text", "value", "max", "icon", "color", "track", "fill", "stroke", "frame"};
   bool isContent = false;
   for (const char* k : contentKeys) if (!strcmp(key, k)) isContent = true;
   uint32_t& h = isContent ? content : geo;
-  String r = resolve(s, t);
+  // "show" counts by its outcome: "{at}-{time.epoch}>0" resolves to new text every second.
+  String r = strcmp(key, "show") ? resolve(s, t) : String(visibleField(v, t) ? "1" : "0");
   for (unsigned i = 0; i < r.length(); ++i) h = (h ^ (uint8_t)r[i]) * 16777619u;
   h = (h ^ '|') * 16777619u;
+}
+
+int repeatCount(JsonObjectConst it, const struct tm& t);
+void repeatAt(int i);
+
+// One item's two hashes. A repeat hashes every entry (any change redraws the face); a
+// spark hashes its variable's history.
+void mixItem(JsonObjectConst it, const struct tm& t, uint32_t& h, uint32_t& g) {
+  const char* type = js(it, "type", "");
+  for (JsonPairConst kv : it) if (strcmp(kv.key().c_str(), "items")) mixValues(kv.value(), kv.key().c_str(), t, h, g);
+  if (!strcmp(type, "spark")) {
+    uint32_t pushes = 0;
+    faceHistory(resolve(js(it, "var", ""), t), nullptr, 0, &pushes);
+    h = (h ^ pushes) * 16777619u;
+  }
+  if (strcmp(type, "repeat") || rep.of) return;
+  int n = repeatCount(it, t);
+  g = (g ^ n) * 16777619u;
+  for (int i = 0; i < n; ++i) {
+    repeatAt(i);
+    for (JsonObjectConst c : it["items"].as<JsonArrayConst>())
+      for (JsonPairConst kv : c) mixValues(kv.value(), kv.key().c_str(), t, g, g);
+  }
+  rep = Repeat();
 }
 
 void ring(int x, int y, int r, int w, int value, int max, uint16_t c, uint16_t track, uint16_t bg) {
@@ -1191,10 +1458,115 @@ void ring(int x, int y, int r, int w, int value, int max, uint16_t c, uint16_t t
   else { D().drawSmoothArc(x, y, r, ir, 180, 360, c, bg); D().drawSmoothArc(x, y, r, ir, 0, end - 360, c, bg); }
 }
 
+// {"type":"sprite","x","y","scale","align","palette":{"r":"#ff453a"},"rows":["..r.."]}:
+// pixel art, one character per pixel; characters not in the palette are transparent.
+// "frames": [[rows], [rows]] and "frame": an expression pick one for animation.
+void drawSprite(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t bg, bool opaque) {
+  JsonArrayConst rows = it["rows"];
+  if (it["frames"].is<JsonArrayConst>()) {
+    JsonArrayConst frames = it["frames"];
+    int n = frames.size();
+    if (!n) return;
+    int k = inum(it, "frame", 0, t) % n;
+    rows = frames[k < 0 ? k + n : k];
+  }
+  int s = std::max(1, std::min(16, inum(it, "scale", 1, t))), h = std::min<int>(rows.size(), 64), w = 0;
+  for (JsonVariantConst r : rows) w = std::max<int>(w, strlen(r | ""));
+  w = std::min(w, 64);
+  uint8_t datum = alignOf(it);
+  x -= (datum % 3) * w * s / 2;
+  y -= (datum / 3) * h * s / 2;
+  char keys[16];
+  uint16_t cols[16];
+  int nk = 0;
+  for (JsonPairConst kv : it["palette"].as<JsonObjectConst>()) {
+    const char* v = kv.value();
+    if (nk == 16 || !kv.key().c_str()[0] || (v && (!*v || !strcmp(v, "none")))) continue;
+    if (kv.value().isNull()) continue;
+    keys[nk] = kv.key().c_str()[0];
+    cols[nk++] = colorOf(kv.value(), WHITE, t);
+  }
+  // Opaque: transparent pixels are painted with bg in the same pass, so each pixel is
+  // written once (clearing the box first made a changing frame blink).
+  for (int r = 0; r < h; ++r) {
+    const char* row = rows[r] | "";
+    int len = std::min<int>(strlen(row), w);
+    for (int c = 0; c < (opaque ? w : len);) {
+      char ch = c < len ? row[c] : 0;
+      int k = 0;
+      while (k < nk && keys[k] != ch) ++k;
+      int run = 1;
+      while (c + run < w && (c + run < len ? row[c + run] : 0) == ch) ++run;
+      if (k < nk) D().fillRect(x + c * s, y + r * s, run * s, s, cols[k]);
+      else if (opaque) D().fillRect(x + c * s, y + r * s, run * s, s, bg);
+      c += run;
+    }
+  }
+}
+
+// {"type":"spark","x","y","w","h","var","min","max","color","fill","bg"}: the values
+// pushed to a variable with "$history", oldest on the left.
+void drawSpark(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t bg, bool opaque) {
+  int w = inum(it, "w", 100, t), h = std::max(2, inum(it, "h", 30, t));
+  float v[HISTORY_LEN];
+  int n = faceHistory(resolve(js(it, "var", ""), t), v, HISTORY_LEN, nullptr);
+  if (opaque) D().fillRect(x, y, w, h, bg);
+  if (n < 2) return;
+  float lo = v[0], hi = v[0];
+  for (int i = 1; i < n; ++i) { lo = std::min(lo, v[i]); hi = std::max(hi, v[i]); }
+  if (jhas(it, "min")) lo = num(it, "min", lo, t);
+  if (jhas(it, "max")) hi = num(it, "max", hi, t);
+  if (hi - lo < 1e-6f) { hi = lo + 1; lo -= 1; }
+  uint16_t c = colorOf(it["color"], WHITE, t);
+  bool fill = jhas(it, "fill");
+  uint16_t fc2 = colorOf(it["fill"], c, t);
+  float px = 0, py = 0;
+  for (int i = 0; i < n; ++i) {
+    // One pixel inside the box: the line's anti-aliased edge stays within what bg clears.
+    float cx = x + 1 + (float)i * (w - 3) / (n - 1);
+    float cy = y + 1 + (h - 3) * (1 - std::min(1.0f, std::max(0.0f, (v[i] - lo) / (hi - lo))));
+    if (fill && i) for (int col = (int)px + 1; col <= (int)cx; ++col) {
+      int top = (int)(py + (cy - py) * (col - px) / std::max(1.0f, cx - px));
+      D().drawFastVLine(col, top + 1, y + h - top - 1, fc2);
+    }
+    if (i) D().drawWedgeLine(px, py, cx, cy, 0.75f, 0.75f, c, bg);
+    px = cx; py = cy;
+  }
+}
+
+// {"type":"repeat","of":"days" | "msgs" | a number,"x","y","dx","dy","items":[...]}:
+// its items once per entry, offset by dx, dy each time; {it.*} reads the entry.
+int repeatCount(JsonObjectConst it, const struct tm& t) {
+  const char* of = it["of"];
+  int n = 0;
+  if (of && !strcmp(of, "days")) { rep.of = 'd'; n = fc.valid ? fc.count : 0; }
+  else if (of && !strcmp(of, "msgs")) { rep.of = 'm'; for (int i = 0; i < MESSAGE_MAX; ++i) n += messageActive(i); }
+  else { rep.of = 'n'; n = std::max(0, std::min(60, inum(it, "of", 0, t))); }
+  rep.count = n;
+  return n;
+}
+void repeatAt(int i) {
+  rep.index = rep.slot = i;
+  if (rep.of == 'm') for (int s = 0, k = 0; s < MESSAGE_MAX; ++s) if (messageActive(s) && k++ == i) rep.slot = s;
+}
+
+void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg);
+void drawRepeat(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t faceBg) {
+  if (rep.of) return;   // not inside another repeat
+  int n = repeatCount(it, t), dx = inum(it, "dx", 0, t), dy = inum(it, "dy", 0, t);
+  for (int i = 0; i < n; ++i) {
+    repeatAt(i);
+    offX = x + i * dx; offY = y + i * dy;
+    for (JsonObjectConst c : it["items"].as<JsonArrayConst>()) drawItem(c, t, faceBg);
+  }
+  offX = offY = 0;
+  rep = Repeat();
+}
+
 void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
   if (!visible(it, t)) return;
   const char* type = js(it, "type", "");
-  int x = inum(it, "x", 0, t), y = inum(it, "y", 0, t);
+  int x = inum(it, "x", 0, t) + offX, y = inum(it, "y", 0, t) + offY;
   uint16_t bg = colorOf(it["bg"], faceBg, t);
   if (!strcmp(type, "text")) {
     drawText(it, t, x, y, colorOf(it["color"], WHITE, t), bg);
@@ -1206,6 +1578,12 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
     else if (fill) paintRect(p, x, y, w, h, r);
     else if (r) D().drawRoundRect(x, y, w, h, r, p.first());
     else D().drawRect(x, y, w, h, p.first());
+    if (jhas(it, "border")) {
+      int bw = std::max(1, inum(it, "bw", 2, t));
+      uint16_t c = colorOf(it["border"], WHITE, t);
+      if (r > 0) D().drawSmoothRoundRect(x, y, std::max(r, bw), std::max(r, bw) - bw, w - 1, h - 1, c, faceBg);
+      else { D().fillRect(x, y, w, bw, c); D().fillRect(x, y + h - bw, w, bw, c); D().fillRect(x, y, bw, h, c); D().fillRect(x + w - bw, y, bw, h, c); }
+    }
   } else if (!strcmp(type, "circle")) {
     int r = inum(it, "r", 10, t);
     Paint p = paintOf(it["color"], WHITE, x - r, y - r, 2 * r, 2 * r, t);
@@ -1213,9 +1591,10 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
     if (!fill) D().drawSmoothCircle(x, y, r, p.first(), faceBg);
     else if (p.n == 1) D().fillSmoothCircle(x, y, r, p.first(), faceBg);
     else paintRect(p, x - r, y - r, 2 * r + 1, 2 * r + 1, r);
+    if (jhas(it, "border")) D().drawSmoothArc(x, y, r, std::max(0, r - std::max(1, inum(it, "bw", 2, t))), 0, 360, colorOf(it["border"], WHITE, t), faceBg);
   } else if (!strcmp(type, "line")) {
     float w = num(it, "w", 2, t) / 2.0f;
-    D().drawWedgeLine(x, y, num(it, "x2", x, t), num(it, "y2", y, t), w, w, colorOf(it["color"], WHITE, t), faceBg);
+    D().drawWedgeLine(x, y, num(it, "x2", x - offX, t) + offX, num(it, "y2", y - offY, t) + offY, w, w, colorOf(it["color"], WHITE, t), faceBg);
   } else if (!strcmp(type, "ring")) {
     ring(x, y, inum(it, "r", 50, t), inum(it, "w", 8, t), inum(it, "value", 0, t), inum(it, "max", 100, t),
          colorOf(it["color"], WHITE, t), colorOf(it["track"], PANEL_HI, t), faceBg);
@@ -1231,9 +1610,15 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
   } else if (!strcmp(type, "icon")) {
     int size = inum(it, "size", 48, t);
     if (jhas(it, "bg")) D().fillRect(x - size / 2 - 2, y - size / 2 - 2, size + 4, size + 4, bg);
-    weatherIcon(x, y, size, resolve(js(it, "icon", "{icon}"), t), bg, colorOf(it["color"], cfg.color1, t));
+    weatherIcon(x, y, size, resolve(js(it, "icon", "{now.icon}"), t), bg, colorOf(it["color"], cfg.color1, t));
   } else if (!strcmp(type, "image")) {
     drawJpeg(String("/photo/") + resolve(js(it, "src", ""), t), x, y);
+  } else if (!strcmp(type, "sprite")) {
+    drawSprite(it, t, x, y, bg, jhas(it, "bg"));
+  } else if (!strcmp(type, "spark")) {
+    drawSpark(it, t, x, y, bg, jhas(it, "bg"));
+  } else if (!strcmp(type, "repeat")) {
+    drawRepeat(it, t, x, y, faceBg);
   }
 }
 
@@ -1262,18 +1647,24 @@ void renderItems(const struct tm& t, bool force) {
   int fps = std::max(1, std::min(20, (int)(customDoc["fps"] | 4)));
   if (!force && millis() - customEvalAt < 1000u / fps) return;
   customEvalAt = millis();
+  static String drawnPalette;
+  const char* pal = customDoc["palette"];
+  paletteName = pal ? evalStr(resolve(pal, t)) : String();
+  bool full = force || paletteName != drawnPalette;
+  drawnPalette = paletteName;
   JsonVariantConst bgV = customDoc["bg"];
   Paint bgPaint = paintOf(bgV, BG, 0, 0, SCR_W, SCR_H, t);
   uint16_t bg = bgPaint.first();
   JsonArrayConst items = customDoc["items"];
   size_t n = std::min(items.size(), CUSTOM_ITEMS);
   uint32_t h[CUSTOM_ITEMS], g[CUSTOM_ITEMS];
-  bool full = force;
   for (size_t i = 0; i < n; ++i) {
     h[i] = g[i] = 2166136261u;
-    for (JsonPairConst kv : items[i].as<JsonObjectConst>()) mixValues(kv.value(), kv.key().c_str(), t, h[i], g[i]);
+    mixItem(items[i].as<JsonObjectConst>(), t, h[i], g[i]);
     if (g[i] != customGeo[i] || (h[i] != customHash[i] && !itemOpaque(items[i]))) full = true;
   }
+  static uint16_t drawnBg = 0;
+  if (bg != drawnBg) { full = true; drawnBg = bg; }
   if (full) {
     if (bgPaint.n > 1) for (int y = 0; y < SCR_H; ++y) span(bgPaint, 0, SCR_W - 1, y);
     else D().fillScreen(bg);
@@ -1285,6 +1676,22 @@ void renderItems(const struct tm& t, bool force) {
   }
 }
 
+// A custom face's turn in the rotation: "when" (in the rotation only while true) and
+// "duration" (seconds on screen; 0 keeps the rotation's). Reads just those two fields.
+bool faceTurn(const String& name, uint32_t* seconds) {
+  File file = LittleFS.open("/faces/" + name + ".json", "r");
+  if (!file) return false;
+  JsonDocument filter, doc;
+  filter["when"] = true; filter["duration"] = true;
+  bool ok = !deserializeJson(doc, file, DeserializationOption::Filter(filter));
+  file.close();
+  if (!ok) return true;
+  time_t now = time(nullptr);
+  struct tm t; localtime_r(&now, &t);
+  if (seconds) *seconds = std::max(0, std::min(3600, (int)lroundf(num(doc.as<JsonObjectConst>(), "duration", 0, t))));
+  return visibleField(doc["when"], t);
+}
+
 // ---- The Message face: the message messageShowing() points at, drawn from this
 // template by the custom-face renderer ({msg.*} placeholders, see messageValue).
 const char MESSAGE_FACE[] PROGMEM = R"({"bg":"{msg.bg}","items":[
@@ -1292,7 +1699,7 @@ const char MESSAGE_FACE[] PROGMEM = R"({"bg":"{msg.bg}","items":[
 {"type":"text","x":120,"y":108,"w":228,"lines":1,"text":"{msg.title}","font":4,"align":"tc","color":"{msg.color}"},
 {"type":"text","x":120,"y":142,"w":220,"lines":"{msg.pct}>=0?3:4","text":"{msg.text}","font":2,"align":"tc","color":"#f2f2f7"},
 {"type":"bar","x":40,"y":204,"w":160,"h":8,"value":"{msg.pct}","color":"{msg.color}","track":"#2c2c2e","show":"{msg.pct}>=0"},
-{"type":"text","x":120,"y":228,"text":"{time}","font":2,"align":"mc","color":"#8e8e93"}]})";
+{"type":"text","x":120,"y":228,"text":"{time.hm}","font":2,"align":"mc","color":"#8e8e93"}]})";
 const char* const MESSAGE_DOC = "\x01message";   // customName while customDoc holds the template
 
 void message(const struct tm& t, bool force) {
@@ -1695,6 +2102,8 @@ int photoCount() {
   }
   return photosCached;
 }
+
+bool customFaceDue(const String& name, uint32_t* seconds) { return faceTurn(name, seconds); }
 
 bool faceAvailable(int face) {
   switch (face) {

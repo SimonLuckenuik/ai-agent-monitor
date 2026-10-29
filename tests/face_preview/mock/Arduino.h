@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <ctime>
 
 #define PROGMEM
 #define PI 3.1415926535897932384626433832795
@@ -19,6 +20,10 @@ template <class T, class L, class H> T constrain(T x, L lo, H hi) { return x < l
 uint32_t millis();
 void delay(unsigned long ms);
 inline void yield() {}
+inline long random(long n) { return n > 0 ? rand() % n : 0; }
+#ifdef _WIN32
+inline struct tm* localtime_r(const time_t* t, struct tm* out) { return localtime_s(out, t) ? nullptr : out; }
+#endif
 
 class String {
   std::string s;
@@ -45,6 +50,7 @@ class String {
   void remove(unsigned i, unsigned n) { if (i < s.size()) s.erase(i, n); }
   bool concat(const char* c, unsigned n) { s.append(c, n); return true; }
   int lastIndexOf(char c) const { size_t i = s.rfind(c); return i == std::string::npos ? -1 : (int)i; }
+  int indexOf(char c, unsigned from = 0) const { size_t i = s.find(c, from); return i == std::string::npos ? -1 : (int)i; }
   String& operator+=(const String& o) { s += o.s; return *this; }
   String& operator+=(char c) { s += c; return *this; }
   bool operator==(const String& o) const { return s == o.s; }

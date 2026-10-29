@@ -28,6 +28,21 @@ String faceVar(const String& key) {
   return String();
 }
 bool photoEnabled(const String&) { return true; }
+long faceVarAge(const String&) { return 42; }
+static std::vector<float> history;   // pushed to "load" with "$history"
+int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {
+  if (key != "load") return 0;
+  if (pushes) *pushes = history.size();
+  int n = std::min<int>(history.size(), max);
+  for (int i = 0; i < n && out; ++i) out[i] = history[history.size() - n + i];
+  return n;
+}
+String deviceValue(const String& key) {
+  if (key == "net.ip") return String("192.168.1.50");
+  if (key == "net.host") return String("agentmonitor-1a2b3c");
+  if (key == "sys.version") return String("1.5.0");
+  return String();
+}
 // The agent message the Message face shows (integrations.cpp is not built here).
 static std::string msgTitle, msgText, msgIcon, msgColor;
 static int msgPct = -1;
@@ -179,12 +194,12 @@ int main(int argc, char** argv) {
     fputs(json, f); fclose(f); facesVer++;
   };
   writeFace("example", R"({"bg":"#000000","items":[
-    {"type":"text","x":120,"y":24,"text":"{dow} {day} {mon3}","font":2,"color":"#9aa0a6","align":"mc","bg":"#000000","pad":200},
-    {"type":"text","x":120,"y":78,"text":"{time}","font":6,"color":"#ffa826","align":"mc","bg":"#000000","pad":220},
-    {"type":"ring","x":60,"y":170,"r":44,"w":8,"value":"{hum}","max":100,"color":"#6ab7ff"},
-    {"type":"text","x":60,"y":170,"text":"{hum}%","font":4,"color":"#ffffff","align":"mc","bg":"#000000","pad":60},
-    {"type":"icon","x":180,"y":155,"size":56,"icon":"{icon}","bg":"#000000"},
-    {"type":"text","x":180,"y":205,"text":"{temp} {unit}","font":4,"color":"#4cd9a0","align":"mc","bg":"#000000","pad":90}]})");
+    {"type":"text","x":120,"y":24,"text":"{date.wday} {date.day} {date.month3}","font":2,"color":"#9aa0a6","align":"mc","bg":"#000000","pad":200},
+    {"type":"text","x":120,"y":78,"text":"{time.hm}","font":6,"color":"#ffa826","align":"mc","bg":"#000000","pad":220},
+    {"type":"ring","x":60,"y":170,"r":44,"w":8,"value":"{now.hum}","max":100,"color":"#6ab7ff"},
+    {"type":"text","x":60,"y":170,"text":"{now.hum}%","font":4,"color":"#ffffff","align":"mc","bg":"#000000","pad":60},
+    {"type":"icon","x":180,"y":155,"size":56,"icon":"{now.icon}","bg":"#000000"},
+    {"type":"text","x":180,"y":205,"text":"{now.temp} {units.temp}","font":4,"color":"#4cd9a0","align":"mc","bg":"#000000","pad":90}]})");
   writeFace("power", R"({"bg":"#101820","items":[
     {"type":"rect","x":10,"y":10,"w":220,"h":220,"r":18,"color":"#1c2733"},
     {"type":"text","x":120,"y":40,"text":"Solar now","font":4,"color":"#9aa0a6","align":"mc"},
@@ -192,27 +207,44 @@ int main(int argc, char** argv) {
     {"type":"text","x":120,"y":140,"text":"kW of {cap} kW","font":2,"color":"#9aa0a6","align":"mc","bg":"#1c2733","pad":200},
     {"type":"bar","x":30,"y":170,"w":180,"h":14,"value":"{pct}","max":100,"color":"#30d158","track":"#2c3a48"},
     {"type":"line","x":30,"y":200,"x2":210,"y2":200,"w":2,"color":"#2c3a48"},
-    {"type":"text","x":120,"y":215,"text":"{time}  {hh}:{mm}:{ss}","font":2,"color":"#ffffff","align":"mc","bg":"#1c2733","pad":200},
+    {"type":"text","x":120,"y":215,"text":"{time.hm}  {time.hour}:{time.min}:{time.sec}","font":2,"color":"#ffffff","align":"mc","bg":"#1c2733","pad":200},
     {"type":"circle","x":36,"y":40,"r":6,"color":"#30d158"}]})");
+  // Repeat, sprite (animated, opaque), spark, palette, maps, borders, braces expressions.
+  writeFace("features", R"J({"palette":"{sun.up}?day:night","palettes":{"day":{"bg":"#0b1d33","fg":"#ffffff","acc":"#ffd60a"},"night":{"bg":"#000000","fg":"#8e8e93","acc":"#5e5ce6"}},
+    "maps":{"st":{"ok":"#30d158","fail":"#ff453a","*":"#8e8e93"}},"bg":"@bg","items":[
+    {"type":"text","x":12,"y":10,"text":"{date.wday3:u} {time.hm}","font":4,"color":"@fg","bg":"@bg","pad":20},
+    {"type":"sprite","x":204,"y":24,"scale":3,"align":"mc","bg":"@bg","frame":"{time.sec}%2","palette":{"y":"@acc","o":"#ff9f0a"},
+     "frames":[["..yy..",".yyyy.","yyyyyy","yyyyyy",".yyyy.","..yy.."],["..oo..",".oyyo.","oyyyyo","oyyyyo",".oyyo.","..oo.."]]},
+    {"type":"repeat","of":"days","x":10,"y":52,"dx":56,"items":[
+      {"type":"rect","x":0,"y":0,"w":52,"h":70,"r":8,"color":"#1c2733","border":"{it.index}==0?@acc:#2c3a48","bw":2},
+      {"type":"text","x":26,"y":8,"text":"{it.wday3}","font":2,"align":"tc","color":"@fg"},
+      {"type":"text","x":26,"y":40,"text":"{it.high}","font":4,"align":"tc","color":"@acc"}]},
+    {"type":"spark","x":12,"y":140,"w":216,"h":40,"var":"load","color":"#64d2ff","fill":"#16324a","bg":"@bg"},
+    {"type":"circle","x":24,"y":210,"r":9,"color":"{state:st}","border":"#ffffff","bw":2},
+    {"type":"text","x":42,"y":210,"text":"Build {{state}==fail?FAILED:OK} ({age.state}s)","font":2,"align":"ml","color":"@fg","bg":"@bg","pad":40}]})J");
   cfg.facesApi = true;
-  previewVars = {{"solar", "3.4"}, {"cap", "6.6"}, {"pct", "52"}};
+  previewVars = {{"solar", "3.4"}, {"cap", "6.6"}, {"pct", "52"}, {"state", "ok"}};
+  history = {3, 5, 4, 8, 6, 9, 7, 11, 10, 12};
   setWeather("03d", "Clouds", "scattered clouds", 21.4f);
-  for (const char* name : {"example", "power"}) {
+  for (const char* name : {"example", "power", "features"}) {
     cfg.customFace = name;
     fresh(FACE_CUSTOM, at(21, 54, 26), std::string("custom_") + name);
     struct tm t = at(21, 58, 50);
     faceInvalidate(); faceDraw(FACE_CUSTOM, t, true);
     for (int s = 0; s < 150; ++s) {
       tick(t);
-      if (s == 30) previewVars = {{"solar", "4.1"}, {"cap", "6.6"}, {"pct", "62"}};
+      if (s == 30) { previewVars = {{"solar", "4.1"}, {"cap", "6.6"}, {"pct", "62"}, {"state", "fail"}}; history.push_back(4); }
       if (s == 40) setWeather("10d", "Rain", "light rain", 18.2f);
       faceDraw(FACE_CUSTOM, t, true);
     }
     std::vector<uint16_t> inc(clockDisplay().fb, clockDisplay().fb + TFT_eSPI::W * TFT_eSPI::H);
     faceInvalidate(); faceDraw(FACE_CUSTOM, t, true);
     int diff = 0;
-    for (int i = 0; i < TFT_eSPI::W * TFT_eSPI::H; ++i) diff += inc[i] != clockDisplay().fb[i];
-    printf("incremental custom:%-7s %5d pixels differ from a full redraw\n", name, diff);
+    int first = -1;
+    for (int i = 0; i < TFT_eSPI::W * TFT_eSPI::H; ++i) if (inc[i] != clockDisplay().fb[i] && !diff++) first = i;
+    printf("incremental custom:%-7s %5d pixels differ from a full redraw", name, diff);
+    if (diff) printf(" (first at %d,%d: %04x, full %04x)", first % TFT_eSPI::W, first / TFT_eSPI::W, inc[first], clockDisplay().fb[first]);
+    printf("\n");
     if (diff) failures++;
     setWeather("03d", "Clouds", "scattered clouds", 21.4f);
   }

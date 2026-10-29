@@ -140,7 +140,7 @@ static bool fetchOpenMeteo() {
   }
   String url = "http://api.open-meteo.com/v1/forecast?latitude=" + coord(cfg.lat) +
                "&longitude=" + coord(cfg.lon) +
-               "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day"
+               "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day,pressure_msl,cloud_cover"
                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
                "wind_speed_10m_max,relative_humidity_2m_mean"
                "&forecast_days=4&timezone=auto&wind_speed_unit=ms";
@@ -158,6 +158,8 @@ static bool fetchOpenMeteo() {
   wx.feels = cur["apparent_temperature"] | wx.temp;
   wx.humidity = cur["relative_humidity_2m"] | 0;
   wx.wind = cur["wind_speed_10m"] | 0.0f;
+  wx.pressure = lroundf(cur["pressure_msl"] | 0.0f);
+  wx.clouds = cur["cloud_cover"] | 0;
   JsonArray dates = daily["time"], codes = daily["weather_code"], his = daily["temperature_2m_max"],
             los = daily["temperature_2m_min"], pops = daily["precipitation_probability_max"],
             feels = daily["apparent_temperature_max"], winds = daily["wind_speed_10m_max"],

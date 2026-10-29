@@ -60,9 +60,13 @@ curl -X POST http://<clock>/api/message -d '{"id":"tooling","title":"tooling","t
 
 ## Custom faces
 
-A face is a JSON object with a background colour and up to 32 **items**, drawn in
-order on the 240×240 screen. Faces are stored on the clock (at most 12, 4 KB each)
-and join the face rotation after the built-in faces.
+A face is a JSON object: a background, up to 32 **items** drawn in order on the
+240×240 screen, and optional fields for palettes, maps and its turn in the rotation.
+Faces are stored on the clock (at most 40, 4 KB each) and join the face rotation after
+the built-in faces. Values that change (a status, a percentage, a title) are
+**variables**, pushed separately: a face is saved once and then updated with values
+only. A JSON Schema for faces, `face.schema.json`, comes with the Claude Code skill
+(`plugins/ai-agent-monitor/skills/ai-agent-monitor/reference/`).
 
 ### Authentication
 
@@ -78,108 +82,281 @@ Send the key as the header `X-Api-Key: <key>`, or as `?key=<key>`.
 | `GET /api/faces/get?name=<name>` | | The face's JSON |
 | `POST /api/faces/show?name=<name>` | | Shows the face now |
 | `POST /api/faces/delete?name=<name>` | | Deletes the face |
-| `POST /api/faces/vars` | `{"key":"value",...}` | Sets variables (merged with existing ones); values may be numbers |
+| `POST /api/faces/vars` | `{"name": value, ..., "$option": ...}` | Sets variables (merged with existing ones) |
 
-Names use 1–20 characters from `a-z 0-9 _ -`. Variables are kept in memory (up to
-24, keys up to 15 characters, values up to 160) and are lost on restart. Push them
-again on a timer or whenever they change.
+Face names use 1–20 characters from `a-z 0-9 _ -`.
 
 ```bash
 curl -X POST "http://<clock>/api/faces?name=power&show=1" -H "X-Api-Key: <key>" -H "Content-Type: application/json" -d @power.json
 ```
 
+### Variables
+
 ```bash
-curl -X POST "http://<clock>/api/faces/vars" -H "X-Api-Key: <key>" -d '{"solar":"4.1","pct":62}'
+curl -X POST "http://<clock>/api/faces/vars" -H "X-Api-Key: <key>" -d '{"solar": 4.1, "pct": 62}'
+```
+
+A variable name is 1–15 characters from `A-Z a-z 0-9 _` (no dots: dotted names are
+the clock's own, below). Values are text or numbers, up to 160 characters; `null`
+deletes a variable. Up to 40 variables exist at once. Options, for every variable in
+the same request:
+
+| Option | Does |
+|---|---|
+| `"$ttl": <seconds>` | The variables expire after that long, and read as empty again (`{status\|idle}` then shows `idle`). Use it for anything that goes stale when its sender stops |
+| `"$persist": true` | Kept across restarts (written to flash at most once a minute). Without it, variables live in RAM and are lost on restart |
+| `"$history": true` | Numeric values are also appended to the variable's history (the last 32 values; 4 variables at most), drawn by `spark` items |
+| `"$add": true` | Whole numbers are added to the current value instead of replacing it: a counter several agents can share |
+
+`{age.<name>}` is the number of seconds since `<name>` was last pushed (empty if it
+never was, or the clock has no time yet).
+
+```bash
+curl -X POST "http://<clock>/api/faces/vars" -H "X-Api-Key: <key>" -d '{"build": "running", "$ttl": 900}'
+curl -X POST "http://<clock>/api/faces/vars" -H "X-Api-Key: <key>" -d '{"load": 0.72, "$history": true}'
+curl -X POST "http://<clock>/api/faces/vars" -H "X-Api-Key: <key>" -d '{"done": 1, "$add": true, "$persist": true}'
 ```
 
 ### Face JSON
 
 ```json
 {
-  "bg": "#101820",
+  "bg": "@bg",
+  "palette": "{sun.up}?day:night",
+  "palettes": {
+    "day":   {"bg": "#0b1d33", "fg": "#ffffff", "accent": "#ffd60a"},
+    "night": {"bg": "#000000", "fg": "#8e8e93", "accent": "#5e5ce6"}
+  },
+  "maps": {"state": {"ok": "#30d158", "fail": "#ff453a", "*": "#8e8e93"}},
   "items": [
-    {"type": "rect",   "x": 10, "y": 10, "w": 220, "h": 220, "r": 18, "color": "#1c2733"},
-    {"type": "text",   "x": 120, "y": 40, "text": "Solar now", "font": 4, "color": "#9aa0a6", "align": "mc"},
-    {"type": "text",   "x": 120, "y": 100, "text": "{solar}", "font": 6, "color": "#ffd60a", "align": "mc", "bg": "#1c2733", "pad": 200},
-    {"type": "bar",    "x": 30, "y": 170, "w": 180, "h": 14, "value": "{pct}", "max": 100, "color": "#30d158", "track": "#2c3a48"},
-    {"type": "text",   "x": 120, "y": 215, "text": "{time}", "font": 2, "color": "#ffffff", "align": "mc", "bg": "#1c2733", "pad": 200}
+    {"type": "text", "x": 120, "y": 30, "text": "{time.hm}", "font": 4, "align": "mc", "color": "@fg", "bg": "@bg", "pad": 20},
+    {"type": "repeat", "of": "days", "x": 10, "y": 60, "dx": 56, "items": [
+      {"type": "rect", "x": 0, "y": 0, "w": 52, "h": 70, "r": 8, "color": "#1c2733", "border": "{it.index}==0?@accent:#2c3a48", "bw": 2},
+      {"type": "text", "x": 26, "y": 8, "text": "{it.wday3}", "font": 2, "align": "tc", "color": "@fg"},
+      {"type": "text", "x": 26, "y": 40, "text": "{it.high}", "font": 4, "align": "tc", "color": "@accent"}]},
+    {"type": "spark", "x": 12, "y": 150, "w": 216, "h": 40, "var": "load", "color": "#64d2ff", "fill": "#16324a", "bg": "@bg"},
+    {"type": "circle", "x": 24, "y": 212, "r": 9, "color": "{build:state}", "border": "#ffffff", "bw": 2},
+    {"type": "text", "x": 42, "y": 212, "text": "Build {{build}==fail?FAILED:OK}", "font": 2, "align": "ml", "color": "@fg", "bg": "@bg", "pad": 40}
   ]
 }
 ```
 
 Coordinates are pixels from the top left of the 240×240 screen. Colours are
-`"#rrggbb"`, `"#rgb"`, an RGB565 number or, where noted, a [gradient](#gradients).
+`"#rrggbb"`, `"#rgb"`, an RGB565 number, a [palette](#palettes) name such as `"@fg"`
+or, where noted, a [gradient](#gradients).
+
+**Face fields**
+
+| Field | Meaning (default) |
+|---|---|
+| `items` | The items, drawn in order (required; at most 32 at the top level) |
+| `bg` | Background colour or gradient (black) |
+| `fps` | How often the face is re-evaluated, 1 to 20 (4). Raise it only for animation |
+| `palette` | Named colours for `@name`: an object, or the name of one of `palettes` (placeholders and an expression allowed, e.g. `"{sun.up}?day:night"`) |
+| `palettes` | `{"<name>": {"<colour name>": "<colour>", ...}, ...}` |
+| `maps` | Lookup tables for the `:<map>` modifier: `{"<map>": {"<value>": "<result>", "*": "<otherwise>"}}` |
+| `when` | The face takes its turn in the rotation only while this is true (`"{build}==fail"`, `"{day0.rain}>60"`). Absent: always |
+| `duration` | Seconds on screen per turn (1–3600), instead of the rotation interval |
+| `show` | `true`: show the face when it is saved |
+
+**Items**
 
 | `type` | Fields (defaults) |
 |---|---|
 | `text` | `x`, `y`, `text`, `font` (4), `color`, `align` (`tl`), `bg` (none = transparent), `pad` (0); `w` wraps to that width, `lines` (8) and `lh` (2, extra line spacing) |
-| `rect` | `x`, `y`, `w`, `h`, `r` corner radius (0), `color` (or gradient), `fill` (true) |
-| `circle` | `x`, `y` (centre), `r` (10), `color` (or gradient), `fill` (true) |
+| `rect` | `x`, `y`, `w`, `h`, `r` corner radius (0), `color` (or gradient), `fill` (true), `border` (colour), `bw` border width (2) |
+| `circle` | `x`, `y` (centre), `r` (10), `color` (or gradient), `fill` (true), `border`, `bw` (2) |
 | `line` | `x`, `y`, `x2`, `y2`, `w` width (2), `color` |
 | `ring` | `x`, `y` (centre), `r` (50), `w` thickness (8), `value`, `max` (100), `color`, `track`: a progress ring from 12 o'clock |
 | `bar` | `x`, `y`, `w` (100), `h` (8), `value`, `max` (100), `color`, `track` |
 | `path` | SVG path data drawn into a box: see [Paths](#paths) |
-| `icon` | `x`, `y` (centre), `size` (48), `icon` (`"{icon}"`): a [Weather Icons](https://erikflowers.github.io/weather-icons/) name such as `"wi-day-rain"` (older codes such as `"10d"` still work), `color` (accent 1), `bg` |
+| `icon` | `x`, `y` (centre), `size` (48), `icon` (`"{now.icon}"`): a [Weather Icons](https://erikflowers.github.io/weather-icons/) name such as `"wi-day-rain"`, `color` (accent 1), `bg` |
 | `image` | `x`, `y`, `src`: a JPEG from the Photos card, by file name |
+| `sprite` | Pixel art: see [Sprites](#sprites) |
+| `spark` | A line chart of a variable's history: see [Sparklines](#sparklines) |
+| `repeat` | Its own `items`, once per entry: see [Repeat](#repeat) |
 
 Every item also takes `show`: `false`, or a condition such as `"{state}==warn"`. A
-hidden item is not drawn.
-
-Face-level fields: `bg` (colour or gradient), `items`, and `fps` (4): how often the
-face is re-evaluated, 1 to 20. Raise it only for animation.
+hidden item is not drawn: two items with opposite conditions (`"{sun.up}"` and
+`"!{sun.up}"`) swap a sun for a moon.
 
 - **Fonts.** `2` is small text (16 px). `4` is medium text (26 px). `6` (48 px) is
   large **digits only** (`0-9 : . -`). `8` (75 px digits) left the build to save
-  flash: it now draws as `6`. Fonts have no degree sign; write `"{temp} {unit}"`, or
-  draw a small circle. For larger digits, draw them as paths.
+  flash: it now draws as `6`. Text is ASCII (accents are dropped) and there is no
+  degree sign: write `"{now.temp} {units.temp}"`, or draw a small circle. For larger
+  digits, draw them as paths.
 - **`align`** sets which point of the item `x`,`y` refers to: `tl`, `tc`, `tr`, `ml`,
   `mc`, `mr`, `bl`, `bc`, `br` (top/middle/bottom, left/centre/right). For wrapped
   text it places the whole block.
 - **Smooth updates.** Only items whose placeholders resolve to something new are
-  redrawn. Text with a `bg` colour, rings, bars, and icons with a `bg` are redrawn on
-  their own when their content (text, value, colour) changes. `pad` (pixels) clears
-  the area around text whose width varies. Anything else that changes, including the
-  position, size or visibility of any item, redraws the whole face, which you will see
-  as a flicker. There is no RAM for a full-screen buffer.
+  redrawn. Text with a `bg` colour, rings, bars, and icons, sprites and sparklines
+  with a `bg` are redrawn on their own when their content (text, value, colour,
+  frame) changes. `pad` (pixels) clears the area around text whose width varies.
+  Anything else that changes, including the position, size or visibility of any
+  item, a repeat's entries, the palette or the face's `bg`, redraws the whole face,
+  which you will see as a flicker. There is no RAM for a full-screen buffer.
 
-### Placeholders and expressions
+### Placeholders
 
-`{name}` in any string field is replaced on the clock. That means `{time}` and the
-weather stay current without the face being sent again.
+`{name}` in any string field is replaced on the clock, so the time, the weather and
+variables stay current without the face being sent again. Names with a dot are the
+clock's own; a name without a dot is a [variable](#variables).
 
-| Placeholder | Example | | Placeholder | Example |
-|---|---|---|---|---|
-| `{time}` | `9:54` (12/24 h as set) | | `{temp}` `{feels}` | `21` (°C/°F as set) |
-| `{hh}` `{mm}` `{ss}` | `9` `54` `26` | | `{hi}` `{lo}` | `24` `15` |
-| `{ms}` | `0`–`999`, for animation | | `{unit}` | `C` or `F` |
-| `{ampm}` | `PM` (12 h only) | | `{hum}` | `64` |
-| `{dow}` `{dow3}` | `Monday` `MON` | | `{wind}` `{wunit}` | `15` `km/h` |
-| `{day}` `{month}` `{mon3}` `{year}` | `5` `October` `Oct` `2026` | | `{desc}` `{main}` | `light rain` `Rain` |
-| `{date}` | `5 October` | | `{city}` `{icon}` | `Sydney` `wi-day-rain` |
-| `{sunrise}` `{sunset}` | `05:41` `18:12` | | | |
+| Group | Placeholders (example) |
+|---|---|
+| `time.` | `hm` (`9:54`, 12/24 h as set), `hour` (`9`; `09` in 24 h), `min` (`05`), `sec` (`07`), `ms` (`0`–`999`, for animation), `ampm` (`PM`, 12 h only), `epoch` (Unix time), `daymin` (minutes since midnight, `0`–`1439`), `zone` (`EDT`) |
+| `date.` | `text` (`5 October`), `day` (`5`), `wday` (`Monday`), `wday3` (`MON`), `month` (`October`), `month3` (`Oct`), `monthnum` (`10`), `year` (`2026`), `yday` (`278`, day of the year), `week` (`41`, ISO week), `wdaynum` (`1` Monday to `7` Sunday), `mdays` (`31`, days in the month) |
+| `now.` | The current weather: `temp`, `feels` (`21`, °C/°F as set), `hum` (`64`, %), `wind` (`15`, km/h or mph as set), `press` (`1013`, hPa), `clouds` (`75`, %), `code` (`61`, WMO weather code), `icon` (`wi-day-rain`), `text` (`light rain`), `kind` (`Rain`), `age` (minutes since the last update), `err` (the last error, or empty) |
+| `day0.` to `day3.` | Today and the next three days: `wday`, `wday3`, `low`, `high`, `feels` (feels-like high), `rain` (chance, %), `wind` (highest), `hum` (mean), `rise`, `set` (sunrise, sunset), `icon` |
+| `sun.` | `up` (`1` between sunrise and sunset, else `0`), `next` (`rise` or `set`), `rise`, `set` (`7:21`), `until_rise`, `until_set` (minutes until the next one), `daylen` (minutes of daylight) |
+| `moon.` | `phase` (`0` new, `2` first quarter, `4` full, `6` last quarter; `0`–`7`), `lit` (% lit), `age` (days since the new moon) |
+| `units.` | `temp` (`C` or `F`), `wind` (`km/h` or `mph`) |
+| `loc.` | `city` (`Montreal`) |
+| `theme.` | `color1`, `color2`, `color3` (the user's accent colours, `#ffa826`), `night` (`1` during night hours) |
+| `msg.` | The agent message on screen (the Message face): `title`, `text`, `icon` (path data), `color`, `bg` (its colour at a quarter strength), `pct`, `ttl`, `id`; and `count` (active messages) |
+| `net.` | `ip`, `host` (`agentmonitor-1a2b3c`), `ssid`, `rssi` (dBm), `mqtt` (`1` when connected) |
+| `sys.` | `version`, `uptime` (seconds), `heap` (free bytes), `lang` (`en` or `fr`) |
+| `age.` | `age.<variable>`: seconds since it was pushed |
+| `it.` | Inside a [repeat](#repeat): the entry's fields, `index` and `count` |
 
-Any other name is a **variable** set with `/api/faces/vars`, or over MQTT. An unknown
-variable is empty; `{name|fallback}` shows the fallback instead, for example
-`{msg|Waiting for an agent}` until `msg` is pushed (variables are lost on restart).
-Weather placeholders show `--` until the first weather update.
+Weather placeholders show `--` until the first weather update (and for days the
+forecast does not have). Words follow the clock's language (English or French).
 
-**Number and colour fields** (`x`, `y`, `w`, `r`, `value`, `rotate`, `color`, …) may
-be a string that, after the placeholders, is an **expression**:
+**Modifiers** follow the name after `:`, and can be chained (`{date.wday:u:3}`):
+
+| Modifier | Does | Example |
+|---|---|---|
+| `u`, `l` | Upper, lower case | `{date.month:u}` → `OCTOBER` |
+| `+` | A sign on positive numbers | `{now.temp:+}` → `+21` |
+| `0N` | Zero-padded to N characters | `{n:03}` → `007` |
+| `N` | Cut to N characters | `{title:12}` |
+| `.N` | N decimals (0–3) | `{load:.1}` → `0.7` |
+| any other word | Looks the value up in that [map](#maps) | `{build:state}` |
+
+**Fallback.** `{name|text}` shows `text` while the value is empty: a variable not
+pushed yet, expired, or lost on restart (`{msg|Waiting for an agent}`).
+
+### Expressions
+
+**Number and colour fields** (`x`, `y`, `w`, `r`, `value`, `rotate`, `color`, `frame`,
+…) may be a string that, after the placeholders, is an **expression**. In **text**,
+an expression goes in braces, with its own placeholders inside:
+`"Build {{build}==fail?FAILED:OK}"`, `"{{done}*100/{total}}%"`. Braces around plain
+words with no operator are left as they are.
 
 | | |
 |---|---|
 | Arithmetic | `+ - * / %` and parentheses: `"120+{dx}*2"` |
 | Comparison | `== != < > <= >=`; `==`/`!=` compare words as text: `"{state}==warn"` |
 | Logic | `&& || !` and `condition ? a : b`: `"{pct}>80?#ff453a:#30d158"` |
-| Functions | `sin(deg)`, `cos(deg)`, `min(a,b)`, `max(a,b)`, `abs(a)`, `round(a)` |
+| Functions | `sin(deg)`, `cos(deg)`, `min(a,b)`, `max(a,b)`, `abs(a)`, `round(a)`, `rand(n)` (a whole number from 0 to n−1) |
 
 A word that is not a number (such as `warn` or `#ff9f0a`) is text. False is `0`, an
-empty value, `false` or `off`. Text fields only take placeholders, not expressions.
+empty value, `false` or `off`. A text result keeps its spaces (`"1?light rain:clear"`),
+but cannot contain operator characters such as `:` or `-`.
 
 ```json
-{"type": "circle", "x": "120+90*sin({ss}*6)", "y": "120-90*cos({ss}*6)", "r": 8,
- "color": "{ss}%2==0?#ffd60a:#ff9f0a"}
+{"type": "circle", "x": "120+90*sin({time.sec}*6)", "y": "120-90*cos({time.sec}*6)", "r": 8,
+ "color": "{time.sec}%2==0?#ffd60a:#ff9f0a"}
 ```
+
+### Maps
+
+`maps` turns a value into another one: a colour, a label, a number. `"*"` is the
+answer for any other value; without it, the value is kept.
+
+```json
+"maps": {
+  "state": {"ok": "#30d158", "warn": "#ff9f0a", "fail": "#ff453a", "*": "#8e8e93"},
+  "label": {"ok": "All good", "warn": "Look soon", "fail": "Broken", "*": "Unknown"}
+},
+"items": [
+  {"type": "circle", "x": 30, "y": 30, "r": 10, "color": "{build:state}"},
+  {"type": "text", "x": 50, "y": 30, "text": "{build:label}", "font": 2, "align": "ml"}
+]
+```
+
+### Palettes
+
+`"@name"` is a colour from the face's palette, anywhere a colour goes (also inside an
+expression: `"{pct}>80?@alert:@fg"`). `palette` is either the colours themselves, or
+the name of one of `palettes`, chosen by an expression: a whole face changes colour at
+once, for day and night, or for a state.
+
+```json
+"palette": "{build}==fail?alarm:calm",
+"palettes": {
+  "calm":  {"bg": "#0b1d33", "fg": "#ffffff", "accent": "#64d2ff"},
+  "alarm": {"bg": "#3a0000", "fg": "#ffffff", "accent": "#ff453a"}
+}
+```
+
+A palette entry may use placeholders (`"accent": "{theme.color1}"`) but not another
+`@name`. A colour missing from the palette falls back to the field's default.
+
+### Repeat
+
+`repeat` draws its own `items` once per entry, moving them by `dx`, `dy` each time.
+The items' coordinates are relative to the repeat's `x`, `y`.
+
+| `of` | Entries | `{it.*}` |
+|---|---|---|
+| `"days"` | The forecast days, today first (up to 4) | as `day0.*`: `wday`, `wday3`, `low`, `high`, `feels`, `rain`, `wind`, `hum`, `rise`, `set`, `icon` |
+| `"msgs"` | The active agent messages (up to 4) | as `msg.*`: `title`, `text`, `icon`, `color`, `bg`, `pct`, `ttl`, `id` |
+| a number, or an expression | That many (0–60) | only `index` and `count` |
+
+`{it.index}` counts from 0 and `{it.count}` is the number of entries. A repeat cannot
+contain another repeat. A change in the entries redraws the whole face.
+
+```json
+{"type": "repeat", "of": 12, "items": [
+  {"type": "line", "x": "120+100*sin({it.index}*30)", "y": "120-100*cos({it.index}*30)",
+   "x2": "120+88*sin({it.index}*30)", "y2": "120-88*cos({it.index}*30)", "w": 3, "color": "#8e8e93"}]}
+```
+
+### Sprites
+
+`sprite` draws pixel art: one character per pixel, each scaled to a square of `scale`
+pixels. Characters not in `palette` (`.` or a space, say) are transparent.
+
+| Field | Meaning (default) |
+|---|---|
+| `rows` | The rows, top to bottom (at most 64 × 64) |
+| `palette` | `{"<character>": "<colour>"}`, up to 16 (colours as anywhere, `@name` included) |
+| `frames`, `frame` | Instead of `rows`: a list of frames (each a list of rows), and an expression choosing one (`"{time.sec}%2"`), for animation |
+| `x`, `y`, `align` | Where it goes (`tl`) |
+| `scale` | Pixels per character, 1–16 (1) |
+| `bg` | Clears its box first, so a changing frame redraws alone instead of the whole face |
+
+```json
+{"type": "sprite", "x": 120, "y": 120, "align": "mc", "scale": 8, "bg": "#000000",
+ "palette": {"r": "#ff453a", "w": "#ffffff"}, "frame": "{time.sec}%2",
+ "frames": [[".rr.rr.", "rrrrrrr", "rrwrrrr", ".rrrrr.", "..rrr..", "...r..."],
+            ["......", ".r..r.", ".rrrr.", "..rr..", "......", "......"]]}
+```
+
+### Sparklines
+
+`spark` draws the values pushed to a variable with `"$history": true`, oldest on the
+left.
+
+| Field | Meaning (default) |
+|---|---|
+| `var` | The variable's name |
+| `x`, `y`, `w`, `h` | The box (100 × 30) |
+| `min`, `max` | The vertical range (the values' own) |
+| `color` | The line (white) |
+| `fill` | A colour under the line (none) |
+| `bg` | Clears the box first, so new values redraw it alone |
+
+### Rotation: `when` and `duration`
+
+Custom faces take turns in the rotation after the built-in faces. A face with `when`
+is skipped while its condition is false, so it appears only when it has something to
+say: `"when": "{build}==fail"`, `"when": "{day0.rain}>=60"`, or
+`"when": "{age.heartbeat}>600"` (a sender that went quiet). `duration` sets its own
+time on screen. Showing a face explicitly (`/api/faces/show`, `"show": true`) ignores
+`when`.
 
 ### Paths
 
@@ -281,7 +458,7 @@ With **Custom faces** also on, the clock subscribes to:
 
 - `<base>/custom/<name>`: a face JSON (an empty payload deletes it), as for `POST /api/faces`.
   MQTT payloads are limited to about 1.5 KB.
-- `<base>/vars`: `{"key":"value",...}`, as for `POST /api/faces/vars`.
+- `<base>/vars`: `{"name": value, ...}` with the same `$` options, as for `POST /api/faces/vars`.
 
 A Home Assistant automation can then push values, for example every time a sensor
 changes:

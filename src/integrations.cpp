@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #ifndef SMARTCLOCK_MQTT
-#define SMARTCLOCK_MQTT 1   // 0: no MQTT (esp12e_nomqtt, the plain stepping-stone image)
+#define SMARTCLOCK_MQTT 1   // 0: a build without MQTT
 #endif
 #if SMARTCLOCK_MQTT
 #include <PubSubClient.h>
@@ -16,7 +16,7 @@
 // ---- From main.cpp
 extern ESP8266WebServer server;
 extern bool storageReady, recoveryMode, brightnessDirty, backlightOff;
-extern uint32_t faceSince;
+extern uint32_t faceSince, faceTurnSec;
 bool requestAuthorized();
 bool requireAuth();
 bool sameSecret(const String& a, const String& b);
@@ -64,20 +64,119 @@ String faceName(const String& raw) {   // [a-z0-9_-], 1..20 chars, or ""
 
 String facePath(const String& name) { return "/faces/" + name + ".json"; }
 
-struct Var { String key, value; };
-constexpr int VARS_MAX = 24;
+// Variables pushed for custom faces ({name}). Kept in RAM; "$persist" ones are also
+// written to /vars.json (at most once a minute, to spare the flash) and read at boot.
+struct Var { String key, value; uint32_t at = 0, until = 0; bool keep = false; };   // at, until: Unix time
+constexpr int VARS_MAX = 40;
 constexpr unsigned VAR_VALUE_MAX = 160;   // a short message; strings hold only their length
 Var vars[VARS_MAX];
+bool varsDirty = false, varsLoaded = false;
+uint32_t varsSavedAt = 0;
 
-void setVar(const String& key, const String& rawValue) {
-  if (key.isEmpty() || key.length() > 15) return;
-  String value = asciiFold(rawValue);
-  int freeSlot = -1;
-  for (int i = 0; i < VARS_MAX; ++i) {
-    if (vars[i].key == key) { vars[i].value = value.substring(0, VAR_VALUE_MAX); return; }
-    if (freeSlot < 0 && vars[i].key.isEmpty()) freeSlot = i;
+// "$history": the last HISTORY_LEN numbers pushed to a few variables, for spark items.
+struct History { String key; float v[HISTORY_LEN]; uint8_t n = 0, head = 0; uint32_t pushes = 0; };
+constexpr int HISTORIES = 4;
+History histories[HISTORIES];
+
+uint32_t epochNow() { time_t t = time(nullptr); return t > 1600000000 ? (uint32_t)t : 0; }
+
+bool varName(const String& key) {   // 1-15 of A-Z a-z 0-9 _
+  if (key.isEmpty() || key.length() > 15) return false;
+  for (unsigned i = 0; i < key.length(); ++i) if (!isalnum((unsigned char)key[i]) && key[i] != '_') return false;
+  return true;
+}
+
+Var* findVar(const String& key) {
+  for (Var& v : vars) {
+    if (v.key != key) continue;
+    if (v.until && epochNow() >= v.until) { if (v.keep) varsDirty = true; v = Var(); return nullptr; }   // expired
+    return &v;
   }
-  if (freeSlot >= 0) { vars[freeSlot].key = key; vars[freeSlot].value = value.substring(0, VAR_VALUE_MAX); }
+  return nullptr;
+}
+
+struct VarOptions { uint32_t ttl = 0; bool keep = false, history = false, add = false; };
+
+void addHistory(const String& key, float value) {
+  History* h = nullptr;
+  for (History& e : histories) if (e.key == key) h = &e;
+  if (!h) {   // a free one, or the one pushed to longest ago
+    for (History& e : histories) if (!h || e.key.isEmpty() || (h->key.length() && e.pushes < h->pushes)) h = &e;
+    *h = History();
+    h->key = key;
+  }
+  h->v[h->head] = value;
+  h->head = (h->head + 1) % HISTORY_LEN;
+  if (h->n < HISTORY_LEN) h->n++;
+  h->pushes++;
+}
+
+void setVar(const String& key, JsonVariant raw, const VarOptions& o) {
+  if (!varName(key)) return;
+  String value = asciiFold(raw.as<String>()).substring(0, VAR_VALUE_MAX);
+  Var* v = findVar(key);
+  if (!v) for (Var& e : vars) if (e.key.isEmpty()) { v = &e; break; }
+  if (!v) return;
+  if (o.add && v->key.length()) value = String(v->value.toInt() + value.toInt());
+  if (raw.isNull()) { if (v->keep) varsDirty = true; *v = Var(); return; }   // null deletes
+  v->key = key; v->value = value;
+  v->at = epochNow();
+  v->until = o.ttl && v->at ? v->at + o.ttl : 0;
+  if (o.keep || v->keep) varsDirty = true;
+  v->keep = o.keep;
+  if (o.history && (raw.is<float>() || o.add)) addHistory(key, o.add ? value.toInt() : raw.as<float>());
+}
+
+// {"name": value, ...} with options "$ttl" (seconds), "$persist", "$history", "$add".
+// Returns "" or the first bad name.
+String applyVars(JsonObject d) {
+  VarOptions o;
+  o.ttl = d["$ttl"] | 0;
+  o.keep = d["$persist"] | false;
+  o.history = d["$history"] | false;
+  o.add = d["$add"] | false;
+  String bad;
+  for (JsonPair kv : d) {
+    String key = kv.key().c_str();
+    if (key[0] == '$') continue;
+    if (!varName(key)) { if (bad.isEmpty()) bad = key; continue; }
+    setVar(key, kv.value(), o);
+  }
+  return bad;
+}
+
+void saveVars() {
+  if (!storageReady || recoveryMode) return;
+  JsonDocument doc;
+  for (Var& v : vars) {
+    if (!v.keep || v.key.isEmpty()) continue;
+    JsonObject o = doc[v.key].to<JsonObject>();
+    o["v"] = v.value; o["at"] = v.at;
+    if (v.until) o["until"] = v.until;
+  }
+  File file = LittleFS.open("/vars.json", "w");
+  if (file) { serializeJson(doc, file); file.close(); }
+  varsDirty = false;
+  varsSavedAt = millis();
+}
+
+void loadVars() {
+  File file = storageReady ? LittleFS.open("/vars.json", "r") : File();
+  if (!file) return;
+  JsonDocument doc;
+  bool ok = !deserializeJson(doc, file);
+  file.close();
+  if (!ok) return;
+  for (JsonPair kv : doc.as<JsonObject>()) {
+    String key = kv.key().c_str();
+    if (findVar(key)) continue;   // pushed since the boot: newer
+    Var* slot = nullptr;
+    for (Var& e : vars) if (!slot && e.key.isEmpty()) slot = &e;
+    if (!slot) break;
+    Var& v = *slot;
+    v.key = key; v.value = kv.value()["v"] | "";
+    v.at = kv.value()["at"] | 0; v.until = kv.value()["until"] | 0; v.keep = true;
+  }
 }
 
 // ---------------------------------------------------------------- agent messages
@@ -165,6 +264,7 @@ void handleMessage() {   // POST: store; GET: list; DELETE ?id=: clear (all with
 void showFace(const String& name) {
   cfg.theme = FACE_CUSTOM; cfg.customFace = name;
   faceSince = millis();
+  faceTurnSec = 0;
   faceInvalidate();
 }
 
@@ -182,7 +282,7 @@ String storeFace(const String& name, const String& body) {
   if (deserializeJson(doc, body) || !doc["items"].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
   if (doc["items"].size() > 32) return F("At most 32 items");
   if (!LittleFS.exists("/faces")) LittleFS.mkdir("/faces");
-  if (!LittleFS.exists(facePath(name)) && customFaceCount() >= 12) return F("At most 12 custom faces");
+  if (!LittleFS.exists(facePath(name)) && customFaceCount() >= FACES_MAX) return F("At most 40 custom faces");
   File f = LittleFS.open(facePath(name), "w");
   if (!f) return F("Could not save the face");
   bool ok = f.print(body) == body.length();
@@ -224,7 +324,7 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
   for (int i = 0, n = customFaceCount(); i < n; ++i) list.add(customFaceAt(i));
   if (cfg.theme == FACE_CUSTOM) doc["showing"] = cfg.customFace;
   JsonObject v = doc["vars"].to<JsonObject>();
-  for (const Var& var : vars) if (var.key.length()) v[var.key] = var.value;
+  for (const Var& var : vars) if (var.key.length() && findVar(var.key)) v[var.key] = var.value;
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
 }
@@ -256,14 +356,15 @@ void handleFaceShow() {
   server.send(200, "text/plain", "OK");
 }
 
-void handleFaceVars() {   // POST {"key":"value",...}: merged; values may be numbers
+void handleFaceVars() {   // POST {"name":value,...,"$ttl":s,...}: merged; null deletes
   if (!facesAllowed()) return;
   JsonDocument doc;
   if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
     server.send(400, "text/plain", "Expected a JSON object");
     return;
   }
-  for (JsonPair kv : doc.as<JsonObject>()) setVar(kv.key().c_str(), kv.value().as<String>());
+  String bad = applyVars(doc.as<JsonObject>());
+  if (bad.length()) { server.send(400, "text/plain", "Bad variable name \"" + bad + "\": 1-15 of A-Z a-z 0-9 _"); return; }
   server.send(200, "text/plain", "OK");
 }
 
@@ -434,8 +535,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     if (name.length()) storeFace(name, body);
   } else if (cfg.facesApi && topic == b + "/vars") {
     JsonDocument d;
-    if (!deserializeJson(d, body) && d.is<JsonObject>())
-      for (JsonPair kv : d.as<JsonObject>()) setVar(kv.key().c_str(), kv.value().as<String>());
+    if (!deserializeJson(d, body) && d.is<JsonObject>()) applyVars(d.as<JsonObject>());
   }
   publishState();
 }
@@ -471,8 +571,25 @@ bool customFaceExists(const String& name) {
 }
 
 String faceVar(const String& key) {
-  for (const Var& v : vars) if (v.key == key) return v.value;
-  return "";
+  const Var* v = findVar(key);
+  return v ? v->value : String();
+}
+
+long faceVarAge(const String& key) {
+  const Var* v = findVar(key);
+  uint32_t now = epochNow();
+  return v && v->at && now ? (long)(now - v->at) : -1;
+}
+
+int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {
+  for (const History& h : histories) {
+    if (h.key != key || key.isEmpty()) continue;
+    if (pushes) *pushes = h.pushes;
+    int n = std::min<int>(h.n, max);
+    for (int i = 0; i < n; ++i) out[i] = h.v[(h.head + HISTORY_LEN - n + i) % HISTORY_LEN];
+    return n;
+  }
+  return 0;
 }
 
 bool photoEnabled(const String& name) { return cfg.photoOff.indexOf(photoKey(name)) < 0; }
@@ -532,6 +649,8 @@ void integrationsRoutes() {
 }
 
 void integrationsLoop() {
+  if (!varsLoaded && storageReady && !recoveryMode) { varsLoaded = true; loadVars(); }   // storage mounts after the routes
+  if (varsDirty && (!varsSavedAt || millis() - varsSavedAt > 60000)) saveVars();   // at most once a minute
 #if SMARTCLOCK_MQTT
   if (mqttReconnect || !cfg.mqttOn || WiFi.status() != WL_CONNECTED) {
     if (mqtt.connected()) { mqtt.publish((base() + "/status").c_str(), "offline", true); mqtt.disconnect(); }

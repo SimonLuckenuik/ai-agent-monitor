@@ -16,11 +16,17 @@ void integrationsSettingsChanged(); // MQTT settings may have changed: reconnect
 
 // Custom faces, for faces.cpp and the rotation.
 constexpr size_t FACE_JSON_MAX = 4096;
+constexpr int FACES_MAX = 40;          // custom faces saved on the clock
 uint32_t customFacesVersion();      // bumped whenever a face is saved or deleted
 int customFaceCount();
 String customFaceAt(int index);     // "" when out of range
 bool customFaceExists(const String& name);
 String faceVar(const String& key);  // a variable pushed with /api/faces/vars, or ""
+long faceVarAge(const String& key); // seconds since it was pushed, or -1
+constexpr int HISTORY_LEN = 32;     // values kept per "$history" variable
+// Copies up to max of its last values, oldest first; returns how many. pushes (if not
+// null) counts every value ever pushed to it, so a change is visible.
+int faceHistory(const String& key, float* out, int max, uint32_t* pushes);
 
 // Agent messages (POST /api/message, MQTT <base>/message): kept in RAM until their
 // ttl runs out, each one a turn of its own in the face rotation (FACE_MESSAGE).

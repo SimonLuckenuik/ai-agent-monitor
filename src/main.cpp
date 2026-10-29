@@ -31,7 +31,7 @@
 #include "integrations.h"
 
 
-#define FW_VERSION "1.4.0"   // see CHANGELOG.md
+#define FW_VERSION "1.5.0-dev"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -253,6 +253,7 @@ void centerText(const String& s, int y, uint8_t font, uint16_t color) {
 
 // ---------------------------- Faces and weather schedule --------------------
 uint32_t faceSince = 0;   // when the current face was chosen (rotation timer)
+uint32_t faceTurnSec = 0; // a custom face's own "duration" while it shows; 0: themeInterval
 bool nightNow = false;    // inside the night hours, as of the last minute
 bool nightTile() { return nightNow && cfg.nightFace >= 0 && cfg.nightFace < FACE_COUNT; }
 
@@ -260,6 +261,7 @@ bool nightTile() { return nightNow && cfg.nightFace >= 0 && cfg.nightFace < FACE
 // and with something to show), then custom faces by name when that integration is on,
 // then each active agent message, one turn each.
 void advanceFace(bool rotation) {
+  faceTurnSec = 0;
   int customs = cfg.facesApi ? customFaceCount() : 0, n = FACE_COUNT + customs + MESSAGE_MAX;
   // Built-in faces in the user's order, then custom faces, then messages.
   static_assert(FACE_COUNT <= 32, "Config::orderOf() keeps a 32-bit set");
@@ -274,9 +276,11 @@ void advanceFace(bool rotation) {
       if (messageActive(slot)) { cfg.theme = FACE_MESSAGE; messageShowSlot(slot); return; }
       continue;
     }
-    if (pos >= FACE_COUNT) {
+    if (pos >= FACE_COUNT) {   // a custom face takes its turn while its "when" holds
       String name = customFaceAt(pos - FACE_COUNT);
-      if (name.length()) { cfg.theme = FACE_CUSTOM; cfg.customFace = name; return; }
+      uint32_t secs = 0;
+      bool due = name.length() && customFaceDue(name, &secs);
+      if (name.length() && (due || !rotation)) { cfg.theme = FACE_CUSTOM; cfg.customFace = name; faceTurnSec = secs; return; }
       continue;
     }
     int face = Config::faceId(cfg.faceOrder[pos]);
@@ -958,6 +962,29 @@ void startOptionalServices() {
 }
 
 // Live device state for the settings page. Never includes secrets.
+String mqttStatus();   // integrations.cpp
+
+// {net.*}, {sys.*}, {theme.night}, {time.zone} for custom faces (faces.cpp).
+String deviceValue(const String& key) {
+  bool linked = WiFi.status() == WL_CONNECTED;
+  if (key == "net.ip") return linked ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
+  if (key == "net.host") return deviceHost();
+  if (key == "net.ssid") return linked ? WiFi.SSID() : setupSsid();
+  if (key == "net.rssi") return linked ? String(WiFi.RSSI()) : "";
+  if (key == "net.mqtt") return mqttStatus() == "connected" ? "1" : "0";
+  if (key == "sys.version") return FW_VERSION;
+  if (key == "sys.uptime") return String(millis() / 1000);
+  if (key == "sys.heap") return String(ESP.getFreeHeap());
+  if (key == "sys.lang") return cfg.lang;
+  if (key == "theme.night") return nightNow ? "1" : "0";
+  if (key == "time.zone") {
+    time_t now = time(nullptr);
+    struct tm t; localtime_r(&now, &t);
+    return _tzname[t.tm_isdst > 0 ? 1 : 0];
+  }
+  return "";
+}
+
 void handleStatus() {
   JsonDocument doc;
   doc["recovery"] = recoveryMode; doc["storageReady"] = storageReady;
@@ -1137,7 +1164,8 @@ void loop() {
     // Debounced and not persisted: a noisy or unfitted GPIO4 must not wear flash.
     if (millis() - lastButton > 300) { lastButton = millis(); advanceFace(false); faceSince = millis(); }
   }
-  if (cfg.themeInterval > 0 && !nightTile() && millis() - faceSince > (uint32_t)cfg.themeInterval * 1000) {
+  uint32_t turn = cfg.theme == FACE_CUSTOM && faceTurnSec ? faceTurnSec : cfg.themeInterval;
+  if (cfg.themeInterval > 0 && !nightTile() && millis() - faceSince > turn * 1000) {
     faceSince = millis();
     advanceFace(true);   // in RAM only; the saved face stays the user's choice
   }
