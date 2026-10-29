@@ -75,6 +75,17 @@ jobs:
             on && /^## / { exit }
             on { print }' > notes.md
           if [ ! -s notes.md ]; then echo "No '## ${{ steps.version.outputs.version }}' section in CHANGELOG.md" >&2; exit 1; fi
+          # Every release page says how a new clock gets its first install: the plain image
+          # was only built for 1.4.0, the first release that unpacks .bin.gz updates.
+          cat >> notes.md <<'EOF'
+
+          ### First install on a new clock
+          A clock on the stock firmware (or on SmartClock-OSS before 1.4.0) only takes a plain
+          image: install [`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin)
+          from v1.4.0 first, from the clock's own update page, then this release's `.bin.gz`.
+          See the README's Install section.
+          EOF
+          sed -i 's/^          //' notes.md
 
       - name: Publish the release
         if: steps.version.outputs.new == 'true'
@@ -82,5 +93,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ steps.version.outputs.version }}" --target "$GITHUB_SHA" \
-            release/*.bin release/*.bin.gz release/SHA256SUMS.txt \
+            release/*.bin.gz release/SHA256SUMS.txt \
             --title "AI Agent Monitor ${{ steps.version.outputs.version }}" --notes-file notes.md

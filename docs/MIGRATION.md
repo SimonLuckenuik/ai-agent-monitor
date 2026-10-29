@@ -5,10 +5,11 @@ through our own updater several times since
 ([record](decisions/2026-10-05-first-flash-over-stock.md)). One unit has been tested.
 Going back to stock still needs UART, so a full flash backup over UART beforehand is the
 only way to keep the vendor firmware; the vendor update binaries are not full-device
-backups. Release images come from `python scripts/make_release.py`: the first install over stock
-uses `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` (a plain image without MQTT), and
-every update after it the full `AIAgentMonitor_v<version>.bin.gz` (no `SDP` prefix, so the
-stock page, which cannot unpack it, refuses it).
+backups. The first install over stock uses `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0
+release (a plain image without MQTT and mDNS; later releases do not build one), and every
+update after it the latest `AIAgentMonitor_v<version>.bin.gz` from
+`python scripts/make_release.py` (no `SDP` prefix, so the stock page, which cannot unpack
+it, refuses it).
 
 ## Build and first flash
 
@@ -46,7 +47,7 @@ continuous searching makes the ESP8266 hop channels and drop AP clients. On the 
 clock's DHCP hostname is **agentmonitor-XXXXXX**, where XXXXXX is from the chip id, so
 the router's client list shows it. The full firmware also answers at
 **http://agentmonitor-XXXXXX.local/** (mDNS), from the same subnet only; the
-first-install `_nomqtt.bin` leaves mDNS out.
+first-install image (`_nomqtt.bin`, v1.4.0) leaves mDNS out.
 
 The unit has no usable button, so GPIO4 is never read to choose recovery. Recovery starts
 when any of these happen:

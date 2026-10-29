@@ -1,19 +1,18 @@
-"""Build the public release images: no WiFi details, stock-updater-friendly names.
+"""Build the public release image: no WiFi details.
 
     python scripts/make_release.py
 
 Builds with SMARTCLOCK_RELEASE=1, which makes build_options.py ignore secrets.ini,
 then refuses to finish if an image contains the SSID or password from a local
-secrets.ini. Writes to release/. The stock update page only accepts names starting
-with "SDP", so only the image it can install has that prefix:
+secrets.ini. Writes to release/:
 
-- SDPro_AIAgentMonitor_v<version>_nomqtt.bin: everything but MQTT, as a plain image
-  small enough for any updater (stock, or this firmware before 1.4.0). The first step
-  on a new clock; then update with the .bin.gz.
-- AIAgentMonitor_v<version>.bin.gz: the full firmware, compressed. For clocks already
-  running 1.4.0 or later (the no-MQTT image included). No "SDP": a stock clock cannot
-  unpack it, so its update page refuses the name.
+- AIAgentMonitor_v<version>.bin.gz: the firmware, compressed, for clocks running 1.4.0
+  or later. No "SDP" prefix: a stock clock cannot unpack it, and its update page only
+  accepts names starting with "SDP".
 - SHA256SUMS.txt
+
+A new clock first installs the plain SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin from the
+v1.4.0 release (the last one with a plain image), then this .bin.gz.
 """
 from pathlib import Path
 import configparser
@@ -55,17 +54,13 @@ def build(name):
     return image
 
 
-lite = build("esp12e_nomqtt")
-full = build("esp12e")   # last, so .pio/build/esp12e is the release build for the tests
-if lite.stat().st_size > 0x7E000:
-    sys.exit(f"{lite}: too big for a plain update ({lite.stat().st_size} bytes)")
+full = build("esp12e")   # .pio/build/esp12e is then the release build, for the tests
 
 out = root / "release"
 out.mkdir(exist_ok=True)
 for old in out.glob("*AIAgentMonitor_v*"):
     old.unlink()   # one release's files at a time
-files = ((full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),
-         (lite, f"SDPro_AIAgentMonitor_v{version}_nomqtt.bin"))
+files = ((full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),)
 sums = ""
 for src, dst in files:
     shutil.copy(src, out / dst)
@@ -73,4 +68,4 @@ for src, dst in files:
     sums += f"{hashlib.sha256(blob).hexdigest()}  {dst}\n"
     print(f"{out / dst}: {len(blob)} bytes")
 (out / "SHA256SUMS.txt").write_bytes(sums.encode())   # LF, or `sha256sum -c` fails
-print("No WiFi details in the images.")
+print("No WiFi details in the image.")
