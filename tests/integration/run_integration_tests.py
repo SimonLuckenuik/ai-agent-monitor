@@ -82,8 +82,9 @@ def baseline(emu):
     emu.fix_weather(open_meteo())
     emu.settings(lang="en", celsius=1, hour12=0, mile=0, nightmode=0, themeInterval=0,
                  brightness=100, color1=0xFD20, facesapi=1)   # 0xFD20: the default orange
-    for name in emu.faces()["faces"]:   # no custom faces or messages left from a case
+    for name in emu.faces()["faces"]:   # no custom faces, variables or messages left from a case
         emu.delete_face(name)
+    emu.clear_vars()
     emu.clear_messages()
 
 
@@ -247,19 +248,86 @@ def custom_faces_off(emu):
 
 @case
 def example_faces(emu):
+    """Every face in examples/faces, with its sample values (samples.json), one at a time
+    (as a user would try them)."""
     emu.set("facesapi", 1)
-    names = sorted(p.stem for p in EXAMPLES.glob("*.json"))
-    check(len(names) >= 5, f"examples: {names}")
+    samples = json.loads((EXAMPLES / "samples.json").read_text())
+    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
+    check(len(names) >= 32, f"examples: {names}")
+    check(set(samples) <= set(names), f"samples for missing faces: {set(samples) - set(names)}")
     for name in names:
         face = json.loads((EXAMPLES / f"{name}.json").read_text())
+        emu.clear_vars()
+        emu.clear_messages()
+        emu.apply_sample(samples.get(name, {}))
         check(emu.push_face(name, face, show=True) == "OK", f"push {name}")
+        check(emu.faces()["showing"] == name, f"{name} is not on screen")
         shot(emu, f"custom_{name}")
         saved = json.loads(emu.get(f"/api/faces/get?name={name}"))
         check(saved == face, f"{name}: saved face differs from the pushed one")
-    listed = sorted(f if isinstance(f, str) else f.get("name") for f in emu.faces()["faces"])
-    check(set(names) <= set(listed), f"faces listed: {listed}")
-    for name in names:
         emu.delete_face(name)
+
+
+@case
+def face_variables(emu):
+    """Variable options: names, null, $add, $ttl, $history, age, and $persist across a restart."""
+    expect_error(400, "Bad variable name", emu.post, "/api/faces/vars", {"bad.name": 1})
+    emu.post("/api/faces/vars", {"n": 1, "$add": True})
+    emu.post("/api/faces/vars", {"n": 2, "$add": True})
+    check(emu.faces()["vars"].get("n") == "3", f"$add: {emu.faces()['vars']}")
+    emu.post("/api/faces/vars", {"n": None})
+    check("n" not in emu.faces()["vars"], "null deletes")
+    emu.post("/api/faces/vars", {"brief": "soon gone", "$ttl": 60})
+    emu.fix_time(FIXED_TIME + 61)
+    check("brief" not in emu.faces()["vars"], "$ttl: still there after 61 s")
+    emu.fix_time(FIXED_TIME - 600)
+    emu.vars(seen="yes")
+    emu.fix_time(FIXED_TIME)
+    for v in [3, 7, 4, 9, 12, 8, 15]:
+        emu.post("/api/faces/vars", {"load": v, "$history": True})
+    face = {"bg": "#000000", "items": [
+        {"type": "text", "x": 120, "y": 30, "text": "seen {age.seen}s ago", "font": 2, "align": "mc"},
+        {"type": "text", "x": 120, "y": 60, "text": "{{load}>10?HIGH:low} {load:03} {load:.1}", "font": 4, "align": "mc"},
+        {"type": "spark", "x": 20, "y": 100, "w": 200, "h": 80, "var": "load", "color": "#30d158", "fill": "#0b3d1a", "min": 0},
+        {"type": "text", "x": 120, "y": 210, "text": "{brief|expired}", "font": 2, "align": "mc"}]}
+    emu.push_face("vars", face, show=True)
+    shot(emu, "custom_variables")
+    emu.post("/api/faces/vars", {"kept": "across restarts", "$persist": True})
+    emu.vars(lost="in RAM only")
+    time.sleep(1.5)   # the first save is immediate, then at most once a minute
+    emu.restart()
+    emu.sign_in()
+    v = emu.faces()["vars"]
+    check(v.get("kept") == "across restarts", f"$persist: {v}")
+    check("lost" not in v, f"RAM variable survived a restart: {v}")
+    emu.post("/api/faces/vars", {"kept": None})
+
+
+@case
+def rotation_when(emu):
+    """A face with "when" is in the rotation only while its condition holds."""
+    mask = emu.config()["faces"]
+    emu.settings(faces=1, themeInterval=1)   # rotate Classic and the custom faces, 1 s each
+    emu.push_face("always", {"items": [{"type": "text", "x": 120, "y": 120, "text": "always", "align": "mc"}]})
+    emu.push_face("onlygo", {"when": "{go}==1", "duration": 3,
+                             "items": [{"type": "text", "x": 120, "y": 120, "text": "go", "align": "mc"}]})
+
+    def seen(seconds):
+        names, end = [], time.time() + seconds
+        while time.time() < end:
+            s = emu.faces().get("showing")
+            if s and (not names or names[-1] != s):
+                names.append(s)
+            time.sleep(0.2)
+        return names
+
+    emu.vars(go=0)
+    first = seen(7)
+    check("always" in first and "onlygo" not in first, f"when false: {first}")
+    emu.vars(go=1)
+    second = seen(9)
+    check("onlygo" in second, f"when true: {second}")
+    emu.settings(faces=mask, themeInterval=0)
 
 
 @case
@@ -289,15 +357,15 @@ def face_validation(emu):
     expect_error(400, "a-z 0-9", emu.push_face, "Bad Name!", ok)
     expect_error(404, "No such face", emu.show_face, "missing")
     emu.delete_face("fallback")
-    for i in range(12):
+    for i in range(40):
         emu.push_face(f"f{i}", ok)
-    expect_error(400, "At most 12", emu.push_face, "thirteenth", ok)
+    expect_error(400, "At most 40", emu.push_face, "one-too-many", ok)
 
 
 @case
 def restart_keeps_settings(emu):
     emu.set("facesapi", 1)
-    emu.push_face("keep", {"bg": "#123", "items": [{"type": "text", "x": 120, "y": 120, "text": "{time}", "align": "mc", "font": 6}]})
+    emu.push_face("keep", {"bg": "#123", "items": [{"type": "text", "x": 120, "y": 120, "text": "{time.hm}", "align": "mc", "font": 6}]})
     emu.message(id="ram", title="gone after restart", text="", ttl=600)
     emu.show(5)
     emu.restart()

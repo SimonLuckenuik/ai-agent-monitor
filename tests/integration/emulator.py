@@ -32,7 +32,7 @@ def epoch(y, mo, d, h, mi, utc_offset=-4):
 
 
 def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, city="Montreal",
-               days=None):
+               days=None, pressure=1016.4, clouds=40):
     """An Open-Meteo forecast reply, as the clock asks for it (wind in m/s).
 
     days: four (code, high, low, feels_high, precip %, wind m/s, humidity %, sunrise,
@@ -50,7 +50,8 @@ def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, c
         "city": city,
         "current": {"temperature_2m": temp, "apparent_temperature": feels,
                     "relative_humidity_2m": humidity, "wind_speed_10m": wind,
-                    "weather_code": code, "is_day": is_day},
+                    "weather_code": code, "is_day": is_day, "pressure_msl": pressure,
+                    "cloud_cover": clouds},
         "daily": {"time": dates, "weather_code": col(0), "temperature_2m_max": col(1),
                   "temperature_2m_min": col(2), "apparent_temperature_max": col(3),
                   "precipitation_probability_max": col(4), "wind_speed_10m_max": col(5),
@@ -210,6 +211,38 @@ class Emulator:
 
     def vars(self, **values):
         return self.post("/api/faces/vars", values).decode()
+
+    def clear_vars(self):
+        names = list(self.faces()["vars"])
+        if names:
+            self.post("/api/faces/vars", {n: None for n in names})
+
+    def apply_sample(self, sample, now=FIXED_TIME):
+        """Sets an example face's sample values from examples/faces/samples.json: "vars"
+        ("@+N" is the Unix time N seconds after `now`; "@age N value" pushes value, or 1,
+        N seconds before it), "history" (each value pushed with $history, oldest first) and
+        "messages"; "shift" moves `now` by that many seconds and "weather" holds open_meteo()
+        arguments (the default weather otherwise). The clock is left stopped at `now`."""
+        now += sample.get("shift", 0)
+        self.fix_weather(open_meteo(**sample.get("weather", {})))
+        aged = {}
+        for k, v in sample.get("vars", {}).items():
+            if isinstance(v, str) and v.startswith("@+"):
+                self.vars(**{k: now + int(v[2:])})
+            elif isinstance(v, str) and v.startswith("@age "):
+                age, _, value = v[5:].partition(" ")
+                aged[k] = (int(age), value or 1)
+            else:
+                self.vars(**{k: v})
+        for k, (age, value) in aged.items():
+            self.fix_time(now - age)
+            self.vars(**{k: value})
+        self.fix_time(now)
+        for k, values in sample.get("history", {}).items():
+            for v in values:
+                self.post("/api/faces/vars", {k: v, "$history": True})
+        for m in sample.get("messages", []):
+            self.message(**m)
 
     # ---- The screen
     def framebuffer(self):
