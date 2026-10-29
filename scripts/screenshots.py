@@ -11,7 +11,8 @@ Uses the integration tests' emulator (tests/integration/emulator.py): fixed time
 firmware does. Writes to docs/images/:
 
   faces.png                the built-in faces
-  custom-faces.png         examples/faces/*.json
+  custom-faces.png         examples/faces/*.json, with their samples.json values
+  faces/<name>.png         each of those faces alone (examples/faces/README.md)
   agent-screens.png        messages, the Agents board and the skill's example faces
   settings-overview.png    the settings page (desktop)
   settings-integrations.png, settings-system.png, settings-phone.png
@@ -76,13 +77,23 @@ def clock_images(emu):
     emu.set("lang", "en")
     sheet(shots, 4, IMAGES / "faces.png", labels=labels)
 
-    # Custom faces from examples/faces.
+    # Custom faces from examples/faces, with their sample values.
     shots, labels = [], []
+    samples = json.loads((EXAMPLES / "samples.json").read_text())
+    (IMAGES / "faces").mkdir(exist_ok=True)
     for path in sorted(EXAMPLES.glob("*.json")):
+        if path.name == "samples.json":
+            continue
+        emu.clear_vars()
+        emu.clear_messages()
+        emu.apply_sample(samples.get(path.stem, {}))
         emu.push_face(path.stem, json.loads(path.read_text()), show=True)
         take(path.stem)
+        shots[-1].save(IMAGES / "faces" / f"{path.stem}.png", optimize=True)
         emu.delete_face(path.stem)
-    sheet(shots, 3, IMAGES / "custom-faces.png", labels=labels)
+    emu.clear_vars()
+    emu.clear_messages()
+    sheet(shots, 6, IMAGES / "custom-faces.png", labels=labels)
 
     # Agent screens: message layouts, the Agents board, the skill's example faces.
     shots, labels = [], []

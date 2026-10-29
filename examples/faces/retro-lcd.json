@@ -1,0 +1,18 @@
+{
+  "bg": "#222222",
+  "items": [
+    {"type": "rect", "x": 8, "y": 8, "w": 224, "h": 224, "r": 28, "color": {"stops": ["#3a3a3a", "#151515"], "angle": 180}},
+    {"type": "text", "x": 120, "y": 26, "text": "AGENT-MON", "font": 2, "align": "mc", "color": "#d8d8d8"},
+    {"type": "text", "x": 30, "y": 42, "text": "LIGHT", "font": 2, "align": "ml", "color": "#e04848"},
+    {"type": "text", "x": 210, "y": 42, "text": "MODE", "font": 2, "align": "mr", "color": "#8a8a8a"},
+    {"type": "rect", "x": 26, "y": 58, "w": 188, "h": 122, "r": 8, "color": "#9ead86", "border": "#5f6b4f", "bw": 3},
+    {"type": "text", "x": 40, "y": 76, "text": "{date.wday3}", "font": 2, "align": "ml", "color": "#2b3420", "bg": "#9ead86"},
+    {"type": "text", "x": 200, "y": 76, "text": "{date.monthnum}-{date.day}", "font": 2, "align": "mr", "color": "#2b3420", "bg": "#9ead86", "pad": 10},
+    {"type": "text", "x": 160, "y": 126, "text": "{time.hour}:{time.min}", "font": 6, "align": "mr", "color": "#1f2a17", "bg": "#9ead86", "pad": 6},
+    {"type": "text", "x": 166, "y": 134, "text": "{time.sec}", "font": 4, "align": "ml", "color": "#1f2a17", "bg": "#9ead86", "pad": 4},
+    {"type": "text", "x": 40, "y": 166, "text": "WK {date.week}", "font": 2, "align": "ml", "color": "#2b3420", "bg": "#9ead86"},
+    {"type": "text", "x": 200, "y": 166, "text": "{now.temp|--}{units.temp}", "font": 2, "align": "mr", "color": "#2b3420", "bg": "#9ead86", "pad": 10},
+    {"type": "text", "x": 120, "y": 200, "text": "ALARM CHRONOGRAPH", "font": 2, "align": "mc", "color": "#8a8a8a"},
+    {"type": "text", "x": 120, "y": 218, "text": "WATER RESIST", "font": 2, "align": "mc", "color": "#5f5f5f"}
+  ]
+}

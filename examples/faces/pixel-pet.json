@@ -1,0 +1,14 @@
+{
+  "bg": "#1b1033",
+  "maps": {"body": {"happy": "#ffd60a", "hungry": "#ff9f0a", "sleepy": "#9a8fbf", "*": "#ffd60a"}, "feel": {"happy": "Feeling great", "hungry": "Feed me!", "sleepy": "Zzz...", "*": "Hello there"}},
+  "items": [
+    {"type": "text", "x": 120, "y": 18, "text": "{pet|Pixel}", "font": 4, "align": "mc", "color": "#f5e9ff"},
+    {"type": "sprite", "x": 120, "y": 108, "align": "mc", "scale": 8, "bg": "#1b1033", "palette": {"b": "{mood:body}", "w": "#ffffff", "k": "#1b1033", "m": "#7a2e4a"}, "frame": "{time.sec}%4==0?1:0", "frames": [["....bbbb....", "..bbbbbbbb..", ".bbbbbbbbbb.", ".bbwwbbwwbb.", "bbbwkbbwkbbb", "bbbwwbbwwbbb", "bbbbbbbbbbbb", "bbbbmbbmbbbb", "bbbbbmmbbbbb", ".bbbbbbbbbb.", "..bb....bb..", "..bb....bb.."], ["....bbbb....", "..bbbbbbbb..", ".bbbbbbbbbb.", ".bbbbbbbbbb.", "bbbkkbbkkbbb", "bbbbbbbbbbbb", "bbbbbbbbbbbb", "bbbbmbbmbbbb", "bbbbbmmbbbbb", ".bbbbbbbbbb.", "..bb....bb..", "..bb....bb.."]]},
+    {"type": "text", "x": 186, "y": 52, "text": "z", "font": 4, "color": "#9a8fbf", "show": "{mood}==sleepy"},
+    {"type": "text", "x": 200, "y": 36, "text": "Z", "font": 4, "color": "#c7bfe6", "show": "{mood}==sleepy"},
+    {"type": "text", "x": 120, "y": 176, "text": "{mood:feel}", "font": 2, "align": "mc", "color": "#c7bfe6", "bg": "#1b1033", "pad": 40},
+    {"type": "text", "x": 30, "y": 206, "text": "FOOD", "font": 2, "align": "ml", "color": "#7d6fa8"},
+    {"type": "bar", "x": 74, "y": 200, "w": 136, "h": 12, "value": "{food|50}", "color": "{food|50}<30?#ff453a:#30d158", "track": "#2d2050"},
+    {"type": "text", "x": 120, "y": 230, "text": "{time.hm}", "font": 2, "align": "mc", "color": "#7d6fa8", "bg": "#1b1033", "pad": 20}
+  ]
+}

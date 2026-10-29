@@ -1,0 +1,32 @@
+{
+  "fps": 4,
+  "palette": "{sun.up}==0?night:day",
+  "palettes": {"day": {"sky": "#4a9bd6", "far": "#2e6e8e", "field": "#77c46a", "ground": "#b5651d", "brick": "#8a4a14", "grass": "#3f9b3a", "hud": "#ffffff"}, "night": {"sky": "#1b1f3b", "far": "#2a2f5a", "field": "#2f5a3a", "ground": "#5a3a1e", "brick": "#3d2712", "grass": "#24502c", "hud": "#ffe08a"}},
+  "bg": "@sky",
+  "items": [
+    {"type": "repeat", "of": 12, "items": [{"type": "rect", "x": "({it.index}*71)%232+4", "y": "44+({it.index}*23)%50", "w": 2, "h": 2, "color": "#ffffff"}], "show": "{sun.up}==0"},
+    {"type": "repeat", "of": 10, "items": [{"type": "rect", "x": "({it.index}*47)%230+4", "y": "46+({it.index}*31)%50", "w": 2, "h": 7, "color": "#bcd7f0"}], "show": "{now.code}>=51"},
+    {"type": "sprite", "x": 26, "y": 58, "scale": 4, "palette": {"w": "#ffffff"}, "rows": ["...wwww....", ".wwwwwwwww.", "wwwwwwwwwwww"], "show": "{sun.up}"},
+    {"type": "sprite", "x": 150, "y": 74, "scale": 3, "palette": {"w": "#ffffff"}, "rows": ["...wwww....", ".wwwwwwwww.", "wwwwwwwwwwww"], "show": "{sun.up}"},
+    {"type": "circle", "x": 200, "y": 64, "r": 12, "color": "#f4f1de", "show": "{sun.up}==0"},
+    {"type": "path", "x": 0, "y": 80, "w": 240, "h": 40, "vb": "0 0 240 40", "fill": "@far", "d": "M0 40V24L20 12L44 26L70 6L98 24L122 14L150 30L178 8L204 22L240 10V40Z"},
+    {"type": "rect", "x": 0, "y": 118, "w": 240, "h": 64, "color": "@field"},
+    {"type": "text", "x": 40, "y": 12, "text": "SCORE", "font": 2, "align": "mc", "color": "@hud"},
+    {"type": "text", "x": 120, "y": 12, "text": "WORLD", "font": 2, "align": "mc", "color": "@hud"},
+    {"type": "text", "x": 200, "y": 12, "text": "TIME", "font": 2, "align": "mc", "color": "@hud"},
+    {"type": "text", "x": 40, "y": 30, "text": "{{time.daymin}*60+{time.sec}}", "font": 2, "align": "mc", "color": "@hud", "bg": "@sky", "pad": 10},
+    {"type": "text", "x": 120, "y": 30, "text": "{date.monthnum}-{date.day}", "font": 2, "align": "mc", "color": "@hud"},
+    {"type": "text", "x": 200, "y": 30, "text": "{time.hm}", "font": 2, "align": "mc", "color": "@hud", "bg": "@sky", "pad": 10},
+    {"type": "bar", "x": 14, "y": 162, "w": 20, "h": 20, "r": 2, "value": "(7-(2*{time.sec}+({time.ms}>=500))%8)==0?100:0", "color": "#e07a3f", "track": "@field"},
+    {"type": "bar", "x": 78, "y": 162, "w": 20, "h": 20, "r": 2, "value": "(7-(2*{time.sec}+({time.ms}>=500))%8)==2?100:0", "color": "#e07a3f", "track": "@field"},
+    {"type": "bar", "x": 110, "y": 162, "w": 20, "h": 20, "r": 2, "value": "(7-(2*{time.sec}+({time.ms}>=500))%8)==3?100:0", "color": "#e07a3f", "track": "@field"},
+    {"type": "bar", "x": 142, "y": 162, "w": 20, "h": 20, "r": 2, "value": "(7-(2*{time.sec}+({time.ms}>=500))%8)==4?100:0", "color": "#e07a3f", "track": "@field"},
+    {"type": "bar", "x": 174, "y": 162, "w": 20, "h": 20, "r": 2, "value": "(7-(2*{time.sec}+({time.ms}>=500))%8)==5?100:0", "color": "#e07a3f", "track": "@field"},
+    {"type": "bar", "x": 206, "y": 162, "w": 20, "h": 20, "r": 2, "value": "(7-(2*{time.sec}+({time.ms}>=500))%8)==6?100:0", "color": "#e07a3f", "track": "@field"},
+    {"type": "sprite", "x": 40, "y": 118, "scale": 4, "bg": "@field", "palette": {"h": "#e63946", "s": "#f1c27d", "k": "#1d1d1d", "b": "#3a6ea5", "l": "#2b2d42", "c": "#e07a3f", "d": "#8a4a14"}, "frame": "(7-(2*{time.sec}+({time.ms}>=500))%8)==1?3:(7-(2*{time.sec}+({time.ms}>=500))%8)==2||(7-(2*{time.sec}+({time.ms}>=500))%8)==0?2:(2*{time.sec}+({time.ms}>=500))%2", "frames": [["........", "", "", "", "", "", "", "", "..hhhh..", ".hhhhhh.", "..ssss..", "..sksk..", ".bbbbbb.", "s.bbbb.s", "..bbbb..", ".l....l."], ["........", "", "", "", "", "", "", "", "..hhhh..", ".hhhhhh.", "..ssss..", "..sksk..", ".bbbbbb.", "s.bbbb.s", "..bbbb..", "..l..l.."], ["........", "", "..hhhh..", ".hhhhhh.", "..ssss..", "..sksk..", ".bbbbbb.", "s.bbbb.s", "..bbbb..", ".ll..ll.", "", "", "", "", "", ""], ["........", "", "..hhhh..", ".hhhhhh.", "..ssss..", "..sksk..", ".bbbbbb.", "s.bbbb.s", "..bbbb..", ".ll..ll.", "", ".cccccc.", ".cdccdc.", ".ccddcc.", ".cdccdc.", ".cccccc."]]},
+    {"type": "rect", "x": 0, "y": 182, "w": 240, "h": 58, "color": "@ground"},
+    {"type": "rect", "x": 0, "y": 182, "w": 240, "h": 6, "color": "@grass"},
+    {"type": "repeat", "of": 16, "items": [{"type": "rect", "x": "({it.index}%8)*30+(({it.index}-{it.index}%8)/8)*15-15", "y": "192+(({it.index}-{it.index}%8)/8)*16", "w": 30, "h": 16, "fill": false, "color": "@brick"}]},
+    {"type": "text", "x": 120, "y": 226, "text": "HI {hi|0}", "font": 2, "align": "mc", "color": "#ffe08a"}
+  ]
+}

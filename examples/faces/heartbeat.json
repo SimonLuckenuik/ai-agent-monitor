@@ -1,0 +1,12 @@
+{
+  "when": "{age.beat|99999}>300",
+  "palette": "{age.beat|99999}>1800?late:slow",
+  "palettes": {"slow": {"bg": "#241a05", "accent": "#ff9f0a"}, "late": {"bg": "#2c0707", "accent": "#ff453a"}},
+  "bg": "@bg",
+  "items": [
+    {"type": "sprite", "x": 120, "y": 70, "align": "mc", "scale": 12, "bg": "@bg", "palette": {"r": "@accent"}, "frame": "{time.sec}%2", "frames": [[".rr.rr.", "rrrrrrr", "rrrrrrr", ".rrrrr.", "..rrr..", "...r..."], ["..r.r..", ".rrrrr.", ".rrrrr.", "..rrr..", "...r...", "......."]]},
+    {"type": "path", "x": 0, "y": 118, "w": 240, "h": 40, "vb": "0 0 240 40", "stroke": "@accent", "sw": 2, "d": "M0 20h80l8-14 10 28 10-28 8 14h124"},
+    {"type": "text", "x": 120, "y": 176, "text": "{agent:16|Agent} is quiet", "font": 4, "align": "mc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 208, "text": "no heartbeat for {round({age.beat|0}/60)} min", "font": 2, "align": "mc", "color": "@accent", "bg": "@bg", "pad": 20}
+  ]
+}

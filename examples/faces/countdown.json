@@ -1,0 +1,16 @@
+{
+  "bg": {"stops": ["#3a0ca3", "#7209b7"], "angle": 160},
+  "items": [
+    {"type": "rect", "x": 60, "y": 22, "w": 120, "h": 120, "r": 14, "color": "#ffffff"},
+    {"type": "rect", "x": 60, "y": 22, "w": 120, "h": 34, "r": 14, "color": "#f72585"},
+    {"type": "rect", "x": 60, "y": 42, "w": 120, "h": 14, "color": "#f72585"},
+    {"type": "circle", "x": 90, "y": 22, "r": 5, "color": "#3a0ca3", "border": "#ffffff", "bw": 2},
+    {"type": "circle", "x": 150, "y": 22, "r": 5, "color": "#3a0ca3", "border": "#ffffff", "bw": 2},
+    {"type": "text", "x": 120, "y": 40, "text": "DAYS", "font": 2, "align": "mc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 100, "text": "{(max(0,{at|0}-{time.epoch})-max(0,{at|0}-{time.epoch})%86400)/86400}", "font": 6, "align": "mc", "color": "#3a0ca3", "bg": "#ffffff", "pad": 10, "show": "max(0,{at|0}-{time.epoch})>0"},
+    {"type": "sprite", "x": 120, "y": 100, "align": "mc", "scale": 8, "palette": {"y": "#ffd60a", "p": "#f72585", "b": "#4cc9f0"}, "rows": ["y....p...b", "...b....y.", ".p....y...", "....y...p.", "b......b..", "..y.p.....", "......y..p", ".b.y......"], "show": "max(0,{at|0}-{time.epoch})==0"},
+    {"type": "text", "x": 120, "y": 170, "text": "{event:20|The big day}", "font": 4, "align": "mc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 200, "text": "and {(max(0,{at|0}-{time.epoch})%86400-max(0,{at|0}-{time.epoch})%3600)/3600} hours", "font": 2, "align": "mc", "color": "#e0c3fc", "show": "max(0,{at|0}-{time.epoch})>0"},
+    {"type": "text", "x": 120, "y": 200, "text": "It's today!", "font": 2, "align": "mc", "color": "#ffd60a", "show": "max(0,{at|0}-{time.epoch})==0"}
+  ]
+}

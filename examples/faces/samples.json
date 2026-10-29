@@ -1,0 +1,256 @@
+{
+ "pixel-pet": {
+  "vars": {
+   "pet": "Bit",
+   "mood": "happy",
+   "food": 72
+  }
+ },
+ "ci-pipeline": {
+  "vars": {
+   "repo": "ai-agent-monitor",
+   "branch": "faces-v2",
+   "build": "fail",
+   "commit": "e27d59b",
+   "author": "simon",
+   "fails": 2
+  },
+  "history": {
+   "mins": [
+    6.1,
+    5.8,
+    6.4,
+    6.0,
+    7.2,
+    6.9,
+    8.5,
+    7.7,
+    6.2,
+    9.4,
+    8.8,
+    11.2
+   ]
+  }
+ },
+ "pomodoro": {
+  "vars": {
+   "task": "Write the face docs",
+   "mode": "focus",
+   "len": 1500,
+   "until": "@+1110"
+  }
+ },
+ "countdown": {
+  "vars": {
+   "event": "Launch day",
+   "at": "@+1036800"
+  }
+ },
+ "homelab": {
+  "vars": {
+   "cpu": 37
+  },
+  "history": {
+   "cpu": [
+    12,
+    18,
+    15,
+    22,
+    41,
+    38,
+    27,
+    30,
+    55,
+    62,
+    48,
+    35,
+    29,
+    33,
+    44,
+    37
+   ]
+  }
+ },
+ "power-cell": {
+  "vars": {
+   "device": "MacBook Pro",
+   "batt": 64,
+   "charging": 1,
+   "eta": 48
+  }
+ },
+ "agent-inbox": {
+  "messages": [
+   {
+    "id": "deploy",
+    "title": "Approve?",
+    "text": "Deploy faces-v2 to the clock",
+    "icon": "waiting",
+    "ttl": 900
+   },
+   {
+    "id": "tests",
+    "title": "Tests",
+    "text": "232 checks passed",
+    "icon": "success",
+    "ttl": 600
+   },
+   {
+    "id": "ci",
+    "title": "CI failed",
+    "text": "integration: 2 cases",
+    "icon": "error",
+    "ttl": 1200
+   },
+   {
+    "id": "docs",
+    "title": "Docs",
+    "text": "Writing the schema",
+    "icon": "running",
+    "pct": 60,
+    "ttl": 300
+   }
+  ]
+ },
+ "commit-streak": {
+  "vars": {
+   "commits": 7,
+   "streak": 12,
+   "repo": "ai-agent-monitor"
+  },
+  "history": {
+   "daily": [
+    3,
+    5,
+    2,
+    8,
+    6,
+    0,
+    4,
+    9,
+    12,
+    7,
+    5,
+    10,
+    6,
+    7
+   ]
+  }
+ },
+ "heartbeat": {
+  "vars": {
+   "agent": "nightly-sync",
+   "beat": "@age 2580"
+  }
+ },
+ "kpi": {
+  "vars": {
+   "label": "Active users",
+   "unit": "k",
+   "delta": 12.4
+  },
+  "history": {
+   "value": [
+    31.2,
+    32.8,
+    30.1,
+    34.5,
+    36.0,
+    35.2,
+    38.9,
+    41.3,
+    40.2,
+    43.8,
+    45.1,
+    47.6
+   ]
+  }
+ },
+ "terminal": {
+  "vars": {
+   "agent": "@age 840 running"
+  }
+ },
+ "claude-mascot": {
+  "vars": {
+   "state": "working",
+   "task": "Refactoring faces.cpp"
+  },
+  "messages": [
+   {
+    "id": "tests",
+    "title": "Tests",
+    "text": "236 checks passed",
+    "icon": "success",
+    "ttl": 600
+   }
+  ]
+ },
+ "block-world": {
+  "weather": {
+   "clouds": 60
+  }
+ },
+ "retro-runner": {
+  "vars": {
+   "hi": 52317
+  }
+ },
+ "what-to-wear": {
+  "weather": {
+   "code": 61,
+   "days": [
+    [
+     61,
+     12,
+     6,
+     9,
+     70,
+     6.1,
+     80,
+     "07:02",
+     "18:31"
+    ],
+    [
+     61,
+     15,
+     9,
+     13,
+     80,
+     9.4,
+     88,
+     "07:03",
+     "18:29"
+    ],
+    [
+     0,
+     19,
+     6,
+     18,
+     0,
+     3.3,
+     52,
+     "07:05",
+     "18:27"
+    ],
+    [
+     71,
+     4,
+     -3,
+     -1,
+     60,
+     7.8,
+     90,
+     "07:06",
+     "18:25"
+    ]
+   ]
+  }
+ },
+ "sky-window": {
+  "shift": 28260
+ },
+ "golden-hour": {
+  "shift": -9540
+ }
+}

@@ -1,0 +1,13 @@
+{
+  "when": "{theme.night}",
+  "bg": "#000000",
+  "items": [
+    {"type": "sprite", "x": 120, "y": 62, "align": "mc", "scale": 7, "palette": {"w": "#4a4a6a"}, "rows": ["...ww...", "..ww....", ".ww.....", ".ww.....", ".ww.....", ".www....", "..wwww.w", "...wwww."]},
+    {"type": "circle", "x": 52, "y": 40, "r": 1, "color": "#3a3a50"},
+    {"type": "circle", "x": 190, "y": 30, "r": 1, "color": "#3a3a50"},
+    {"type": "circle", "x": 200, "y": 96, "r": 1, "color": "#3a3a50"},
+    {"type": "text", "x": 120, "y": 140, "text": "{time.hm}", "font": 6, "align": "mc", "color": "#5a5a7a", "bg": "#000000", "pad": 20},
+    {"type": "text", "x": 120, "y": 184, "text": "Sleep well", "font": 2, "align": "mc", "color": "#3d3d55"},
+    {"type": "text", "x": 120, "y": 212, "text": "Sunrise {sun.rise}", "font": 2, "align": "mc", "color": "#3d3d55"}
+  ]
+}

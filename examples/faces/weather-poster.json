@@ -1,0 +1,16 @@
+{
+  "palette": "{now.code|3}<=1?clear:{now.code|3}<=3?cloud:{now.code|3}<=48?fog:{now.code|3}<=67?rain:{now.code|3}<=77?snow:{now.code|3}<=82?rain:{now.code|3}<=86?snow:storm",
+  "palettes": {"clear": {"bg": "#f4a259", "fg": "#3d1e00", "soft": "#7a4410"}, "cloud": {"bg": "#5b7083", "fg": "#ffffff", "soft": "#d2dce6"}, "fog": {"bg": "#8d99ae", "fg": "#1d2433", "soft": "#3d4659"}, "rain": {"bg": "#24527a", "fg": "#ffffff", "soft": "#a9cbe8"}, "snow": {"bg": "#dfe9f3", "fg": "#1d3557", "soft": "#5d7493"}, "storm": {"bg": "#2e1f47", "fg": "#ffd60a", "soft": "#b9a6d9"}},
+  "bg": "@bg",
+  "items": [
+    {"type": "text", "x": 14, "y": 18, "text": "{loc.city:14|Here}", "font": 2, "align": "ml", "color": "@soft"},
+    {"type": "text", "x": 226, "y": 18, "text": "{time.hm}", "font": 2, "align": "mr", "color": "@soft", "bg": "@bg", "pad": 10},
+    {"type": "icon", "x": 120, "y": 86, "size": 112, "icon": "{now.icon}", "color": "@fg"},
+    {"type": "text", "x": 112, "y": 172, "text": "{now.temp}", "font": 6, "align": "mr", "color": "@fg", "bg": "@bg", "pad": 10},
+    {"type": "circle", "x": 122, "y": 156, "r": 6, "color": "@fg", "fill": false},
+    {"type": "circle", "x": 122, "y": 156, "r": 5, "color": "@fg", "fill": false},
+    {"type": "text", "x": 134, "y": 160, "text": "{units.temp}", "font": 4, "align": "ml", "color": "@fg"},
+    {"type": "text", "x": 134, "y": 186, "text": "feels {now.feels}", "font": 2, "align": "ml", "color": "@soft", "bg": "@bg", "pad": 6},
+    {"type": "text", "x": 120, "y": 222, "text": "{now.text:u:24}", "font": 2, "align": "mc", "color": "@fg", "bg": "@bg", "pad": 20}
+  ]
+}

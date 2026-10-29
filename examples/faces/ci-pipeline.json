@@ -1,0 +1,20 @@
+{
+  "when": "{build|idle}!=idle",
+  "palette": "{build|idle}",
+  "palettes": {"ok": {"bg": "#06241a", "panel": "#0d3527", "accent": "#30d158"}, "running": {"bg": "#071a2c", "panel": "#0e2a45", "accent": "#64d2ff"}, "fail": {"bg": "#2c0707", "panel": "#45100e", "accent": "#ff453a"}, "idle": {"bg": "#111111", "panel": "#222222", "accent": "#8e8e93"}},
+  "maps": {"label": {"ok": "PASSED", "running": "RUNNING", "fail": "FAILED", "*": "IDLE"}},
+  "bg": "@bg",
+  "items": [
+    {"type": "path", "x": 14, "y": 12, "size": 22, "stroke": "@accent", "sw": 2, "d": ["M6 3v12", "M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M18 9a9 9 0 0 1-9 9"]},
+    {"type": "text", "x": 44, "y": 23, "text": "{repo|repo}", "font": 2, "align": "ml", "color": "#ffffff"},
+    {"type": "text", "x": 226, "y": 23, "text": "{branch:14|main}", "font": 2, "align": "mr", "color": "@accent"},
+    {"type": "rect", "x": 12, "y": 46, "w": 216, "h": 84, "r": 12, "color": "@panel", "border": "@accent", "bw": 2},
+    {"type": "text", "x": 120, "y": 76, "text": "{build:label}", "font": 4, "align": "mc", "color": "@accent"},
+    {"type": "text", "x": 120, "y": 108, "text": "{commit:7|-------}  {author:12|someone}", "font": 2, "align": "mc", "color": "#d0d0d0"},
+    {"type": "ring", "x": 204, "y": 88, "r": 14, "w": 4, "value": "{pct|0}", "color": "@accent", "track": "#2a3a4a", "show": "{build}==running"},
+    {"type": "text", "x": 14, "y": 146, "text": "BUILD MINUTES", "font": 2, "color": "#8e8e93"},
+    {"type": "text", "x": 226, "y": 146, "text": "fails {fails|0}", "font": 2, "align": "tr", "color": "#8e8e93", "bg": "@bg", "pad": 10},
+    {"type": "spark", "x": 14, "y": 166, "w": 212, "h": 40, "var": "mins", "color": "@accent", "fill": "@panel", "bg": "@bg", "min": 0},
+    {"type": "text", "x": 120, "y": 226, "text": "updated {round({age.build|0}/60)} min ago", "font": 2, "align": "mc", "color": "#8e8e93", "bg": "@bg", "pad": 30}
+  ]
+}

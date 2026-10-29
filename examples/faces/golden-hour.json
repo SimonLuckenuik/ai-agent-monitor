@@ -1,0 +1,16 @@
+{
+  "when": "{sun.up}==1&&({sun.until_set}<=75||{sun.daylen}-{sun.until_set}<=60)",
+  "duration": 20,
+  "bg": {"stops": ["#2d1b4e", "#b3446c", "#f6a14b", "#ffd88a"], "angle": 180},
+  "items": [
+    {"type": "text", "x": 120, "y": 22, "text": "GOLDEN HOUR", "font": 4, "align": "mc", "color": "#fff4c2"},
+    {"type": "text", "x": 120, "y": 46, "text": "Soft warm light: go outside", "font": 2, "align": "mc", "color": "#ffe1b0"},
+    {"type": "circle", "x": 120, "y": "150-min(min({sun.until_set},{sun.daylen}-{sun.until_set})-min({sun.until_set},{sun.daylen}-{sun.until_set})%5,75)", "r": 30, "color": {"stops": ["#fff4c2", "#ffb347"], "angle": 180}},
+    {"type": "path", "x": 0, "y": 126, "w": 240, "h": 24, "vb": "0 0 240 24", "fill": "#5a2a52", "d": "M0 24V14L30 6L58 16L92 4L124 14L160 2L196 14L222 8L240 12V24Z"},
+    {"type": "rect", "x": 0, "y": 150, "w": 240, "h": 90, "color": "#2a1838"},
+    {"type": "repeat", "of": 5, "x": 0, "y": 156, "dy": 7, "items": [{"type": "rect", "x": "120-34+{it.index}*6", "y": 0, "w": "68-{it.index}*12", "h": 3, "r": 1, "color": "#f6a14b"}]},
+    {"type": "text", "x": 120, "y": 204, "text": "{sun.until_set} min to sunset", "font": 4, "align": "mc", "color": "#ffd88a", "bg": "#2a1838", "pad": 20, "show": "!({sun.daylen}-{sun.until_set}<=60)"},
+    {"type": "text", "x": 120, "y": 204, "text": "{60-{sun.daylen}+{sun.until_set}} min of glow left", "font": 4, "align": "mc", "color": "#ffd88a", "bg": "#2a1838", "pad": 20, "show": "{sun.daylen}-{sun.until_set}<=60"},
+    {"type": "text", "x": 120, "y": 228, "text": "Sun {sun.rise} to {sun.set}   Now {time.hm}", "font": 2, "align": "mc", "color": "#c9a9c9", "bg": "#2a1838", "pad": 10}
+  ]
+}

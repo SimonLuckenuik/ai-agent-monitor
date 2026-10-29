@@ -20,9 +20,12 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   and an optional progress bar. Up to 4 messages at a time, each with a time to live.
   Warning and error light the screen fully. The **Agents board** lists every active
   message at a glance.
-- **Custom faces.** Agents (or you) design whole screens as JSON: text, shapes, SVG
-  paths (Lucide or Material icons as they are), gradients, gauges, photos, live values,
-  expressions and animation. They are saved on the clock and join the rotation.
+- **Custom faces.** Agents (or you) design whole screens as JSON: text, shapes with
+  borders, SVG paths (Lucide or Material icons as they are), gradients, gauges, pixel
+  art, charts, lists, live values (time, weather, forecast, sun, moon, network, your
+  own variables), expressions, palettes and animation. They are saved on the clock and
+  join the rotation, or appear only when they have something to show. A JSON Schema
+  checks them. [32 examples](examples/faces).
 - **A Claude Code plugin** that teaches Claude the API, with examples. See
   [Claude Code plugin](#claude-code-plugin).
 - **Clock faces:** Classic, Simple, Weather, Forecast, Photo, and the **Big tiles**:
@@ -68,14 +71,20 @@ this firmware is not for your clock.
 ## Release files
 
 Each [release](../../releases/latest) has these files. The clock's flash holds the
-running firmware and the incoming update in the same 1 MB, so a full-size image can
-only be sent compressed, and only a clock running 1.4.0 or later can unpack it.
+running firmware and the incoming update in the same 1 MB, so the firmware can only be
+sent compressed, and only a clock running 1.4.0 or later can unpack it.
 
 | File | What it is | Use it for |
 |---|---|---|
-| `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` | Everything except MQTT, as a plain image small enough for any updater | **The first install**: from the stock firmware, or from SmartClock-OSS before 1.4.0 |
-| `AIAgentMonitor_v<version>.bin.gz` | The full firmware, compressed | **Every update after that** (and adding MQTT after the first install), from this firmware's own Firmware update card |
+| `AIAgentMonitor_v<version>.bin.gz` | The firmware, compressed | **Every install and update** on a clock running 1.4.0 or later, from this firmware's own Firmware update card |
 | `SHA256SUMS.txt` | Checksums | `sha256sum -c SHA256SUMS.txt` |
+
+**The first install** on a new clock uses one file from the
+[v1.4.0 release](../../releases/tag/v1.4.0):
+[`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin). It is a plain image, small enough for the stock
+update page and for SmartClock-OSS before 1.4.0, without MQTT and mDNS. It is not built
+for later releases, so their features are not limited by its size: once it runs,
+install the latest `.bin.gz`.
 
 Keep the file names. The stock update page only accepts names starting with `SDP`, so
 only the first-install image has that prefix: the stock firmware cannot unpack the
@@ -90,8 +99,9 @@ compressed image, and its name keeps it from being tried there.
 
 ### From the stock firmware (a new clock)
 
-1. Download **`SDPro_AIAgentMonitor_v<version>_nomqtt.bin`** from the
-   [latest release](../../releases/latest).
+1. Download **[`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin)** from the
+   [v1.4.0 release](../../releases/tag/v1.4.0) (the first-install image; later releases
+   have only the `.bin.gz`).
 2. Open the clock's web page in a browser (its IP address is shown on the clock when it
    starts), and find **Firmware Update (OTA)**.
 3. Choose the file and press **Start Update**. Confirm, then wait for "Update Success".
@@ -102,15 +112,15 @@ compressed image, and its name keeps it from being tried there.
 5. In the **WiFi** card, pick your network, enter its password, and press
    **Connect & restart**. The clock shows its new address when it connects.
 6. Open that address. In **Firmware update**, install
-   **`AIAgentMonitor_v<version>.bin.gz`** from the same release. This adds MQTT;
-   skip it if you will never use MQTT (you can do it any time later).
+   **`AIAgentMonitor_v<version>.bin.gz`** from the
+   [latest release](../../releases/latest): everything since 1.4.0, MQTT and mDNS.
 7. Set your city and time zone, and choose your faces.
 
 ### From SmartClock-OSS
 
 Clocks running SmartClock-OSS **1.3.x or earlier** only take plain images: install the
-`_nomqtt.bin` from its Firmware update card first, then the `.bin.gz` as in step 6
-above. Settings and photos are kept.
+[`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin) from its Firmware update card first, then the latest
+`.bin.gz` as in step 6 above. Settings and photos are kept.
 
 ### Updating
 
@@ -125,8 +135,8 @@ anything; a `.bin` that is too big for a plain update is refused with a pointer 
 The clock names itself `agentmonitor-XXXXXX` (unique per clock) in your router's list
 of devices, and its setup network **AI Agent Monitor XXXXXX** carries the same suffix.
 The full firmware also answers at `http://agentmonitor-XXXXXX.local/` (mDNS, same
-network only). The first-install `_nomqtt.bin` leaves mDNS out to stay small; it comes
-with the `.bin.gz` update.
+network only). The first-install image leaves mDNS out to stay small; it comes with the
+`.bin.gz` update.
 
 ## Messages from agents and scripts
 
@@ -159,25 +169,41 @@ With MQTT on, the same JSON on `<base>/message` does the same. Details:
 
 ## Custom faces
 
-A face is a JSON list of items (text, rectangles, circles, lines, arcs, bars, rings,
-SVG paths, weather icons and photos) with placeholders such as `{time}`, `{temp}` or
-your own `{vars}` that agents update over HTTP or MQTT. Saved faces join the rotation.
+A face is a JSON list of items drawn in order: text, rectangles and circles (with
+borders), lines, bars, rings, SVG paths, weather icons, photos, pixel-art **sprites**
+(animated by frames), **sparklines** of a value's history, and **repeats** (items once
+per forecast day, agent message, or number). Any string can hold placeholders: the
+clock's own values (`{time.hm}`, `{date.wday}`, `{now.temp}`, `{day1.high}`,
+`{sun.until_set}`, `{moon.phase}`, `{net.ip}`, …) and your **variables**, which agents
+update over HTTP or MQTT: with an expiry (`$ttl`), kept across restarts (`$persist`),
+added up (`$add`) or kept as a history for charts (`$history`). Number and colour fields
+take expressions, and so does text in braces; **maps** turn values into colours or
+labels, and **palettes** recolour a whole face (day and night, or by state). A face
+joins the rotation, or only `when` a condition holds, for as long as its `duration`.
+
 Turn them on in **Integrations → Custom faces**, which also gives the API key for
 scripts:
 
 ```bash
 curl -X POST "http://<clock>/api/faces?name=build&key=<api key>" -d @build.json
-curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"progress":64}'
+curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"progress": 64, "build": "running", "$ttl": 900}'
 ```
 
-The format, placeholders and expressions are in
-[docs/specifications/integrations-api.md](docs/specifications/integrations-api.md#custom-faces).
+The format is in
+[docs/specifications/integrations-api.md](docs/specifications/integrations-api.md#custom-faces),
+and `face.schema.json` in the [Claude Code plugin](#claude-code-plugin)'s skill is its
+JSON Schema (`clock.py check face.json` validates a face and its placeholder names).
 
-[`examples/faces/`](examples/faces) has six ready-made faces to start from or to show
-what the format can do: scenes drawn with paths and gradients, an analog clock whose
-hands are expressions, a terminal, and a sea view with the live weather icon.
+[`examples/faces/`](examples/faces) has 32 ready-made faces, each described with what
+it demonstrates and the variables it reads: clocks (analog, binary, a 1980s watch, a
+month calendar), weather (a forecast strip, the sun's path, the moon's phase, a
+day/night beach, what to wear, a window on the sky, golden hour), faces for agents
+and work (an inbox of agent messages, a CI pipeline, a heartbeat watchdog that
+appears when an agent goes quiet, a pomodoro timer, a countdown, a commit streak, a
+KPI with its trend, a homelab, a battery, a pixel pet, and an animated Claude
+mascot), and two pixel-art games (a block world and a retro runner).
 
-![Example custom faces: bauhaus, night-lake, orbit, seaside, synthwave, terminal](docs/images/custom-faces.png)
+![The 32 example custom faces](docs/images/custom-faces.png)
 
 ```bash
 curl -X POST "http://<clock>/api/faces?name=synthwave&show=1&key=<api key>" --data-binary @examples/faces/synthwave.json
@@ -197,7 +223,16 @@ Working in this repository, Claude Code offers the plugin by itself: the project
 `.claude/settings.json` lists the marketplace and enables it. Then give Claude the
 clock's address and API key in `CLOCK_URL` and `CLOCK_API_KEY`.
 Without them it uses the emulator at `http://127.0.0.1:8000`. The skill is in
-[`plugins/ai-agent-monitor`](plugins/ai-agent-monitor/skills/ai-agent-monitor/SKILL.md).
+[`plugins/ai-agent-monitor`](plugins/ai-agent-monitor/skills/ai-agent-monitor/SKILL.md):
+
+| File | What it gives Claude |
+|---|---|
+| `SKILL.md` | When to use a message or a custom face, and the face model in short |
+| `reference/api.md` | Every endpoint: messages, faces, variables and their options, MQTT, the emulator |
+| `reference/face-format.md` | The face format in full (generated from the specification) |
+| `reference/face.schema.json` | The JSON Schema of a face |
+| `scripts/clock.py` | `message`, `push`, `vars`, `show`, `screenshot`, and `check` (schema and placeholder names) |
+| `examples/` | Status faces for agents: attention, progress, done, error |
 
 ## Settings page
 
@@ -261,8 +296,7 @@ pio run
 
 | Environment | Image |
 |---|---|
-| `esp12e` (default) | The full firmware, with MQTT and mDNS: `.pio/build/esp12e/firmware.bin` and `firmware.bin.gz` |
-| `esp12e_nomqtt` | Without MQTT or mDNS, small enough for a plain update |
+| `esp12e` (default) | The firmware, with MQTT and mDNS: `.pio/build/esp12e/firmware.bin` and `firmware.bin.gz` |
 
 The build reports how much of the update budget each image uses, and fails if an image
 could not be replaced over the air. The CPU runs at 160 MHz (`board_build.f_cpu`).
@@ -355,7 +389,7 @@ src/config.h          settings stored on the clock (/config.json)
 web/index.html        settings page (compressed into the firmware at build time)
 emulator/             the Docker emulator
 plugins/              the Claude Code plugin
-examples/faces/       example custom faces
+examples/faces/       example custom faces, their sample values and a gallery
 tests/                unit, safety, face preview and integration tests
 docs/                 status, migration, specifications, decisions, issues, plans
 ```

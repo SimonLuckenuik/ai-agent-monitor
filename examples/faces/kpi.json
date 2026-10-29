@@ -1,0 +1,13 @@
+{
+  "bg": "#0b132b",
+  "items": [
+    {"type": "text", "x": 16, "y": 22, "text": "{label:u:20|REVENUE}", "font": 2, "align": "ml", "color": "#8d99ae"},
+    {"type": "text", "x": 16, "y": 74, "text": "{value|0}", "font": 6, "align": "ml", "color": "#ffffff", "bg": "#0b132b", "pad": 30},
+    {"type": "text", "x": 226, "y": 74, "text": "{unit|}", "font": 4, "align": "mr", "color": "#8d99ae"},
+    {"type": "path", "x": 26, "y": 124, "size": 20, "align": "mc", "fill": "#30d158", "d": "M12 4l9 14H3z", "show": "{delta|0}>=0"},
+    {"type": "path", "x": 26, "y": 124, "size": 20, "align": "mc", "fill": "#ff453a", "d": "M12 20L3 6h18z", "show": "{delta|0}<0"},
+    {"type": "text", "x": 42, "y": 124, "text": "{delta:+|0}% vs last week", "font": 2, "align": "ml", "color": "{delta|0}>=0?#30d158:#ff453a", "bg": "#0b132b", "pad": 20},
+    {"type": "spark", "x": 16, "y": 146, "w": 208, "h": 58, "var": "value", "color": "#5bc0eb", "fill": "#1c2541", "bg": "#0b132b"},
+    {"type": "text", "x": 120, "y": 224, "text": "updated {round({age.value|0}/60)} min ago", "font": 2, "align": "mc", "color": "#5c677d", "bg": "#0b132b", "pad": 20}
+  ]
+}

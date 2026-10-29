@@ -1,0 +1,17 @@
+{
+  "fps": 1,
+  "bg": "#fdfcf7",
+  "maps": {"wd": {"0": "M", "1": "T", "2": "W", "3": "T", "4": "F", "5": "S", "6": "S"}},
+  "items": [
+    {"type": "rect", "x": 0, "y": 0, "w": 240, "h": 40, "color": "#e63946"},
+    {"type": "text", "x": 14, "y": 20, "text": "{date.month:u}", "font": 4, "align": "ml", "color": "#ffffff"},
+    {"type": "text", "x": 226, "y": 20, "text": "{date.year}", "font": 4, "align": "mr", "color": "#ffd6d9"},
+    {"type": "repeat", "of": 7, "x": 22, "y": 52, "dx": 33, "items": [
+      {"type": "text", "x": 0, "y": 0, "text": "{it.index:wd}", "font": 2, "align": "tc", "color": "{it.index}>4?#e63946:#6c757d"}
+    ]},
+    {"type": "repeat", "of": 42, "items": [
+      {"type": "circle", "x": "22+{it.index}%7*33", "y": "88+({it.index}-{it.index}%7)/7*28", "r": 12, "color": "#e63946", "show": "({it.index}-(({date.wdaynum}-1-({date.day}-1)%7+14)%7)+1)=={date.day}"},
+      {"type": "text", "x": "22+{it.index}%7*33", "y": "88+({it.index}-{it.index}%7)/7*28", "text": "{({it.index}-(({date.wdaynum}-1-({date.day}-1)%7+14)%7)+1)}", "font": 2, "align": "mc", "color": "({it.index}-(({date.wdaynum}-1-({date.day}-1)%7+14)%7)+1)=={date.day}?#ffffff:{it.index}%7>4?#e63946:#1d3557", "show": "({it.index}-(({date.wdaynum}-1-({date.day}-1)%7+14)%7)+1)>=1&&({it.index}-(({date.wdaynum}-1-({date.day}-1)%7+14)%7)+1)<={date.mdays}"}
+    ]}
+  ]
+}

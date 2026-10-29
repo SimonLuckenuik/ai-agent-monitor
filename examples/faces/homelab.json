@@ -1,0 +1,23 @@
+{
+  "fps": 2,
+  "bg": "#16171a",
+  "items": [
+    {"type": "text", "x": 12, "y": 18, "text": "HOMELAB", "font": 2, "align": "ml", "color": "#d4d4d8"},
+    {"type": "text", "x": 228, "y": 18, "text": "{net.ip}", "font": 2, "align": "mr", "color": "#71717a"},
+    {"type": "repeat", "of": 3, "x": 12, "y": 38, "dy": 34, "items": [
+      {"type": "rect", "x": 0, "y": 0, "w": 216, "h": 28, "r": 4, "color": "#2b2d31", "border": "#3f4147", "bw": 1},
+      {"type": "circle", "x": 12, "y": 14, "r": 3, "color": "#52525b"},
+      {"type": "circle", "x": 204, "y": 14, "r": 3, "color": "#52525b"},
+      {"type": "rect", "x": 24, "y": 8, "w": 70, "h": 12, "r": 2, "color": "#1c1d20"},
+      {"type": "line", "x": 102, "y": 9, "x2": 150, "y2": 9, "w": 2, "color": "#3f4147"},
+      {"type": "line", "x": 102, "y": 19, "x2": 150, "y2": 19, "w": 2, "color": "#3f4147"}
+    ]},
+    {"type": "sprite", "x": 172, "y": 52, "scale": 4, "bg": "#2b2d31", "palette": {"g": "#30d158", "a": "#ff9f0a", "o": "#1f3a26"}, "frame": "({time.sec}+0)%3", "frames": [["g.o.g"], ["o.g.a"], ["g.g.o"]]},
+    {"type": "sprite", "x": 172, "y": 86, "scale": 4, "bg": "#2b2d31", "palette": {"g": "#30d158", "a": "#ff9f0a", "o": "#1f3a26"}, "frame": "({time.sec}+1)%3", "frames": [["g.o.g"], ["o.g.a"], ["g.g.o"]]},
+    {"type": "sprite", "x": 172, "y": 120, "scale": 4, "bg": "#2b2d31", "palette": {"g": "#30d158", "a": "#ff9f0a", "o": "#1f3a26"}, "frame": "({time.sec}+2)%3", "frames": [["g.o.g"], ["o.g.a"], ["g.g.o"]]},
+    {"type": "text", "x": 12, "y": 148, "text": "CPU {cpu|0}%", "font": 2, "align": "ml", "color": "#a1a1aa", "bg": "#16171a", "pad": 10},
+    {"type": "text", "x": 228, "y": 148, "text": "up {round({sys.uptime}/3600)} h", "font": 2, "align": "mr", "color": "#a1a1aa", "bg": "#16171a", "pad": 10},
+    {"type": "spark", "x": 12, "y": 162, "w": 216, "h": 50, "var": "cpu", "min": 0, "max": 100, "color": "#a78bfa", "fill": "#2e1f5e", "bg": "#16171a"},
+    {"type": "text", "x": 120, "y": 228, "text": "{net.host}", "font": 2, "align": "mc", "color": "#71717a"}
+  ]
+}

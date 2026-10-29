@@ -1,0 +1,23 @@
+{
+  "palette": "{sun.up}==0?night:{now.code}>=51?wet:day",
+  "palettes": {"day": {"sky": "#8ec5ff", "cloud": "#ffffff"}, "wet": {"sky": "#7d8a99", "cloud": "#c9d1da"}, "night": {"sky": "#10153a", "cloud": "#3a4166"}},
+  "bg": "@sky",
+  "items": [
+    {"type": "repeat", "of": 16, "items": [{"type": "rect", "x": "({it.index}*67)%236", "y": "8+({it.index}*41)%110", "w": 2, "h": 2, "color": "#ffffff"}], "show": "{sun.up}==0"},
+    {"type": "sprite", "x": "120-96*cos(180*(1-({sun.until_set}-{sun.until_set}%10)/{sun.daylen}))", "y": "150-110*sin(180*(1-({sun.until_set}-{sun.until_set}%10)/{sun.daylen}))", "align": "mc", "scale": 4, "palette": {"y": "#ffd23f", "Y": "#fff3a0"}, "rows": ["yyyyyyyy", "yYYYYYYy", "yYYYYYYy", "yYYYYYYy", "yYYYYYYy", "yYYYYYYy", "yYYYYYYy", "yyyyyyyy"], "show": "{sun.up}"},
+    {"type": "sprite", "x": "120-96*cos(180*(1-({sun.until_rise}-{sun.until_rise}%10)/(1440-{sun.daylen})))", "y": "150-110*sin(180*(1-({sun.until_rise}-{sun.until_rise}%10)/(1440-{sun.daylen})))", "align": "mc", "scale": 3, "palette": {"m": "#e6e6f0", "M": "#b7b7c9"}, "rows": ["mmmmmmmm", "mmmmMmmm", "mMmmmmmm", "mmmmmmmm", "mmmmmMMm", "mmMmmMMm", "mmmmmmmm", "mmmmmmmm"], "show": "{sun.up}==0"},
+    {"type": "sprite", "x": 18, "y": 40, "scale": 4, "palette": {"w": "@cloud"}, "rows": ["...wwww....", ".wwwwwwwww.", "wwwwwwwwwwww"], "show": "{now.clouds}>=15"},
+    {"type": "sprite", "x": 140, "y": 70, "scale": 4, "palette": {"w": "@cloud"}, "rows": ["...wwww....", ".wwwwwwwww.", "wwwwwwwwwwww"], "show": "{now.clouds}>=45"},
+    {"type": "sprite", "x": 80, "y": 100, "scale": 3, "palette": {"w": "@cloud"}, "rows": ["...wwww....", ".wwwwwwwww.", "wwwwwwwwwwww"], "show": "{now.clouds}>=75"},
+    {"type": "repeat", "of": 14, "items": [{"type": "rect", "x": "({it.index}*53)%232", "y": "56+({it.index}*29)%104", "w": 3, "h": 8, "color": "#9fc7ff"}], "show": "{now.code}>=51&&!(({now.code}>=71&&{now.code}<=77)||{now.code}==85||{now.code}==86)"},
+    {"type": "repeat", "of": 18, "items": [{"type": "rect", "x": "({it.index}*53)%232", "y": "56+({it.index}*29)%110", "w": 4, "h": 4, "color": "#ffffff"}], "show": "({now.code}>=71&&{now.code}<=77)||{now.code}==85||{now.code}==86"},
+    {"type": "sprite", "x": 164, "y": 136, "scale": 5, "palette": {"l": "{date.monthnum}==12||{date.monthnum}<=2?#e4ecf2:{date.monthnum}>=9&&{date.monthnum}<=11?#d9822b:#3f9b3a", "t": "#6b4423"}, "rows": ["..llll..", ".llllll.", "llllllll", "llllllll", ".llllll.", "...tt...", "...tt...", "...tt..."]},
+    {"type": "sprite", "x": 44, "y": 148, "scale": 4, "bg": "@sky", "palette": {"f": "#ff9f1c", "F": "#ffe66d", "s": "#7a5230"}, "frame": "{time.ms}>=500", "frames": [["..f", ".fFf", ".fFf", "..s", "..s", "..s", "..s"], [".f", "..Ff", ".fFf", "..s", "..s", "..s", "..s"]], "show": "{sun.up}==0"},
+    {"type": "repeat", "of": 10, "x": 0, "y": 176, "dx": 24, "items": [{"type": "sprite", "x": 0, "y": 0, "scale": 3, "palette": {"g": "{date.monthnum}==12||{date.monthnum}<=2?#f2f6fa:#5fbf3a", "G": "{date.monthnum}==12||{date.monthnum}<=2?#dbe5ee:#4a9e2c", "d": "#8a5a2b", "e": "#6e4520"}, "rows": ["gggggggg", "gGgggGgg", "dgdddgdd", "dddeddd", "ddddddde", "dedddddd", "dddddedd", "ddeddddd"]}]},
+    {"type": "repeat", "of": 10, "x": 0, "y": 200, "dx": 24, "items": [{"type": "sprite", "x": 0, "y": 0, "scale": 3, "palette": {"d": "#7a4f26", "e": "#5c3a1a"}, "rows": ["dddddedd", "deddddd", "dddddddd", "ddddedd", "deddddd", "dddddded", "ddeddddd", "dddddddd"]}]},
+    {"type": "rect", "x": 8, "y": 210, "w": 224, "h": 26, "r": 3, "color": "#2b2118", "border": "#57452f", "bw": 2},
+    {"type": "text", "x": 18, "y": 223, "text": "{time.hm}", "font": 2, "align": "ml", "color": "#ffffff", "bg": "#2b2118", "pad": 8},
+    {"type": "text", "x": 120, "y": 223, "text": "{date.wday3} {date.day}", "font": 2, "align": "mc", "color": "#f2c94c", "bg": "#2b2118", "pad": 8},
+    {"type": "text", "x": 222, "y": 223, "text": "{now.temp} {units.temp}", "font": 2, "align": "mr", "color": "#ffffff", "bg": "#2b2118", "pad": 8}
+  ]
+}

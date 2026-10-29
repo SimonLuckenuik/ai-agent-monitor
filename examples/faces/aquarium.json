@@ -1,0 +1,16 @@
+{
+  "fps": 2,
+  "bg": "#0a3d62",
+  "items": [
+    {"type": "rect", "x": 0, "y": 0, "w": 240, "h": 40, "color": "#0c4a75"},
+    {"type": "text", "x": 120, "y": 20, "text": "{time.hm}", "font": 4, "align": "mc", "color": "#cfeeff", "bg": "#0c4a75", "pad": 20},
+    {"type": "rect", "x": 0, "y": 206, "w": 240, "h": 34, "color": "#e0c48c"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "stroke": "#2e8b57", "sw": 4, "d": ["M30 210c-10-20 10-30 0-50s10-30 0-50", "M46 210c8-18-8-28 2-46", "M200 210c-10-20 10-34 0-56s8-26 0-40"]},
+    {"type": "circle", "x": 150, "y": 212, "r": 10, "color": "#8d6e63"},
+    {"type": "circle", "x": 166, "y": 214, "r": 7, "color": "#a1887f"},
+    {"type": "sprite", "x": 70, "y": 80, "scale": 5, "bg": "#0a3d62", "palette": {"o": "#ff8c1a", "k": "#1b1b1b"}, "frame": "{time.sec}%2", "frames": [["o...oooo..", "oo.oooooo.", "oooooookoo", "ooooooooo.", "oo.oooooo.", "o...oooo.."], ["....oooo..", "o..oooooo.", "oooooookoo", "ooooooooo.", "o..oooooo.", "....oooo.."]]},
+    {"type": "sprite", "x": 140, "y": 140, "scale": 4, "bg": "#0a3d62", "palette": {"o": "#4fc3f7", "k": "#1b1b1b"}, "frame": "({time.sec}+1)%2", "frames": [["..oooo...o", ".oooooo.oo", "ookooooooo", ".ooooooooo", ".oooooo.oo", "..oooo...o"], ["..oooo....", ".oooooo..o", "ookooooooo", ".ooooooooo", ".oooooo..o", "..oooo...."]]},
+    {"type": "sprite", "x": 104, "y": 56, "scale": 4, "bg": "#0a3d62", "palette": {"w": "#bfe9ff"}, "frame": "{time.sec}%3", "frames": [[".w.", "...", "...", "w..", "...", "..w", "...", "..."], ["...", "w..", "...", "..w", "...", "...", ".w.", "..."], ["...", "..w", "...", "...", ".w.", "...", "...", "w.."]]},
+    {"type": "text", "x": 120, "y": 224, "text": "{now.temp} {units.temp} outside", "font": 2, "align": "mc", "color": "#5d4037", "bg": "#e0c48c", "pad": 20}
+  ]
+}

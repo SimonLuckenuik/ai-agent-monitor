@@ -1,0 +1,17 @@
+{
+  "fps": 1,
+  "bg": "#0a0a0a",
+  "palette": {"on": "#00e5ff", "off": "#1a2a2e", "edge": "#004d57"},
+  "items": [
+    {"type": "text", "x": 120, "y": 18, "text": "BINARY TIME", "font": 2, "align": "mc", "color": "#4d8a94"},
+    {"type": "repeat", "of": 16, "items": [
+      {"type": "circle", "x": "45+(({it.index}-{it.index}%4)/4)*50", "y": "176-{it.index}%4*38", "r": 14, "color": "(((((({it.index}-{it.index}%4)/4)==0?(({time.hour}-{time.hour}%10)/10):(({it.index}-{it.index}%4)/4)==1?{time.hour}%10:(({it.index}-{it.index}%4)/4)==2?(({time.min}-{time.min}%10)/10):{time.min}%10))-(((({it.index}-{it.index}%4)/4)==0?(({time.hour}-{time.hour}%10)/10):(({it.index}-{it.index}%4)/4)==1?{time.hour}%10:(({it.index}-{it.index}%4)/4)==2?(({time.min}-{time.min}%10)/10):{time.min}%10))%({it.index}%4==0?1:{it.index}%4==1?2:{it.index}%4==2?4:8))/({it.index}%4==0?1:{it.index}%4==1?2:{it.index}%4==2?4:8))%2==1?@on:@off", "border": "@edge", "bw": 2}
+    ]},
+    {"type": "text", "x": 20, "y": 176, "text": "1", "font": 2, "align": "mc", "color": "#4d8a94"},
+    {"type": "text", "x": 20, "y": 138, "text": "2", "font": 2, "align": "mc", "color": "#4d8a94"},
+    {"type": "text", "x": 20, "y": 100, "text": "4", "font": 2, "align": "mc", "color": "#4d8a94"},
+    {"type": "text", "x": 20, "y": 62, "text": "8", "font": 2, "align": "mc", "color": "#4d8a94"},
+    {"type": "line", "x": 120, "y": 50, "x2": 120, "y2": 192, "w": 2, "color": "#1a2a2e"},
+    {"type": "text", "x": 120, "y": 220, "text": "{time.hour}:{time.min}", "font": 4, "align": "mc", "color": "#00e5ff", "bg": "#0a0a0a", "pad": 20}
+  ]
+}

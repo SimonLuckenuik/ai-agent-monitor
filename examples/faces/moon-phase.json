@@ -1,0 +1,17 @@
+{
+  "fps": 1,
+  "bg": "#070a1c",
+  "maps": {"name": {"0": "New moon", "1": "Waxing crescent", "2": "First quarter", "3": "Waxing gibbous", "4": "Full moon", "5": "Waning gibbous", "6": "Last quarter", "7": "Waning crescent"}},
+  "items": [
+    {"type": "repeat", "of": 26, "items": [
+      {"type": "circle", "x": "({it.index}*67)%227+6", "y": "({it.index}*41)%113+6", "r": "{it.index}%5==0?2:1", "color": "{it.index}%3==0?#ffffff:#6c78a8"}
+    ]},
+    {"type": "circle", "x": 120, "y": 100, "r": 64, "color": "#2a2f45"},
+    {"type": "circle", "x": 120, "y": 100, "r": 64, "color": {"stops": ["#fffbe6", "#d9d4be"], "angle": 160}, "show": "{moon.lit}>3"},
+    {"type": "circle", "x": "120+({moon.age}<15?-1:1)*128*{moon.lit}/100", "y": 100, "r": 64, "color": "#070a1c", "show": "{moon.lit}<97"},
+    {"type": "circle", "x": 104, "y": 84, "r": 9, "color": "#cfc9b0", "show": "{moon.lit}>60"},
+    {"type": "circle", "x": 140, "y": 118, "r": 6, "color": "#cfc9b0", "show": "{moon.lit}>60"},
+    {"type": "text", "x": 120, "y": 188, "text": "{moon.phase:name}", "font": 4, "align": "mc", "color": "#f2efe0"},
+    {"type": "text", "x": 120, "y": 218, "text": "{moon.lit}% lit  -  day {moon.age} of 29", "font": 2, "align": "mc", "color": "#8f9ac6"}
+  ]
+}

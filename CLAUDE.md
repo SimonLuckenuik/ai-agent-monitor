@@ -14,15 +14,16 @@ branch has **not run on hardware yet**.
 
 ## Hard constraints (read before changing firmware)
 
-- **Flash budget.** An OTA image must be ≤ 0x7E000 = **516,096 bytes**
-  (`scripts/build_options.py` fails the build above it). Currently ~512 KB: about
-  **4 KB left**. Measure every change with `pio run`; find what grew with a link map
+- **Flash budget.** Updates are the compressed `.bin.gz` (1.4.0 on): the image plus
+  its `.bin.gz` must fit the 1 MB sketch area, about 640 KB of firmware
+  (`scripts/build_options.py` prints both and fails above it). The plain image is over
+  the plain-update limit (0x7E000 = 516,096 B) and is not released: new clocks install
+  v1.4.0's `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` first. Flash is still scarce: measure every change with `pio run`; find what grew with a link map
   (see Debugging). Things that cost a lot for little: `strtof`/`atof`/`strtod`
   (~9 KB of libc: use `parseNum()` in faces.cpp), `atan2f`/`fmodf`, any `%f`/`%g`
   in printf (also forbidden by the safety tests: float printf is not linked), inlined
   ArduinoJson lookups (go through the `noinline` helpers `js()`, `num()`, `colorOf()`).
-  mDNS (`SMARTCLOCK_MDNS`, ~21 KB) is in the full image only: `esp12e_nomqtt` unflags it
-  so the plain first-install image fits; the emulator leaves it out (no multicast).
+  mDNS (`SMARTCLOCK_MDNS`, ~21 KB); the emulator leaves it out (no multicast).
 - **RAM.** ~24 KB free heap at run time. No frame buffer (240×240×2 = 115 KB): faces
   redraw only what changed, text needs a `bg`/`pad` to overwrite itself, and anything
   that moves redraws the face (flicker). Paths allocate 3.2 KB while drawing
@@ -102,10 +103,12 @@ running 1.4.0 on; the bootloader unpacks it into place. Since the Weather Icons 
 full plain image is over the plain limit (516,096 B): it can only be flashed over UART
 (a USB-serial adapter on the board's pads; the clock's USB port is power only), so it is
 not a release file.
-`pio run -e esp12e_nomqtt` (`SMARTCLOCK_MQTT=0`) is the plain stepping stone for clocks
-that only take plain images (stock, SmartClock-OSS before 1.4.0). File names: only the
-image the stock update page can install starts with `SDP` (that page refuses other
-names). The stock firmware cannot unpack the `.bin.gz`, so it has no `SDP` prefix.
+Clocks that only take plain images (stock, SmartClock-OSS before 1.4.0) first install
+`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release, the last plain image
+(no MQTT, no mDNS); later releases do not build one, so features are not held to its
+size. File names: only an image the stock update page can install starts with `SDP`
+(that page refuses other names). The stock firmware cannot unpack the `.bin.gz`, so it
+has no `SDP` prefix. The release workflow adds this first-install note to every release.
 
 ### Releases and the version number
 
@@ -116,7 +119,6 @@ on the pushed commit, and publishes:
 
 | File | For |
 |---|---|
-| `SDPro_AIAgentMonitor_v<version>_nomqtt.bin` | The first install, from stock or SmartClock-OSS before 1.4.0 |
 | `AIAgentMonitor_v<version>.bin.gz` | Every update after that |
 | `SHA256SUMS.txt` | Checksums |
 
@@ -203,16 +205,27 @@ change.
   placeholders, the API, limits, the emulator's endpoints or how the clock is reached
   (`plugins/ai-agent-monitor/skills/ai-agent-monitor/`): update `CHANGELOG.md`,
   `docs/specifications/integrations-api.md`, then regenerate the skill's
-  `reference/face-format.md` from it (the "Face JSON" section to "Home Assistant
-  dashboards", headings one level up), and update the skill's `SKILL.md`,
-  `reference/api.md`, `scripts/clock.py` and `examples/`. Check the skill's examples
-  still render (`agent_faces` in the integration tests).
+  `reference/face-format.md` from it (`python scripts/gen_face_format.py`; CI fails
+  when it is out of date), and update the skill's `SKILL.md`, `reference/api.md`,
+  `reference/face.schema.json` (new item types and fields), `scripts/clock.py`
+  (`FIELDS`: the placeholder names `check` knows) and `examples/`. Check the skill's
+  examples still render (`agent_faces` in the integration tests).
+- **Placeholder names** live in tables in `src/faces.cpp` (`GROUPS`, `TIME_F`,
+  `DATE_F`, …, then `fieldValue()`); `net.*`, `sys.*`, `theme.night`, `time.zone`
+  come from `deviceValue()` in `src/main.cpp`. A new name goes in the spec's table,
+  `clock.py`'s `FIELDS` and a unit test.
 - Plugin changes: bump the version in both `plugin.json` and `marketplace.json`. The
   repository's `.claude/settings.json` enables the plugin from the GitHub marketplace,
   so sessions here get the published (`main`) version; try local skill edits with
   `claude --plugin-dir plugins/ai-agent-monitor`.
-- Example faces (`examples/faces/`): at most 4 KB minified and 32 items each; the
-  integration tests push and capture every file there.
+- Example faces (`examples/faces/`): at most 4 KB minified and 32 items each, valid
+  for `clock.py check`. `samples.json` holds the variables, histories and messages
+  each one is shown with (`"@+N"`: N seconds after the test time; `"@age N value"`:
+  pushed N seconds before it), and optionally `"shift"` (seconds added to the test
+  time) and `"weather"` (`open_meteo()` arguments in `tests/integration/emulator.py`). The integration tests push and capture every face;
+  `scripts/screenshots.py` writes `docs/images/custom-faces.png` and
+  `docs/images/faces/<name>.png` for `examples/faces/README.md` (describe a new face
+  there).
 - New source files: add them to `emulator/build.sh`; headers used by faces.cpp to the
   copy lists in `tests/face_preview/run_face_preview.py` and `tests/unit/run_unit_tests.py`.
 - Face preview mocks (`tests/face_preview/mock/`) are shared with the unit tests (the

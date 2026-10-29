@@ -1,0 +1,16 @@
+{
+  "palette": "{sun.up}?day:night",
+  "palettes": {"day": {"sky": "#7ec8ff", "ground": "#2f6b3a", "arc": "#ffffff", "fg": "#0b2545"}, "night": {"sky": "#0b1026", "ground": "#14261a", "arc": "#3a4470", "fg": "#c9d3ff"}},
+  "bg": "@sky",
+  "items": [
+    {"type": "rect", "x": 0, "y": 168, "w": 240, "h": 72, "color": "@ground"},
+    {"type": "path", "x": 0, "y": 0, "size": 240, "vb": "0 0 240 240", "stroke": "@arc", "sw": 2, "d": "M20 168A100 100 0 0 1 220 168"},
+    {"type": "circle", "x": "120-100*cos(180*(1-{sun.until_set}/{sun.daylen}))", "y": "168-100*sin(180*(1-{sun.until_set}/{sun.daylen}))", "r": 13, "color": "#ffd60a", "border": "#ff9f0a", "bw": 3, "show": "{sun.up}"},
+    {"type": "circle", "x": "120-100*cos(180*(1-{sun.until_rise}/(1440-{sun.daylen})))", "y": "168-100*sin(180*(1-{sun.until_rise}/(1440-{sun.daylen})))", "r": 10, "color": "#e8e8f0", "show": "!{sun.up}"},
+    {"type": "text", "x": 120, "y": 120, "text": "{time.hm}", "font": 6, "align": "mc", "color": "@fg"},
+    {"type": "text", "x": 20, "y": 184, "text": "{sun.rise}", "font": 2, "align": "tc", "color": "#ffffff"},
+    {"type": "text", "x": 220, "y": 184, "text": "{sun.set}", "font": 2, "align": "tc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 214, "text": "Sunset in {({sun.until_set}-{sun.until_set}%60)/60}h {{sun.until_set}%60}m", "font": 2, "align": "mc", "color": "#ffffff", "show": "{sun.up}"},
+    {"type": "text", "x": 120, "y": 214, "text": "Sunrise in {({sun.until_rise}-{sun.until_rise}%60)/60}h {{sun.until_rise}%60}m", "font": 2, "align": "mc", "color": "#ffffff", "show": "!{sun.up}"}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "when": "{until|0}>{time.epoch}",
+  "palette": "{mode|focus}",
+  "palettes": {"focus": {"bg": "#2b0f0e", "ring": "#ff6347", "track": "#4a1f1c", "fg": "#ffe8e3"}, "break": {"bg": "#0d2618", "ring": "#30d158", "track": "#1d4a30", "fg": "#e3ffe9"}},
+  "maps": {"title": {"break": "BREAK", "*": "FOCUS"}},
+  "bg": "@bg",
+  "items": [
+    {"type": "ring", "x": 120, "y": 112, "r": 92, "w": 12, "value": "max(0,{until|0}-{time.epoch})", "max": "{len|1500}", "color": "@ring", "track": "@track"},
+    {"type": "sprite", "x": 120, "y": 54, "align": "mc", "scale": 3, "palette": {"g": "#30d158", "r": "#ff6347", "w": "#ffb3a7"}, "rows": ["....gg....", "...gggg...", ".rrrggrrr.", "rrrrrrrrrr", "rrrwrrrrrr", "rrwwrrrrrr", "rrrrrrrrrr", "rrrrrrrrrr", ".rrrrrrrr.", "..rrrrrr.."]},
+    {"type": "text", "x": 120, "y": 112, "text": "{(max(0,{until|0}-{time.epoch})-max(0,{until|0}-{time.epoch})%60)/60}:{(max(0,{until|0}-{time.epoch})%60-max(0,{until|0}-{time.epoch})%10)/10}{max(0,{until|0}-{time.epoch})%10}", "font": 6, "align": "mc", "color": "@fg", "bg": "@bg", "pad": 20},
+    {"type": "text", "x": 120, "y": 152, "text": "{mode:title}", "font": 2, "align": "mc", "color": "@ring"},
+    {"type": "text", "x": 120, "y": 224, "text": "{task:26|Deep work}", "font": 2, "align": "mc", "color": "@fg"}
+  ]
+}

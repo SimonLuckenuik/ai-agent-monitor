@@ -1,0 +1,12 @@
+{
+  "bg": "#0d1117",
+  "items": [
+    {"type": "text", "x": 14, "y": 20, "text": "COMMITS TODAY", "font": 2, "align": "ml", "color": "#8b949e"},
+    {"type": "text", "x": 14, "y": 64, "text": "{commits|0}", "font": 6, "align": "ml", "color": "#39d353", "bg": "#0d1117", "pad": 20},
+    {"type": "sprite", "x": 196, "y": 56, "align": "mc", "scale": 6, "bg": "#0d1117", "palette": {"o": "#ff7b1a", "y": "#ffd60a"}, "frame": "{time.sec}%2", "frames": [["...o....", "..oo....", "..ooo.o.", ".oooooo.", ".ooyyoo.", "ooyyyyoo", "ooyyyyoo", ".oyyyyo.", "..oooo.."], ["....o...", "...oo...", ".o.ooo..", ".oooooo.", ".ooyyoo.", "ooyyyyoo", "ooyyyyoo", ".oyyyyo.", "..oooo.."]]},
+    {"type": "text", "x": 196, "y": 98, "text": "{streak|0} days", "font": 2, "align": "mc", "color": "#ffb86b"},
+    {"type": "text", "x": 14, "y": 124, "text": "LAST 14 DAYS", "font": 2, "align": "ml", "color": "#8b949e"},
+    {"type": "spark", "x": 14, "y": 144, "w": 212, "h": 60, "var": "daily", "min": 0, "color": "#39d353", "fill": "#0e4429", "bg": "#0d1117"},
+    {"type": "text", "x": 120, "y": 224, "text": "{repo:24|my-project}", "font": 2, "align": "mc", "color": "#8b949e"}
+  ]
+}

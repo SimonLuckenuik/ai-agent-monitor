@@ -1,0 +1,19 @@
+{
+  "palette": "{sun.up}?day:night",
+  "palettes": {"day": {"bg": "#eef3f8", "card": "#ffffff", "edge": "#d5dee8", "fg": "#14213d", "muted": "#6b7a90", "accent": "#f77f00"}, "night": {"bg": "#0d1321", "card": "#1d2d44", "edge": "#2b3f5c", "fg": "#f0ebd8", "muted": "#8d99ae", "accent": "#ffb703"}},
+  "bg": "@bg",
+  "items": [
+    {"type": "text", "x": 10, "y": 20, "text": "{loc.city:16|Weather}", "font": 4, "align": "ml", "color": "@fg"},
+    {"type": "text", "x": 230, "y": 20, "text": "{now.temp} {units.temp}", "font": 4, "align": "mr", "color": "@accent"},
+    {"type": "text", "x": 10, "y": 44, "text": "{now.text}, feels {now.feels}", "font": 2, "align": "ml", "color": "@muted"},
+    {"type": "repeat", "of": "days", "x": 6, "y": 64, "dx": 58, "items": [
+      {"type": "rect", "x": 0, "y": 0, "w": 54, "h": 166, "r": 10, "color": "@card", "border": "{it.index}==0?@accent:@edge", "bw": 2},
+      {"type": "text", "x": 27, "y": 10, "text": "{it.wday3}", "font": 2, "align": "tc", "color": "@muted"},
+      {"type": "icon", "x": 27, "y": 52, "size": 38, "icon": "{it.icon}", "color": "@fg"},
+      {"type": "text", "x": 27, "y": 84, "text": "{it.high}", "font": 4, "align": "tc", "color": "@fg"},
+      {"type": "text", "x": 27, "y": 112, "text": "{it.low}", "font": 2, "align": "tc", "color": "@muted"},
+      {"type": "bar", "x": 7, "y": 136, "w": 40, "h": 6, "value": "{it.rain}", "color": "#4ea8de", "track": "@edge"},
+      {"type": "text", "x": 27, "y": 148, "text": "{it.rain}%", "font": 2, "align": "tc", "color": "#4ea8de"}
+    ]}
+  ]
+}

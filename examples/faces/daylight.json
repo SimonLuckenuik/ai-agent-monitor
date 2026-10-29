@@ -1,0 +1,17 @@
+{
+  "bg": "#101b2d",
+  "items": [
+    {"type": "text", "x": 120, "y": 22, "text": "DAYLIGHT", "font": 2, "align": "mc", "color": "#8aa2c8"},
+    {"type": "path", "x": 120, "y": 64, "size": 52, "align": "mc", "stroke": "#ffd166", "sw": 2, "d": ["M8 12a4 4 0 1 0 8 0 4 4 0 1 0-8 0", "M12 2v2", "M12 20v2", "M4.9 4.9l1.4 1.4", "M17.7 17.7l1.4 1.4", "M2 12h2", "M20 12h2", "M6.3 17.7l-1.4 1.4", "M19.1 4.9l-1.4 1.4"], "show": "{sun.up}"},
+    {"type": "path", "x": 120, "y": 64, "size": 48, "align": "mc", "fill": "#c9d3ff", "d": "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z", "show": "!{sun.up}"},
+    {"type": "text", "x": 120, "y": 112, "text": "{({sun.daylen}-{sun.daylen}%60)/60}h {{sun.daylen}%60}m", "font": 4, "align": "mc", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 136, "text": "of daylight today", "font": 2, "align": "mc", "color": "#8aa2c8"},
+    {"type": "bar", "x": 20, "y": 152, "w": 200, "h": 10, "value": "{sun.up}?{sun.daylen}-{sun.until_set}:0", "max": "{sun.daylen}", "color": "#ffd166", "track": "#22324d"},
+    {"type": "path", "x": 22, "y": 176, "size": 20, "stroke": "#ffd166", "sw": 2.5, "d": "M12 19V5M5 12l7-7 7 7"},
+    {"type": "text", "x": 46, "y": 186, "text": "{sun.rise}", "font": 4, "align": "ml", "color": "#ffffff"},
+    {"type": "path", "x": 218, "y": 176, "size": 20, "align": "tr", "stroke": "#f4845f", "sw": 2.5, "d": "M12 5v14M19 12l-7 7-7-7"},
+    {"type": "text", "x": 194, "y": 186, "text": "{sun.set}", "font": 4, "align": "mr", "color": "#ffffff"},
+    {"type": "text", "x": 120, "y": 222, "text": "Sunset in {({sun.until_set}-{sun.until_set}%60)/60}h {{sun.until_set}%60}m", "font": 2, "align": "mc", "color": "#8aa2c8", "show": "{sun.up}"},
+    {"type": "text", "x": 120, "y": 222, "text": "Sunrise in {({sun.until_rise}-{sun.until_rise}%60)/60}h {{sun.until_rise}%60}m", "font": 2, "align": "mc", "color": "#8aa2c8", "show": "!{sun.up}"}
+  ]
+}

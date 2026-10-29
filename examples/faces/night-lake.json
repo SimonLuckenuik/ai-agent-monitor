@@ -20,8 +20,8 @@
     {"type": "line", "x": 177, "y": 187, "x2": 195, "y2": 187, "w": 2, "color": "#857c66"},
     {"type": "line", "x": 182, "y": 194, "x2": 190, "y2": 194, "w": 2, "color": "#5c5648"},
     {"type": "line", "x": 108, "y": 178, "x2": 114, "y2": 178, "w": 2, "color": "#7a6430"},
-    {"type": "text", "x": 16, "y": 216, "text": "{time}", "font": 4, "align": "ml", "color": "#e8e6f5", "bg": "#121936", "pad": 96},
-    {"type": "text", "x": 224, "y": 206, "text": "{dow3} {day}", "font": 2, "align": "mr", "color": "#9aa3d0", "bg": "#121936", "pad": 80},
-    {"type": "text", "x": 224, "y": 226, "text": "{temp|--} {unit}", "font": 2, "align": "mr", "color": "#9aa3d0", "bg": "#121936", "pad": 80}
+    {"type": "text", "x": 16, "y": 216, "text": "{time.hm}", "font": 4, "align": "ml", "color": "#e8e6f5", "bg": "#121936", "pad": 96},
+    {"type": "text", "x": 224, "y": 206, "text": "{date.wday3} {date.day}", "font": 2, "align": "mr", "color": "#9aa3d0", "bg": "#121936", "pad": 80},
+    {"type": "text", "x": 224, "y": 226, "text": "{now.temp|--} {units.temp}", "font": 2, "align": "mr", "color": "#9aa3d0", "bg": "#121936", "pad": 80}
   ]
 }

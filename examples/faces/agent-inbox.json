@@ -1,0 +1,19 @@
+{
+  "when": "{msg.count}>0",
+  "bg": "#0f0f14",
+  "items": [
+    {"type": "text", "x": 14, "y": 20, "text": "INBOX", "font": 4, "align": "ml", "color": "#ffffff"},
+    {"type": "circle", "x": 104, "y": 20, "r": 12, "color": "#ff453a", "show": "{msg.count}>0"},
+    {"type": "text", "x": 104, "y": 20, "text": "{msg.count}", "font": 2, "align": "mc", "color": "#ffffff", "show": "{msg.count}>0"},
+    {"type": "text", "x": 226, "y": 20, "text": "{time.hm}", "font": 2, "align": "mr", "color": "#8e8e93", "bg": "#0f0f14", "pad": 10},
+    {"type": "repeat", "of": "msgs", "x": 8, "y": 42, "dy": 48, "items": [
+      {"type": "rect", "x": 0, "y": 0, "w": 224, "h": 44, "r": 8, "color": "#1c1c24"},
+      {"type": "rect", "x": 0, "y": 0, "w": 5, "h": 44, "r": 2, "color": "{it.color}"},
+      {"type": "path", "x": 26, "y": 22, "size": 22, "align": "mc", "stroke": "{it.color}", "sw": 2, "d": "{it.icon}"},
+      {"type": "text", "x": 46, "y": 13, "text": "{it.title:15}", "font": 2, "align": "ml", "color": "{it.color}"},
+      {"type": "text", "x": 218, "y": 13, "text": "{round({it.ttl}/60)}m", "font": 2, "align": "mr", "color": "#636366"},
+      {"type": "text", "x": 46, "y": 31, "text": "{it.text:24}", "font": 2, "align": "ml", "color": "#c7c7cc"}
+    ]},
+    {"type": "text", "x": 120, "y": 130, "text": "All quiet", "font": 4, "align": "mc", "color": "#636366", "show": "{msg.count}==0"}
+  ]
+}
