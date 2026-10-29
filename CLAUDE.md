@@ -218,6 +218,10 @@ change.
   repository's `.claude/settings.json` enables the plugin from the GitHub marketplace,
   so sessions here get the published (`main`) version; try local skill edits with
   `claude --plugin-dir plugins/ai-agent-monitor`.
+- Settings for faces and colours (rotation entries, palettes, roles) are specified in
+  `docs/specifications/settings.md`; keep it, `applySetting()`, `configJson()` and the
+  settings page in step. Role names live in `ROLE_NAMES` (`src/faces.cpp`), in the
+  page's `ROLES`, and in `clock.py`'s `FIELDS["theme"]`.
 - Example faces (`examples/faces/`): at most 4 KB minified and 32 items each, valid
   for `clock.py check`. `samples.json` holds the variables, histories and messages
   each one is shown with (`"@+N"`: N seconds after the test time; `"@age N value"`:

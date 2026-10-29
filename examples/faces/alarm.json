@@ -1,0 +1,14 @@
+{
+  "when": "{alarm}",
+  "duration": 30,
+  "palette": "{time.sec}%2==0?on:off",
+  "palettes": {"on": {"bg": "#e0001b", "fg": "#ffffff", "dim": "#ffd0d4"}, "off": {"bg": "#14000a", "fg": "#ff3b4e", "dim": "#a3606a"}},
+  "bg": "@bg",
+  "items": [
+    {"type": "path", "x": 120, "y": 62, "size": 84, "align": "mc", "stroke": "@fg", "sw": 2.2, "d": ["M10.268 21a2 2 0 0 0 3.464 0", "M22 8c0-2.3-.8-4.3-2-6", "M4 2C2.8 3.7 2 5.7 2 8", "M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"]},
+    {"type": "text", "x": 120, "y": 124, "text": "ALARM", "font": 4, "align": "mc", "color": "@fg"},
+    {"type": "text", "x": 120, "y": 162, "w": 224, "lines": 2, "text": "{alarm}", "font": 4, "align": "mc", "color": "@fg"},
+    {"type": "text", "x": 120, "y": 202, "text": "{source|}", "font": 2, "align": "mc", "color": "@dim"},
+    {"type": "text", "x": 120, "y": 224, "text": "since {round({age.alarm|0}/60)} min  |  {time.hm}", "font": 2, "align": "mc", "color": "@dim"}
+  ]
+}

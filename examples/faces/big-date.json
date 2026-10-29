@@ -1,0 +1,7 @@
+{
+  "items": [
+    {"font": "big", "align": "tc", "bg": "@bg", "type": "text", "x": 120, "y": 8, "text": "{date.wday}", "size": 40, "w": 226, "color": "@date", "pad": 8},
+    {"font": "big", "align": "tc", "bg": "@bg", "type": "text", "x": 120, "y": 60, "text": "{date.day}", "size": 112, "w": 226, "color": "@text", "pad": 8},
+    {"font": "big", "align": "tc", "bg": "@bg", "type": "text", "x": 120, "y": 192, "text": "{date.month}", "size": 40, "w": 226, "color": "@date", "pad": 8}
+  ]
+}

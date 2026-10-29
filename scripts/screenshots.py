@@ -79,7 +79,7 @@ def clock_images(emu):
 
     # Custom faces from examples/faces, with their sample values.
     shots, labels = [], []
-    samples = json.loads((EXAMPLES / "samples.json").read_text())
+    samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
     (IMAGES / "faces").mkdir(exist_ok=True)
     for path in sorted(EXAMPLES.glob("*.json")):
         if path.name == "samples.json":
@@ -87,7 +87,7 @@ def clock_images(emu):
         emu.clear_vars()
         emu.clear_messages()
         emu.apply_sample(samples.get(path.stem, {}))
-        emu.push_face(path.stem, json.loads(path.read_text()), show=True)
+        emu.push_face(path.stem, json.loads(path.read_text(encoding="utf-8")), show=True)
         take(path.stem)
         shots[-1].save(IMAGES / "faces" / f"{path.stem}.png", optimize=True)
         emu.delete_face(path.stem)
@@ -119,7 +119,7 @@ def clock_images(emu):
                          ("done", {"title": "Release 1.4.0", "msg": "Published"}),
                          ("error", {"title": "CI", "msg": "2 tests failed"})):
         emu.vars(**values)
-        emu.push_face(f"agent-{name}", json.loads((SKILL_EXAMPLES / f"{name}.json").read_text()), show=True)
+        emu.push_face(f"agent-{name}", json.loads((SKILL_EXAMPLES / f"{name}.json").read_text(encoding="utf-8")), show=True)
         take(f"skill face: {name}")
         emu.delete_face(f"agent-{name}")
     sheet(shots, 4, IMAGES / "agent-screens.png", labels=labels)
@@ -131,6 +131,11 @@ def web_images(emu):
     except ImportError:
         raise SystemExit("The settings page needs Playwright: pip install playwright (or use --no-web)")
     url = f"{emu.api}/#password={emu.password()}"   # the emulator build's sign-in link
+    # The rotation with a few custom faces: one with its own time, one turned off.
+    shown = ("calendar", "scoreboard", "pomodoro")
+    for name in shown:
+        emu.push_face(name, json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8")))
+    emu.settings(themeInterval=10, turns="#7=20,scoreboard=30", customoff="pomodoro")
 
     def card(page, title):
         return page.locator(f"section.card:has(h2:has-text('{title}'))").first
@@ -176,6 +181,9 @@ def web_images(emu):
         page.screenshot(path=str(IMAGES / "settings-phone.png"))
         page.close()
         browser.close()
+    for name in shown:
+        emu.delete_face(name)
+    emu.settings(themeInterval=0, turns="", customoff="")
 
 
 def main():

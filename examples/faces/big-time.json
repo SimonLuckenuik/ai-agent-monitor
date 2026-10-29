@@ -1,0 +1,6 @@
+{
+  "items": [
+    {"font": "big", "align": "tc", "bg": "@bg", "type": "text", "x": 120, "y": 8, "text": "{time.hour}", "size": 95, "w": 226, "color": "@text", "pad": 4},
+    {"font": "big", "align": "tc", "bg": "@bg", "type": "text", "x": 120, "y": 128, "text": "{time.min}", "size": 95, "w": 226, "color": "@time", "pad": 4}
+  ]
+}

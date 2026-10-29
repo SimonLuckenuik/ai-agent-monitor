@@ -1,0 +1,16 @@
+{
+  "bg": "#101410",
+  "items": [
+    {"type": "rect", "x": 4, "y": 4, "w": 232, "h": 232, "r": 10, "fill": false, "border": "#3a3f3a", "bw": 3},
+    {"type": "text", "x": 120, "y": 14, "text": "AGENT LEAGUE", "font": "big", "size": 16, "align": "tc", "color": "#9aa39a"},
+    {"type": "rect", "x": 14, "y": 40, "w": 100, "h": 96, "r": 6, "color": "#000000", "border": "#2c322c", "bw": 2},
+    {"type": "rect", "x": 126, "y": 40, "w": 100, "h": 96, "r": 6, "color": "#000000", "border": "#2c322c", "bw": 2},
+    {"type": "text", "x": 64, "y": 50, "text": "✓ PASS", "font": "big", "size": 14, "align": "tc", "color": "#30d158"},
+    {"type": "text", "x": 176, "y": 50, "text": "✗ FAIL", "font": "big", "size": 14, "align": "tc", "color": "#ff453a"},
+    {"type": "text", "x": 64, "y": 76, "text": "{pass:03|000}", "font": "big", "size": 48, "w": 84, "align": "tc", "color": "#ffb400", "bg": "#000000"},
+    {"type": "text", "x": 176, "y": 76, "text": "{fail:03|000}", "font": "big", "size": 48, "w": 84, "align": "tc", "color": "{fail|0}>0?#ff453a:#ffb400", "bg": "#000000"},
+    {"type": "text", "x": 120, "y": 148, "text": "{time.hm}", "font": "big", "size": 38, "align": "tc", "color": "@time", "bg": "#101410", "pad": 10},
+    {"type": "text", "x": 120, "y": 196, "text": "↑ {sun.rise}  ↓ {sun.set}", "font": "big", "size": 14, "align": "tc", "color": "#c9cfc9", "bg": "#101410", "pad": 10},
+    {"type": "text", "x": 120, "y": 216, "text": "{now.temp}°  {now.kind:u:12}", "font": "big", "size": 12, "align": "tc", "color": "#7f877f", "bg": "#101410", "pad": 10}
+  ]
+}

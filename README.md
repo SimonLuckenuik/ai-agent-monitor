@@ -23,9 +23,9 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
 - **Custom faces.** Agents (or you) design whole screens as JSON: text, shapes with
   borders, SVG paths (Lucide or Material icons as they are), gradients, gauges, pixel
   art, charts, lists, live values (time, weather, forecast, sun, moon, network, your
-  own variables), expressions, palettes and animation. They are saved on the clock and
-  join the rotation, or appear only when they have something to show. A JSON Schema
-  checks them. [32 examples](examples/faces).
+  own variables), expressions, palettes, large text in the Big tiles' font and
+  animation. They are saved on the clock and join the rotation, or appear only when
+  they have something to show. A JSON Schema checks them. [37 examples](examples/faces).
 - **A Claude Code plugin** that teaches Claude the API, with examples. See
   [Claude Code plugin](#claude-code-plugin).
 - **Clock faces:** Classic, Simple, Weather, Forecast, Photo, and the **Big tiles**:
@@ -33,7 +33,13 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   Weather forecast - Day 1, 2 and 3), each showing one thing as large as the screen
   allows. The Day tiles lead with the feels-like temperature, then wind, humidity,
   sunrise and sunset, low, high and precipitation; Weather today shows the current
-  conditions. You choose which faces rotate, in what order and how often; faces with nothing to show are skipped.
+  conditions. You choose which faces rotate (built-in and custom alike), in what
+  order, how often, and how long each one stays; faces with nothing to show are
+  skipped.
+- **Colours:** palettes of named colours for day and night, and every part of the
+  faces (time, date, highlights, weather icons, temperatures, background, text …)
+  bound to one of them, or to a rule such as "blue below 0°, orange above". Custom
+  faces can use the same colours, so everything matches.
 - **Weather and a 4-day forecast with no API key**, from
   [Open-Meteo](https://open-meteo.com/), drawn with
   [Weather Icons](https://erikflowers.github.io/weather-icons/) (day and night).
@@ -178,8 +184,11 @@ clock's own values (`{time.hm}`, `{date.wday}`, `{now.temp}`, `{day1.high}`,
 update over HTTP or MQTT: with an expiry (`$ttl`), kept across restarts (`$persist`),
 added up (`$add`) or kept as a history for charts (`$history`). Number and colour fields
 take expressions, and so does text in braces; **maps** turn values into colours or
-labels, and **palettes** recolour a whole face (day and night, or by state). A face
-joins the rotation, or only `when` a condition holds, for as long as its `duration`.
+labels, and **palettes** recolour a whole face (day and night, or by state); `@time`,
+`@bg`, `@warn` … are the clock's own colours, so a face can match the built-in ones.
+`"font": "big"` draws the Big tiles' line font at any size, with `° ↑ ↓ ✓ ✗ ♥ ⚡`. A
+face joins the rotation, or only `when` a condition holds, for as long as its
+`duration`.
 
 Turn them on in **Integrations → Custom faces**, which also gives the API key for
 scripts:
@@ -194,16 +203,16 @@ The format is in
 and `face.schema.json` in the [Claude Code plugin](#claude-code-plugin)'s skill is its
 JSON Schema (`clock.py check face.json` validates a face and its placeholder names).
 
-[`examples/faces/`](examples/faces) has 32 ready-made faces, each described with what
+[`examples/faces/`](examples/faces) has 37 ready-made faces, each described with what
 it demonstrates and the variables it reads: clocks (analog, binary, a 1980s watch, a
-month calendar), weather (a forecast strip, the sun's path, the moon's phase, a
+month calendar, the Big tiles redone in JSON), weather (a forecast strip, the sun's path, the moon's phase, a
 day/night beach, what to wear, a window on the sky, golden hour), faces for agents
 and work (an inbox of agent messages, a CI pipeline, a heartbeat watchdog that
 appears when an agent goes quiet, a pomodoro timer, a countdown, a commit streak, a
 KPI with its trend, a homelab, a battery, a pixel pet, and an animated Claude
-mascot), and two pixel-art games (a block world and a retro runner).
+mascot, a scoreboard, a flashing alarm), and two pixel-art games (a block world and a retro runner).
 
-![The 32 example custom faces](docs/images/custom-faces.png)
+![The 37 example custom faces](docs/images/custom-faces.png)
 
 ```bash
 curl -X POST "http://<clock>/api/faces?name=synthwave&show=1&key=<api key>" --data-binary @examples/faces/synthwave.json

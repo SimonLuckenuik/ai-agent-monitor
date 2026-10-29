@@ -1,0 +1,6 @@
+{
+  "items": [
+    {"type": "icon", "x": 120, "y": 62, "size": 124, "icon": "{now.icon}", "color": "@icon", "bg": "@bg"},
+    {"font": "big", "align": "tc", "bg": "@bg", "type": "text", "x": 120, "y": 130, "text": "{now.temp}°", "size": 92, "w": 226, "color": "@text", "pad": 8}
+  ]
+}

@@ -1,6 +1,6 @@
 # Example custom faces
 
-32 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
+37 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
 push to the clock (`POST /api/faces`, or `python clock.py push <name> <file>` from the
 Claude Code skill); the format is in
 [docs/specifications/integrations-api.md](../../docs/specifications/integrations-api.md#custom-faces).
@@ -25,6 +25,9 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "m
 | ![](../../docs/images/faces/calendar.png) | **calendar**: the month, today circled | A 6-week grid from `{date.wdaynum}`, `{date.mdays}` and one `repeat`; weekday initials from a map |
 | ![](../../docs/images/faces/terminal.png) | **terminal**: a shell session | A blinking cursor; status colours from a map; `{age.agent}`. Push `agent` |
 | ![](../../docs/images/faces/night-light.png) | **night-light**: a dim face for the bedside | `"when": "{theme.night}"`: in the rotation only during night hours |
+| ![](../../docs/images/faces/big-time.png) | **big-time**: the Big time tile, in JSON | `"font": "big"` at 95 px; `@text` and `@time`, so it follows the clock's colours |
+| ![](../../docs/images/faces/big-date.png) | **big-date**: the Big date tile, in JSON | Big text shrunk to fit with `w`; `@date`; an opaque `bg` so each line redraws alone |
+| ![](../../docs/images/faces/big-weather.png) | **big-weather**: the Big weather tile, in JSON | A weather `icon` in `@icon`; the degree sign `°`, which only the big font has |
 
 ## Weather, sun and moon
 
@@ -50,6 +53,7 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "m
 | ![](../../docs/images/faces/agent-inbox.png) | **agent-inbox**: every agent message | `repeat` over `"msgs"`; a count badge; `"when": "{msg.count}>0"`. Post messages |
 | ![](../../docs/images/faces/ci-pipeline.png) | **ci-pipeline**: the last build | A palette per state; labels from a map; a `spark` of build times. Push `build` (`ok`, `running`, `fail`), `repo`, `branch`, `commit`, `author`, `fails`, `pct`; `mins` with `$history` |
 | ![](../../docs/images/faces/heartbeat.png) | **heartbeat**: an agent that went quiet | `"when": "{age.beat\|99999}>300"`: the face appears by itself when `beat` stops being pushed. Push `beat` (anything) and `agent` |
+| ![](../../docs/images/faces/alarm.png) | **alarm**: a flashing alarm | A palette chosen by `{time.sec}%2` swaps the whole face between two colour sets every second; `"when": "{alarm}"`: in the rotation only while an alarm is set; `{age.alarm}` for how long. Push `alarm` (the text; `null` clears it) and `source` |
 | ![](../../docs/images/faces/pomodoro.png) | **pomodoro**: a focus timer | A countdown from a Unix time (`{until}-{time.epoch}`); `"when"` while it runs. Push `until` (Unix time), `len` (seconds), `task`, `mode` (`focus`, `break`) |
 | ![](../../docs/images/faces/countdown.png) | **countdown**: days to an event | Days and hours from a Unix time; confetti on the day. Push `event`, `at` (Unix time) |
 | ![](../../docs/images/faces/commit-streak.png) | **commit-streak**: today's commits | `$add` counters; a flickering flame `sprite`; a `spark`. Push `commits` (with `$add`), `streak`, `repo`; `daily` with `$history` |
@@ -58,6 +62,7 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "m
 | ![](../../docs/images/faces/power-cell.png) | **power-cell**: a battery | A width from a value; colour by level; a bolt shown while charging. Push `batt`, `charging` (1 or 0), `eta`, `device` |
 | ![](../../docs/images/faces/pixel-pet.png) | **pixel-pet**: a pet that needs feeding | A blinking `sprite` coloured by mood through a map; a food bar. Push `pet`, `mood` (`happy`, `hungry`, `sleepy`), `food` (0-100) |
 | ![](../../docs/images/faces/claude-mascot.png) | **claude-mascot**: Claude Code at work | One `sprite` with 9 frames chosen by an expression: typing, cheering, thinking, a slump on failure, asleep at night; a message badge. Push `state` (`thinking`, `working`, `done`, `fail`, or none), `task` |
+| ![](../../docs/images/faces/scoreboard.png) | **scoreboard**: passes and failures, stadium style | Big text with `✓ ✗ ↑ ↓`; zero-padded numbers (`{fail:03|000}`); a colour from a value (`{fail}>0`); `@time`. Push `pass` and `fail` (with `$add`) |
 
 ## Games and worlds
 

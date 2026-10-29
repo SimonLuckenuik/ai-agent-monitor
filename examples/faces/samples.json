@@ -252,5 +252,17 @@
  },
  "golden-hour": {
   "shift": -9540
+ },
+ "scoreboard": {
+  "vars": {
+   "pass": 128,
+   "fail": 3
+  }
+ },
+ "alarm": {
+  "vars": {
+   "alarm": "@age 420 Disk 97% full on nas",
+   "source": "homelab watchdog"
+  }
  }
 }
