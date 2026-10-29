@@ -358,8 +358,12 @@
           "description": "ASCII; {placeholders}, and {expressions with {placeholders} inside}."
         },
         "font": {
+          "anyOf": [{"$ref": "#/$defs/number"}, {"const": "big"}],
+          "description": "2 (16 px), 4 (26 px, default), 6 (48 px, digits : . - only), or \"big\": the Big tiles' line font at any size (capitals, digits, : . , % / + ! ? ' and the symbols arrows, check, cross, bullet, heart, bolt, degree)."
+        },
+        "size": {
           "$ref": "#/$defs/number",
-          "description": "2 (16 px), 4 (26 px, default), 6 (48 px, digits : . - only)."
+          "description": "With font big: the letters' height in pixels (40)."
         },
         "color": {
           "$ref": "#/$defs/colour"
@@ -377,7 +381,7 @@
         },
         "w": {
           "$ref": "#/$defs/number",
-          "description": "Wraps to this width."
+          "description": "Wraps to this width; with font big, the text shrinks to fit it."
         },
         "lines": {
           "$ref": "#/$defs/number",

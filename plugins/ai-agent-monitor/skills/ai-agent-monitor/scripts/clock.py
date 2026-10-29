@@ -99,7 +99,8 @@ FIELDS = {
     "moon": "phase lit age",
     "units": "temp wind",
     "loc": "city",
-    "theme": "color1 color2 color3 night",
+    "theme": "color1 color2 color3 night palette bg text muted panel time seconds date highlight icon "
+             "weather high low rain sun ok warn error info",
     "net": "ip host ssid rssi mqtt",
     "sys": "version uptime heap lang",
     "msg": "title text icon color bg pct ttl id count",

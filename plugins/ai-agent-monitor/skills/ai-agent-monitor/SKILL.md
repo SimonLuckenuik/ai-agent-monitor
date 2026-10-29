@@ -77,14 +77,24 @@ saved on the clock. The model:
   Every item takes `show`, a condition.
 - **Maps** turn a value into a colour or a label (`{build:state}`); **palettes** name
   colours (`"@fg"`) and can switch as a whole (`"palette": "{sun.up}?day:night"`).
+- **Flashing** for an alarm: `"palette": "{time.sec}%2==0?on:off"` with two palettes
+  swaps the whole face's colours every second; add `"when": "{alarm}"` so it shows
+  only while the alarm variable is set.
+- **The clock's colours**: `@time`, `@bg`, `@text`, `@muted`, `@panel`, `@warn`,
+  `@error`, `@ok` … are the colours the user chose for the built-in faces (day and
+  night). Use them unless the face needs colours of its own: it then matches the
+  clock and follows the user's palettes.
+- **Big text**: `"font": "big"` with a `size` in pixels draws the Big tiles' line font
+  at any size: capitals, digits, punctuation, and `° ↑ ↓ ← → ✓ ✗ • ♥ ⚡`.
 - **Rotation**: `when` puts the face in the rotation only while a condition holds
-  (`"{build}==fail"`, `"{day0.rain}>60"`); `duration` sets its time on screen.
+  (`"{build}==fail"`, `"{day0.rain}>60"`); `duration` sets its time on screen. The
+  user orders the rotation and turns faces on or off in the settings.
 
 `reference/face-format.md` has every field and placeholder; `reference/face.schema.json`
 is the JSON Schema of a face.
 
 1. **Pick or write a face.** `examples/` has `attention`, `progress`, `done` and
-   `error`. The firmware repository's `examples/faces/` has 32 more (clocks, weather,
+   `error`. The firmware repository's `examples/faces/` has 37 more (clocks, weather,
    build status, pixel art, games, charts) showing every feature. Adapt one, or design a new
    face with `reference/face-format.md`.
 2. **Check it:** `python scripts/clock.py check face.json` validates it against the
@@ -114,8 +124,9 @@ variables, names 1–15 of `A-Z a-z 0-9 _`, values up to 160 characters.
 ## Rules of the screen
 
 - **Text is ASCII.** Font `2` (16 px) and `4` (26 px) are text; `6` (48 px) is
-  **digits only** (`8` is gone and draws as `6`). There is no degree sign: write
-  `{now.temp} {units.temp}`.
+  **digits only** (`8` is gone and draws as `6`); they have no degree sign: write
+  `{now.temp} {units.temp}`. `"big"` (any `size`) has capitals, digits and a few
+  symbols, `°` among them; it is slower to draw, so keep it for a few large items.
 - **Redraws.** There is no frame buffer. An item whose content changes in place (text,
   icon, sprite or spark with a `bg`; ring; bar) redraws alone; any other change
   (position, visibility, a repeat's entries, the palette) redraws the whole face,
