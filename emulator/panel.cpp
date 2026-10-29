@@ -2,7 +2,9 @@
 // drawing speed.
 //
 // Panel: the bytes TFT_eSPI sends are decoded as the controller would: CASET/RASET set
-// the window, RAMWR streams RGB565 pixels into it (big-endian), INVON/INVOFF invert.
+// the window, RAMWR streams RGB565 pixels into it (big-endian), INVON/INVOFF invert,
+// MADCTL turns the address mapping (MV exchanges rows and columns, then MX and MY mirror
+// them in the 240x320 RAM; the glass shows its first 240 rows).
 // The panel is an IPS that needs INVON for true colours, as on the clock, so pixels
 // written while inversion is off show inverted. emuPanel[] is what the glass shows.
 //
@@ -36,11 +38,15 @@ uint8_t cmd = 0;
 int argIndex = 0;
 uint8_t args[4];
 bool dataMode = true, inverted = false, pendingHigh = false;
-uint8_t highByte = 0;
+uint8_t highByte = 0, madctl = 0;
 int xs = 0, xe = PW - 1, ys = 0, ye = PH - 1, cx = 0, cy = 0;
 
 void put(uint16_t c) {
-  if (cx < PW && cy < PH && cx >= 0 && cy >= 0) emuPanel[cy * PW + cx] = inverted ? c : uint16_t(~c);
+  int col = cx, row = cy;
+  if (madctl & 0x20) std::swap(col, row);   // MV
+  if (madctl & 0x40) col = PW - 1 - col;     // MX
+  if (madctl & 0x80) row = 320 - 1 - row;    // MY, over the controller's 320 rows
+  if (col < PW && row < PH && col >= 0 && row >= 0) emuPanel[row * PW + col] = inverted ? c : uint16_t(~c);
   if (++cx > xe) { cx = xs; if (++cy > ye) cy = ys; }
 }
 
@@ -58,6 +64,7 @@ void data(uint8_t b) {
     put(uint16_t(highByte << 8 | b));
     return;
   }
+  if (cmd == 0x36) { madctl = b; return; }   // MADCTL
   if (cmd != 0x2A && cmd != 0x2B) return;
   if (argIndex < 4) args[argIndex++] = b;
   if (argIndex == 4) {

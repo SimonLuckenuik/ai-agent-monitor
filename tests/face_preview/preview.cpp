@@ -37,6 +37,7 @@ int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {
   for (int i = 0; i < n && out; ++i) out[i] = history[history.size() - n + i];
   return n;
 }
+bool nightActive() { return false; }
 String deviceValue(const String& key) {
   if (key == "net.ip") return String("192.168.1.50");
   if (key == "net.host") return String("agentmonitor-1a2b3c");

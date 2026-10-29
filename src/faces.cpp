@@ -12,6 +12,7 @@
 #include "weather.h"
 #include "weather_icons.h"
 #include "integrations.h"
+#include "ascii.h"
 #include <ArduinoJson.h>
 
 TFT_eSPI& clockDisplay();   // main.cpp
@@ -30,9 +31,25 @@ namespace {
 
 constexpr int SCR_W = 240, SCR_H = 240;   // the panel
 
-// ---- Palette (RGB565). Accents come from the user's color1..3.
-constexpr uint16_t BG = 0x0000, PANEL = 0x18E3, PANEL_HI = 0x2945, DIM = 0x528A,
-                   MUTED = 0x9D14, WHITE = 0xFFFF, CLOUD = 0xE75D, RAIN = 0x5D9F;
+// ---- Colours (RGB565): each part of a face is a role, bound to a colour of the palette
+// in use (docs/specifications/settings.md). computeColors() fills R[] about once a
+// second; the built-in faces draw with it, and custom faces reach it as @name.
+enum Role { R_BG, R_TEXT, R_MUTED, R_PANEL, R_TIME, R_SECONDS, R_DATE, R_HIGHLIGHT, R_ICON, R_WEATHER,
+            R_HIGH, R_LOW, R_RAIN, R_SUN, R_OK, R_WARN, R_ERROR, R_INFO, ROLE_COUNT };
+const char* const ROLE_NAMES[] = {"bg", "text", "muted", "panel", "time", "seconds", "date", "highlight", "icon",
+                                  "weather", "high", "low", "rain", "sun", "ok", "warn", "error", "info", nullptr};
+const char* const ROLE_DEFAULTS[] = {"black", "white", "", "", "accent1", "accent2", "accent1", "accent2", "accent1",
+                                     "accent3", "@text", "@muted", "rain", "@text", "green", "orange", "red", "blue"};
+uint16_t R[ROLE_COUNT];
+uint16_t panelHi, dim, cloudGrey;   // mixes of bg and text
+#define BG R[R_BG]
+#define WHITE R[R_TEXT]
+#define MUTED R[R_MUTED]
+#define PANEL R[R_PANEL]
+#define RAIN R[R_RAIN]
+#define PANEL_HI panelHi
+#define DIM dim
+#define CLOUD cloudGrey
 
 const char* const DAY_LONG[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 const char* const DAY_SHORT[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
@@ -55,6 +72,90 @@ const char* monthShort(int i) { return (fr() ? MONTH_SHORT_FR : MONTH_SHORT)[i];
 // Weather words in the clock's language; wx.main / wx.desc stay English for the API.
 String wxMain() { if (!fr()) return wx.main; String m, d; wmoText(wx.code, true, m, d); return m; }
 String wxDesc() { if (!fr()) return wx.desc; String m, d; wmoText(wx.code, true, m, d); return d; }
+
+uint16_t hex565(const char* s, uint16_t fallback);
+String resolve(const char* tpl, const struct tm& t);
+String evalStr(const String& s);
+int pick(const String& s, const char* const* names);
+
+// a + (b - a) * f, channel by channel.
+uint16_t mix565(uint16_t a, uint16_t b, float f) {
+  auto ch = [&](int sh, int m) { int x = (a >> sh) & m, y = (b >> sh) & m; return ((int)lroundf(x + (y - x) * f) & m) << sh; };
+  return ch(11, 31) | ch(5, 63) | ch(0, 31);
+}
+
+JsonDocument palDoc, roleDoc;   // cfg.palettes and cfg.roles, parsed when they change
+uint16_t parsedRev = 0xFFFF;
+String activePal;               // the palette in use: cfg.palette, or cfg.nightPalette at night
+String facePal;                 // a clock palette the custom face on screen names ("" none)
+uint8_t roleState[ROLE_COUNT];  // this pass: 0 to do, 1 in progress, 2 done
+
+// A colour of a palette; a palette inherits the colours it lacks from "day".
+bool swatch(const char* pal, const char* name, uint16_t* out) {
+  JsonVariantConst v = palDoc[pal][name];
+  if (v.isNull()) v = palDoc["day"][name];
+  const char* s = v;
+  if (!s) return false;
+  *out = hex565(s, 0);
+  return true;
+}
+
+uint16_t roleColor(int i, const struct tm& t, int depth);
+
+// A role's binding: "#hex", "@role", a palette colour's name, or an expression that
+// gives one of those. Chains stop after 4 steps.
+bool colourSpec(const char* s, const struct tm& t, int depth, uint16_t* out) {
+  if (!s || !*s || depth > 4) return false;
+  if (*s == '#') { *out = hex565(s, 0); return true; }
+  if (strchr(s, '{') || strchr(s, '?')) {
+    String r = evalStr(resolve(s, t));
+    return !strchr(r.c_str(), '{') && !strchr(r.c_str(), '?') && colourSpec(r.c_str(), t, depth + 1, out);
+  }
+  const char* name = *s == '@' ? s + 1 : s;
+  int j = pick(name, ROLE_NAMES);
+  if (*s == '@' && j >= 0) { *out = roleColor(j, t, depth + 1); return true; }
+  if (swatch(activePal.c_str(), name, out)) return true;
+  if (j >= 0) { *out = roleColor(j, t, depth + 1); return true; }
+  return false;
+}
+
+uint16_t roleColor(int i, const struct tm& t, int depth) {
+  if (roleState[i]) return R[i];   // done, or a loop back to it
+  roleState[i] = 1;
+  const char* spec = roleDoc[ROLE_NAMES[i]] | ROLE_DEFAULTS[i];
+  uint16_t c;
+  bool ok = colourSpec(spec, t, depth, &c) || colourSpec(ROLE_DEFAULTS[i], t, depth, &c);
+  if (!ok) c = i == R_MUTED || i == R_PANEL ? mix565(roleColor(R_BG, t, depth + 1), roleColor(R_TEXT, t, depth + 1), i == R_MUTED ? 0.6f : 0.1f)
+               : i == R_BG ? 0 : 0xFFFF;
+  R[i] = c;
+  roleState[i] = 2;
+  return c;
+}
+
+// The roles' colours for now; true if any changed (the face is then redrawn).
+bool computeColors(const struct tm& t) {
+  if (parsedRev != cfg.colorsRev) {
+    parsedRev = cfg.colorsRev;
+    palDoc.clear(); deserializeJson(palDoc, cfg.palettes.c_str());
+    roleDoc.clear(); deserializeJson(roleDoc, cfg.roles.c_str());
+  }
+  activePal = nightActive() && cfg.nightPalette.length() ? cfg.nightPalette : cfg.palette;
+  uint16_t before[ROLE_COUNT];
+  memcpy(before, R, sizeof(R));
+  memset(roleState, 0, sizeof(roleState));
+  for (int i = 0; i < ROLE_COUNT; ++i) roleColor(i, t, 0);
+  panelHi = mix565(BG, WHITE, 0.16f); dim = mix565(BG, WHITE, 0.32f); cloudGrey = mix565(BG, WHITE, 0.9f);
+  return memcmp(before, R, sizeof(R)) != 0;
+}
+
+// @name in a custom face, after its own palette: the clock palette the face names, a
+// role, a colour of the palette in use.
+bool clockColor(const char* name, uint16_t* out) {
+  if (facePal.length() && swatch(facePal.c_str(), name, out)) return true;
+  int j = pick(name, ROLE_NAMES);
+  if (j >= 0) { *out = R[j]; return true; }
+  return swatch(activePal.c_str(), name, out);
+}
 
 int drawnFace = -1;      // -2 = "setting the time" screen
 bool dirty = true;
@@ -150,7 +251,7 @@ void syncScreen() {
   D().fillScreen(BG);
   D().fillSmoothCircle(120, 88, 34, PANEL_HI, BG);
   D().drawWedgeLine(120, 88, 120, 66, 3, 2, WHITE, PANEL_HI);
-  D().drawWedgeLine(120, 88, 136, 98, 3, 2, cfg.color1, PANEL_HI);
+  D().drawWedgeLine(120, 88, 136, 98, 3, 2, R[R_TIME], PANEL_HI);
   D().fillSmoothCircle(120, 88, 4, WHITE, PANEL_HI);
   text(tr("Setting the time", "Reglage de l'heure"), 120, 150, 4, WHITE, BG, MC_DATUM);
   text(tr("Waiting for a time server", "Attente du serveur de temps"), 120, 178, 2, MUTED, BG, MC_DATUM);
@@ -166,19 +267,19 @@ void classic(const struct tm& t, bool force) {
     char date[24];
     snprintf(date, sizeof(date), "%d %s", t.tm_mday, monthLong(t.tm_mon));
     String wd = dayLong(t.tm_wday); wd.toUpperCase();
-    text(wd.c_str(), 120, 28, 2, cfg.color2, BG, MC_DATUM, 200);
+    text(wd.c_str(), 120, 28, 2, R[R_DATE], BG, MC_DATUM, 200);
     text(date, 120, 52, 4, WHITE, BG, MC_DATUM, 230);
     day = t.tm_yday;
   }
   if (t.tm_min != min) {
-    bigTime(120, 112, t, cfg.color1, BG, force);
+    bigTime(120, 112, t, R[R_TIME], BG, force);
     D().fillRect(0, barY - 8, 240, 20, BG);
     D().fillRoundRect(barX, barY, barW, barH, 2, PANEL_HI);
     if (cfg.hour12) text(ampm(t), 210, barY + 2, 2, MUTED, BG, MC_DATUM);
     min = t.tm_min; sec = -1;
   }
   if (t.tm_sec != sec) {
-    D().fillRoundRect(barX, barY, std::max(barH, barW * (t.tm_sec + 1) / 60), barH, 2, cfg.color2);
+    D().fillRoundRect(barX, barY, std::max(barH, barW * (t.tm_sec + 1) / 60), barH, 2, R[R_SECONDS]);
     sec = t.tm_sec;
   }
   if (wx.version != wxv) {
@@ -187,8 +288,8 @@ void classic(const struct tm& t, bool force) {
       char tb[8]; snprintf(tb, sizeof(tb), "%d", displayTemp(wx.temp));
       int tw = D().textWidth(tb, 4) + 12, mw = D().textWidth(wxMain(), 2);
       int x = 120 - (36 + 8 + tw + 8 + mw) / 2;
-      weatherIcon(x + 18, 206, 36, wx.icon, BG, cfg.color1);
-      temp(x + 44 + tw / 2, 207, displayTemp(wx.temp), 4, cfg.color3, BG);
+      weatherIcon(x + 18, 206, 36, wx.icon, BG, R[R_ICON]);
+      temp(x + 44 + tw / 2, 207, displayTemp(wx.temp), 4, R[R_WEATHER], BG);
       text(wxMain().c_str(), x + 44 + tw + 8, 208, 2, MUTED, BG, ML_DATUM);
     }
     wxv = wx.version;
@@ -215,7 +316,7 @@ void weather(const struct tm& t, bool force) {
     weatherPlaceholder(tr("No weather yet", "Pas encore de meteo"));
     return;
   }
-  weatherIcon(64, 104, 100, wx.icon, BG, cfg.color1);
+  weatherIcon(64, 104, 100, wx.icon, BG, R[R_ICON]);
   char tb[8]; snprintf(tb, sizeof(tb), "%d", displayTemp(wx.temp));
   int w = D().textWidth(tb, 6);
   text(tb, 126, 96, 6, WHITE, BG, ML_DATUM);
@@ -224,7 +325,7 @@ void weather(const struct tm& t, bool force) {
   char hl[24]; snprintf(hl, sizeof(hl), "H %d   L %d", displayTemp(wx.tempMax), displayTemp(wx.tempMin));
   text(hl, 128, 132, 2, MUTED, BG, ML_DATUM);
   String desc = wxDesc(); if (desc.length()) desc.setCharAt(0, toupper(desc[0]));
-  text(desc.c_str(), 120, 170, D().textWidth(desc, 4) <= 228 ? 4 : 2, cfg.color2, BG, MC_DATUM);
+  text(desc.c_str(), 120, 170, D().textWidth(desc, 4) <= 228 ? 4 : 2, R[R_HIGHLIGHT], BG, MC_DATUM);
   const char* labels[] = {tr("FEELS", "RESSENTI"), tr("HUMIDITY", "HUMIDITE"), tr("WIND", "VENT")};
   for (int i = 0; i < 3; ++i) text(labels[i], 42 + i * 78, 198, 2, MUTED, BG, MC_DATUM);
   temp(42, 222, displayTemp(wx.feels), 4, WHITE, BG);
@@ -263,10 +364,10 @@ void forecast(const struct tm& t, bool force) {
     D().fillSmoothRoundRect(x, 50, 54, 182, 12, PANEL, BG);
     if (i >= fc.count) continue;
     const ForecastDay& d = fc.days[i];
-    text(d.today ? tr("TODAY", "AUJ.") : dayShort(d.wday), cx, 70, 2, d.today ? cfg.color2 : MUTED, PANEL, MC_DATUM);
-    weatherIcon(cx, 110, 44, d.icon, PANEL, cfg.color1);
-    temp(cx, 152, displayTemp(d.hi), 4, WHITE, PANEL);
-    temp(cx, 178, displayTemp(d.lo), 2, MUTED, PANEL);
+    text(d.today ? tr("TODAY", "AUJ.") : dayShort(d.wday), cx, 70, 2, d.today ? R[R_HIGHLIGHT] : MUTED, PANEL, MC_DATUM);
+    weatherIcon(cx, 110, 44, d.icon, PANEL, R[R_ICON]);
+    temp(cx, 152, displayTemp(d.hi), 4, R[R_HIGH], PANEL);
+    temp(cx, 178, displayTemp(d.lo), 2, R[R_LOW], PANEL);
     if (d.pop >= 10) {
       char p[12]; snprintf(p, sizeof(p), "%d%%", std::min(d.pop, 100));
       D().fillSmoothCircle(cx - 14, 210, 3, RAIN, PANEL);
@@ -287,7 +388,7 @@ void simple(const struct tm& t, bool force) {
     snprintf(db, sizeof(db), "%s  %d %s", dayLong(t.tm_wday), t.tm_mday, monthLong(t.tm_mon));
     String s = db; s.toUpperCase();
     text(s.c_str(), 120, 168, 2, MUTED, BG, MC_DATUM, 236);
-    text(ampm(t), 120, 190, 2, cfg.color1, BG, MC_DATUM, 40);
+    text(ampm(t), 120, 190, 2, R[R_TIME], BG, MC_DATUM, 40);
     day = t.tm_yday;
   }
 }
@@ -402,6 +503,7 @@ void photo(const struct tm& t, bool force) {
 // to anything else (position, size, visibility, a transparent item) redraws the face.
 JsonDocument customDoc;
 String customName;
+String customWanted;   // the custom face to draw: cfg.customFace, or the night face
 uint32_t customVer = 0, customEvalAt = 0;
 bool customLoaded = false;
 constexpr size_t CUSTOM_ITEMS = 32;
@@ -597,9 +699,10 @@ String fieldValue(const String& key, const struct tm& t) {
     case 7:   // loc
       if (f == "city") return wx.cityName;
       break;
-    case 8:   // theme
-      if (f.startsWith("color") && f.length() == 6 && f[5] >= '1' && f[5] <= '3')
-        return hex565Text(f[5] == '1' ? cfg.color1 : f[5] == '2' ? cfg.color2 : cfg.color3);
+    case 8:   // theme: the roles' colours ({theme.night} is main.cpp's)
+      if (f == "palette") return activePal;
+      k = f == "color1" ? R_TIME : f == "color2" ? R_HIGHLIGHT : f == "color3" ? R_WEATHER : pick(f, ROLE_NAMES);
+      if (k >= 0) return hex565Text(R[k]);
       break;
     case 9:   // msg: the message on screen
       if (f == "count") { int n = 0; for (int i = 0; i < MESSAGE_MAX; ++i) n += messageActive(i); return numText(n); }
@@ -622,11 +725,11 @@ const char ICON_WAITING[] PROGMEM = ICON_CIRCLE "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 
 const char ICON_RUNNING[] PROGMEM = "M21 12a9 9 0 1 1-6.219-8.56";
 const char ICON_BELL[] PROGMEM = "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0";
 const char ICON_DONE[] PROGMEM = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7";
-struct MessageIcon { const char* name; const char* color; const char* path; };
+struct MessageIcon { const char* name; uint8_t role; const char* path; };   // role: its colour
 const MessageIcon MESSAGE_ICON_SET[] = {
-    {"info", "#0a84ff", ICON_INFO},       {"success", "#30d158", ICON_SUCCESS}, {"warning", "#ff9f0a", ICON_WARNING},
-    {"error", "#ff453a", ICON_ERROR},     {"waiting", "#ffd60a", ICON_WAITING}, {"running", "#64d2ff", ICON_RUNNING},
-    {"bell", "#ff9f0a", ICON_BELL},       {"done", "#30d158", ICON_DONE}};
+    {"info", R_INFO, ICON_INFO},       {"success", R_OK, ICON_SUCCESS}, {"warning", R_WARN, ICON_WARNING},
+    {"error", R_ERROR, ICON_ERROR},    {"waiting", R_WARN, ICON_WAITING}, {"running", R_INFO, ICON_RUNNING},
+    {"bell", R_WARN, ICON_BELL},       {"done", R_OK, ICON_DONE}};
 
 String pgmString(const char* p) {
   String s;
@@ -641,7 +744,7 @@ String messageValueAt(int slot, const String& key) {
   const MessageIcon* def = &MESSAGE_ICON_SET[0];
   for (const MessageIcon& m : MESSAGE_ICON_SET) if (icon == m.name) def = &m;
   String color = messageField(slot, "color");
-  if (color.isEmpty()) color = def->color;
+  if (color.isEmpty()) color = hex565Text(R[def->role]);
   if (key == "icon") return pgmString(def->path);
   if (key == "color") return color;
   if (key == "bg") return hex565Text(hex565(color.c_str(), WHITE), 4);   // a solid background in its hue
@@ -949,7 +1052,9 @@ uint16_t paletteColor(const char* name, uint16_t fallback, const struct tm& t) {
   if (!p.is<JsonObjectConst>()) e = customDoc["palettes"][paletteName][name];
   const char* s = e;
   if (s && *s == '@') return fallback;   // no palette entry points at another
-  return e.isNull() ? fallback : colorOf(e, fallback, t);
+  if (!e.isNull()) return colorOf(e, fallback, t);
+  uint16_t c;
+  return clockColor(name, &c) ? c : fallback;
 }
 
 uint16_t colorOf(JsonVariantConst v, uint16_t fallback, const struct tm& t) {
@@ -1357,7 +1462,10 @@ void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
 }
 
 // ---- Text, possibly wrapped to "w" pixels over at most "lines" lines.
+void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg);
+
 void drawText(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
+  if (!strcmp(js(it, "font", ""), "big")) { drawBig(it, t, x, y, c, bg); return; }
   String s = resolve(js(it, "text", ""), t);
   int font = inum(it, "font", 4, t);
   if (font == 8) font = 6;   // font 8 left the build (flash); 6 is the next digit font
@@ -1610,7 +1718,7 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
   } else if (!strcmp(type, "icon")) {
     int size = inum(it, "size", 48, t);
     if (jhas(it, "bg")) D().fillRect(x - size / 2 - 2, y - size / 2 - 2, size + 4, size + 4, bg);
-    weatherIcon(x, y, size, resolve(js(it, "icon", "{now.icon}"), t), bg, colorOf(it["color"], cfg.color1, t));
+    weatherIcon(x, y, size, resolve(js(it, "icon", "{now.icon}"), t), bg, colorOf(it["color"], R[R_ICON], t));
   } else if (!strcmp(type, "image")) {
     drawJpeg(String("/photo/") + resolve(js(it, "src", ""), t), x, y);
   } else if (!strcmp(type, "sprite")) {
@@ -1625,8 +1733,8 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
 void renderItems(const struct tm& t, bool force);
 
 void custom(const struct tm& t, bool force) {
-  if (customName != cfg.customFace || customVer != customFacesVersion()) {
-    customName = cfg.customFace;
+  if (customName != customWanted || customVer != customFacesVersion()) {
+    customName = customWanted;
     customVer = customFacesVersion();
     customDoc.clear();
     File f = LittleFS.open("/faces/" + customName + ".json", "r");
@@ -1650,6 +1758,8 @@ void renderItems(const struct tm& t, bool force) {
   static String drawnPalette;
   const char* pal = customDoc["palette"];
   paletteName = pal ? evalStr(resolve(pal, t)) : String();
+  // A name the face's own palettes lack may be one of the clock's.
+  facePal = paletteName.length() && customDoc["palettes"][paletteName].isNull() && !palDoc[paletteName].isNull() ? paletteName : String();
   bool full = force || paletteName != drawnPalette;
   drawnPalette = paletteName;
   JsonVariantConst bgV = customDoc["bg"];
@@ -1678,7 +1788,7 @@ void renderItems(const struct tm& t, bool force) {
 
 // A custom face's turn in the rotation: "when" (in the rotation only while true) and
 // "duration" (seconds on screen; 0 keeps the rotation's). Reads just those two fields.
-bool faceTurn(const String& name, uint32_t* seconds) {
+bool faceTurn(const String& name, uint32_t* seconds, bool* hasWhen = nullptr) {
   File file = LittleFS.open("/faces/" + name + ".json", "r");
   if (!file) return false;
   JsonDocument filter, doc;
@@ -1689,6 +1799,7 @@ bool faceTurn(const String& name, uint32_t* seconds) {
   time_t now = time(nullptr);
   struct tm t; localtime_r(&now, &t);
   if (seconds) *seconds = std::max(0, std::min(3600, (int)lroundf(num(doc.as<JsonObjectConst>(), "duration", 0, t))));
+  if (hasWhen) { *hasWhen = !doc["when"].isNull(); return true; }
   return visibleField(doc["when"], t);
 }
 
@@ -1764,6 +1875,26 @@ const char MG_W[] PROGMEM = "M1.6 0L4.8 20 8.7 1 12.5 20 15.8 0";
 const char MG_X[] PROGMEM = "M2.2 0L15.1 20M14.9 0L2.1 20";
 const char MG_Y[] PROGMEM = "M1.6 0L8.2 12.2 14.6 0M8.2 12.2V20";
 const char MG_Z[] PROGMEM = "M2.4 0H13.6L2.4 20H14.3";
+// Punctuation, and symbols that no other font has (custom faces' "big" text; monoPrep()
+// turns their UTF-8 into the codes 1 to 9).
+const char MG_COLON[] PROGMEM = "M8.45 5.6h.01M8.45 14.4h.01";
+const char MG_DOT[] PROGMEM = "M8.45 19h.01";
+const char MG_COMMA[] PROGMEM = "M9.3 16.6L7.7 20";
+const char MG_PCT[] PROGMEM = "M2 4.4a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0-5.2 0M9.7 15.6a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0-5.2 0M13.8 1.2L3.1 18.8";
+const char MG_SLASH[] PROGMEM = "M13.4 0L3.5 20";
+const char MG_PLUS[] PROGMEM = "M8.45 4.5v11M2.95 10h11";
+const char MG_BANG[] PROGMEM = "M8.45 0v13M8.45 19h.01";
+const char MG_ASK[] PROGMEM = "M3.3 5.3C3.6 2.2 5.8 0 8.6 0c3 0 5.2 2.1 5.2 4.9 0 2.4-1.6 3.6-3.4 4.8-1.2.8-1.9 1.8-1.9 3.4v.6M8.5 19h.01";
+const char MG_QUOTE[] PROGMEM = "M8.45 0v5";
+const char MG_UP[] PROGMEM = "M8.45 20V1M2.5 7l5.95-6 5.95 6";
+const char MG_DOWN[] PROGMEM = "M8.45 0v19M2.5 13l5.95 6 5.95-6";
+const char MG_LEFT[] PROGMEM = "M15 10H2M8 4l-6 6 6 6";
+const char MG_RIGHT[] PROGMEM = "M2 10h13M9 4l6 6-6 6";
+const char MG_CHECK[] PROGMEM = "M2 11l4.5 5L15 4";
+const char MG_CROSS[] PROGMEM = "M3 4l11 12M14 4L3 16";
+const char MG_BULLET[] PROGMEM = "M6.45 10a2 2 0 1 0 4 0a2 2 0 1 0-4 0";
+const char MG_HEART[] PROGMEM = "M8.45 17.5C4 14 1.7 11.3 1.7 7.9 1.7 5.2 3.7 3.4 6 3.4c1.2 0 2.2.6 2.45 1.6.25-1 1.25-1.6 2.45-1.6 2.3 0 4.3 1.8 4.3 4.5 0 3.4-2.3 6.1-6.75 9.6z";
+const char MG_BOLT[] PROGMEM = "M10 0L3.5 11.5h5L7 20l6.5-11.5h-5z";
 struct MonoGlyph { char c; const char* path; };
 const MonoGlyph MONO[] = {
     {'0', MG_0}, {'1', MG_1}, {'2', MG_2}, {'3', MG_3}, {'4', MG_4}, {'5', MG_5}, {'6', MG_6},
@@ -1771,7 +1902,11 @@ const MonoGlyph MONO[] = {
     {'A', MG_A}, {'B', MG_B}, {'C', MG_C}, {'D', MG_D}, {'E', MG_E}, {'F', MG_F}, {'G', MG_G},
     {'H', MG_H}, {'I', MG_I}, {'J', MG_J}, {'K', MG_K}, {'L', MG_L}, {'M', MG_M}, {'N', MG_N},
     {'O', MG_O}, {'P', MG_P}, {'Q', MG_Q}, {'R', MG_R}, {'S', MG_S}, {'T', MG_T}, {'U', MG_U},
-    {'V', MG_V}, {'W', MG_W}, {'X', MG_X}, {'Y', MG_Y}, {'Z', MG_Z}};
+    {'V', MG_V}, {'W', MG_W}, {'X', MG_X}, {'Y', MG_Y}, {'Z', MG_Z},
+    {':', MG_COLON}, {'.', MG_DOT}, {',', MG_COMMA}, {'%', MG_PCT}, {'/', MG_SLASH}, {'+', MG_PLUS},
+    {'!', MG_BANG}, {'?', MG_ASK}, {'\'', MG_QUOTE}, {'\x01', MG_UP}, {'\x02', MG_DOWN}, {'\x03', MG_LEFT},
+    {'\x04', MG_RIGHT}, {'\x05', MG_CHECK}, {'\x06', MG_CROSS}, {'\x07', MG_BULLET}, {'\x08', MG_HEART},
+    {'\x09', MG_BOLT}};
 // Grid units ('*' is the degree sign). MONO_SB: the side bearing left out when centring.
 constexpr float MONO_H = 20, MONO_ADV = 16.9f, MONO_SB = 1.5f, MONO_STROKE = 2.3f;
 
@@ -1781,16 +1916,18 @@ const MonoGlyph* monoGlyph(char c) {
   return nullptr;
 }
 
+// : . , ! ' take half a cell, so "10:09" stays compact.
+bool monoNarrow(char c) { return strchr(":.,!'", c) != nullptr; }
+
 float monoWidth(const char* s) {
-  int n = 0;
-  for (; *s; ++s) if (monoGlyph(*s)) ++n;
-  return n ? n * MONO_ADV - 2 * MONO_SB : 0;
+  float w = 0;
+  for (; *s; ++s) if (monoGlyph(*s)) w += monoNarrow(*s) ? MONO_ADV / 2 : MONO_ADV;
+  return w ? w - 2 * MONO_SB : 0;
 }
 
-// Draws s centred on cx in the box from y to y+maxH, as large as maxW and maxH allow.
-void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) {
-  float k = std::min(maxH / (MONO_H + MONO_STROKE), maxW / (monoWidth(s) + MONO_STROKE));
-  float x = cx - (monoWidth(s) / 2 + MONO_SB) * k, top = y + (maxH - MONO_H * k) / 2;
+// Draws s from x (its first cell's left edge) with the glyphs' tops at top, k pixels
+// per grid unit; the edges blend into under.
+void monoDraw(const char* s, float x, float top, float k, uint16_t color, uint16_t under) {
   Paint paint;
   paint.c[0] = color;
   for (; *s; ++s) {
@@ -1800,13 +1937,48 @@ void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) 
     if (d.length()) {
       Poly P;
       if (!P.ok()) return;
-      P.sx = P.sy = k; P.ox = x; P.oy = top;
+      P.sx = P.sy = k; P.ox = x - (monoNarrow(*s) ? MONO_ADV / 4 * k : 0); P.oy = top;
       parsePath(P, d.c_str());
       P.close();
-      strokePoly(P, MONO_STROKE * k, paint, BG);
+      strokePoly(P, MONO_STROKE * k, paint, under);
     }
-    x += MONO_ADV * k;
+    x += (monoNarrow(*s) ? MONO_ADV / 2 : MONO_ADV) * k;
   }
+}
+
+// Draws s centred on cx in the box from y to y+maxH, as large as maxW and maxH allow.
+void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) {
+  float k = std::min(maxH / (MONO_H + MONO_STROKE), maxW / (monoWidth(s) + MONO_STROKE));
+  monoDraw(s, cx - (monoWidth(s) / 2 + MONO_SB) * k, y + (maxH - MONO_H * k) / 2, k, color, BG);
+}
+
+// Text for the line font: the symbols it has (arrows, check, cross, bullet, heart,
+// bolt, degree) as their codes, everything else folded to ASCII.
+String monoPrep(const String& in) {
+  static const char* const SYMBOLS[] = {"\u2191", "\u2193", "\u2190", "\u2192", "\u2713", "\u2717", "\u2022", "\u2665", "\u26a1",
+                                        "\u2714", "\u2715", "\u2764", "\u00b0", nullptr};
+  static const char CODES[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 5, 6, 8, '*'};
+  String s = in;
+  for (int i = 0; SYMBOLS[i]; ++i) { char code[2] = {CODES[i], 0}; s.replace(SYMBOLS[i], code); }
+  return asciiFold(s);
+}
+
+// A text item with "font": "big": the line font, "size" pixels tall (40), narrowed to
+// at most "w" pixels; "align", "bg" and "pad" as for other text.
+void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
+  String s = monoPrep(resolve(js(it, "text", ""), t));
+  float k = std::max(6.0f, std::min(240.0f, num(it, "size", 40, t))) / MONO_H;
+  float tw = (monoWidth(s.c_str()) + MONO_STROKE) * k;
+  int maxW = inum(it, "w", 0, t);
+  if (maxW > 0 && tw > maxW) { k *= maxW / tw; tw = maxW; }
+  float th = (MONO_H + MONO_STROKE) * k;
+  uint8_t datum = alignOf(it);
+  float left = x - (datum % 3) * tw / 2, top = y - (datum / 3) * th / 2;
+  if (jhas(it, "bg")) {
+    int pad = inum(it, "pad", 0, t);
+    D().fillRect(left - pad, top, tw + 2 * pad + 1, th + 1, bg);
+  }
+  monoDraw(s.c_str(), left + (MONO_STROKE / 2 - MONO_SB) * k, top + MONO_STROKE / 2 * k, k, c, bg);
 }
 
 // ---- Weather icons: Erik Flowers' Weather Icons (weather_icons.h), filled as paths.
@@ -1900,10 +2072,10 @@ void bigDate(const struct tm& t, bool force) {
   if (!force && t.tm_yday == day) return;
   if (!force) D().fillScreen(BG);
   day = t.tm_yday;
-  monoText(dayLong(t.tm_wday), 120, 6, TILE_W, 44, cfg.color1);
+  monoText(dayLong(t.tm_wday), 120, 6, TILE_W, 44, R[R_DATE]);
   char n[4]; snprintf(n, sizeof(n), "%d", t.tm_mday);
   monoText(n, 120, 56, TILE_W, 128, WHITE);
-  monoText(monthLong(t.tm_mon), 120, 190, TILE_W, 44, cfg.color1);
+  monoText(monthLong(t.tm_mon), 120, 190, TILE_W, 44, R[R_DATE]);
 }
 
 // ---- 7 Big time: the hours, the minutes below
@@ -1921,7 +2093,7 @@ void bigTimeFace(const struct tm& t, bool force) {
   if (t.tm_min != minute) {
     D().fillRect(0, 120, SCR_W, 120, BG);
     snprintf(b, sizeof(b), "%02d", t.tm_min);
-    monoText(b, 120, 126, TILE_W, 106, cfg.color1);
+    monoText(b, 120, 126, TILE_W, 106, R[R_TIME]);
     minute = t.tm_min;
   }
 }
@@ -1936,7 +2108,7 @@ void bigWeather(const struct tm& t, bool force) {
   if (!force && seen == wx.version) return;
   if (!force) D().fillScreen(BG);
   seen = wx.version;
-  weatherIcon(120, 62, 124, wx.icon, BG, cfg.color1);   // the icon fills the top half
+  weatherIcon(120, 62, 124, wx.icon, BG, R[R_ICON]);   // the icon fills the top half
   char b[8]; snprintf(b, sizeof(b), "%d*", displayTemp(wx.temp));   // '*' draws the degree sign
   monoText(b, 120, 126, TILE_W, 106, WHITE);
 }
@@ -1960,16 +2132,17 @@ int factWidth(const Fact* f, int n, int gap) {   // gap: either side of each rul
 void factLine(int cx, int cy, const Fact* f, int n, int gap, uint16_t fg) {
   int w = factWidth(f, n, gap), x = std::max(4, std::min(cx - w / 2, SCR_W - 4 - w));
   for (int i = 0; i < n; ++i) {
+    uint16_t c = f[i].arrow ? R[R_SUN] : fg;
     if (f[i].arrow) {   // a small arrow: up before a sunrise, down before a sunset
       int tip = cy - 5 * f[i].arrow;
-      D().drawWedgeLine(x + 3.5f, cy - 5, x + 3.5f, cy + 5, 0.75f, 0.75f, fg, BG);
-      D().drawWedgeLine(x + 0.5f, tip + 3 * f[i].arrow, x + 3.5f, tip, 0.75f, 0.75f, fg, BG);
-      D().drawWedgeLine(x + 6.5f, tip + 3 * f[i].arrow, x + 3.5f, tip, 0.75f, 0.75f, fg, BG);
+      D().drawWedgeLine(x + 3.5f, cy - 5, x + 3.5f, cy + 5, 0.75f, 0.75f, c, BG);
+      D().drawWedgeLine(x + 0.5f, tip + 3 * f[i].arrow, x + 3.5f, tip, 0.75f, 0.75f, c, BG);
+      D().drawWedgeLine(x + 6.5f, tip + 3 * f[i].arrow, x + 3.5f, tip, 0.75f, 0.75f, c, BG);
       x += ARROW_W;
     }
-    text(f[i].s, x, cy, 2, fg, BG, ML_DATUM);
+    text(f[i].s, x, cy, 2, c, BG, ML_DATUM);
     x += D().textWidth(f[i].s, 2);
-    if (f[i].deg) { ring(x + 5, cy - D().fontHeight(2) / 2 + 5, 3, fg, BG); x += 9; }
+    if (f[i].deg) { ring(x + 5, cy - D().fontHeight(2) / 2 + 5, 3, c, BG); x += 9; }
     if (i < n - 1) { D().drawFastVLine(x + gap, cy - 7, 14, DIM); x += 2 * gap + 1; }
   }
 }
@@ -2013,8 +2186,8 @@ void dayTile(int k, const struct tm& t, bool force) {
   if (!force) D().fillScreen(BG);
   seen = fc.version; seenWx = wx.version; seenPhase = phase;
   const ForecastDay& next = fc.days[fc.count > 1 ? 1 : 0];
-  monoText(dayLong(d.wday), 120, 6, TILE_W, 40, cfg.color1);
-  weatherIcon(54, 104, 96, now ? wx.icon : d.icon, BG, cfg.color1);   // a 96 px icon on the left
+  monoText(dayLong(d.wday), 120, 6, TILE_W, 40, R[R_DATE]);
+  weatherIcon(54, 104, 96, now ? wx.icon : d.icon, BG, R[R_ICON]);   // a 96 px icon on the left
   char b[8];
   snprintf(b, sizeof(b), "%d*", displayTemp(now ? wx.feels : d.feels));   // '*' draws the degree sign
   monoText(b, 170, 58, 134, 72, WHITE);
@@ -2032,10 +2205,10 @@ void dayTile(int k, const struct tm& t, bool force) {
   D().drawFastHLine(0, 179, SCR_W, PANEL_HI);
   const char* labels[] = {tr("LOW", "MIN"), tr("HIGH", "MAX"), tr("PRECIP", "PRECIP.")};
   for (int i = 0; i < 3; ++i) text(labels[i], 44 + 76 * i, 194, 2, MUTED, BG, MC_DATUM);
-  temp(44, 222, displayTemp(d.lo), 4, WHITE, BG);
-  temp(120, 222, displayTemp(d.hi), 4, WHITE, BG);
+  temp(44, 222, displayTemp(d.lo), 4, R[R_LOW], BG);
+  temp(120, 222, displayTemp(d.hi), 4, R[R_HIGH], BG);
   snprintf(b, sizeof(b), "%d%%", std::min(d.pop, 100));
-  text(b, 196, 222, 4, WHITE, BG, MC_DATUM);
+  text(b, 196, 222, 4, RAIN, BG, MC_DATUM);
 }
 
 // ---- 9 Agents: every active agent message on one screen --------------------------
@@ -2063,7 +2236,7 @@ void agents(const struct tm& t, bool force) {
     String icon = messageField(slot, "icon"), color = messageField(slot, "color");
     const MessageIcon* def = &MESSAGE_ICON_SET[0];
     for (const MessageIcon& m : MESSAGE_ICON_SET) if (icon == m.name) def = &m;
-    if (color.isEmpty()) color = def->color;
+    if (color.isEmpty()) color = hex565Text(R[def->role]);
     uint16_t c = hex565(color.c_str(), WHITE);
     JsonDocument item;   // the icon, drawn as a path item
     item["x"] = 26; item["y"] = y + 22; item["size"] = 28; item["align"] = "mc";
@@ -2104,6 +2277,8 @@ int photoCount() {
 }
 
 bool customFaceDue(const String& name, uint32_t* seconds) { return faceTurn(name, seconds); }
+void customFaceRule(const String& name, bool* hasWhen, uint32_t* seconds) { *hasWhen = false; faceTurn(name, seconds, hasWhen); }
+bool roleKnown(const char* name) { return pick(name, ROLE_NAMES) >= 0; }
 
 bool faceAvailable(int face) {
   switch (face) {
@@ -2121,7 +2296,17 @@ bool faceAvailable(int face) {
   }
 }
 
-void faceDraw(int face, const struct tm& t, bool timeValid) {
+void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFace) {
+  customWanted = customFace ? customFace : cfg.customFace.c_str();
+  // The roles' colours: once a second (a role may follow the time or the weather),
+  // and at once when the settings or the night palette change.
+  static int colorSec = -1;
+  static uint16_t colorRev = 0xFFFF;
+  static bool colorNight = false;
+  if (t.tm_sec != colorSec || colorRev != cfg.colorsRev || colorNight != nightActive()) {
+    colorSec = t.tm_sec; colorRev = cfg.colorsRev; colorNight = nightActive();
+    if (computeColors(t)) dirty = true;
+  }
   if (!timeValid) {
     if (drawnFace != -2 || dirty) syncScreen();
     drawnFace = -2; dirty = false;

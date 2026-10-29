@@ -72,6 +72,15 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:99px;cursor:pointer}
 .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
 #rotChips .chip{touch-action:none}.chip.drag{opacity:.5}
+.chip b{font:600 11px ui-monospace,Consolas,monospace;color:var(--accent);margin-right:4px}
+.chip i{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);margin-left:5px}
+.chip .more{margin-left:6px;padding:0 3px;border-radius:5px;color:var(--muted)}.chip .more:hover{background:var(--surface2)}
+.theme.cust svg{color:var(--accent)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:10px}
+.sw{display:flex;align-items:center;gap:6px}.sw input[type=text]{padding:6px 8px;font-size:13px}
+.sw button{border:0;background:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px}
+.dot{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);flex:none;
+  background:repeating-linear-gradient(45deg,var(--surface2) 0 4px,var(--surface) 4px 8px)}
 .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:12px}
 .ph{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surface2)}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
@@ -176,21 +185,34 @@ a{color:var(--accent)}
         <option value="0">Off</option><option value="10">10 s</option><option value="30">30 s</option>
         <option value="60">1 min</option><option value="300">5 min</option></select>
     </div>
-    <div id="rotBox"><span style="font-size:12.5px;color:var(--muted)">Include in rotation (faces without weather or photos are skipped). Drag to change the order</span>
+    <div id="rotBox"><span style="font-size:12.5px;color:var(--muted)">Tap to include a face in the rotation, drag to change the order, ⋯ to give it its own time. Faces without weather or photos are skipped; <b style="font:600 11px monospace;color:var(--accent)">{ }</b> marks a custom face</span>
       <div class="chips" id="rotChips"></div></div>
     <div class="row"><span class="lbl">Brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="brightness" data-key="brightness" data-live><output></output></div></div>
-    <div class="row"><span class="lbl">Colours</span>
-      <div class="colors">
-        <label><input type="color" id="color1" data-key="color1" data-rgb565>Time &amp; hands</label>
-        <label><input type="color" id="color2" data-key="color2" data-rgb565>Date &amp; highlights</label>
-        <label><input type="color" id="color3" data-key="color3" data-rgb565>Weather</label>
-      </div></div>
+    <div class="row"><span class="lbl">Screen orientation<span class="hint">Turns everything on the screen, for a clock on its side or upside down</span></span>
+      <select class="sm" id="orientation" data-key="orientation"><option value="0">Upright</option><option value="90">90° clockwise</option>
+        <option value="180">Upside down</option><option value="270">90° counter-clockwise</option></select></div>
+  </section>
+
+  <section class="card settings">
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.5-.8 1.5-1.6 0-1.3-1-1.6-1-2.9 0-1 .8-1.5 1.8-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/></svg>Colours</h2>
+    <div class="chips" id="palTabs" style="margin-top:0"></div>
+    <div class="swatches" id="swatches"></div>
+    <p class="note" id="palNote" hidden>A colour this palette lacks comes from the day palette.</p>
+    <div class="btns" style="margin-top:10px"><button class="btn" onclick="addSwatch()">Add colour</button>
+      <button class="btn danger" id="palDel" onclick="delPalette()">Delete palette</button></div>
+    <div class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><span class="lbl">Palette<span class="hint">The colours in use, outside night mode</span></span>
+      <select class="sm" id="palette"></select></div>
+    <div class="row"><span class="lbl">Night palette<span class="hint">The colours in use while night mode is on</span></span>
+      <select class="sm" id="nightpalette"></select></div>
+    <div class="sub">Which colour each part uses</div>
+    <div id="roleRows"></div>
+    <button class="linkbtn" id="moreRoles" style="margin-top:8px">More parts</button>
   </section>
 
   <section class="card settings">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>Night mode</h2>
-    <div class="row"><label for="nightmode">Dim at night<span class="hint">Lower the backlight while it is dark</span></label>
+    <div class="row"><label for="nightmode">Use night mode<span class="hint">On the schedule below: a dimmer backlight, and the night face, palette and colour</span></label>
       <label class="switch"><input type="checkbox" id="nightmode" data-key="nightmode"><span></span></label></div>
     <div class="row"><span class="lbl">Schedule</span>
       <div class="seg" data-key="nightauto"><button data-v="1">Sunset to sunrise</button><button data-v="0">Set hours</button></div></div>
@@ -198,9 +220,7 @@ a{color:var(--accent)}
     <div class="row hoursRow"><span class="lbl">From</span><select class="sm hours" id="starttime" data-key="starttime"></select></div>
     <div class="row hoursRow"><span class="lbl">Until</span><select class="sm hours" id="stoptime" data-key="stoptime"></select></div>
     <div class="row"><span class="lbl">At night show<span class="hint">One face all night, instead of the rotation</span></span>
-      <select class="sm" id="nightface" data-key="nightface"><option value="-1">The rotation</option><option value="7">Big time</option>
-        <option value="3">Big date</option><option value="8">Big weather</option><option value="10">Weather today</option><option value="0">Classic</option><option value="4">Simple</option>
-        <option value="9">Agents</option></select></div>
+      <select class="sm" id="nightface" data-key="nightface"></select></div>
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
     <div class="row"><label for="nighttint">Night color<span class="hint">Faces drawn in one dim color; photos keep theirs</span></label>
@@ -462,36 +482,111 @@ function nightRows(auto){auto=['1','true'].includes(String(auto));all('.hoursRow
 function paintSeg(el,v){el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v)))}
 
 let dragged=0;
+// Faces are entries: "#<id>" a built-in face, else a custom face's name (docs/specifications/settings.md).
+const CUSTOM_SVG='<path d="M14 7c-3 0-3 2-3 4s0 3-3 4c3 1 3 2 3 4s0 4 3 4M24 7c3 0 3 2 3 4s0 3 3 4c-3 1-3 2-3 4s0 4-3 4"/>';
+const csv=s=>(s||'').split(',').filter(Boolean);
+const builtin=e=>e[0]=='#',faceLabel=e=>builtin(e)?(THEMES.find(t=>'#'+t[0]==e)||[0,e])[1]:e;
+const customs=()=>cfg.customs||[];
+function turnMap(){const o={};csv(cfg.turns).forEach(p=>{const[k,v]=p.split('=');o[k]=+v});return o}
+function entryOn(e){return builtin(e)?(+cfg.faces>>+e.slice(1)&1):!csv(cfg.customoff).includes(e)}
 function renderThemes(){
-  $('themes').innerHTML=THEMES.map(([id,name,svg])=>
-    `<button class="theme${cfg.theme==id?' on':''}" data-id="${id}"><svg viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>${name}</button>`).join('');
-  all('.theme').forEach(b=>b.onclick=async()=>{if(await set('theme',b.dataset.id)){cfg.theme=+b.dataset.id;renderThemes()}});
-  const mask=cfg.faces===undefined?127:+cfg.faces;
-  // In rotation order; a tap toggles, a drag moves (pointer events: phones too).
-  // faceorder: one base-36 character per face id (0-9, then a-d).
-  $('rotChips').innerHTML=[...(cfg.faceorder||'0123456789abcd')].map(c=>THEMES.find(t=>t[0]==parseInt(c,36))).filter(Boolean)
-    .map(([id,name])=>`<button class="chip${mask>>id&1?' on':''}" data-id="${id}">${name}</button>`).join('');
+  const tile=(on,attr,svg,name,cls='')=>`<button class="theme${cls}${on?' on':''}" ${attr}><svg viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>${name}</button>`;
+  $('themes').innerHTML=THEMES.map(([id,name,svg])=>tile(cfg.theme==id,`data-id="${id}"`,svg,name)).join('')+
+    customs().map(c=>tile(cfg.theme==14&&cfg.customface==c.name,`data-c="${c.name}"`,CUSTOM_SVG,c.name,' cust')).join('');
+  all('.theme').forEach(b=>b.onclick=async()=>{
+    if(b.dataset.c){if(await set('customface',b.dataset.c)){cfg.theme=14;cfg.customface=b.dataset.c;renderThemes()}}
+    else if(await set('theme',b.dataset.id)){cfg.theme=+b.dataset.id;renderThemes()}});
+  // In rotation order; a tap toggles, a drag moves (pointer events: phones too), ⋯ sets its own time.
+  const tm=turnMap(),entries=csv(cfg.order);
+  $('rotChips').innerHTML=entries.map(e=>{const c=customs().find(x=>x.name==e);
+    return `<button class="chip${entryOn(e)?' on':''}" data-e="${e}">${builtin(e)?'':'<b>{ }</b>'}${faceLabel(e)}${c&&c.when?'<i>when</i>':''}${tm[e]?'<i>'+tm[e]+' s</i>':''}<span class="more" title="Its own time on screen">⋯</span></button>`}).join('');
+  const nf=$('nightface');
+  nf.innerHTML='<option value="">The rotation</option><optgroup label="Built-in">'+THEMES.filter(t=>t[0]!=2).map(t=>`<option value="#${t[0]}">${t[1]}</option>`).join('')+'</optgroup>'+
+    (customs().length?'<optgroup label="Custom">'+customs().map(c=>`<option value="${c.name}">${c.name}</option>`).join('')+'</optgroup>':'');
+  nf.value=cfg.nightface||'';
   all('#rotChips .chip').forEach(b=>{
-    b.onclick=async()=>{if(dragged){dragged=0;return}const m=(cfg.faces===undefined?127:+cfg.faces)^(1<<b.dataset.id);
-      if(!m){toast('Keep at least one face',1);return}if(await set('faces',m)){cfg.faces=m;renderThemes()}};
+    const e=b.dataset.e;
+    b.querySelector('.more').onclick=async ev=>{ev.stopPropagation();
+      const v=prompt('Seconds on screen for '+faceLabel(e)+' (3 to 3600; empty: the rotation\'s)',tm[e]||'');if(v===null)return;
+      const n=parseInt(v);if(v.trim()&&!(n>=3&&n<=3600)){toast('3 to 3600 seconds',1);return}
+      const o=turnMap();if(v.trim())o[e]=n;else delete o[e];
+      const s=Object.entries(o).map(([k,x])=>k+'='+x).join(',');if(await set('turns',s)){cfg.turns=s;renderThemes()}};
+    b.onclick=async()=>{if(dragged){dragged=0;return}
+      if(entryOn(e)&&csv(cfg.order).filter(entryOn).length<2){toast('Keep at least one face',1);return}
+      if(builtin(e)){const m=+cfg.faces^(1<<+e.slice(1));if(await set('faces',m)){cfg.faces=m;renderThemes()}return}
+      const off=csv(cfg.customoff),s=(entryOn(e)?[...off,e]:off.filter(x=>x!=e)).join(',');
+      if(await set('customoff',s)){cfg.customoff=s;renderThemes()}};
     // On window: moving the chip in the page would drop its pointer capture.
     b.onpointerdown=e=>{const x=e.clientX,y=e.clientY;dragged=0;
       onpointermove=m=>{if(!dragged&&Math.hypot(m.clientX-x,m.clientY-y)<8)return;dragged=1;b.classList.add('drag');
         const t=document.elementFromPoint(m.clientX,m.clientY)?.closest('#rotChips .chip');
         if(t&&t!=b){const r=t.getBoundingClientRect();t.before(b);if(m.clientX>r.left+r.width/2)t.after(b)}};
       onpointerup=async()=>{onpointermove=onpointerup=null;b.classList.remove('drag');if(!dragged)return;
-        const o=[...$('rotChips').children].map(c=>(+c.dataset.id).toString(36)).join('');if(await set('faceorder',o))cfg.faceorder=o}}});
+        const o=[...$('rotChips').children].map(c=>c.dataset.e).join(',');if(await set('order',o))cfg.order=o}}});
   $('rotBox').hidden=!(+cfg.themeInterval>0);
 }
 
+// ---- Colours: palettes of named colours, and the parts (roles) bound to them
+const ROLES=[['bg','Background','black'],['text','Text','white'],['time','Time & hands','accent1'],['date','Day & month','accent1'],
+ ['highlight','Highlights','accent2'],['icon','Weather icons','accent1'],['weather','Temperature','accent3'],
+ ['muted','Labels',''],['panel','Cards & tracks',''],['seconds','Seconds bar','accent2'],['high','High temperature','@text'],
+ ['low','Low temperature','@muted'],['rain','Rain chance','rain'],['sun','Sun times','@text'],['ok','Success','green'],
+ ['warn','Warning','orange'],['error','Error','red'],['info','Info','blue']];
+let pals={},roles={},palTab='day',moreRoles=false;
+const palColor=(p,n)=>(pals[p]||{})[n]||(pals.day||{})[n];
+const mixHex=(a,b,f)=>a&&b?'#'+[1,3,5].map(i=>Math.round(parseInt(a.substr(i,2),16)*(1-f)+parseInt(b.substr(i,2),16)*f).toString(16).padStart(2,'0')).join(''):null;
+function roleColor(r,d=0){   // a preview of the colour a part gets by day (rules aside)
+  const def=ROLES.find(x=>x[0]==r);if(!def||d>4)return null;const v=roles[r]||def[2];
+  if(!v)return mixHex(roleColor('bg',d+1),roleColor('text',d+1),r=='muted'?.6:.1);
+  if(v[0]=='#')return v;if(/[{?]/.test(v))return null;
+  const n=v.replace('@','');return v[0]=='@'&&ROLES.some(x=>x[0]==n)?roleColor(n,d+1):palColor(cfg.palette||'day',n)||roleColor(n,d+1)}
+const savePals=async()=>{if(await set('palettes',JSON.stringify(pals)))renderColors()};
+const saveRoles=async()=>{if(await set('roles',JSON.stringify(roles)))renderColors()};
+const goodName=n=>/^[A-Za-z0-9_]{1,15}$/.test(n);
+function renderColors(){
+  if(!pals[palTab])palTab='day';
+  $('palTabs').innerHTML=Object.keys(pals).map(p=>`<button class="chip${p==palTab?' on':''}" data-p="${p}">${p}</button>`).join('')+'<button class="chip" data-p="">+ Palette</button>';
+  all('#palTabs .chip').forEach(b=>b.onclick=async()=>{const p=b.dataset.p;if(p){palTab=p;renderColors();return}
+    const n=(prompt('Name of the new palette (A-Z, 0-9, _)')||'').trim();if(!n)return;if(!goodName(n)||pals[n]){toast('Use a new name of 1-15 A-Z a-z 0-9 _',1);return}
+    pals[n]={};palTab=n;savePals()});
+  const own=pals[palTab]||{};
+  $('swatches').innerHTML=Object.entries(own).map(([n,v])=>`<div class="sw" data-n="${n}"><input type="color" value="${v.length==4?'#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]:v}"><input type="text" value="${n}" spellcheck="false"><button title="Remove">×</button></div>`).join('');
+  all('#swatches .sw').forEach(s=>{const n=s.dataset.n,[c,t]=s.querySelectorAll('input');
+    c.onchange=()=>{pals[palTab][n]=c.value;savePals()};
+    t.onchange=()=>{const m=t.value.trim();if(!goodName(m)||own[m]){toast('Use a new name of 1-15 A-Z a-z 0-9 _',1);t.value=n;return}
+      pals[palTab]=Object.fromEntries(Object.entries(own).map(([k,v])=>[k==n?m:k,v]));savePals()};
+    s.querySelector('button').onclick=()=>{if(palTab=='day'&&!confirm('Remove '+n+'? Parts that use it go back to their default.'))return;delete pals[palTab][n];savePals()}});
+  $('palNote').hidden=palTab=='day';$('palDel').hidden=palTab=='day';
+  const opts=(sel,none)=>(none?`<option value="">${none}</option>`:'')+Object.keys(pals).map(p=>`<option${p==sel?' selected':''}>${p}</option>`).join('');
+  $('palette').innerHTML=opts(cfg.palette);$('nightpalette').innerHTML=opts(cfg.nightpalette,'Same as the palette');$('nightpalette').value=cfg.nightpalette||'';
+  const names=[...new Set([...Object.keys(pals.day||{}),...Object.keys(pals[cfg.palette]||{})])];
+  $('roleRows').innerHTML=ROLES.map(([r,label,def],i)=>{const v=roles[r]||'',rule=/[{?#]/.test(v);
+    return `<div class="row"${i>=7&&!moreRoles?' hidden':''}><span class="lbl">${label}</span><span class="pair"><i class="dot" style="${roleColor(r)?'background:'+roleColor(r):''}"></i>
+      <select class="sm" data-r="${r}"><option value="">Default (${def||'automatic'})</option>
+      <optgroup label="Colours">${names.map(n=>`<option${v==n?' selected':''}>${n}</option>`).join('')}</optgroup>
+      <optgroup label="Same as">${ROLES.filter(x=>x[0]!=r).map(x=>`<option value="@${x[0]}"${v=='@'+x[0]?' selected':''}>${x[1]}</option>`).join('')}</optgroup>
+      ${rule?`<option selected>${v.replace(/</g,'&lt;').replace(/"/g,'&quot;')}</option>`:''}<option value="*">Rule…</option></select></span></div>`}).join('');
+  all('#roleRows select').forEach(s=>s.onchange=()=>{const r=s.dataset.r;let v=s.value;
+    if(v=='*'){v=prompt('A colour, or a rule that picks one, e.g. {now.temp}<0?@blue:@orange',roles[r]||'');if(v===null){renderColors();return}v=v.trim()}
+    if(v)roles[r]=v;else delete roles[r];saveRoles()});
+  $('moreRoles').textContent=moreRoles?'Fewer parts':'More parts'}
+$('moreRoles').onclick=()=>{moreRoles=!moreRoles;renderColors()};
+$('palette').onchange=async()=>{const v=$('palette').value;if(await set('palette',v)){cfg.palette=v;renderColors()}};
+$('nightpalette').onchange=async()=>{const v=$('nightpalette').value;if(await set('nightpalette',v))cfg.nightpalette=v};
+function addSwatch(){const n=(prompt('Name of the colour (A-Z, 0-9, _)',palTab=='day'?'':Object.keys(pals.day||{}).find(k=>!(pals[palTab]||{})[k])||'')||'').trim();if(!n)return;
+  if(!goodName(n)||(pals[palTab]||{})[n]){toast('Use a new name of 1-15 A-Z a-z 0-9 _',1);return}
+  if(Object.keys(pals[palTab]).length>=16){toast('At most 16 colours',1);return}pals[palTab][n]=palColor('day',n)||'#888888';savePals()}
+function delPalette(){if(palTab=='day'||!confirm('Delete the palette '+palTab+'?'))return;delete pals[palTab];palTab='day';
+  savePals().then(()=>fetch('/config').then(r=>r.json()).then(c=>{cfg.palette=c.palette;cfg.nightpalette=c.nightpalette;renderColors()}))}
+
 function fillConfig(c){
-  cfg=c;renderThemes();
-  for(const k of ['themeInterval','brightness','nightbrightness','nightface','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
+  cfg=c;pals=c.palettes||{day:{}};roles=c.roles||{};renderThemes();renderColors();
+  for(const k of ['themeInterval','brightness','orientation','nightbrightness','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
   if(![...$('themeInterval').options].some(o=>o.value==String(c.themeInterval))){const o=new Option(c.themeInterval+' s',c.themeInterval);$('themeInterval').add(o);$('themeInterval').value=c.themeInterval}
   $('nightmode').checked=!!c.nightmode;$('nighttint').checked=c.nighttint!==false;$('photoclock').checked=c.photoclock!==false;
   ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
   ['mqtthost','mqttuser','mqttbase'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
-  ['color1','color2','color3','nightcolor'].forEach(k=>$(k).value=hex565(c[k]||0));
+  $('nightcolor').value=hex565(c.nightcolor||0);
   paintSeg(document.querySelector('[data-key=hour12]'),c.hour12?1:0);paintSeg(document.querySelector('[data-key=lang]'),c.lang||'en');
   paintSeg(document.querySelector('[data-key=celsius]'),c.celsius?1:0);
   paintSeg(document.querySelector('[data-key=mile]'),c.mile?1:0);
@@ -672,7 +767,7 @@ phDrop.ondragover=e=>{e.preventDefault();phDrop.classList.add('over')};phDrop.on
 phDrop.ondrop=e=>{e.preventDefault();phDrop.classList.remove('over');addPhotos([...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')))};
 
 all('select.hours').forEach(s=>{for(let h=0;h<24;h++)s.add(new Option((h%12||12)+(h<12?' am':' pm'),h))});
-bindInputs();renderThemes();
+bindInputs();
 (async()=>{try{fillConfig(await(await fetch('/config')).json())}catch(e){toast('Could not load settings',1)}await poll();loadPhotos();loadInteg();setInterval(poll,5000)})();
 </script>
 </body>

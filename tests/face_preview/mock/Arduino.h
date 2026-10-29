@@ -51,6 +51,9 @@ class String {
   bool concat(const char* c, unsigned n) { s.append(c, n); return true; }
   int lastIndexOf(char c) const { size_t i = s.rfind(c); return i == std::string::npos ? -1 : (int)i; }
   int indexOf(char c, unsigned from = 0) const { size_t i = s.find(c, from); return i == std::string::npos ? -1 : (int)i; }
+  void replace(const String& a, const String& b) {
+    for (size_t i = 0; !a.s.empty() && (i = s.find(a.s, i)) != std::string::npos; i += b.s.size()) s.replace(i, a.s.size(), b.s);
+  }
   String& operator+=(const String& o) { s += o.s; return *this; }
   String& operator+=(char c) { s += c; return *this; }
   bool operator==(const String& o) const { return s == o.s; }

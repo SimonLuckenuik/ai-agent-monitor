@@ -7,6 +7,45 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Upgrading
+
+- **Settings move over by themselves.** The three colours become `accent1`-`accent3`
+  of the new day palette, the rotation's order keeps its built-in faces, and the
+  night face is kept. The settings keys `faceorder` and `color1`-`color3` are still
+  accepted, for older scripts and backups.
+- **A few default colours moved to their part** (spec: `docs/specifications/settings.md`):
+  Classic's day of the week is now in the date colour (amber, was blue); a day
+  tile's low temperature is grey and its chance of rain blue; the Message face's
+  `waiting` icon is orange (was yellow) and `running` blue (was light blue).
+- **Custom faces without `bg` or `color`** now take the clock's background and text
+  colours (black and white unless the user changes them).
+
+### Added
+
+- **Palettes and roles.** Named colours in palettes (day, night, and up to 8), the
+  palette in use by day and at night, and 18 roles, the parts of the faces (time,
+  date, highlights, weather icons, temperatures, rain, sun times, message colours,
+  background, text, labels, cards), each bound to a colour, another role, or a rule
+  (`{now.temp}<0?@blue:@orange`). The built-in faces draw with the roles; custom faces
+  reach them as `@time`, `@bg`, `@warn` …, and `{theme.<role>}`. A Colours card on the
+  settings page edits them. The built-in night palette has the day's colours, dimmer;
+  it is used while night mode is on and "Night color" is off.
+- **One rotation list.** Custom faces join the built-in ones in the rotation's chips:
+  any order, on or off, marked as custom (and `when` when they have a rule).
+- **A face's own time on screen** (⋯ on its chip), for built-in and custom faces.
+- **Custom faces at night** ("At night show") and in the Display face picker.
+- **`"font": "big"`** in custom faces: the Big tiles' line font at any size, with
+  punctuation and the symbols `° ↑ ↓ ← → ✓ ✗ • ♥ ⚡`.
+- **5 example faces**: big-time, big-date and big-weather (the Big tiles as JSON, in
+  the clock's colours) and scoreboard, in the big font; alarm, which flashes between
+  two colour sets every second while an alarm is set.
+- The settings page says "Use night mode" (was "Dim at night"): the switch turns on all
+  of night mode, not only the dimmer backlight.
+- **Screen orientation**: turn the picture 90, 180 or 270 degrees (Display card), done
+  by the display controller, for a clock on its side or upside down.
+- Settings: `orientation`, `order`, `customoff`, `turns`, `customface`, `nightface` (any face),
+  `palettes`, `palette`, `nightpalette`, `roles` (`docs/specifications/settings.md`).
+
 ## 1.5.0 - 2026-10-29
 
 A richer custom face model: grouped placeholders, modifiers, maps, palettes, sprites,

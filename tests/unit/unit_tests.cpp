@@ -26,6 +26,8 @@ uint32_t messageVersion() { return 1; }
 String messageField(int, const String&) { return String(); }
 static std::map<std::string, std::string> device;   // net.*, sys.*, ...
 String deviceValue(const String& key) { auto it = device.find(key.c_str()); return it == device.end() ? String() : String(it->second); }
+static bool night = false;   // night palette
+bool nightActive() { return night; }
 long faceVarAge(const String& key) { return vars.count(key.c_str()) ? 30 : -1; }
 static std::vector<float> history;   // the "load" variable's
 int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {
@@ -232,7 +234,7 @@ static void testMessageFace() {
     bool inside = P.n >= 4 && x0 >= -0.5f && y0 >= -0.5f && x1 <= 24.5f && y1 <= 24.5f && x1 - x0 >= 12 && y1 - y0 >= 12;
     if (!inside) printf("  icon %s: %d points, x %.1f..%.1f y %.1f..%.1f\n", icon.name, P.n, x0, x1, y0, y1);
     CHECK(inside);
-    CHECK(hex565(icon.color, 1) != 1);
+    CHECK(icon.role >= R_OK && icon.role <= R_INFO);
   }
   JsonDocument face;
   CHECK(!deserializeJson(face, pgmString(MESSAGE_FACE).c_str()));
@@ -272,14 +274,11 @@ static void testAsciiFold() {
   CHECK_STR(asciiFold("\xE6\x97\xA5\xE6\x9C\xAC"), "??");
 }
 
-// The rotation order (setting "faceorder"): every face id once, in the given order first.
+// The older rotation order (setting "faceorder") as face entries.
 static void testFaceOrder() {
-  CHECK_STR(Config::orderOf("7801234569"), "7801234569abcd");   // an older order: the Day tiles join at the end
-  CHECK_STR(Config::orderOf("73x8807"), "7380124569abcd");   // junk and repeats dropped, rest appended
-  CHECK_STR(Config::orderOf(""), "0123456789abcd");
-  CHECK_STR(Config::orderOf("dcba9876543210"), "dcba9876543210");
-  CHECK_STR(Config::orderOf("a7ezA"), "a7012345689bcd");   // e and A are no face ids
-  CHECK(Config::faceChar(FACE_DAY3) == 'd' && Config::faceId('d') == FACE_DAY3 && Config::faceId('5') == 5);
+  CHECK_STR(Config::entriesOf("7801234569"), "#7,#8,#0,#1,#2,#3,#4,#5,#6,#9");
+  CHECK_STR(Config::entriesOf("73xd"), "#7,#3,#13");   // x is no face id
+  CHECK_STR(Config::entriesOf(""), "");
 }
 
 // Placeholder names, modifiers, maps, expressions in braces, palettes, repeats.
@@ -287,6 +286,7 @@ static void testPlaceholders() {
   struct tm t = now();   // Monday 26 October 2026, 09:05:07
   t.tm_wday = 1; t.tm_yday = 298;
   cfg.hour12 = false; cfg.celsius = true; cfg.mile = false;
+  computeColors(t);   // the default palette and roles
   vars = {{"state", "warn"}, {"n", "42"}, {"pi", "3.14159"}, {"neg", "-3"}};
   device = {{"net.ip", "10.0.0.2"}};
   wx.valid = true; wx.temp = 21.4f; wx.feels = 19.6f; wx.humidity = 64; wx.wind = 4.2f;
@@ -389,6 +389,70 @@ static void testPlaceholders() {
   fc = Forecast(); wx = Weather();
 }
 
+// Palettes and roles (docs/specifications/settings.md).
+static String hexOf(uint16_t c) { return hex565Text(c); }
+static void testColors() {
+  struct tm t = now();
+  cfg.palettes = DEFAULT_PALETTES; cfg.palette = "day"; cfg.nightPalette = "night"; cfg.roles = "{}"; cfg.colorsRev++;
+  night = false;
+  computeColors(t);
+  CHECK_STR(hexOf(R[R_BG]), "#000000");
+  CHECK_STR(hexOf(R[R_TIME]), "#ffaa20");   // accent1, #ffa826 in RGB565
+  CHECK(R[R_HIGH] == R[R_TEXT]);   // @text
+  CHECK(R[R_MUTED] == mix565(0, 0xFFFF, 0.6f));   // automatic
+  CHECK_STR(resolve("{theme.time} {theme.color2} {theme.palette}", t), "#ffaa20 #6ab6ff day");
+  {   // the default night palette has every colour of the day palette
+    JsonDocument p;
+    deserializeJson(p, DEFAULT_PALETTES);
+    bool all = p["night"].size() == p["day"].size();
+    for (JsonPairConst c : p["day"].as<JsonObjectConst>()) all = all && p["night"][c.key().c_str()].is<const char*>();
+    CHECK(all);
+  }
+  CHECK_STR(resolve("[{nope:03|000}] [{n:03}]", t), "[000] [042]");
+  // A night palette with one colour of its own; the rest inherited from day.
+  cfg.palettes = "{\"day\":{\"accent1\":\"#ff0000\",\"black\":\"#000000\",\"white\":\"#ffffff\",\"blue\":\"#0000ff\"},\"night\":{\"accent1\":\"#00ff00\"}}";
+  cfg.colorsRev++;
+  computeColors(t);
+  CHECK_STR(hexOf(R[R_TIME]), "#ff0000");
+  night = true;
+  CHECK(computeColors(t));   // changed: the face is redrawn
+  CHECK_STR(hexOf(R[R_TIME]), "#00ff00");
+  CHECK_STR(hexOf(R[R_BG]), "#000000");   // inherited
+  night = false;
+  // Bindings: a colour, another role, an expression, a loop, an unknown name.
+  cfg.roles = "{\"bg\":\"#336699\",\"text\":\"@time\",\"date\":\"{now.temp}<0?@blue:#ffffff\",\"low\":\"@high\",\"high\":\"@low\",\"icon\":\"nope\"}";
+  cfg.colorsRev++;
+  computeColors(t);
+  CHECK(R[R_BG] == hex565("#336699", 0));
+  CHECK_STR(hexOf(R[R_TEXT]), "#ff0000");
+  CHECK_STR(hexOf(R[R_ICON]), "#ff0000");   // unknown: the default, accent1
+  CHECK(R[R_HIGH] == R[R_HIGH]);   // a loop ends without hanging
+  wx.temp = -5; wx.valid = true;
+  computeColors(t);
+  CHECK_STR(hexOf(R[R_DATE]), "#0000ff");
+  wx.temp = 21;
+  computeColors(t);
+  CHECK_STR(hexOf(R[R_DATE]), "#ffffff");
+  // Custom faces: own palette, then roles, then the palette in use.
+  customDoc.clear();
+  deserializeJson(customDoc, "{\"palette\":{\"time\":\"#123456\"},\"items\":[]}");
+  JsonDocument v;
+  v["c"] = "@bg";
+  CHECK(colorOf(v["c"], 1, t) == R[R_BG]);
+  v["c"] = "@blue";
+  CHECK_STR(hexOf(colorOf(v["c"], 1, t)), "#0000ff");
+  v["c"] = "@time";
+  CHECK(colorOf(v["c"], 1, t) == hex565("#123456", 0));   // the face's own palette first
+  v["c"] = "@nothing";
+  CHECK(colorOf(v["c"], 1, t) == 1);
+  customDoc.clear();
+  // The big font's text: symbols to codes, accents folded, lower case drawn as capitals.
+  CHECK_STR(monoPrep("\u2191 7:02 \u2713 \u00e9t\u00e9 21\u00b0"), "\x01 7:02 \x05 ete 21*");
+  CHECK(monoGlyph('a') == monoGlyph('A') && monoGlyph(':') && monoGlyph('\x09') && !monoGlyph('#'));
+  cfg.palettes = DEFAULT_PALETTES; cfg.roles = "{}"; cfg.colorsRev++;
+  computeColors(t);
+}
+
 int main() {
   testNumbers();
   testExpressions();
@@ -400,6 +464,7 @@ int main() {
   testAsciiFold();
   testFaceOrder();
   testPlaceholders();
+  testColors();
   printf(failures ? "FAIL: %d of %d checks\n" : "PASS: %d checks\n", failures ? failures : checks, checks);
   return failures ? 1 : 0;
 }

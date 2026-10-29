@@ -20,6 +20,7 @@ constexpr int FACES_MAX = 40;          // custom faces saved on the clock
 uint32_t customFacesVersion();      // bumped whenever a face is saved or deleted
 int customFaceCount();
 String customFaceAt(int index);     // "" when out of range
+int customFaceNames(String* out, int max);   // every custom face's name; returns how many
 bool customFaceExists(const String& name);
 String faceVar(const String& key);  // a variable pushed with /api/faces/vars, or ""
 long faceVarAge(const String& key); // seconds since it was pushed, or -1

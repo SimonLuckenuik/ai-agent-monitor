@@ -566,6 +566,18 @@ String customFaceAt(int index) {
   return "";
 }
 
+int customFaceNames(String* out, int max) {
+  if (!storageReady) return 0;
+  Dir dir = LittleFS.openDir("/faces");
+  int n = 0;
+  while (n < max && dir.next()) {
+    if (!dir.isFile() || !dir.fileName().endsWith(".json")) continue;
+    String f = dir.fileName();
+    out[n++] = f.substring(0, f.length() - 5);
+  }
+  return n;
+}
+
 bool customFaceExists(const String& name) {
   return storageReady && name.length() && LittleFS.exists(facePath(name));
 }

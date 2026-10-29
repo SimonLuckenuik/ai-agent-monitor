@@ -31,7 +31,7 @@
 #include "integrations.h"
 
 
-#define FW_VERSION "1.5.0"   // see CHANGELOG.md
+#define FW_VERSION "1.6.0-dev"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -240,7 +240,9 @@ void displayBegin() {
   analogWriteRange(BL_PWM_RANGE);
   setBacklight(0);                   // off during init (avoid flash of noise)
   clockDisplay().init();
-  clockDisplay().setRotation(0);                // stock boots rotation 0, offset (0,0)
+  // The controller turns the picture (MADCTL): stock boots rotation 0, offset (0,0);
+  // TFT_eSPI adds the 80-row offset a 240x240 glass on 240x320 RAM needs at 180 and 270.
+  clockDisplay().setRotation(cfg.orientation);
   clockDisplay().fillScreen(TFT_BLACK);
   setBacklight(cfg.brightness);
 }
@@ -253,39 +255,117 @@ void centerText(const String& s, int y, uint8_t font, uint16_t color) {
 
 // ---------------------------- Faces and weather schedule --------------------
 uint32_t faceSince = 0;   // when the current face was chosen (rotation timer)
-uint32_t faceTurnSec = 0; // a custom face's own "duration" while it shows; 0: themeInterval
+uint32_t faceTurnSec = 0; // the shown face's own time on screen; 0: themeInterval
 bool nightNow = false;    // inside the night hours, as of the last minute
-bool nightTile() { return nightNow && cfg.nightFace >= 0 && cfg.nightFace < FACE_COUNT; }
+bool nightActive() { return nightNow; }
 
-// Moves to the next face: built-in faces by id (enabled for rotation, when rotating,
-// and with something to show), then custom faces by name when that integration is on,
-// then each active agent message, one turn each.
+// ---- Faces as entries: "#<id>" a built-in face, else a custom face's name
+// (docs/specifications/settings.md).
+// item in a comma list ("a,b,c").
+bool inList(const String& list, const char* item) {
+  size_t n = strlen(item);
+  for (const char* p = list.c_str(); *p;) {
+    const char* e = strchr(p, ',');
+    size_t len = e ? size_t(e - p) : strlen(p);
+    if (len == n && !strncmp(p, item, n)) return true;
+    if (!e) break;
+    p = e + 1;
+  }
+  return false;
+}
+
+// An entry's own time on screen from cfg.turns ("#7=20,calendar=45"), or 0.
+uint32_t turnOf(const String& entry) {
+  for (const char* p = cfg.turns.c_str(); *p;) {
+    const char* e = strchr(p, ','), *eq = strchr(p, '=');
+    if (eq && (!e || eq < e) && size_t(eq - p) == entry.length() && !strncmp(p, entry.c_str(), entry.length()))
+      return constrain(atoi(eq + 1), 3, 3600);
+    if (!e) break;
+    p = e + 1;
+  }
+  return 0;
+}
+
+int entryFace(const String& e) { return e[0] == '#' ? e.substring(1).toInt() : FACE_CUSTOM; }
+
+// Every face in rotation order: cfg.order's entries that exist, then the built-in
+// faces it lacks, then the custom faces it lacks (a new face joins at the end).
+constexpr int FACE_ENTRIES = FACE_COUNT + FACES_MAX;
+int faceEntries(String* out) {
+  String customs[FACES_MAX];
+  int nc = cfg.facesApi ? customFaceNames(customs, FACES_MAX) : 0, n = 0;
+  auto add = [&](const String& e) {
+    for (int i = 0; i < n; ++i) if (out[i] == e) return;
+    if (e[0] == '#') {
+      int id = e.substring(1).toInt();
+      if (id < 0 || id >= FACE_COUNT || id == FACE_FLIP || e != "#" + String(id)) return;
+    } else {
+      bool known = false;
+      for (int i = 0; i < nc && !known; ++i) known = customs[i] == e;
+      if (!known) return;
+    }
+    if (n < FACE_ENTRIES) out[n++] = e;
+  };
+  for (const char* p = cfg.order.c_str(); *p;) {
+    const char* e = strchr(p, ',');
+    add(e ? String(p).substring(0, e - p) : String(p));
+    if (!e) break;
+    p = e + 1;
+  }
+  for (int id = 0; id < FACE_COUNT; ++id) add("#" + String(id));
+  for (int i = 0; i < nc; ++i) add(customs[i]);
+  return n;
+}
+
+bool entryOn(const String& e) {
+  return e[0] == '#' ? (cfg.faceMask >> entryFace(e) & 1) : !inList(cfg.customOff, e.c_str());
+}
+
+// The night face, while night mode shows one: an entry that exists. Custom faces are
+// checked once a minute (and when the faces change), not every frame.
+bool nightTile() {
+  if (!nightNow || cfg.nightFace.isEmpty()) return false;
+  if (cfg.nightFace[0] == '#') { int id = entryFace(cfg.nightFace); return id >= 0 && id < FACE_COUNT && id != FACE_FLIP; }
+  static String seen;
+  static uint32_t seenVer = 0, seenAt = 0;
+  static bool ok = false;
+  if (seen != cfg.nightFace || seenVer != customFacesVersion() || millis() - seenAt > 60000) {
+    seen = cfg.nightFace; seenVer = customFacesVersion(); seenAt = millis();
+    ok = customFaceExists(seen);
+  }
+  return cfg.facesApi && ok;
+}
+
+// Moves to the next face: the faces in rotation order (in the rotation, when rotating,
+// with something to show, and for a custom face while its "when" holds), then each
+// active agent message, one turn each.
 void advanceFace(bool rotation) {
   faceTurnSec = 0;
-  int customs = cfg.facesApi ? customFaceCount() : 0, n = FACE_COUNT + customs + MESSAGE_MAX;
-  // Built-in faces in the user's order, then custom faces, then messages.
-  static_assert(FACE_COUNT <= 32, "Config::orderOf() keeps a 32-bit set");
-  int cur = cfg.theme < FACE_COUNT ? cfg.faceOrder.indexOf(Config::faceChar(cfg.theme)) : FACE_COUNT - 1;
-  if (cfg.theme == FACE_CUSTOM)
-    for (int i = 0; i < customs; ++i) if (customFaceAt(i) == cfg.customFace) cur = FACE_COUNT + i;
-  if (cfg.theme == FACE_MESSAGE) cur = FACE_COUNT + customs + messageShowing();
-  for (int step = 1; step <= n; ++step) {
-    int pos = (cur + step) % n;
-    if (pos >= FACE_COUNT + customs) {
-      int slot = pos - FACE_COUNT - customs;
+  String list[FACE_ENTRIES];
+  int n = faceEntries(list), total = n + MESSAGE_MAX, cur = n - 1;
+  String now = cfg.theme == FACE_CUSTOM ? cfg.customFace : "#" + String(cfg.theme);
+  for (int i = 0; i < n; ++i) if (list[i] == now) cur = i;
+  if (cfg.theme == FACE_MESSAGE) cur = n + messageShowing();
+  for (int step = 1; step <= total; ++step) {
+    int pos = (cur + step) % total;
+    if (pos >= n) {
+      int slot = pos - n;
       if (messageActive(slot)) { cfg.theme = FACE_MESSAGE; messageShowSlot(slot); return; }
       continue;
     }
-    if (pos >= FACE_COUNT) {   // a custom face takes its turn while its "when" holds
-      String name = customFaceAt(pos - FACE_COUNT);
+    const String& e = list[pos];
+    if (rotation && !entryOn(e)) continue;
+    int face = entryFace(e);
+    if (face == FACE_CUSTOM) {
       uint32_t secs = 0;
-      bool due = name.length() && customFaceDue(name, &secs);
-      if (name.length() && (due || !rotation)) { cfg.theme = FACE_CUSTOM; cfg.customFace = name; faceTurnSec = secs; return; }
+      if (customFaceDue(e, &secs) || !rotation) {
+        cfg.theme = FACE_CUSTOM; cfg.customFace = e;
+        faceTurnSec = turnOf(e) ? turnOf(e) : secs;
+        return;
+      }
       continue;
     }
-    int face = Config::faceId(cfg.faceOrder[pos]);
-    if (rotation && !(cfg.faceMask >> face & 1)) continue;
-    if (faceAvailable(face)) { cfg.theme = face; return; }
+    if (faceAvailable(face)) { cfg.theme = face; faceTurnSec = turnOf(e); return; }
   }
 }
 
@@ -431,22 +511,106 @@ String configJson() {
   JsonDocument doc;
   doc["theme"] = cfg.theme; doc["celsius"] = cfg.celsius; doc["hour12"] = cfg.hour12; doc["lang"] = cfg.lang;
   doc["mile"] = cfg.mile;   doc["city"] = cfg.city;       doc["brightness"] = cfg.brightness;
+  doc["orientation"] = cfg.orientation * 90;
   doc["location"] = cfg.geoFor == cfg.city ? cfg.geoName : "";
   doc["nightmode"] = cfg.nightMode; doc["starttime"] = cfg.startHour; doc["stoptime"] = cfg.stopHour;
   doc["nightbrightness"] = cfg.nightBrightness; doc["nightface"] = cfg.nightFace; doc["ntp"] = cfg.ntp;
   doc["nighttint"] = cfg.nightTint; doc["nightcolor"] = cfg.nightColor;
   doc["timezone"] = cfg.timezoneMin; doc["tz"] = cfg.tz; doc["themeInterval"] = cfg.themeInterval;
-  doc["faces"] = cfg.faceMask; doc["faceorder"] = cfg.faceOrder; doc["nightauto"] = cfg.nightAuto;
+  doc["faces"] = cfg.faceMask; doc["nightauto"] = cfg.nightAuto;
+  {   // the faces in rotation order, and the custom faces' own rules
+    String list[FACE_ENTRIES], order;
+    int n = faceEntries(list);
+    JsonArray customs = doc["customs"].to<JsonArray>();
+    for (int i = 0; i < n; ++i) {
+      if (i) order += ',';
+      order += list[i];
+      if (list[i][0] == '#') continue;
+      JsonObject c = customs.add<JsonObject>();
+      bool when = false;
+      uint32_t secs = 0;
+      customFaceRule(list[i], &when, &secs);
+      c["name"] = list[i]; c["when"] = when; c["duration"] = secs;
+    }
+    doc["order"] = order;
+  }
+  doc["customoff"] = cfg.customOff; doc["turns"] = cfg.turns; doc["customface"] = cfg.customFace;
   doc["photointerval"] = cfg.photoInterval; doc["photoclock"] = cfg.photoClock;
   doc["facesapi"] = cfg.facesApi; doc["hacompat"] = cfg.haCompat; doc["mqtt"] = cfg.mqttOn;
   doc["mqtthost"] = cfg.mqttHost; doc["mqttport"] = cfg.mqttPort; doc["mqttuser"] = cfg.mqttUser;
   doc["mqttbase"] = cfg.mqttBase;   // the MQTT password and API key are never sent back
   doc["type"] = "smartclock-oss-settings"; doc["version"] = FW_VERSION;
-  doc["color1"] = cfg.color1; doc["color2"] = cfg.color2; doc["color3"] = cfg.color3;
+  doc["palettes"] = serialized(cfg.palettes); doc["roles"] = serialized(cfg.roles);
+  doc["palette"] = cfg.palette; doc["nightpalette"] = cfg.nightPalette;
   // NOTE: stock leaked ssid/password/weatherkey here in cleartext. We deliberately
   // DO NOT expose secrets via /config. (See security notes in docs.) Weather comes
   // from Open-Meteo, so stock's "weatherkey" setting is not accepted.
   String out; serializeJson(doc, out); return out;
+}
+
+// ---- Palettes and roles (docs/specifications/settings.md)
+bool Config::setColor(const char* pal, const char* name, uint16_t c) {
+  JsonDocument doc;
+  if (deserializeJson(doc, palettes)) return false;
+  char hex[8];
+  snprintf(hex, sizeof(hex), "#%02x%02x%02x", (c >> 11) * 255 / 31, ((c >> 5) & 63) * 255 / 63, (c & 31) * 255 / 31);
+  doc[pal][name] = hex;
+  palettes = "";
+  serializeJson(doc, palettes);
+  colorsRev++;
+  return true;
+}
+
+bool colorName(const char* s) {   // 1-15 of A-Z a-z 0-9 _
+  size_t n = strlen(s);
+  if (n < 1 || n > 15) return false;
+  for (; *s; ++s) if (!isalnum((unsigned char)*s) && *s != '_') return false;
+  return true;
+}
+
+bool paletteExists(const String& name) {
+  JsonDocument doc;
+  return !deserializeJson(doc, cfg.palettes) && doc[name].is<JsonObject>();
+}
+
+// Every palette at once: {"day": {"accent1": "#ffa826", ...}, ...}.
+String setPalettes(const String& val) {
+  JsonDocument doc;
+  if (val.length() > 2048 || deserializeJson(doc, val) || !doc.is<JsonObject>()) return F("Expected a JSON object of palettes");
+  JsonObject all = doc.as<JsonObject>();
+  if (!all["day"].is<JsonObject>()) return F("The day palette is missing");
+  if (all.size() > 8) return F("At most 8 palettes");
+  for (JsonPair p : all) {
+    if (!colorName(p.key().c_str()) || !p.value().is<JsonObject>()) return "Bad palette name \"" + String(p.key().c_str()) + "\": 1-15 of A-Z a-z 0-9 _";
+    if (p.value().size() > 16) return F("At most 16 colours a palette");
+    for (JsonPair c : p.value().as<JsonObject>()) {
+      const char* v = c.value();
+      if (!colorName(c.key().c_str())) return "Bad colour name \"" + String(c.key().c_str()) + "\": 1-15 of A-Z a-z 0-9 _";
+      if (!v || *v != '#' || (strlen(v) != 7 && strlen(v) != 4) || strspn(v + 1, "0123456789abcdefABCDEF") != strlen(v) - 1)
+        return "Bad colour \"" + String(c.key().c_str()) + "\": #rrggbb";
+    }
+  }
+  cfg.palettes = "";
+  serializeJson(doc, cfg.palettes);
+  if (!all[cfg.palette].is<JsonObject>()) cfg.palette = "day";
+  if (cfg.nightPalette.length() && !all[cfg.nightPalette].is<JsonObject>()) cfg.nightPalette = "";
+  cfg.colorsRev++;
+  return "";
+}
+
+// The roles' bindings that differ from the defaults: {"time": "accent1", ...}.
+String setRoles(const String& val) {
+  JsonDocument doc;
+  if (val.length() > 1200 || deserializeJson(doc, val) || !doc.is<JsonObject>()) return F("Expected a JSON object of roles");
+  for (JsonPair r : doc.as<JsonObject>()) {
+    const char* v = r.value();
+    if (!roleKnown(r.key().c_str())) return "Unknown role \"" + String(r.key().c_str()) + "\"";
+    if (!v || strlen(v) > 120) return F("A role is a colour name, @role, #rrggbb or an expression (120 characters at most)");
+  }
+  cfg.roles = "";
+  serializeJson(doc, cfg.roles);
+  cfg.colorsRev++;
+  return "";
 }
 
 // Applies one setting to cfg (not saved). Shared by /api/set and settings restore.
@@ -461,24 +625,54 @@ String applySetting(const String& key, const String& val) {
     if (val.length() > 63) return F("TZ rule too long");
     cfg.tz = val; timeChanged = true;
   }
-  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); }
+  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); faceTurnSec = 0; }
+  else if (key == "customface") {
+    if (!customFaceExists(val)) return F("No such face");
+    cfg.customFace = val; cfg.theme = FACE_CUSTOM; faceSince = millis(); faceTurnSec = 0;
+  }
   else if (key == "themeInterval") cfg.themeInterval = constrain(val.toInt(), 0, 3600);
   else if (key == "brightness") { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
+  else if (key == "orientation") {   // degrees, clockwise
+    int deg = val.toInt();
+    if (deg % 90) return F("Orientation: 0, 90, 180 or 270");
+    cfg.orientation = (deg / 90 % 4 + 4) % 4;
+    if (displayReady) { clockDisplay().setRotation(cfg.orientation); clockDisplay().fillScreen(TFT_BLACK); }
+  }
   else if (key == "celsius")    cfg.celsius = (val == "1" || val == "true");
   else if (key == "hour12")     cfg.hour12 = (val == "1" || val == "true");
   else if (key == "lang")       cfg.lang = val == "fr" ? "fr" : "en";
   else if (key == "nightmode")  cfg.nightMode = (val == "1" || val == "true");
   else if (key == "nightbrightness") cfg.nightBrightness = constrain(val.toInt(), 0, 100);
-  else if (key == "nightface")  cfg.nightFace = constrain(val.toInt(), -1, FACE_COUNT - 1);
+  else if (key == "nightface") {   // an entry; "" or -1 the rotation; a number a built-in id
+    if (val.isEmpty() || val == "-1") cfg.nightFace = "";
+    else if (isdigit((unsigned char)val[0]) || val[0] == '#') {
+      int id = val.substring(val[0] == '#').toInt();
+      if (id < 0 || id >= FACE_COUNT || id == FACE_FLIP) return F("Unknown face");
+      cfg.nightFace = "#" + String(id);
+    } else if (val.length() <= 20 && strspn(val.c_str(), "abcdefghijklmnopqrstuvwxyz0123456789_-") == val.length()) cfg.nightFace = val;
+    else return F("Unknown face");
+  }
   else if (key == "nighttint")  cfg.nightTint = (val == "1" || val == "true");
   else if (key == "nightcolor") cfg.nightColor = (uint16_t)val.toInt();
   else if (key == "starttime")  cfg.startHour = constrain(val.toInt(), 0, 23);
   else if (key == "stoptime")   cfg.stopHour = constrain(val.toInt(), 0, 23);
-  else if (key == "color1")     cfg.color1 = (uint16_t)val.toInt();
-  else if (key == "color2")     cfg.color2 = (uint16_t)val.toInt();
-  else if (key == "color3")     cfg.color3 = (uint16_t)val.toInt();
+  else if (key == "color1" || key == "color2" || key == "color3") {   // older settings: the day accents
+    cfg.setColor("day", key == "color1" ? "accent1" : key == "color2" ? "accent2" : "accent3", (uint16_t)val.toInt());
+  }
+  else if (key == "palettes")   return setPalettes(val);
+  else if (key == "palette" || key == "nightpalette") {
+    bool night = key == "nightpalette";
+    if (!(night && val.isEmpty()) && !paletteExists(val)) return F("No such palette");
+    (night ? cfg.nightPalette : cfg.palette) = val;
+    cfg.colorsRev++;
+  }
+  else if (key == "roles")      return setRoles(val);
   else if (key == "faces")      cfg.faceMask = constrain(val.toInt(), 0, (1 << FACE_COUNT) - 1);
-  else if (key == "faceorder")  cfg.faceOrder = Config::orderOf(val);
+  else if (key == "faceorder")  cfg.order = Config::entriesOf(val);
+  else if (key == "order" || key == "customoff" || key == "turns") {
+    if (val.length() > 1200) return F("Too long");
+    (key == "order" ? cfg.order : key == "customoff" ? cfg.customOff : cfg.turns) = val;
+  }
   else if (key == "mile")       cfg.mile = (val == "1" || val == "true");
   else if (key == "nightauto")  cfg.nightAuto = (val == "1" || val == "true");
   else if (key == "lcd_brightness") cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key
@@ -540,9 +734,12 @@ void handleSettingsImport() {
   int applied = 0, skipped = 0;
   for (JsonPair kv : doc.as<JsonObject>()) {
     String key = kv.key().c_str();
-    if (key == "type" || key == "version" || key == "location") continue;
+    if (key == "type" || key == "version" || key == "location" || key == "customs") continue;
     JsonVariant v = kv.value();
-    String val = v.is<bool>() ? String(v.as<bool>() ? "1" : "0") : v.as<String>();
+    String val;
+    if (v.is<bool>()) val = v.as<bool>() ? "1" : "0";
+    else if (v.is<JsonObject>() || v.is<JsonArray>()) serializeJson(v, val);
+    else val = v.as<String>();
     if (applySetting(key, val).length()) skipped++; else applied++;
   }
   if (!cfg.save()) { server.send(503, "text/plain", "Settings could not be saved"); return; }
@@ -1164,7 +1361,7 @@ void loop() {
     // Debounced and not persisted: a noisy or unfitted GPIO4 must not wear flash.
     if (millis() - lastButton > 300) { lastButton = millis(); advanceFace(false); faceSince = millis(); }
   }
-  uint32_t turn = cfg.theme == FACE_CUSTOM && faceTurnSec ? faceTurnSec : cfg.themeInterval;
+  uint32_t turn = faceTurnSec ? faceTurnSec : cfg.themeInterval;
   if (cfg.themeInterval > 0 && !nightTile() && millis() - faceSince > turn * 1000) {
     faceSince = millis();
     advanceFace(true);   // in RAM only; the saved face stays the user's choice
@@ -1199,10 +1396,15 @@ void loop() {
     if (revealUntil && (int32_t)(millis() - revealUntil) >= 0) { revealUntil = 0; faceInvalidate(); }
     // At night, one face of the user's choice instead of the rotation; a message shown
     // on purpose (show) still comes through.
-    int shown = nightTile() && cfg.theme != FACE_MESSAGE ? cfg.nightFace : cfg.theme;
+    int shown = cfg.theme;
+    const char* custom = nullptr;
+    if (nightTile() && cfg.theme != FACE_MESSAGE) {
+      shown = entryFace(cfg.nightFace);
+      if (shown == FACE_CUSTOM) custom = cfg.nightFace.c_str();
+    }
     if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) {
       uint32_t start = micros();
-      faceDraw(shown, t, timeValid);
+      faceDraw(shown, t, timeValid, custom);
       uint32_t ms = (micros() - start) / 1000;
       if (ms > 1 && shown >= 0 && shown <= FACE_MESSAGE) {
         drawLast[shown] = std::min<uint32_t>(ms, 65535);

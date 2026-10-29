@@ -150,7 +150,7 @@ or, where noted, a [gradient](#gradients).
 | Field | Meaning (default) |
 |---|---|
 | `items` | The items, drawn in order (required; at most 32 at the top level) |
-| `bg` | Background colour or gradient (black) |
+| `bg` | Background colour or gradient (the clock's `bg` [role](#palettes), black by default) |
 | `fps` | How often the face is re-evaluated, 1 to 20 (4). Raise it only for animation |
 | `palette` | Named colours for `@name`: an object, or the name of one of `palettes` (placeholders and an expression allowed, e.g. `"{sun.up}?day:night"`) |
 | `palettes` | `{"<name>": {"<colour name>": "<colour>", ...}, ...}` |
@@ -163,14 +163,14 @@ or, where noted, a [gradient](#gradients).
 
 | `type` | Fields (defaults) |
 |---|---|
-| `text` | `x`, `y`, `text`, `font` (4), `color`, `align` (`tl`), `bg` (none = transparent), `pad` (0); `w` wraps to that width, `lines` (8) and `lh` (2, extra line spacing) |
+| `text` | `x`, `y`, `text`, `font` (4), `color`, `align` (`tl`), `bg` (none = transparent), `pad` (0); `w` wraps to that width, `lines` (8) and `lh` (2, extra line spacing). With `"font": "big"`: `size` (40, the letters' height in pixels), and `w` shrinks the text to fit |
 | `rect` | `x`, `y`, `w`, `h`, `r` corner radius (0), `color` (or gradient), `fill` (true), `border` (colour), `bw` border width (2) |
 | `circle` | `x`, `y` (centre), `r` (10), `color` (or gradient), `fill` (true), `border`, `bw` (2) |
 | `line` | `x`, `y`, `x2`, `y2`, `w` width (2), `color` |
 | `ring` | `x`, `y` (centre), `r` (50), `w` thickness (8), `value`, `max` (100), `color`, `track`: a progress ring from 12 o'clock |
 | `bar` | `x`, `y`, `w` (100), `h` (8), `value`, `max` (100), `color`, `track` |
 | `path` | SVG path data drawn into a box: see [Paths](#paths) |
-| `icon` | `x`, `y` (centre), `size` (48), `icon` (`"{now.icon}"`): a [Weather Icons](https://erikflowers.github.io/weather-icons/) name such as `"wi-day-rain"`, `color` (accent 1), `bg` |
+| `icon` | `x`, `y` (centre), `size` (48), `icon` (`"{now.icon}"`): a [Weather Icons](https://erikflowers.github.io/weather-icons/) name such as `"wi-day-rain"`, `color` (the `icon` role), `bg` |
 | `image` | `x`, `y`, `src`: a JPEG from the Photos card, by file name |
 | `sprite` | Pixel art: see [Sprites](#sprites) |
 | `spark` | A line chart of a variable's history: see [Sparklines](#sparklines) |
@@ -182,9 +182,13 @@ hidden item is not drawn: two items with opposite conditions (`"{sun.up}"` and
 
 - **Fonts.** `2` is small text (16 px). `4` is medium text (26 px). `6` (48 px) is
   large **digits only** (`0-9 : . -`). `8` (75 px digits) left the build to save
-  flash: it now draws as `6`. Text is ASCII (accents are dropped) and there is no
-  degree sign: write `"{now.temp} {units.temp}"`, or draw a small circle. For larger
-  digits, draw them as paths.
+  flash: it now draws as `6`. These are ASCII (accents are dropped) with no degree
+  sign. **`"big"`** is the Big tiles' line font at any `size`: capitals (lower case
+  draws as capitals), digits, `: . , % / + ! ? ' - *` and a space, and symbols no
+  other font has, typed as themselves: `°` (or `*`), `↑ ↓ ← →`, `✓ ✗`, `•`, `♥`, `⚡`
+  (`"↑ {sun.rise}  ↓ {sun.set}"`, `"{now.temp}°"`, `"✓ {pass}"`). It is slower to
+  draw: keep it to a few items that change at most once a minute, or give them a
+  `bg`.
 - **`align`** sets which point of the item `x`,`y` refers to: `tl`, `tc`, `tr`, `ml`,
   `mc`, `mr`, `bl`, `bc`, `br` (top/middle/bottom, left/centre/right). For wrapped
   text it places the whole block.
@@ -212,7 +216,7 @@ clock's own; a name without a dot is a [variable](#variables).
 | `moon.` | `phase` (`0` new, `2` first quarter, `4` full, `6` last quarter; `0`–`7`), `lit` (% lit), `age` (days since the new moon) |
 | `units.` | `temp` (`C` or `F`), `wind` (`km/h` or `mph`) |
 | `loc.` | `city` (`Montreal`) |
-| `theme.` | `color1`, `color2`, `color3` (the user's accent colours, `#ffa826`), `night` (`1` during night hours) |
+| `theme.` | A [role](#palettes)'s colour as `#rrggbb` (`{theme.time}`, `{theme.bg}`); `color1`, `color2`, `color3` (the `time`, `highlight` and `weather` roles); `palette` (the clock palette in use); `night` (`1` during night hours) |
 | `msg.` | The agent message on screen (the Message face): `title`, `text`, `icon` (path data), `color`, `bg` (its colour at a quarter strength), `pct`, `ttl`, `id`; and `count` (active messages) |
 | `net.` | `ip`, `host` (`agentmonitor-1a2b3c`), `ssid`, `rssi` (dBm), `mqtt` (`1` when connected) |
 | `sys.` | `version`, `uptime` (seconds), `heap` (free bytes), `lang` (`en` or `fr`) |
@@ -292,7 +296,32 @@ once, for day and night, or for a state.
 ```
 
 A palette entry may use placeholders (`"accent": "{theme.color1}"`) but not another
-`@name`. A colour missing from the palette falls back to the field's default.
+`@name`.
+
+A palette chosen by the time **flashes** the whole face, for an alarm:
+`"palette": "{time.sec}%2==0?on:off"` swaps two colour sets every second (each swap
+redraws the face). Keep such a face light (font 2 and 4 text, a path or two) so the
+swap is quick, and give it a `when` so it shows only while there is something wrong
+(example: `examples/faces/alarm.json`).
+
+**The clock's colours.** A name the face's palette lacks is looked up on the clock
+(see [settings](https://github.com/SimonLuckenuik/ai-agent-monitor/blob/main/docs/specifications/settings.md#in-custom-faces)): first in the clock palette that
+`palette` names (`"palette": "night"`, when the face has no palette of that name), then
+the **roles**, the colours the built-in faces use: `@bg`, `@text`, `@muted`, `@panel`,
+`@time`, `@seconds`, `@date`, `@highlight`, `@icon`, `@weather`, `@high`, `@low`,
+`@rain`, `@sun`, `@ok`, `@warn`, `@error`, `@info`, then the palette in use (`@accent1`,
+`@red`, or any colour the user named). A face written with roles matches the built-in
+faces and follows the user's day and night palettes:
+
+```json
+{"items": [
+  {"type": "text", "x": 120, "y": 90, "text": "{time.hm}", "font": "big", "size": 60, "align": "mc", "color": "@time"},
+  {"type": "text", "x": 120, "y": 160, "text": "{date.wday}", "font": 4, "align": "mc", "color": "@muted"}]}
+```
+
+Without `bg`, a face has the `bg` role's colour, and an item without `color` the
+`text` role's. Otherwise a colour that is found nowhere falls back to the field's
+default.
 
 ### Repeat
 
@@ -351,12 +380,15 @@ left.
 
 ### Rotation: `when` and `duration`
 
-Custom faces take turns in the rotation after the built-in faces. A face with `when`
-is skipped while its condition is false, so it appears only when it has something to
-say: `"when": "{build}==fail"`, `"when": "{day0.rain}>=60"`, or
+Custom faces take turns in the rotation with the built-in faces, in the order the
+user sets on the settings page; a new face joins at the end, and the user can turn it
+off there (see [settings](https://github.com/SimonLuckenuik/ai-agent-monitor/blob/main/docs/specifications/settings.md)). A face with `when` is skipped while its
+condition is false, so it appears only when it has something to say:
+`"when": "{build}==fail"`, `"when": "{day0.rain}>=60"`, or
 `"when": "{age.heartbeat}>600"` (a sender that went quiet). `duration` sets its own
-time on screen. Showing a face explicitly (`/api/faces/show`, `"show": true`) ignores
-`when`.
+time on screen, unless the user set one for it. Showing a face explicitly
+(`/api/faces/show`, `"show": true`) ignores `when`. The user may also pick a custom
+face as the night face, shown all night whatever its `when`.
 
 ### Paths
 
