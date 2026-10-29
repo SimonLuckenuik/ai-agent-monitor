@@ -61,39 +61,64 @@ python scripts/clock.py message "my-project" "Waiting for your approval to deplo
 ## Custom faces
 
 When a message is not enough, a custom face is a JSON description of what to draw,
-saved on the clock. A face uses **variables** (`{title}`, `{pct}`, …) pushed
-separately, so it is saved once and then updated with values only.
+saved on the clock. The model:
+
+- **Items** (up to 32, drawn in order): `text`, `rect`, `circle`, `line`, `ring`,
+  `bar`, `path` (SVG icons), `icon` (weather), `image`, `sprite` (pixel art, animated
+  by frames), `spark` (a chart of a variable's history), and `repeat` (items once per
+  forecast day, agent message, or number). Shapes take a `border`.
+- **Placeholders** in any string: the clock's own values are dotted (`{time.hm}`,
+  `{date.wday}`, `{now.temp}`, `{day1.high}`, `{sun.up}`, `{moon.phase}`,
+  `{msg.title}`, `{net.ip}` …); a name without a dot is a **variable** you push.
+  Modifiers after `:` (`{title:u}`, `{n:03}`, `{load:.1}`), a fallback after `|`
+  (`{status|idle}`).
+- **Expressions** in number and colour fields (`"120+{dx}*2"`,
+  `"{pct}>80?@alert:@ok"`) and, in braces, in text (`"Build {{build}==fail?FAILED:OK}"`).
+  Every item takes `show`, a condition.
+- **Maps** turn a value into a colour or a label (`{build:state}`); **palettes** name
+  colours (`"@fg"`) and can switch as a whole (`"palette": "{sun.up}?day:night"`).
+- **Rotation**: `when` puts the face in the rotation only while a condition holds
+  (`"{build}==fail"`, `"{day0.rain}>60"`); `duration` sets its time on screen.
+
+`reference/face-format.md` has every field and placeholder; `reference/face.schema.json`
+is the JSON Schema of a face.
 
 1. **Pick or write a face.** `examples/` has `attention`, `progress`, `done` and
-   `error`. Adapt one, or design a new face with `reference/face-format.md`. The
-   firmware repository's `examples/faces/` has decorative clock faces (scenes,
-   an analog clock, a terminal) that show what paths, gradients and expressions can do.
-2. **Save it once:** `python scripts/clock.py push status examples/progress.json`
-3. **Set values and show it:**
+   `error`. The firmware repository's `examples/faces/` has 32 more (clocks, weather,
+   build status, pixel art, games, charts) showing every feature. Adapt one, or design a new
+   face with `reference/face-format.md`.
+2. **Check it:** `python scripts/clock.py check face.json` validates it against the
+   schema and flags unknown placeholders (the clock ignores what it does not know,
+   silently). `push` checks too.
+3. **Save it once:** `python scripts/clock.py push status examples/progress.json`
+4. **Set values and show it:**
    ```bash
    python scripts/clock.py vars "title=my-project" "pct=40" "step=Running the tests"
    python scripts/clock.py show status
    ```
-4. **Update with values only** (they live in RAM: fast, and no flash wear). Re-push a
-   face only when its layout changes. Values are lost on restart: write
-   `{name|fallback}` so a face still reads sensibly before they are pushed again.
-5. **Delete it** when done (`python scripts/clock.py delete status`): saved custom
-   faces stay in the face rotation until deleted.
+5. **Update with values only** (they live in RAM: fast, and no flash wear). Re-push a
+   face only when its layout changes. Values are lost on restart unless pushed with
+   `--persist`; give values that go stale a `--ttl`, and write `{name|fallback}` so a
+   face reads sensibly without them. `--history` keeps numbers for a `spark` chart;
+   `--add` adds to a counter.
+6. **Delete it** when done (`python scripts/clock.py delete status`): saved custom
+   faces stay in the face rotation until deleted (or give them a `when`).
 
 If a call answers `Custom faces are turned off`, ask the user to turn on
 **Integrations → Custom faces** on the settings page and to give you the API key.
 
 **Limits.** A face is at most 4 KB of JSON (the script minifies and checks) and 32
-items; 12 custom faces in all; names are 1–20 of `a-z 0-9 _ -`. At most 24 variables,
-keys up to 15 characters, values up to 160; they are lost on restart.
+top-level items; 40 custom faces in all; names are 1–20 of `a-z 0-9 _ -`. At most 40
+variables, names 1–15 of `A-Z a-z 0-9 _`, values up to 160 characters.
 
 ## Rules of the screen
 
 - **Text is ASCII.** Font `2` (16 px) and `4` (26 px) are text; `6` (48 px) is
   **digits only** (`8` is gone and draws as `6`). There is no degree sign: write
-  `{temp} {unit}`.
-- **Redraws.** There is no frame buffer. An item whose content changes in place (text
-  with a `bg`, ring, bar) redraws alone; any other change redraws the whole face,
+  `{now.temp} {units.temp}`.
+- **Redraws.** There is no frame buffer. An item whose content changes in place (text,
+  icon, sprite or spark with a `bg`; ring; bar) redraws alone; any other change
+  (position, visibility, a repeat's entries, the palette) redraws the whole face,
   which flickers. Keep moving parts few, and give changing text a `bg` and a `pad`.
 - **Legibility.** The screen is 1.54″: one idea per face, large text, strong
   contrast, at most about 3 short lines of font 2 under a title in font 4.
@@ -116,6 +141,7 @@ changing anything: `python scripts/clock.py screenshot shot.png`, then view the 
 ## References
 
 - `reference/api.md`: messages, custom faces, MQTT and the emulator's extras.
-- `reference/face-format.md`: every item type, placeholders, expressions, paths and
-  gradients, with examples.
+- `reference/face-format.md`: every item type, placeholder, modifier, expression,
+  map, palette, repeat, sprite, sparkline, path and gradient, with examples.
+- `reference/face.schema.json`: the JSON Schema of a face (`clock.py check` uses it).
 - `examples/*.json`: tested custom faces to start from.

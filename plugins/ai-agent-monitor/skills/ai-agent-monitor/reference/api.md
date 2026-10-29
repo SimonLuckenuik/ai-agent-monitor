@@ -43,11 +43,24 @@ otherwise these endpoints answer 404 `Custom faces are turned off`.
 | `GET /api/faces/get?name=<name>` | | The face's JSON |
 | `POST /api/faces/show?name=<name>` | | Shows the face now; the rotation carries on from it |
 | `POST /api/faces/delete?name=<name>` | | Deletes the face |
-| `POST /api/faces/vars` | `{"key":"value",...}` | Sets variables, merged with the existing ones; numbers allowed |
+| `POST /api/faces/vars` | `{"name": value, ..., "$option": ...}` | Sets variables, merged with the existing ones; `null` deletes one |
 | `GET /status` | | Time, weather, network, `face` and `version`; no key needed |
+
+Variable names are 1–15 of `A-Z a-z 0-9 _` (no dots: dotted names are the clock's
+own placeholders); values are text or numbers up to 160 characters; 24 at most. Options
+apply to every variable in the request:
+
+| Option | Does |
+|---|---|
+| `"$ttl": <seconds>` | The values expire and read as empty again (a `{name\|fallback}` then shows) |
+| `"$persist": true` | Kept across restarts (written to flash at most once a minute) |
+| `"$history": true` | Numbers are also kept in a 32-value history, for `spark` items (4 variables at most) |
+| `"$add": true` | Whole numbers are added to the current value: a shared counter |
 
 ```bash
 curl -X POST "$CLOCK_URL/api/faces/vars" -H "X-Api-Key: $CLOCK_API_KEY" -d '{"msg":"Build finished","pct":100}'
+curl -X POST "$CLOCK_URL/api/faces/vars" -H "X-Api-Key: $CLOCK_API_KEY" -d '{"build":"running","$ttl":900}'
+curl -X POST "$CLOCK_URL/api/faces/vars" -H "X-Api-Key: $CLOCK_API_KEY" -d '{"cpu":42,"$history":true}'
 ```
 
 ```bash
@@ -55,7 +68,10 @@ curl -X POST "$CLOCK_URL/api/faces?name=done&show=1" -H "X-Api-Key: $CLOCK_API_K
 ```
 
 Errors come back as HTTP 400 or 401 with a plain-text reason (`Face is larger than 4
-KB`, `At most 32 items`, `At most 12 custom faces`, `name: 1-20 of a-z 0-9 _ -`).
+KB`, `At most 32 items`, `At most 40 custom faces`, `name: 1-20 of a-z 0-9 _ -`,
+`Bad variable name "x.y": 1-15 of A-Z a-z 0-9 _`). The clock does not check a face's
+fields: an unknown field or placeholder is silently ignored, so run
+`python scripts/clock.py check face.json` (against `face.schema.json`) first.
 
 ## MQTT
 
@@ -65,8 +81,8 @@ works through their broker, with the topic base shown there (default
 
 - `<base>/custom/<name>`: a face JSON (empty payload deletes). Payloads are limited to
   about 1.5 KB.
-- `<base>/vars`: `{"key":"value",...}`. Publish with **retain** so the values come back
-  after the clock restarts.
+- `<base>/vars`: `{"name": value, ...}`, with the same `$` options. Publish with
+  **retain**, or use `"$persist": true`, so the values come back after a restart.
 - `<base>/face/set`: the name of a face to show.
 - `<base>/message`: a message JSON; `<base>/message/clear`: an id, or empty for all.
   These work without Custom faces turned on.

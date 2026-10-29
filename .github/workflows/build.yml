@@ -36,11 +36,6 @@ jobs:
       - name: Build the firmware (fails above the OTA size budget)
         run: pio run
 
-      - name: Build the no-MQTT image (must fit a plain update)
-        run: |
-          pio run -e esp12e_nomqtt
-          python -c "import os, sys; n = os.path.getsize('.pio/build/esp12e_nomqtt/firmware.bin'); print(n); sys.exit(n > 0x7E000)"
-
       - name: Unit tests
         run: python tests/unit/run_unit_tests.py
 
@@ -56,7 +51,6 @@ jobs:
           path: |
             .pio/build/esp12e/firmware.bin
             .pio/build/esp12e/firmware.bin.gz
-            .pio/build/esp12e_nomqtt/firmware.bin
             .pio/face-preview/sheet.png
           if-no-files-found: error
 
@@ -86,17 +80,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Manifests, examples and helper
+      - name: Manifests and the face schema
         run: |
+          pip install jsonschema
           python - <<'EOF'
-          import glob, json
+          import json, jsonschema
           for path in [".claude-plugin/marketplace.json", "plugins/ai-agent-monitor/.claude-plugin/plugin.json",
-                       *glob.glob("plugins/ai-agent-monitor/skills/*/examples/*.json"),
-                       *glob.glob("examples/faces/*.json")]:
-              data = json.load(open(path, encoding="utf-8"))
-              if "examples" in path:
-                  size = len(json.dumps(data, separators=(",", ":")))
-                  assert size <= 4096 and len(data["items"]) <= 32, f"{path}: {size} bytes"
-              print("ok", path)
+                       "examples/faces/samples.json"]:
+              json.load(open(path, encoding="utf-8"))
+          schema = json.load(open("plugins/ai-agent-monitor/skills/ai-agent-monitor/reference/face.schema.json"))
+          jsonschema.Draft202012Validator.check_schema(schema)
+          print("ok")
           EOF
-          python plugins/ai-agent-monitor/skills/ai-agent-monitor/scripts/clock.py --help > /dev/null
+
+      - name: Example faces against the schema
+        run: |
+          python plugins/ai-agent-monitor/skills/ai-agent-monitor/scripts/clock.py check \
+            plugins/ai-agent-monitor/skills/ai-agent-monitor/examples/*.json \
+            $(ls examples/faces/*.json | grep -v samples.json)
+
+      - name: The skill's face format matches the specification
+        run: python scripts/gen_face_format.py --check

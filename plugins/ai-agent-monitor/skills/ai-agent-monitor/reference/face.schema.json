@@ -1,0 +1,882 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SimonLuckenuik/ai-agent-monitor/face.schema.json",
+  "title": "AI Agent Monitor custom face",
+  "description": "A custom face for the AI Agent Monitor clock (240x240). See face-format.md. Strings may hold {placeholders}; number and colour fields may also be expressions such as \"120+{dx}*2\" or \"{pct}>80?@alert:@fg\". Minified, a face must be at most 4096 bytes.",
+  "type": "object",
+  "required": [
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "bg": {
+      "$ref": "#/$defs/paint",
+      "description": "Background colour or gradient (black)."
+    },
+    "fps": {
+      "$ref": "#/$defs/number",
+      "description": "Evaluations per second, 1-20 (4). Raise only for animation."
+    },
+    "palette": {
+      "description": "Colours for \"@name\": an object of colours, or the name of one of `palettes` (placeholders and an expression allowed).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/colours"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "palettes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/colours"
+      }
+    },
+    "maps": {
+      "description": "Lookup tables for the :<map> modifier. \"*\" answers any other value.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": [
+            "string",
+            "number"
+          ]
+        }
+      }
+    },
+    "when": {
+      "$ref": "#/$defs/condition",
+      "description": "In the rotation only while true."
+    },
+    "duration": {
+      "$ref": "#/$defs/number",
+      "description": "Seconds on screen per turn, 1-3600 (the rotation interval)."
+    },
+    "show": {
+      "type": "boolean",
+      "description": "Show the face when it is saved."
+    }
+  },
+  "$defs": {
+    "number": {
+      "type": [
+        "number",
+        "string"
+      ],
+      "description": "A number, or a string of placeholders and an expression."
+    },
+    "condition": {
+      "type": [
+        "boolean",
+        "string"
+      ],
+      "description": "true/false, or a string such as \"{state}==warn\". False is 0, empty, false or off."
+    },
+    "colour": {
+      "description": "\"#rrggbb\", \"#rgb\", \"@name\" (palette), an RGB565 number, or an expression that gives one.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|@[A-Za-z0-9_]+)$"
+        },
+        {
+          "type": "string",
+          "pattern": "[{?]"
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        }
+      ]
+    },
+    "colours": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/colour"
+      }
+    },
+    "gradient": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stops": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/colour"
+          }
+        },
+        "from": {
+          "$ref": "#/$defs/colour"
+        },
+        "to": {
+          "$ref": "#/$defs/colour"
+        },
+        "angle": {
+          "$ref": "#/$defs/number",
+          "description": "Degrees as in CSS: 180 (default) top to bottom, 90 left to right."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "stops"
+          ]
+        },
+        {
+          "required": [
+            "from",
+            "to"
+          ]
+        }
+      ]
+    },
+    "paint": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/colour"
+        },
+        {
+          "$ref": "#/$defs/gradient"
+        }
+      ]
+    },
+    "align": {
+      "enum": [
+        "tl",
+        "tc",
+        "tr",
+        "ml",
+        "mc",
+        "mr",
+        "bl",
+        "bc",
+        "br"
+      ]
+    },
+    "item": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "text",
+            "rect",
+            "circle",
+            "line",
+            "ring",
+            "bar",
+            "path",
+            "icon",
+            "image",
+            "sprite",
+            "spark",
+            "repeat"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "rect"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/rect"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "circle"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/circle"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "line"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/line"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ring"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ring"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bar"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/bar"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "path"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "icon"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/icon"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/image"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "sprite"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/sprite"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "spark"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/spark"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "repeat"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/repeat"
+          }
+        }
+      ]
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "text": {
+          "type": "string",
+          "description": "ASCII; {placeholders}, and {expressions with {placeholders} inside}."
+        },
+        "font": {
+          "$ref": "#/$defs/number",
+          "description": "2 (16 px), 4 (26 px, default), 6 (48 px, digits : . - only)."
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        },
+        "bg": {
+          "$ref": "#/$defs/colour",
+          "description": "Draws opaque: the text then redraws alone when it changes."
+        },
+        "pad": {
+          "$ref": "#/$defs/number",
+          "description": "Pixels cleared around text whose width varies (with bg)."
+        },
+        "align": {
+          "$ref": "#/$defs/align"
+        },
+        "w": {
+          "$ref": "#/$defs/number",
+          "description": "Wraps to this width."
+        },
+        "lines": {
+          "$ref": "#/$defs/number",
+          "description": "At most this many wrapped lines (8)."
+        },
+        "lh": {
+          "$ref": "#/$defs/number",
+          "description": "Extra line spacing (2)."
+        }
+      }
+    },
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "w",
+        "h"
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "w": {
+          "$ref": "#/$defs/number"
+        },
+        "h": {
+          "$ref": "#/$defs/number"
+        },
+        "r": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/paint"
+        },
+        "fill": {
+          "type": "boolean"
+        },
+        "border": {
+          "$ref": "#/$defs/colour"
+        },
+        "bw": {
+          "$ref": "#/$defs/number",
+          "description": "Border width (2)."
+        }
+      }
+    },
+    "circle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "r": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/paint"
+        },
+        "fill": {
+          "type": "boolean"
+        },
+        "border": {
+          "$ref": "#/$defs/colour"
+        },
+        "bw": {
+          "$ref": "#/$defs/number"
+        }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "x2": {
+          "$ref": "#/$defs/number"
+        },
+        "y2": {
+          "$ref": "#/$defs/number"
+        },
+        "w": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        }
+      }
+    },
+    "ring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "r": {
+          "$ref": "#/$defs/number"
+        },
+        "w": {
+          "$ref": "#/$defs/number"
+        },
+        "value": {
+          "$ref": "#/$defs/number"
+        },
+        "max": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        },
+        "track": {
+          "$ref": "#/$defs/colour"
+        }
+      }
+    },
+    "bar": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "w": {
+          "$ref": "#/$defs/number"
+        },
+        "h": {
+          "$ref": "#/$defs/number"
+        },
+        "r": {
+          "$ref": "#/$defs/number"
+        },
+        "value": {
+          "$ref": "#/$defs/number"
+        },
+        "max": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        },
+        "track": {
+          "$ref": "#/$defs/colour"
+        }
+      }
+    },
+    "path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "d"
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "d": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "SVG path data (M L H V C S Q T A Z)."
+        },
+        "vb": {
+          "type": "string",
+          "description": "viewBox \"minX minY width height\" (\"0 0 24 24\")."
+        },
+        "align": {
+          "$ref": "#/$defs/align"
+        },
+        "size": {
+          "$ref": "#/$defs/number"
+        },
+        "w": {
+          "$ref": "#/$defs/number"
+        },
+        "h": {
+          "$ref": "#/$defs/number"
+        },
+        "rotate": {
+          "$ref": "#/$defs/number"
+        },
+        "fill": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/paint"
+            },
+            {
+              "const": false
+            },
+            {
+              "const": "none"
+            }
+          ]
+        },
+        "stroke": {
+          "$ref": "#/$defs/paint"
+        },
+        "sw": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        },
+        "rule": {
+          "const": "evenodd"
+        }
+      }
+    },
+    "icon": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "size": {
+          "$ref": "#/$defs/number"
+        },
+        "icon": {
+          "type": "string",
+          "description": "A Weather Icons name such as wi-day-rain ({now.icon} by default)."
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        },
+        "bg": {
+          "$ref": "#/$defs/colour"
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "src"
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "src": {
+          "type": "string",
+          "description": "A JPEG from the clock's Photos card, by file name."
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "maxLength": 64
+      }
+    },
+    "sprite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "palette"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "rows"
+          ]
+        },
+        {
+          "required": [
+            "frames"
+          ]
+        }
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "rows": {
+          "$ref": "#/$defs/rows"
+        },
+        "frames": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/rows"
+          }
+        },
+        "frame": {
+          "$ref": "#/$defs/number",
+          "description": "Which frame, e.g. \"{time.sec}%2\"."
+        },
+        "palette": {
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": {
+            "minLength": 1,
+            "maxLength": 1
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/colour"
+          }
+        },
+        "scale": {
+          "$ref": "#/$defs/number"
+        },
+        "align": {
+          "$ref": "#/$defs/align"
+        },
+        "bg": {
+          "$ref": "#/$defs/colour"
+        }
+      }
+    },
+    "spark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "var"
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "var": {
+          "type": "string",
+          "description": "A variable pushed with \"$history\": true."
+        },
+        "w": {
+          "$ref": "#/$defs/number"
+        },
+        "h": {
+          "$ref": "#/$defs/number"
+        },
+        "min": {
+          "$ref": "#/$defs/number"
+        },
+        "max": {
+          "$ref": "#/$defs/number"
+        },
+        "color": {
+          "$ref": "#/$defs/colour"
+        },
+        "fill": {
+          "$ref": "#/$defs/colour"
+        },
+        "bg": {
+          "$ref": "#/$defs/colour"
+        }
+      }
+    },
+    "repeat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "of",
+        "items"
+      ],
+      "properties": {
+        "type": {},
+        "x": {
+          "$ref": "#/$defs/number"
+        },
+        "y": {
+          "$ref": "#/$defs/number"
+        },
+        "show": {
+          "$ref": "#/$defs/condition"
+        },
+        "of": {
+          "anyOf": [
+            {
+              "enum": [
+                "days",
+                "msgs"
+              ]
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 60
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "\"days\" (forecast), \"msgs\" (agent messages), or a count; {it.*} reads the entry."
+        },
+        "dx": {
+          "$ref": "#/$defs/number"
+        },
+        "dy": {
+          "$ref": "#/$defs/number"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repeatedItem"
+          }
+        }
+      }
+    },
+    "repeatedItem": {
+      "description": "Any item except another repeat.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/item"
+        },
+        {
+          "not": {
+            "properties": {
+              "type": {
+                "const": "repeat"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

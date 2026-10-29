@@ -1,7 +1,7 @@
 {
   "name": "ai-agent-monitor",
-  "version": "0.3.0",
-  "description": "Lets Claude show messages, progress, status and custom graphics (SVG icons, gradients, live values) on an AI Agent Monitor desk clock (AI Agent Monitor firmware), or on its Docker emulator.",
+  "version": "0.4.0",
+  "description": "Lets Claude show messages, progress, status and custom graphics (SVG icons, pixel art, charts, gradients, live values) on an AI Agent Monitor desk clock (AI Agent Monitor firmware), or on its Docker emulator.",
   "author": {
     "name": "Simon Luckenuik",
     "url": "https://github.com/SimonLuckenuik"
