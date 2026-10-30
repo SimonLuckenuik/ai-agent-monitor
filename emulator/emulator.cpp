@@ -12,6 +12,13 @@
 //              GET /password  the device password, for the settings link's auto sign-in
 //              GET /fs?path=  a LittleFS directory as JSON (read-only)
 //              GET /fs/file?path=[&download=1]  a LittleFS file
+//              GET|POST /time      the mocked clock (see EmuClock)
+//              GET|POST|DELETE /weather  a fixed Open-Meteo reply instead of the network
+//              POST /mqtt?topic=   a message as if from the MQTT broker (vars, message, ...)
+//              GET /vars           the pushed variables, faces and what is showing
+//              POST /facesapi?on=  Integrations: Custom faces on (1) or off (0)
+//              GET /presets        presets.json: times, weathers and scenarios
+//              GET /examples/<f>   examples/faces (index: the list)
 //
 // The firmware's setup()/loop() are renamed by fw_main.cpp so this file can wrap them.
 #include <Arduino.h>
@@ -22,6 +29,8 @@
 #include <user_interface.h>
 #include <ArduinoJson.h>
 #include "weather.h"
+#include "config.h"
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,24 +56,67 @@ String readFile(const char* path);
 
 }  // namespace
 
-// ---- Fixed time and weather, for tests that need the same screens every run. Both
-// are files in $EMU_DATA, so they survive the firmware's restarts.
-// POST /time?epoch=N stops the clock at N (Unix seconds; 0 lets it run again).
-time_t emuFixedTime = -1;   // -1: not read yet
-extern "C" time_t time(time_t* out) {   // replaces libc's for the firmware's time(nullptr)
-  if (emuFixedTime < 0) {
-    FILE* f = fopen(dataPath("emu_time").c_str(), "r");
-    long long v = 0;
-    if (!f || fscanf(f, "%lld", &v) != 1) v = 0;
-    if (f) fclose(f);
-    emuFixedTime = v;
-  }
+// ---- Mocked time and weather: for tests that need the same screens every run, and the
+// screen page's Scenarios panel. Both are files in $EMU_DATA, so they survive the
+// firmware's restarts.
+// POST /time?epoch=N (or local=YYYY-MM-DDTHH:MM[:SS] in the clock's zone) [&add=s] [&speed=x]
+// sets the clock to N, then runs it at x times real time (0, the default, stops it).
+// epoch=0 gives the real time back. speed alone keeps the time and changes the pace.
+struct EmuClock {
+  bool loaded = false;
+  long long base = 0;   // the emulated Unix time at `real`; 0: the real time
+  double real = 0, speed = 0;
+} emuClock;
+
+double realNow() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  time_t now = emuFixedTime ? emuFixedTime : ts.tv_sec;
+  return ts.tv_sec + ts.tv_nsec / 1e9;
+}
+
+void emuClockLoad() {
+  emuClock.loaded = true;
+  FILE* f = fopen(dataPath("emu_time").c_str(), "r");
+  if (!f) return;
+  long long base = 0;
+  double real = 0, speed = 0;
+  int n = fscanf(f, "%lld %lf %lf", &base, &real, &speed);
+  fclose(f);
+  if (n < 1) return;
+  emuClock.base = base;
+  emuClock.real = n >= 2 ? real : realNow();   // an older file: one number, a stopped clock
+  emuClock.speed = n >= 3 ? speed : 0;
+}
+
+double emuNow() {
+  if (!emuClock.loaded) emuClockLoad();
+  double now = realNow();
+  return emuClock.base ? emuClock.base + (now - emuClock.real) * emuClock.speed : now;
+}
+
+void emuClockSet(long long base, double speed) {
+  emuClock.loaded = true;
+  emuClock.base = base;
+  emuClock.real = realNow();
+  emuClock.speed = speed;
+  FILE* f = fopen(dataPath("emu_time").c_str(), "w");
+  if (f) { fprintf(f, "%lld %.3f %g\n", base, emuClock.real, speed); fclose(f); }
+}
+
+extern "C" time_t time(time_t* out) {   // replaces libc's for the firmware's time(nullptr)
+  time_t now = time_t(emuNow());
   if (out) *out = now;
   return now;
 }
+
+// integrations.cpp (emulator builds): a push as if it came from the MQTT broker, and
+// the variables as they stand.
+String emuMqtt(const String& topic, const String& body);
+String emuVarsJson();
+
+// The Scenarios panel's presets, and examples/faces (faces plus samples.json).
+String presetsPath() { const char* p = getenv("EMU_PRESETS"); return p && *p ? p : "/emulator/presets.json"; }
+String examplesDir() { const char* p = getenv("EMU_EXAMPLES"); return p && *p ? p : "/emulator/faces"; }
 
 // POST /weather with an Open-Meteo forecast reply (plus an optional "city") replaces
 // the network fetch until DELETE /weather; weather.cpp asks through emuWeather().
@@ -191,6 +243,35 @@ void serveFile(WiFiClient& c, const String& path, bool download) {
   uint8_t buf[2048];
   for (size_t n; (n = f.read(buf, sizeof(buf))) > 0;) writeAll(c, buf, n);
   f.close();
+}
+
+// GET /examples/<file>: one file of examples/faces ("index" lists them as JSON).
+void serveExample(WiFiClient& c, const String& name) {
+  String dir = examplesDir();
+  if (name == "index") {
+    String body = "[";
+    if (DIR* d = opendir(dir.c_str())) {
+      bool first = true;
+      while (struct dirent* e = readdir(d)) {
+        String n = e->d_name;
+        if (!n.endsWith(".json")) continue;
+        body += (first ? "\"" : ",\"") + jsonEscape(n) + "\"";
+        first = false;
+      }
+      closedir(d);
+    }
+    sendText(c, 200, "application/json", body + "]");
+    return;
+  }
+  bool plain = name.endsWith(".json") && name.indexOf("..") < 0;
+  for (unsigned i = 0; i < name.length(); ++i)
+    if (!isalnum((unsigned char)name[i]) && name[i] != '-' && name[i] != '_' && name[i] != '.') plain = false;
+  if (!plain) {
+    sendText(c, 404, "text/plain", "No such example");
+    return;
+  }
+  String text = readFile((dir + "/" + name).c_str());
+  sendText(c, text.length() ? 200 : 404, "application/json; charset=utf-8", text.length() ? text : String("No such example"));
 }
 
 // ---- WebSocket screen stream (GET /ws)
@@ -362,11 +443,54 @@ void handleRequest(WiFiClient& c, const String& head) {
     serveDir(c, queryArg(query, "path"));
   } else if (path == "/fs/file") {
     serveFile(c, queryArg(query, "path"), queryArg(query, "download") == "1");
-  } else if (method == "POST" && path == "/time") {
-    emuFixedTime = atoll(queryArg(query, "epoch").c_str());
-    FILE* f = fopen(dataPath("emu_time").c_str(), "w");
-    if (f) { fprintf(f, "%lld\n", (long long)emuFixedTime); fclose(f); }
+  } else if (path == "/time") {
+    if (method == "POST") {
+      String epoch = queryArg(query, "epoch"), local = queryArg(query, "local"), speed = queryArg(query, "speed");
+      bool moved = epoch.length() || local.length();
+      long long target = (long long)emuNow();
+      if (epoch.length()) target = atoll(epoch.c_str());
+      else if (local.length()) {
+        struct tm t{};
+        int got = sscanf(local.c_str(), "%d-%d-%dT%d:%d:%d", &t.tm_year, &t.tm_mon, &t.tm_mday,
+                         &t.tm_hour, &t.tm_min, &t.tm_sec);
+        if (got < 5) { sendText(c, 400, "text/plain", "local: YYYY-MM-DDTHH:MM[:SS]"); c.flush(); c.stop(); return; }
+        t.tm_year -= 1900; t.tm_mon -= 1; t.tm_isdst = -1;
+        target = mktime(&t);   // in the zone the firmware set from its settings (TZ)
+      }
+      target += atoll(queryArg(query, "add").c_str());
+      double pace = speed.length() ? atof(speed.c_str()) : moved ? 0 : emuClock.speed;
+      if (!(pace >= 0 && pace <= 100000)) { sendText(c, 400, "text/plain", "speed: 0 to 100000"); c.flush(); c.stop(); return; }
+      if (epoch.length() && atoll(epoch.c_str()) == 0) target = 0;   // the real time again
+      if (moved || speed.length()) emuClockSet(target, pace);
+    }
+    time_t now = time(nullptr);
+    struct tm t;
+    localtime_r(&now, &t);
+    char local[24];
+    snprintf(local, sizeof(local), "%04d-%02d-%02dT%02d:%02d:%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+             t.tm_hour, t.tm_min, t.tm_sec);
+    sendText(c, 200, "application/json",
+             String("{\"epoch\":") + String((long)now) + ",\"local\":\"" + local + "\",\"zone\":\"" +
+             jsonEscape(tzname[t.tm_isdst > 0 ? 1 : 0]) + "\",\"mocked\":" + (emuClock.base ? "true" : "false") +
+             ",\"speed\":" + String(emuClock.base ? emuClock.speed : 1.0, 3) + "}");
+  } else if (method == "GET" && path == "/weather") {
+    String fixed = emuWeather();
+    sendText(c, 200, "application/json", fixed.length() ? fixed : String("null"));
+  } else if (method == "POST" && path == "/mqtt") {   // as if it came from the broker
+    String body = head.substring(head.indexOf("\r\n\r\n") + 4);
+    String err = emuMqtt(queryArg(query, "topic"), body);
+    sendText(c, err.length() ? 400 : 200, "text/plain", err.length() ? err : String("OK"));
+  } else if (path == "/vars") {
+    sendText(c, 200, "application/json", emuVarsJson());
+  } else if (method == "POST" && path == "/facesapi") {   // Integrations: Custom faces
+    cfg.facesApi = queryArg(query, "on") != "0";
+    cfg.save();
     sendText(c, 200, "text/plain", "OK");
+  } else if (path == "/presets") {
+    String text = readFile(presetsPath().c_str());
+    sendText(c, text.length() ? 200 : 404, "application/json", text.length() ? text : String("{}"));
+  } else if (path.startsWith("/examples/")) {
+    serveExample(c, path.substring(10));
   } else if ((method == "POST" || method == "DELETE") && path == "/weather") {
     String body = head.substring(head.indexOf("\r\n\r\n") + 4);
     JsonDocument doc;

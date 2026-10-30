@@ -17,8 +17,8 @@
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
   main { max-width: 760px; margin: 0 auto; padding: 32px 16px; display: grid; gap: 24px;
-         grid-template-columns: auto 1fr; align-items: start; }
-  @media (max-width: 680px) { main { grid-template-columns: 1fr; justify-items: center; } }
+         grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  @media (max-width: 680px) { main { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
   .clock { background: var(--case); border: 1px solid var(--case-edge); border-radius: 22px;
            padding: 34px 30px 46px; box-shadow: 0 18px 40px rgba(0,0,0,.25); }
   .glass { background: #000; padding: 6px; border-radius: 4px; width: fit-content; margin: 0 auto; }
@@ -28,7 +28,7 @@
   .zoom { display: flex; justify-content: center; gap: 4px; margin-top: 14px; }
   .zoom button { padding: 3px 9px; font-size: 13px; background: var(--case-edge); color: #c7c7cc; border-color: #3a3a3e; }
   .zoom button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; width: 100%; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; width: 100%; min-width: 0; }
   h1 { font-size: 18px; margin: 0 0 4px; }
   p { margin: 0 0 14px; color: var(--muted); }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 16px; }
@@ -60,6 +60,37 @@
   .viewer .meta a { color: var(--accent); text-decoration: none; }
   .viewer pre { margin: 0; font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
   .viewer img { max-width: 100%; image-rendering: pixelated; background: #000; }
+
+  .scenarios { grid-column: 1 / -1; }
+  .scenarios header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .row select { max-width: 100%; }
+  .row label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  input, select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+                            border-radius: 8px; padding: 6px 8px; min-width: 0; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  input[type=number] { width: 84px; }
+  input[type=checkbox] { padding: 0; }
+  textarea { width: 100%; min-height: 84px; font: 12.5px/1.5 ui-monospace, Consolas, monospace; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 14px; overflow-x: auto; }
+  .tabs button { border: 0; border-radius: 0; background: none; padding: 8px 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .chips button { padding: 4px 10px; font-size: 13px; border-radius: 99px; }
+  .now { font-size: 28px; font-variant-numeric: tabular-nums; margin: 0 0 2px; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 14px; margin-bottom: 14px; }
+  .fields label { display: grid; gap: 3px; color: var(--muted); font-size: 13px; }
+  .fields input, .fields select { width: 100%; }
+  .table { overflow-x: auto; margin-bottom: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 6px; white-space: nowrap; }
+  td { padding: 3px 6px; border-top: 1px solid var(--line); }
+  td input, td select { width: 100%; padding: 4px 6px; }
+  td input[type=number] { width: 70px; }
+  td.num { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .note { color: var(--warn); }
+  h2 { font-size: 15px; margin: 18px 0 8px; }
 </style>
 </head>
 <body>
@@ -87,6 +118,98 @@
     </div>
     <small>The clock's own web server is the firmware on port 80 of the container
       (<span id="clockurl"></span>). Open this page with <code>?clock=&lt;port&gt;</code> if you mapped it elsewhere.</small>
+  </section>
+  <section class="panel scenarios">
+    <header>
+      <div><h1>Scenarios</h1><small>Mock the time, the weather and the values agents push, to see every screen in any condition.</small></div>
+      <small id="sc-status"></small>
+    </header>
+    <div class="row">
+      <label>Preset <select id="sc-preset"></select></label>
+      <button class="primary" id="sc-apply">Apply</button>
+      <label title="Before a preset: remove the variables and messages pushed so far"><input type="checkbox" id="sc-clear" checked> Clear values first</label>
+      <button id="sc-real" title="Real time, live weather">Back to real</button>
+    </div>
+    <div class="tabs" id="sc-tabs">
+      <button data-tab="time">Time</button><button data-tab="weather">Weather</button><button data-tab="values">Values and MQTT</button>
+    </div>
+
+    <div data-pane="time">
+      <p class="now" id="t-now">–</p>
+      <p id="t-mode">–</p>
+      <div class="row">
+        <input type="datetime-local" id="t-local" step="1">
+        <label>Pace <select id="t-speed">
+          <option value="0">Stopped</option><option value="1" selected>Real pace (1×)</option><option value="10">10×</option>
+          <option value="60">60× (a minute a second)</option><option value="600">600×</option><option value="720">720× (a day in 2 minutes)</option><option value="3600">3600× (an hour a second)</option>
+        </select></label>
+        <button class="primary" id="t-set">Set</button>
+      </div>
+      <div class="row">
+        <button data-add="-86400">−1 day</button><button data-add="-3600">−1 h</button><button data-add="-60">−1 min</button>
+        <button data-add="60">+1 min</button><button data-add="3600">+1 h</button><button data-add="86400">+1 day</button>
+        <button id="t-real">Real time</button>
+      </div>
+      <div class="chips" id="t-presets"></div>
+      <small>Times are in the clock's zone (Settings, Time). Night mode, sun phases and "when" rules follow this clock; a
+        fixed weather moves its forecast dates along.</small>
+    </div>
+
+    <div data-pane="weather" hidden>
+      <p id="w-mode">–</p>
+      <div class="chips" id="w-presets"></div>
+      <div class="fields" id="w-current"></div>
+      <div class="table"><table>
+        <thead><tr><th>Day</th><th>Condition</th><th>High °C</th><th>Low °C</th><th>Feels high</th><th>Rain %</th>
+          <th>Wind km/h</th><th>Humidity %</th><th>Sunrise</th><th>Sunset</th></tr></thead>
+        <tbody id="w-days"></tbody>
+      </table></div>
+      <div class="row">
+        <label><input type="checkbox" id="w-auto" checked> Apply as I type</label>
+        <button class="primary" id="w-apply">Apply</button>
+        <button id="w-live">Live weather</button>
+      </div>
+      <small>Values are in °C and km/h whatever the clock shows: it converts them like a real Open-Meteo reply.</small>
+    </div>
+
+    <div data-pane="values" hidden>
+      <p id="v-api">–</p>
+      <div class="row">
+        <label>Showing <select id="v-face"></select></label>
+      </div>
+      <h2>Variables</h2>
+      <div class="table"><table>
+        <thead><tr><th>Name</th><th>Value</th><th>Pushed</th><th>Expires</th><th>History</th><th></th></tr></thead>
+        <tbody id="v-list"></tbody>
+      </table></div>
+      <div class="row">
+        <input id="v-name" placeholder="name" size="12"><input id="v-value" placeholder="value" size="18">
+        <label title="Keep the last values for sparklines"><input type="checkbox" id="v-history"> $history</label>
+        <label title="Saved, kept across restarts"><input type="checkbox" id="v-persist"> $persist</label>
+        <label title="Added to the current value"><input type="checkbox" id="v-add"> $add</label>
+        <label>$ttl <input type="number" id="v-ttl" min="0" placeholder="s"></label>
+        <button class="primary" id="v-push">Push</button>
+      </div>
+      <h2>Message</h2>
+      <div class="row">
+        <input id="m-title" placeholder="title" size="14"><input id="m-text" placeholder="text" size="24">
+        <select id="m-icon"></select>
+        <label>% <input type="number" id="m-pct" min="0" max="100"></label>
+        <label><input type="checkbox" id="m-show" checked> show now</label>
+        <button class="primary" id="m-send">Send</button><button id="m-clear">Clear all</button>
+      </div>
+      <h2>Any MQTT topic</h2>
+      <div class="row">
+        <label><span id="mq-base">&lt;base&gt;</span>/ <select id="mq-topic">
+          <option>vars</option><option>message</option><option>message/clear</option><option>face/set</option>
+          <option value="custom/">custom/&lt;name&gt;</option><option>backlight/set</option><option>sync</option>
+        </select></label>
+        <input id="mq-name" placeholder="face name" size="14" hidden>
+        <button class="primary" id="mq-send">Publish</button>
+      </div>
+      <textarea id="mq-body" spellcheck="false"></textarea>
+      <small>Each push goes through the firmware's MQTT handler, as if the broker had sent it: no broker needed.</small>
+    </div>
   </section>
   <section class="panel storage">
     <header>
@@ -275,6 +398,312 @@ document.getElementById("recovery").onclick = async () => {
     await sleep(4000);
   }
 };
+
+// ---- Scenarios: the emulator's mocked clock (/time), fixed weather (/weather) and
+// pushes as if from the MQTT broker (/mqtt). Presets come from emulator/presets.json and
+// examples/faces (each example face with its samples.json values).
+const $ = id => document.getElementById(id);
+const scStatus = (text, bad) => { $("sc-status").textContent = text; $("sc-status").className = bad ? "note" : ""; };
+async function call(method, path, body) {
+  const r = await fetch(path, { method, body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body), cache: "no-store" });
+  const text = await r.text();
+  if (!r.ok) throw new Error(text || r.statusText);
+  try { return JSON.parse(text); } catch { return text; }
+}
+const mqtt = (topic, body) => call("POST", `/mqtt?topic=${encodeURIComponent(topic)}`, body ?? "");
+
+// Tabs, remembered per viewer.
+function showTab(name) {
+  for (const b of $("sc-tabs").children) b.classList.toggle("on", b.dataset.tab === name);
+  for (const p of document.querySelectorAll("[data-pane]")) p.hidden = p.dataset.pane !== name;
+  try { localStorage.setItem("emu-tab", name); } catch {}
+  if (name === "values") refreshValues();
+}
+for (const b of $("sc-tabs").children) b.onclick = () => showTab(b.dataset.tab);
+let savedTab = "time";
+try { savedTab = localStorage.getItem("emu-tab") || "time"; } catch {}
+showTab(["time", "weather", "values"].includes(savedTab) ? savedTab : "time");
+
+// ---- Time
+let clockNow = null;
+const speedText = s => s === 0 ? "stopped" : s === 1 ? "running at real pace" : `running at ${s}×`;
+async function refreshTime() {
+  try {
+    clockNow = await call("GET", "/time");
+    const [d, t] = clockNow.local.split("T");
+    const day = new Date(d + "T12:00Z").toLocaleDateString("en", { weekday: "long", timeZone: "UTC" });
+    $("t-now").textContent = `${day} ${d} ${t} ${clockNow.zone}`;
+    $("t-mode").textContent = clockNow.mocked ? `Mocked time, ${speedText(clockNow.speed)}.` : "Real time.";
+    if (document.activeElement !== $("t-local") && !$("t-local").dataset.edited) $("t-local").value = clockNow.local;
+  } catch {}
+}
+async function setTime(params) {
+  const before = clockNow && clockNow.local.slice(0, 10);
+  clockNow = await call("POST", "/time?" + new URLSearchParams(params));
+  delete $("t-local").dataset.edited;
+  await refreshTime();
+  if (weatherFixed && clockNow.local.slice(0, 10) !== before) await applyWeather();   // forecast dates follow
+  return clockNow;
+}
+$("t-local").oninput = () => { $("t-local").dataset.edited = "1"; };
+$("t-set").onclick = () => setTime({ local: $("t-local").value, speed: $("t-speed").value }).catch(e => scStatus(e.message, true));
+for (const b of document.querySelectorAll("[data-add]"))
+  b.onclick = () => setTime({ local: clockNow.local, add: b.dataset.add, speed: $("t-speed").value }).catch(e => scStatus(e.message, true));
+$("t-real").onclick = () => setTime({ epoch: 0 });
+setInterval(refreshTime, 1000);
+
+// ---- Weather: a form for one Open-Meteo reply (the shape the clock asks for).
+const WMO = [[0, "Clear"], [1, "Mainly clear"], [2, "Partly cloudy"], [3, "Overcast"], [45, "Fog"], [48, "Rime fog"],
+  [51, "Light drizzle"], [53, "Drizzle"], [55, "Dense drizzle"], [56, "Freezing drizzle"], [57, "Dense freezing drizzle"],
+  [61, "Light rain"], [63, "Rain"], [65, "Heavy rain"], [66, "Freezing rain"], [67, "Heavy freezing rain"],
+  [71, "Light snow"], [73, "Snow"], [75, "Heavy snow"], [77, "Snow grains"], [80, "Light showers"], [81, "Showers"],
+  [82, "Violent showers"], [85, "Snow showers"], [86, "Heavy snow showers"], [95, "Thunderstorm"],
+  [96, "Thunderstorm, hail"], [99, "Thunderstorm, heavy hail"]];
+// tests/integration/emulator.py open_meteo()'s defaults; presets give the fields that differ.
+const WEATHER_DEFAULT = { temp: 18.4, feels: 16.9, humidity: 72, wind: 5.2, code: 2, is_day: 1, city: "Montreal",
+  pressure: 1016.4, clouds: 40, days: [[2, 21, 11, 20, 10, 6.1, 64, "07:02", "18:31"], [61, 15, 9, 13, 80, 9.4, 88, "07:03", "18:29"],
+    [0, 19, 6, 18, 0, 3.3, 52, "07:05", "18:27"], [71, 4, -3, -1, 60, 7.8, 90, "07:06", "18:25"]] };
+const CURRENT = [["city", "City", "text"], ["code", "Condition", "wmo"], ["is_day", "Sky", "day"], ["temp", "Temperature °C"],
+  ["feels", "Feels like °C"], ["humidity", "Humidity %"], ["wind", "Wind km/h"], ["clouds", "Cloud cover %"], ["pressure", "Pressure hPa"]];
+const DAY_LABELS = ["Today", "Day 1", "Day 2", "Day 3"];
+const kmh = ms => Math.round(ms * 36) / 10, ms = kmh => Math.round(kmh / 3.6 * 100) / 100;
+const wmoSelect = () => el("select", {}, ...WMO.map(([c, n]) => el("option", { value: c, textContent: `${n} (${c})` })));
+let weatherFixed = false;
+
+for (const [key, label, kind] of CURRENT) {
+  const input = kind === "wmo" ? wmoSelect()
+    : kind === "day" ? el("select", {}, el("option", { value: 1, textContent: "Day" }), el("option", { value: 0, textContent: "Night" }))
+    : el("input", { type: kind || "number", step: "any" });
+  input.id = "w-" + key;
+  $("w-current").append(el("label", {}, label, input));
+}
+DAY_LABELS.forEach((label, i) => {
+  const cell = node => el("td", {}, node);
+  const num = name => Object.assign(el("input", { type: "number", step: "any" }), { id: `w-d${i}-${name}` });
+  const code = Object.assign(wmoSelect(), { id: `w-d${i}-code` });
+  const time = name => Object.assign(el("input", { type: "time" }), { id: `w-d${i}-${name}` });
+  $("w-days").append(el("tr", {}, el("td", { textContent: label }), cell(code), cell(num("hi")), cell(num("lo")), cell(num("feels")),
+    cell(num("pop")), cell(num("wind")), cell(num("hum")), cell(time("rise")), cell(time("set"))));
+});
+const DAY_KEYS = ["code", "hi", "lo", "feels", "pop", "wind", "hum", "rise", "set"];
+
+function fillWeather(w) {   // open_meteo() arguments (wind in m/s) into the form (km/h)
+  w = { ...WEATHER_DEFAULT, ...w };
+  for (const [key] of CURRENT) $("w-" + key).value = key === "wind" ? kmh(w.wind) : w[key];
+  w.days.forEach((d, i) => DAY_KEYS.forEach((k, j) => { $(`w-d${i}-${k}`).value = k === "wind" ? kmh(d[j]) : d[j]; }));
+}
+function readWeather() {   // the form back to open_meteo() arguments
+  const n = id => Number($(id).value);
+  const w = { city: $("w-city").value };
+  for (const [key, , kind] of CURRENT) if (kind !== "text") w[key] = key === "wind" ? ms(n("w-wind")) : n("w-" + key);
+  w.days = DAY_LABELS.map((_, i) => DAY_KEYS.map(k => k === "rise" || k === "set" ? $(`w-d${i}-${k}`).value
+    : k === "wind" ? ms(n(`w-d${i}-wind`)) : n(`w-d${i}-${k}`)));
+  return w;
+}
+function openMeteo(w, today) {   // as tests/integration/emulator.py open_meteo(), dated from the clock's today
+  const base = new Date((today || new Date().toISOString().slice(0, 10)) + "T12:00Z");
+  const dates = w.days.map((_, i) => new Date(base.getTime() + i * 864e5).toISOString().slice(0, 10));
+  const col = i => w.days.map(d => d[i]);
+  return { city: w.city,
+    current: { temperature_2m: w.temp, apparent_temperature: w.feels, relative_humidity_2m: w.humidity, wind_speed_10m: w.wind,
+      weather_code: w.code, is_day: w.is_day, pressure_msl: w.pressure, cloud_cover: w.clouds },
+    daily: { time: dates, weather_code: col(0), temperature_2m_max: col(1), temperature_2m_min: col(2), apparent_temperature_max: col(3),
+      precipitation_probability_max: col(4), wind_speed_10m_max: col(5), relative_humidity_2m_mean: col(6),
+      sunrise: dates.map((d, i) => `${d}T${w.days[i][7]}`), sunset: dates.map((d, i) => `${d}T${w.days[i][8]}`) } };
+}
+function fromOpenMeteo(r) {   // a stored reply back to open_meteo() arguments
+  const c = r.current, d = r.daily, hm = s => (s || "").slice(11, 16);
+  return { city: r.city || "", temp: c.temperature_2m, feels: c.apparent_temperature, humidity: c.relative_humidity_2m,
+    wind: c.wind_speed_10m, code: c.weather_code, is_day: c.is_day, pressure: c.pressure_msl, clouds: c.cloud_cover,
+    days: d.time.slice(0, 4).map((_, i) => [d.weather_code[i], d.temperature_2m_max[i], d.temperature_2m_min[i],
+      d.apparent_temperature_max[i], d.precipitation_probability_max[i], d.wind_speed_10m_max[i], d.relative_humidity_2m_mean[i],
+      hm(d.sunrise[i]), hm(d.sunset[i])]) };
+}
+function weatherMode() {
+  $("w-mode").textContent = weatherFixed ? "Fixed weather: the clock shows these values." : "Live weather from Open-Meteo (needs the network). Apply to fix it.";
+}
+async function applyWeather(w = readWeather()) {
+  await call("POST", "/weather", openMeteo(w, clockNow && clockNow.local.slice(0, 10)));
+  weatherFixed = true;
+  weatherMode();
+}
+let weatherTimer = 0;
+const weatherChanged = () => {
+  if (!$("w-auto").checked) return;
+  clearTimeout(weatherTimer);
+  weatherTimer = setTimeout(() => applyWeather().catch(e => scStatus(e.message, true)), 400);
+};
+for (const input of document.querySelectorAll('[data-pane="weather"] input:not(#w-auto), [data-pane="weather"] select')) input.addEventListener("input", weatherChanged);
+$("w-apply").onclick = () => applyWeather().then(() => scStatus("Weather applied")).catch(e => scStatus(e.message, true));
+$("w-live").onclick = async () => {
+  try { await call("DELETE", "/weather"); } catch (e) { scStatus(`Live weather: ${e.message}`, true); }
+  weatherFixed = false;
+  weatherMode();
+};
+(async () => {
+  try {
+    const r = await call("GET", "/weather");
+    weatherFixed = !!r;
+    fillWeather(r ? fromOpenMeteo(r) : {});
+  } catch { fillWeather({}); }
+  weatherMode();
+})();
+
+// ---- Values: variables, messages and any MQTT topic
+const BUILT_IN = ["Classic", "Weather", "Photo", "Big date", "Simple", "Forecast", "Big time", "Big weather", "Agents",
+  "Weather today", "Weather forecast - Day 1", "Weather forecast - Day 2", "Weather forecast - Day 3"];
+const ICONS = ["info", "success", "warning", "error", "waiting", "running", "bell", "done"];
+$("m-icon").append(...ICONS.map(i => el("option", { value: i, textContent: i })));
+let values = null;
+const ago = s => s < 0 ? "–" : s < 60 ? `${s} s ago` : s < 3600 ? `${Math.floor(s / 60)} min ago` : s < 86400 ? `${Math.floor(s / 3600)} h ago` : `${Math.floor(s / 86400)} d ago`;
+
+async function refreshValues() {
+  try { values = await call("GET", "/vars"); } catch { return; }
+  $("v-api").replaceChildren(values.facesApi ? "Custom faces are on: variables and custom faces reach the clock."
+    : el("span", { className: "note" }, "Custom faces are off (Integrations): variables and custom/ pushes are ignored. "),
+    values.facesApi ? "" : el("button", { textContent: "Turn them on", onclick: async () => { await call("POST", "/facesapi?on=1"); refreshValues(); } }));
+  const face = $("v-face");
+  if (document.activeElement !== face) {
+    face.replaceChildren(el("optgroup", { label: "Built-in" }, ...BUILT_IN.map(n => el("option", { value: n, textContent: n }))),
+      el("optgroup", { label: "Custom" }, ...values.faces.map(n => el("option", { value: n, textContent: n }))));
+    if (values.showing === "message") face.prepend(el("option", { value: "", textContent: "A message" }));
+    face.value = values.showing === "message" ? "" : values.showing;
+  }
+  const list = $("v-list");
+  if (list.contains(document.activeElement)) return;   // not while a value is being edited
+  const rows = Object.entries(values.vars).sort(([a], [b]) => a.localeCompare(b)).map(([name, v]) => {
+    const input = el("input", { value: v.value });
+    input.onchange = () => pushVars({ [name]: input.value }, `${name} = ${input.value}`);
+    return el("tr", {}, el("td", { textContent: name }), el("td", {}, input), el("td", { className: "num", textContent: ago(v.age) + (v.persist ? " · saved" : "") }),
+      el("td", { className: "num", textContent: v.ttl ? `in ${v.ttl} s` : "–" }),
+      el("td", { className: "num", textContent: v.history ? `${v.history.length}: ${v.history.slice(-5).join(", ")}` : "–" }),
+      el("td", {}, el("button", { textContent: "×", title: "Delete", onclick: () => pushVars({ [name]: null }, `${name} deleted`) })));
+  });
+  list.replaceChildren(...(rows.length ? rows : [el("tr", {}, el("td", { colSpan: 6, className: "num", textContent: "No variables pushed yet." }))]));
+}
+setInterval(() => { if (!document.querySelector('[data-pane="values"]').hidden) refreshValues(); }, 2000);
+
+// A value as typed: a number when it reads as one, so $history and $add work.
+const typed = s => s.trim() !== "" && !isNaN(Number(s)) ? Number(s) : s;
+async function pushVars(obj, what) {
+  try { await mqtt("vars", obj); scStatus(`Pushed ${what}`); } catch (e) { scStatus(e.message, true); }
+  refreshValues();
+}
+$("v-push").onclick = () => {
+  const name = $("v-name").value.trim();
+  if (!name) return;
+  const body = { [name]: typed($("v-value").value) };
+  for (const o of ["history", "persist", "add"]) if ($("v-" + o).checked) body["$" + o] = true;
+  if (Number($("v-ttl").value) > 0) body.$ttl = Number($("v-ttl").value);
+  pushVars(body, `${name} = ${$("v-value").value}`);
+};
+$("v-face").onchange = () => mqtt("face/set", $("v-face").value).then(refreshValues).catch(e => scStatus(e.message, true));
+$("m-send").onclick = async () => {
+  const m = { id: $("m-title").value.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 15) || "emulator",
+    title: $("m-title").value, text: $("m-text").value, icon: $("m-icon").value, show: $("m-show").checked };
+  if ($("m-pct").value !== "") m.pct = Number($("m-pct").value);
+  try { await mqtt("message", m); scStatus(`Message "${m.title}" sent`); } catch (e) { scStatus(e.message, true); }
+};
+$("m-clear").onclick = () => mqtt("message/clear", "").then(() => scStatus("Messages cleared"));
+
+const TOPIC_EXAMPLES = { vars: '{"cpu": 42, "$history": true}',
+  message: '{"id": "build", "title": "Build", "text": "Compiling", "icon": "running", "pct": 40, "show": true}',
+  "message/clear": "", "face/set": "Big weather", "custom/": '{"items": [{"type": "text", "x": 120, "y": 110, "text": "{time}", "font": "big", "align": "center"}]}',
+  "backlight/set": '{"state": "ON", "brightness": 60}', sync: "" };
+$("mq-topic").onchange = () => {
+  $("mq-name").hidden = $("mq-topic").value !== "custom/";
+  $("mq-body").value = TOPIC_EXAMPLES[$("mq-topic").value] ?? "";
+};
+$("mq-topic").onchange();
+$("mq-send").onclick = async () => {
+  const topic = $("mq-topic").value + ($("mq-topic").value === "custom/" ? $("mq-name").value.trim() : "");
+  try { await mqtt(topic, $("mq-body").value); scStatus(`Published to ${topic}`); } catch (e) { scStatus(e.message, true); }
+  refreshValues();
+};
+
+// ---- Presets
+let presets = { time: [], weather: [], scenarios: [] }, examples = {}, samples = {};
+const weatherPreset = name => (presets.weather.find(w => w.name === name) || {}).weather || {};
+
+async function clearValues() {
+  const v = await call("GET", "/vars");
+  const names = Object.keys(v.vars);
+  if (names.length) await mqtt("vars", Object.fromEntries(names.map(n => [n, null])));
+  await mqtt("message/clear", "");
+}
+async function ensureFacesApi() {
+  if (!(await call("GET", "/vars")).facesApi) await call("POST", "/facesapi?on=1");
+}
+
+// A sample from examples/faces/samples.json, as tests/integration/emulator.py apply_sample()
+// does it: "@+N" is N seconds after the sample's time, "@age N value" a value pushed N s before it.
+async function applySample(sample, speed) {
+  const now = (await setTime({ local: "2026-10-05T10:09", add: sample.shift || 0, speed: 0 })).epoch;
+  fillWeather(sample.weather || {});
+  await applyWeather();
+  const plain = {}, aged = [];
+  for (const [k, v] of Object.entries(sample.vars || {})) {
+    if (typeof v === "string" && v.startsWith("@+")) plain[k] = now + Number(v.slice(2));
+    else if (typeof v === "string" && v.startsWith("@age ")) { const [age, ...rest] = v.slice(5).split(" "); aged.push([k, Number(age), rest.join(" ") || 1]); }
+    else plain[k] = v;
+  }
+  if (Object.keys(plain).length) await mqtt("vars", plain);
+  for (const [k, age, value] of aged) { await setTime({ epoch: now - age, speed: 0 }); await mqtt("vars", { [k]: value }); }
+  await setTime({ epoch: now, speed });
+  for (const [k, list] of Object.entries(sample.history || {})) for (const v of list) await mqtt("vars", { [k]: v, $history: true });
+  for (const m of sample.messages || []) await mqtt("message", m);
+}
+
+async function applyPreset() {
+  const [kind, key] = $("sc-preset").value.split(":");
+  try {
+    scStatus("Applying…");
+    if ($("sc-clear").checked) await clearValues();
+    if (kind === "scenario") {
+      const s = presets.scenarios[Number(key)];
+      if (s.time) await setTime({ local: s.time.local, speed: s.time.speed ?? 1 });
+      if (s.weather) { fillWeather(typeof s.weather === "string" ? weatherPreset(s.weather) : s.weather); await applyWeather(); }
+      if (s.vars) { await ensureFacesApi(); await mqtt("vars", s.vars); }
+      for (const m of s.messages || []) await mqtt("message", m);
+      if (s.face) await mqtt("face/set", s.face);
+      $("t-speed").value = String(s.time && s.time.speed !== undefined ? s.time.speed : $("t-speed").value);
+      scStatus(`Applied "${s.name}"`);
+    } else if (kind === "face") {
+      await ensureFacesApi();
+      const face = await call("GET", `/examples/${key}.json`);
+      await mqtt(`custom/${key}`, JSON.stringify(face));
+      await applySample(samples[key] || {}, Number($("t-speed").value));
+      await mqtt("face/set", key);
+      scStatus(`Showing the ${key} example with its sample values`);
+    }
+  } catch (e) { scStatus(e.message, true); }
+  refreshValues();
+}
+$("sc-apply").onclick = applyPreset;
+$("sc-real").onclick = async () => {
+  await setTime({ epoch: 0 });
+  await call("DELETE", "/weather").catch(() => {});
+  weatherFixed = false;
+  weatherMode();
+  scStatus("Real time and live weather");
+};
+
+(async () => {
+  try { presets = { ...presets, ...(await call("GET", "/presets")) }; } catch {}
+  try {
+    const files = await call("GET", "/examples/index");
+    samples = files.includes("samples.json") ? await call("GET", "/examples/samples.json") : {};
+    examples = files.filter(f => f !== "samples.json").map(f => f.replace(/\.json$/, "")).sort();
+  } catch { examples = []; }
+  $("sc-preset").replaceChildren(
+    el("optgroup", { label: "Scenarios" }, ...presets.scenarios.map((s, i) => el("option", { value: `scenario:${i}`, textContent: s.name }))),
+    el("optgroup", { label: "Example faces, with their sample values" }, ...examples.map(n => el("option", { value: `face:${n}`, textContent: n }))));
+  $("t-presets").replaceChildren(...presets.time.map(t => el("button", { textContent: t.name, title: t.local,
+    onclick: () => setTime({ local: t.local, speed: $("t-speed").value }).catch(e => scStatus(e.message, true)) })));
+  $("w-presets").replaceChildren(...presets.weather.map(w => el("button", { textContent: w.name,
+    onclick: () => { fillWeather(w.weather); applyWeather().then(() => scStatus(`Weather: ${w.name}`)).catch(e => scStatus(e.message, true)); } })));
+})();
+refreshTime();
 </script>
 </body>
 </html>

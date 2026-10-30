@@ -10,7 +10,7 @@ docker compose -f emulator/docker-compose.yml up --build
 
 | URL | What |
 |---|---|
-| http://localhost:8080 | The screen, streamed over a WebSocket as it changes (up to ~30 updates a second) and dimmed like the backlight, with Power cycle, Reset and Enter recovery buttons, and a **Storage** browser for the clock's LittleFS volume (JSON formatted, images shown, anything else as hex, each file downloadable) |
+| http://localhost:8080 | The screen, streamed over a WebSocket as it changes (up to ~30 updates a second) and dimmed like the backlight, with Power cycle, Reset and Enter recovery buttons, a **Scenarios** panel (below), and a **Storage** browser for the clock's LittleFS volume (JSON formatted, images shown, anything else as hex, each file downloadable) |
 | http://localhost:8000 | The firmware's port 80: the settings page, `/status`, `/api/...` |
 
 Both ports are published on `127.0.0.1` only: port 8080 can read everything in the
@@ -27,13 +27,44 @@ The screen server's endpoints, for scripts:
 | `GET /fs?path=/faces` | A directory: `{"path","total","used","entries":[{"name","dir","size"}]}` |
 | `GET /fs/file?path=/config.json` | A file; `&download=1` as an attachment |
 | `POST /power`, `POST /reset` | Power cycle, external reset |
-| `POST /time?epoch=N` | Stops the firmware's clock at Unix time N, across restarts (`0`: the real time again) |
-| `POST /weather` | An Open-Meteo forecast reply (the clock's own request: `current` and `daily`, plus an optional `"city"`) used instead of the network, and applied now; `DELETE /weather` goes back to fetching |
+| `POST /time?epoch=N` | Sets the firmware's clock to Unix time N, stopped, across restarts (`0`: the real time again). `local=2026-10-05T07:45[:SS]` instead of `epoch` is a time in the clock's zone; `add=S` moves it by S seconds; `speed=X` runs it at X times real time (0 stops it; alone, it changes the pace and keeps the time) |
+| `GET /time` | `{"epoch","local","zone","mocked","speed"}`: the time the firmware sees |
+| `POST /weather` | An Open-Meteo forecast reply (the clock's own request: `current` and `daily`, plus an optional `"city"`) used instead of the network, and applied now; `DELETE /weather` goes back to fetching; `GET /weather` returns it (`null`: live) |
+| `POST /mqtt?topic=vars` | The body as if the MQTT broker had sent it to `<base>/<topic>`: `vars`, `message`, `message/clear`, `face/set`, `custom/<name>`, `backlight/set`, `sync`. It goes through the firmware's MQTT handler; no broker or MQTT settings needed. 400 when Custom faces are off and the topic needs them |
+| `GET /vars` | `{"facesApi","showing","faces","vars":{name:{"value","age","ttl","persist","history"}}}` |
+| `POST /facesapi?on=1` | Turns Custom faces (Integrations) on, or off with `on=0` |
+| `GET /presets` | `emulator/presets.json` |
+| `GET /examples/index`, `GET /examples/<file>.json` | The list of `examples/faces`, and one of its files (`samples.json` included) |
 
 Storage is read-only from here. Change it through the firmware's own API, as on the clock.
 
 The fixed time and weather are for tests that need the same screens on every run
 (`tests/integration/`, `scripts/screenshots.py`); both are files in the data volume.
+
+### Scenarios
+
+The **Scenarios** panel on the screen page mocks what the clock reacts to, to see every
+screen in any condition:
+
+- **Time:** a date and time in the clock's zone, stopped or running at 1× to 3600×
+  (night mode, sun phases and `when` rules follow it), ±minute/hour/day buttons, and
+  presets: sunrise, golden hour, midnight, New Year's Eve, the daylight saving changes,
+  a leap day …
+- **Weather:** the current conditions and four forecast days as a form (°C, km/h),
+  applied as you type, and presets from sunny to blizzard, heatwave and "Extremes
+  (widest numbers)". A fixed weather's forecast dates follow the mocked date.
+- **Values and MQTT:** the pushed variables (edit, delete, push with `$history`,
+  `$persist`, `$add`, `$ttl`), a message form, the face showing, and a raw publish to
+  any topic. All of it goes through the firmware's MQTT handler (`POST /mqtt`).
+- **Presets:** whole scenarios (time, weather, messages, face) from
+  `emulator/presets.json`, and every example face of `examples/faces` with its sample
+  values from `samples.json` (as `tests/integration/emulator.py` `apply_sample()` does).
+  "Clear values first" removes the variables and messages pushed before.
+
+Add presets to `emulator/presets.json`: weather fields are `open_meteo()`'s
+(`tests/integration/emulator.py`, wind in m/s), and the integration test `scenarios`
+checks that every preset applies. `dev-reload.sh` copies the page, the presets and the
+example faces into the running emulator.
 
 **Screen size:** the buttons under the screen show it at **Real** size (the 1.54" panel
 is a 1.09" square, about 105 CSS pixels; how close that is to life depends on the

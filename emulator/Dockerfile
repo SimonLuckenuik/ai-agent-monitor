@@ -33,7 +33,9 @@ RUN sh /app/emulator/build.sh /app /smartclock
 # ---- Run: the emulator binary, the screen page and the supervisor.
 FROM debian:bookworm-slim
 COPY --from=build /smartclock /emulator/smartclock
-COPY emulator/screen.html emulator/run.sh /emulator/
+COPY emulator/screen.html emulator/presets.json emulator/run.sh /emulator/
+# The Scenarios panel loads the example faces and their sample values.
+COPY examples/faces /emulator/faces
 RUN chmod +x /emulator/run.sh
 ENV EMU_DATA=/data EMU_SCREEN_PAGE=/emulator/screen.html
 VOLUME /data

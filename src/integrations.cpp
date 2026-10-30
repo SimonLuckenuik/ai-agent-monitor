@@ -694,3 +694,49 @@ void integrationsLoop() {
   if (millis() - mqttStateAt > 60000) publishState();
 #endif
 }
+
+#if SMARTCLOCK_EMULATOR
+// ---- The emulator's Scenarios panel (emulator.cpp, port 8080)
+// A push as if it came from the MQTT broker: topic is what follows the base topic
+// ("vars", "message", "custom/<name>", "face/set", ...). Returns "" or why it was ignored.
+String emuMqtt(const String& topic, const String& body) {
+#if SMARTCLOCK_MQTT
+  if (!cfg.facesApi && (topic == "vars" || topic.startsWith("custom/")))
+    return F("Custom faces are turned off (Integrations)");
+  String full = base() + "/" + topic;
+  if (full.length() > 127) return F("Topic too long");
+  char t[128];
+  strlcpy(t, full.c_str(), sizeof(t));
+  onMqtt(t, (byte*)body.c_str(), body.length());
+  return "";
+#else
+  (void)topic; (void)body;
+  return F("This build has no MQTT");
+#endif
+}
+
+// {"facesApi":b,"showing":face,"faces":[...],"vars":{name:{"value","age","ttl","persist","history":[...]}}}
+String emuVarsJson() {
+  JsonDocument doc;
+  doc["facesApi"] = cfg.facesApi;
+  doc["showing"] = cfg.theme == FACE_CUSTOM ? cfg.customFace : cfg.theme == FACE_MESSAGE ? String("message")
+                 : String(FACE_NAMES[cfg.theme >= 0 && cfg.theme < FACE_COUNT ? cfg.theme : 0]);
+  JsonArray faces = doc["faces"].to<JsonArray>();
+  for (int i = 0, n = customFaceCount(); i < n; ++i) faces.add(customFaceAt(i));
+  JsonObject list = doc["vars"].to<JsonObject>();
+  uint32_t now = epochNow();
+  for (const Var& v : vars) {
+    if (v.key.isEmpty() || !findVar(v.key)) continue;
+    JsonObject o = list[v.key].to<JsonObject>();
+    o["value"] = v.value;
+    o["age"] = v.at && now >= v.at ? (long)(now - v.at) : -1;
+    if (v.until) o["ttl"] = (long)(v.until - now);
+    if (v.keep) o["persist"] = true;
+    float h[HISTORY_LEN];
+    int n = faceHistory(v.key, h, HISTORY_LEN, nullptr);
+    if (n) { JsonArray a = o["history"].to<JsonArray>(); for (int i = 0; i < n; ++i) a.add(h[i]); }
+  }
+  String out; serializeJson(doc, out);
+  return out;
+}
+#endif

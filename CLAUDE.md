@@ -152,7 +152,10 @@ docker compose -f emulator/docker-compose.yml up -d --build
 ```
 
 - http://127.0.0.1:8080: the screen (WebSocket), zoom, Power cycle / Reset / Enter
-  recovery, storage browser, a Settings button that signs in by itself.
+  recovery, storage browser, a Settings button that signs in by itself, and a
+  **Scenarios** panel: mocked time (any date, 0-3600× pace), weather form and presets,
+  variables/messages/any topic pushed as if over MQTT, example faces with their sample
+  values (`emulator/presets.json`; endpoints in `emulator/README.md`).
 - http://127.0.0.1:8000: the firmware's own web server and API.
 - From scripts use `127.0.0.1`, not `localhost` (Windows tries IPv6 first: +200 ms).
 
