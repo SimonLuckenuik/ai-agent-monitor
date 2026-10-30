@@ -300,6 +300,11 @@ The screen is at http://localhost:8080 (with a storage browser and power-cycle
 buttons) and the clock's own web server at http://localhost:8000. See
 [emulator/README.md](emulator/README.md).
 
+The screen page: the clock's screen, power-cycle and recovery buttons, the Scenarios
+panel (mocked time, weather and pushed values, with presets) and the storage browser.
+
+<img src="docs/images/emulator.png" alt="The emulator's screen page" width="480">
+
 ## Building from source
 
 Requires [PlatformIO](https://platformio.org/) and Python 3.

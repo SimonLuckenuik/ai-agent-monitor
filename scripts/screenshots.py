@@ -16,6 +16,7 @@ firmware does. Writes to docs/images/:
   agent-screens.png        messages, the Agents board and the skill's example faces
   settings-overview.png    the settings page (desktop)
   settings-integrations.png, settings-system.png, settings-phone.png
+  emulator.png             the emulator's screen page, with the Scenarios panel
 
 The settings page is captured with Playwright (pip install playwright). It uses the
 installed Microsoft Edge or Google Chrome when there is one; otherwise run
@@ -179,6 +180,19 @@ def web_images(emu):
 
         page = open_page(400, 720, "dark")
         page.screenshot(path=str(IMAGES / "settings-phone.png"))
+        page.close()
+
+        # The emulator's own page: the screen, its controls and the Scenarios panel.
+        page = browser.new_page(viewport={"width": 1100, "height": 1000}, color_scheme="dark")
+        page.goto(emu.screen + "/")
+        page.wait_for_load_state("networkidle")
+        emu.show(10)   # redraw the face for the page that just connected
+        time.sleep(2)
+        box = page.locator("section.scenarios").bounding_box()
+        height = page.evaluate("document.documentElement.scrollHeight")
+        page.screenshot(path=str(IMAGES / "emulator.png"), full_page=True,
+                        clip={"x": box["x"] - 16, "y": 16, "width": box["width"] + 32,
+                              "height": height - 16})
         page.close()
         browser.close()
     for name in shown:
