@@ -23,6 +23,7 @@ class TFT_eSPI {
 
   void init() {}
   void setRotation(uint8_t) {}   // the panel only ever runs at rotation 0
+  void invertDisplay(bool) {}
   void fillScreen(uint32_t c) { fillRect(0, 0, W, H, c); }
   virtual ~TFT_eSPI() = default;
   // Virtual as in TFT_eSPI, so main.cpp's NightPanel can tint what is drawn.

@@ -192,6 +192,9 @@ a{color:var(--accent)}
     <div class="row"><span class="lbl">Screen orientation<span class="hint">Turns everything on the screen, for a clock on its side or upside down</span></span>
       <select class="sm" id="orientation" data-key="orientation"><option value="0">Upright</option><option value="90">90° clockwise</option>
         <option value="180">Upside down</option><option value="270">90° counter-clockwise</option></select></div>
+    <div class="row"><span class="lbl">Contrast curve<span class="hint">The panel's gamma: how bright the mid-tones are</span></span>
+      <select class="sm" id="gamma" data-key="gamma"><option value="2.2">Standard (2.2)</option><option value="1.8">Lighter (1.8)</option>
+        <option value="2.5">Deeper (2.5)</option><option value="1.0">Flat (1.0)</option></select></div>
   </section>
 
   <section class="card settings">
@@ -221,6 +224,11 @@ a{color:var(--accent)}
     <div class="row hoursRow"><span class="lbl">Until</span><select class="sm hours" id="stoptime" data-key="stoptime"></select></div>
     <div class="row"><span class="lbl">At night show<span class="hint">One face all night, instead of the rotation</span></span>
       <select class="sm" id="nightface" data-key="nightface"></select></div>
+    <div class="row"><label for="nightoff">Screen off<span class="hint">Turns the panel off, not only the backlight; warnings and errors still wake it</span></label>
+      <label class="switch"><input type="checkbox" id="nightoff" data-key="nightoff"><span></span></label></div>
+    <div class="row"><span class="lbl">Night contrast curve</span>
+      <select class="sm" id="nightgamma" data-key="nightgamma"><option value="">Same as by day</option><option value="2.2">Standard (2.2)</option><option value="1.8">Lighter (1.8)</option>
+        <option value="2.5">Deeper (2.5)</option><option value="1.0">Flat (1.0)</option></select></div>
     <div class="row"><span class="lbl">Night brightness</span>
       <div class="range"><input type="range" min="0" max="100" id="nightbrightness" data-key="nightbrightness"><output></output></div></div>
     <div class="row"><label for="nighttint">Night color<span class="hint">Faces drawn in one dim color; photos keep theirs</span></label>
@@ -581,9 +589,9 @@ function delPalette(){if(palTab=='day'||!confirm('Delete the palette '+palTab+'?
 
 function fillConfig(c){
   cfg=c;pals=c.palettes||{day:{}};roles=c.roles||{};renderThemes();renderColors();
-  for(const k of ['themeInterval','brightness','orientation','nightbrightness','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
+  for(const k of ['themeInterval','brightness','orientation','gamma','nightgamma','nightbrightness','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
   if(![...$('themeInterval').options].some(o=>o.value==String(c.themeInterval))){const o=new Option(c.themeInterval+' s',c.themeInterval);$('themeInterval').add(o);$('themeInterval').value=c.themeInterval}
-  $('nightmode').checked=!!c.nightmode;$('nighttint').checked=c.nighttint!==false;$('photoclock').checked=c.photoclock!==false;
+  $('nightmode').checked=!!c.nightmode;$('nightoff').checked=!!c.nightoff;$('nighttint').checked=c.nighttint!==false;$('photoclock').checked=c.photoclock!==false;
   ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
   ['mqtthost','mqttuser','mqttbase'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
   $('nightcolor').value=hex565(c.nightcolor||0);

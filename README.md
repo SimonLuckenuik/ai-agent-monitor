@@ -44,8 +44,13 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   [Open-Meteo](https://open-meteo.com/), drawn with
   [Weather Icons](https://erikflowers.github.io/weather-icons/) (day and night).
 - **Night mode:** dim the screen, draw everything in one dark color (dark gray by
-  default) so it lights the room less, and show a single face all night (Big time, for
-  example).
+  default) or in a night palette so it lights the room less, show a single face all
+  night (Big time, or one of your own), or turn the panel off altogether (warnings and
+  errors still wake it).
+- **The screen itself:** turned 90°, 180° or 270° for a clock on its side or upside
+  down, a choice of contrast curve (by day and at night), and custom faces that flash
+  by inverting the panel's colours. The display does all three, so they cost no
+  drawing time.
 - **English or French** on the faces (days, months, weather, labels).
 - **Correct local time all year:** time zones include daylight-saving rules.
 - **Your photos:** the settings page crops and resizes them to 240×240 in your browser

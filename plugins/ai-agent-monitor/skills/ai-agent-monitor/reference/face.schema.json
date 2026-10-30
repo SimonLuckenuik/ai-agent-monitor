@@ -58,6 +58,10 @@
       "$ref": "#/$defs/condition",
       "description": "In the rotation only while true."
     },
+    "invert": {
+      "$ref": "#/$defs/condition",
+      "description": "While true, the panel inverts every colour, with no redraw: \"{time.sec}%2\" flashes the face."
+    },
     "duration": {
       "$ref": "#/$defs/number",
       "description": "Seconds on screen per turn, 1-3600 (the rotation interval)."

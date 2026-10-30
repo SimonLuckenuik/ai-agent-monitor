@@ -35,6 +35,9 @@ struct Config {
   int    faceMask    = (1 << FACE_COUNT) - 1;   // bit n set = face n takes part in rotation
   int    brightness  = 60;           // 0..100
   int    orientation = 0;            // the screen turned by 0-3 quarter turns (clockwise), in hardware
+  int    gamma       = 0;            // the panel's gamma curve: 0 2.2, 1 1.8, 2 2.5, 3 1.0 (GAMSET)
+  int    nightGamma  = -1;           // at night; -1 the day's
+  bool   nightOff    = false;        // during night mode: the panel off (urgent messages wake it)
   bool   nightMode   = true;
   bool   nightAuto   = false;          // dim from sunset to sunrise instead of fixed hours
   int    nightBrightness = 15;       // 0..100
@@ -67,6 +70,13 @@ struct Config {
   String mqttHost, mqttUser, mqttPass, mqttBase;   // mqttBase "" = the hostname
   int    mqttPort = 1883;
   String apiKey;                     // for scripts calling the faces API; never exported
+
+  // The panel's four gamma curves, as the settings name them; -1 for anything else.
+  static constexpr const char* GAMMAS[4] = {"2.2", "1.8", "2.5", "1.0"};
+  static int gammaIndex(const String& s) {
+    for (int i = 0; i < 4; ++i) if (s == GAMMAS[i]) return i;
+    return -1;
+  }
 
   // The older "faceorder" setting: built-in face ids as base-36 characters (0-9, a-d),
   // turned into face entries ("#3,#7,...").
@@ -117,6 +127,9 @@ struct Config {
     faceMask    = doc["faces"]       | faceMask;
     brightness  = doc["brightness"]  | brightness;
     orientation = ((doc["orientation"] | 0) / 90 % 4 + 4) % 4;
+    gamma       = constrain(gammaIndex(doc["gamma"] | "2.2"), 0, 3);
+    nightGamma  = gammaIndex(doc["nightgamma"] | "");
+    nightOff    = doc["nightoff"]    | nightOff;
     nightMode   = doc["nightmode"]   | nightMode;
     nightAuto   = doc["nightauto"]   | nightAuto;
     nightBrightness = doc["nightbrightness"] | nightBrightness;
@@ -182,6 +195,7 @@ struct Config {
     doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
     doc["faces"] = faceMask;     doc["facesv"] = 4;
     doc["brightness"] = brightness; doc["orientation"] = orientation * 90;
+    doc["gamma"] = GAMMAS[gamma]; doc["nightgamma"] = nightGamma < 0 ? "" : GAMMAS[nightGamma]; doc["nightoff"] = nightOff;
     doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness; doc["nightface"] = nightFace;
     doc["nighttint"] = nightTint; doc["nightcolor"] = nightColor;
     doc["starttime"] = startHour; doc["stoptime"] = stopHour;

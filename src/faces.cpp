@@ -157,6 +157,14 @@ bool clockColor(const char* name, uint16_t* out) {
   return swatch(activePal.c_str(), name, out);
 }
 
+// A custom face's "invert": the panel flips every colour itself, with no redraw.
+bool panelInverted = false;
+void invertPanel(bool on) {
+  if (on == panelInverted) return;
+  panelInverted = on;
+  D().invertDisplay(!on);   // the IPS panel shows true colours with INVON
+}
+
 int drawnFace = -1;      // -2 = "setting the time" screen
 bool dirty = true;
 int photosCached = -1;   // -1 = recount
@@ -1758,6 +1766,7 @@ void renderItems(const struct tm& t, bool force) {
   static String drawnPalette;
   const char* pal = customDoc["palette"];
   paletteName = pal ? evalStr(resolve(pal, t)) : String();
+  invertPanel(!customDoc["invert"].isNull() && visibleField(customDoc["invert"], t));
   // A name the face's own palettes lack may be one of the clock's.
   facePal = paletteName.length() && customDoc["palettes"][paletteName].isNull() && !palDoc[paletteName].isNull() ? paletteName : String();
   bool full = force || paletteName != drawnPalette;
@@ -2264,7 +2273,7 @@ String weatherIconName(int wmo, bool day) {
 }
 
 // ---- Public -----------------------------------------------------------------------
-void faceInvalidate() { dirty = true; }
+void faceInvalidate() { dirty = true; invertPanel(false); }
 void facePhotosChanged() { photosCached = -1; dirty = true; }
 
 int photoCount() {
@@ -2314,6 +2323,7 @@ void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFa
   }
   bool force = dirty || face != drawnFace;
   if (face == FACE_CUSTOM && !cfg.facesApi) face = FACE_CLASSIC;   // integration turned off
+  if (face != FACE_CUSTOM && face != FACE_MESSAGE) invertPanel(false);
   if (force && face != FACE_PHOTO && face != FACE_CUSTOM && face != FACE_MESSAGE) D().fillScreen(BG);
   switch (face) {
     case FACE_WEATHER:  weather(t, force);  break;

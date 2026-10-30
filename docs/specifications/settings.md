@@ -31,11 +31,19 @@ custom face, in rotation order), `customoff`, `turns`, `nightface` (an entry, or
 and `customs`: one object per custom face, `{"name": "calendar", "when": true,
 "duration": 20}` (`when`: the face has a `when` rule; `duration`: its own, or 0).
 
-## Screen orientation
+## The screen
+
+The display controller (ST7789) does these itself, so they cost no drawing time.
 
 | Key | Value | Meaning |
 |---|---|---|
-| `orientation` | `0`, `90`, `180` or `270` | Turns everything on the screen clockwise by that many degrees, for a clock standing on its side or upside down. The display controller does it (its MADCTL register), so drawing is as fast as upright. Faces are square, so they need no change |
+| `orientation` | `0`, `90`, `180` or `270` | Turns everything on the screen clockwise by that many degrees, for a clock standing on its side or upside down (MADCTL). Faces are square, so they need no change |
+| `gamma` | `2.2`, `1.8`, `2.5` or `1.0` | The panel's contrast curve (GAMSET): `2.2` standard, `1.8` lighter mid-tones, `2.5` deeper, `1.0` flat |
+| `nightgamma` | as `gamma`, or empty | The curve during night mode; empty keeps the day's |
+| `nightoff` | `1` or `0` | During night mode the panel is turned off (DISPOFF and sleep), not only its backlight. A warning or error message wakes it while it is on screen |
+
+A custom face's `invert` (see the integrations API) flips the panel's colours the same
+way, for flashing.
 
 ## Palettes: named colours
 

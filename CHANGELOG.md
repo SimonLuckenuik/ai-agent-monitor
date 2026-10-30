@@ -22,6 +22,13 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- **Emulator: Scenarios panel.** The screen page mocks the time (any date, stopped or up
+  to 3600× real pace), the weather (a form for the current conditions and four forecast
+  days, plus presets from sunny to blizzard) and the values agents push (variables,
+  messages, any MQTT topic, handled by the firmware as if from the broker), and loads
+  whole scenarios or any example face with its sample values. New emulator endpoints:
+  `GET /time` and `local`/`add`/`speed` on `POST /time`, `GET /weather`, `POST /mqtt`,
+  `GET /vars`, `POST /facesapi`, `GET /presets`, `GET /examples/…`.
 - **Palettes and roles.** Named colours in palettes (day, night, and up to 8), the
   palette in use by day and at night, and 18 roles, the parts of the faces (time,
   date, highlights, weather icons, temperatures, rain, sun times, message colours,
@@ -39,11 +46,15 @@ versioning. `/version` on the device reports the version it was built as; a
 - **5 example faces**: big-time, big-date and big-weather (the Big tiles as JSON, in
   the clock's colours) and scoreboard, in the big font; alarm, which flashes between
   two colour sets every second while an alarm is set.
+- **The display's own features:** a custom face's `invert` (the panel inverts every
+  colour, with no redraw, to flash it); a contrast curve (gamma 2.2, 1.8, 2.5 or 1.0)
+  by day and at night; and "Screen off" at night, which turns the panel off, not only
+  its backlight (warnings and errors still wake it). The emulator models all three.
 - The settings page says "Use night mode" (was "Dim at night"): the switch turns on all
   of night mode, not only the dimmer backlight.
 - **Screen orientation**: turn the picture 90, 180 or 270 degrees (Display card), done
   by the display controller, for a clock on its side or upside down.
-- Settings: `orientation`, `order`, `customoff`, `turns`, `customface`, `nightface` (any face),
+- Settings: `orientation`, `gamma`, `nightgamma`, `nightoff`, `order`, `customoff`, `turns`, `customface`, `nightface` (any face),
   `palettes`, `palette`, `nightpalette`, `roles` (`docs/specifications/settings.md`).
 
 ## 1.5.0 - 2026-10-29

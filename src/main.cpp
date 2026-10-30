@@ -234,6 +234,8 @@ bool isNight(const struct tm& t) {
 }
 
 // ---------------------------- Display ---------------------------------------
+void setGamma(int index);
+
 void displayBegin() {
   displayReady = true;
   pinMode(PIN_BACKLIGHT, OUTPUT);
@@ -243,8 +245,32 @@ void displayBegin() {
   // The controller turns the picture (MADCTL): stock boots rotation 0, offset (0,0);
   // TFT_eSPI adds the 80-row offset a 240x240 glass on 240x320 RAM needs at 180 and 270.
   clockDisplay().setRotation(cfg.orientation);
+  setGamma(cfg.gamma);
   clockDisplay().fillScreen(TFT_BLACK);
   setBacklight(cfg.brightness);
+}
+
+// The panel's gamma curve (GAMSET: one of four built-in curves).
+void setGamma(int index) {
+  static int now = -1;
+  if (!displayReady || index == now) return;
+  now = index;
+  clockDisplay().writecommand(0x26);
+  clockDisplay().writedata(1 << index);
+}
+
+// The panel itself off (DISPOFF, then sleep), not only the backlight; on again it
+// wakes (SLPOUT, DISPON) and the face is redrawn.
+bool panelOff = false;
+void setPanelOn(bool on) {
+  if (!displayReady || on == !panelOff) return;
+  panelOff = !on;
+  TFT_eSPI& d = clockDisplay();
+  if (!on) { d.writecommand(0x28); d.writecommand(0x10); return; }
+  d.writecommand(0x11);
+  delay(10);   // after SLPOUT, before the next command
+  d.writecommand(0x29);
+  faceInvalidate();
 }
 
 void centerText(const String& s, int y, uint8_t font, uint16_t color) {
@@ -512,6 +538,8 @@ String configJson() {
   doc["theme"] = cfg.theme; doc["celsius"] = cfg.celsius; doc["hour12"] = cfg.hour12; doc["lang"] = cfg.lang;
   doc["mile"] = cfg.mile;   doc["city"] = cfg.city;       doc["brightness"] = cfg.brightness;
   doc["orientation"] = cfg.orientation * 90;
+  doc["gamma"] = Config::GAMMAS[cfg.gamma]; doc["nightgamma"] = cfg.nightGamma < 0 ? "" : Config::GAMMAS[cfg.nightGamma];
+  doc["nightoff"] = cfg.nightOff;
   doc["location"] = cfg.geoFor == cfg.city ? cfg.geoName : "";
   doc["nightmode"] = cfg.nightMode; doc["starttime"] = cfg.startHour; doc["stoptime"] = cfg.stopHour;
   doc["nightbrightness"] = cfg.nightBrightness; doc["nightface"] = cfg.nightFace; doc["ntp"] = cfg.ntp;
@@ -632,6 +660,12 @@ String applySetting(const String& key, const String& val) {
   }
   else if (key == "themeInterval") cfg.themeInterval = constrain(val.toInt(), 0, 3600);
   else if (key == "brightness") { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
+  else if (key == "gamma" || key == "nightgamma") {   // a curve: 2.2, 1.8, 2.5 or 1.0; "" at night: the day's
+    int g = Config::gammaIndex(val);
+    if (g < 0 && !(key == "nightgamma" && val.isEmpty())) return F("Gamma: 2.2, 1.8, 2.5 or 1.0");
+    (key == "gamma" ? cfg.gamma : cfg.nightGamma) = g;
+  }
+  else if (key == "nightoff")   cfg.nightOff = (val == "1" || val == "true");
   else if (key == "orientation") {   // degrees, clockwise
     int deg = val.toInt();
     if (deg % 90) return F("Orientation: 0, 90, 180 or 270");
@@ -1388,7 +1422,10 @@ void loop() {
       brightnessDirty = false;
       lastBrightMin = t.tm_min;
       nightNow = isNight(t);
-      setBacklight(backlightOff ? 0 : boosted ? 100 : nightNow ? cfg.nightBrightness : cfg.brightness);
+      bool off = nightNow && cfg.nightOff && !boosted;   // an urgent message wakes the panel
+      setPanelOn(!off);
+      setGamma(nightNow && cfg.nightGamma >= 0 ? cfg.nightGamma : cfg.gamma);
+      setBacklight(backlightOff || off ? 0 : boosted ? 100 : nightNow ? cfg.nightBrightness : cfg.brightness);
       // Night colours too; an urgent message keeps its own.
       uint16_t tint = nightNow && !boosted && cfg.nightTint ? std::max<uint16_t>(cfg.nightColor, 1) : 0;
       if (tint != nightPanel().tint) { nightPanel().tint = tint; faceInvalidate(); }
@@ -1402,7 +1439,7 @@ void loop() {
       shown = entryFace(cfg.nightFace);
       if (shown == FACE_CUSTOM) custom = cfg.nightFace.c_str();
     }
-    if (!revealUntil && (int32_t)(millis() - faceHoldUntil) >= 0) {
+    if (!revealUntil && !panelOff && (int32_t)(millis() - faceHoldUntil) >= 0) {
       uint32_t start = micros();
       faceDraw(shown, t, timeValid, custom);
       uint32_t ms = (micros() - start) / 1000;

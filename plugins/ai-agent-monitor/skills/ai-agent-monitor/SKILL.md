@@ -77,9 +77,11 @@ saved on the clock. The model:
   Every item takes `show`, a condition.
 - **Maps** turn a value into a colour or a label (`{build:state}`); **palettes** name
   colours (`"@fg"`) and can switch as a whole (`"palette": "{sun.up}?day:night"`).
-- **Flashing** for an alarm: `"palette": "{time.sec}%2==0?on:off"` with two palettes
-  swaps the whole face's colours every second; add `"when": "{alarm}"` so it shows
-  only while the alarm variable is set.
+- **Flashing** for an alarm: `"invert": "{time.sec}%2"` makes the display invert every
+  colour each other second, with no redraw (red turns cyan). For two colours of your
+  choice, `"palette": "{time.sec}%2==0?on:off"` with two palettes swaps them (the face
+  is redrawn each time). Add `"when": "{alarm}"` so it shows only while the alarm
+  variable is set.
 - **The clock's colours**: `@time`, `@bg`, `@text`, `@muted`, `@panel`, `@warn`,
   `@error`, `@ok` … are the colours the user chose for the built-in faces (day and
   night). Use them unless the face needs colours of its own: it then matches the

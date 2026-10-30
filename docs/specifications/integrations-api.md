@@ -157,6 +157,7 @@ or, where noted, a [gradient](#gradients).
 | `maps` | Lookup tables for the `:<map>` modifier: `{"<map>": {"<value>": "<result>", "*": "<otherwise>"}}` |
 | `when` | The face takes its turn in the rotation only while this is true (`"{build}==fail"`, `"{day0.rain}>60"`). Absent: always |
 | `duration` | Seconds on screen per turn (1–3600), instead of the rotation interval |
+| `invert` | A condition: while true, the panel shows every colour inverted. The display does it, with no redraw, so `"{time.sec}%2"` flashes the face at no cost |
 | `show` | `true`: show the face when it is saved |
 
 **Items**
@@ -298,7 +299,11 @@ once, for day and night, or for a state.
 A palette entry may use placeholders (`"accent": "{theme.color1}"`) but not another
 `@name`.
 
-A palette chosen by the time **flashes** the whole face, for an alarm:
+`"invert": "{time.sec}%2"` **flashes** a face at no cost: the display inverts every
+colour itself, with nothing redrawn. Inverted colours are the opposites (red turns
+cyan); for two colours of your choice, use palettes instead.
+
+A palette chosen by the time also flashes the whole face, for an alarm:
 `"palette": "{time.sec}%2==0?on:off"` swaps two colour sets every second (each swap
 redraws the face). Keep such a face light (font 2 and 4 text, a path or two) so the
 swap is quick, and give it a `when` so it shows only while there is something wrong
