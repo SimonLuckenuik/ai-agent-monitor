@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Changed
+
+- The address screen shown after a restart (IP address and name) also shows the
+  firmware version.
+
 ## 1.6.0 - 2026-10-29
 
 Custom faces join the rotation, palettes and roles colour every face, the big font in

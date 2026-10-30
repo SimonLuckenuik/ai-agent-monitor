@@ -1376,6 +1376,7 @@ void loop() {
     clockDisplay().fillScreen(TFT_BLACK);
     centerText(WiFi.localIP().toString(), 100, 4, TFT_YELLOW);
     centerText(deviceHost() + (SMARTCLOCK_MDNS ? ".local" : ""), 140, 2, TFT_CYAN);
+    centerText(F("v" FW_VERSION), 165, 2, TFT_LIGHTGREY);
     faceHoldUntil = millis() + 3000;   // let the address be read
     faceInvalidate();
   } else if (WiFi.status() != WL_CONNECTED && mode == MODE_RUN) {
