@@ -7,8 +7,22 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 1.7.0 - 2026-10-29
+
+Less flicker in custom faces with moving parts, and the firmware version on the
+address screen after a restart.
+
+### Upgrading
+
+- **From 1.4.0 on:** install `AIAgentMonitor_v1.7.0.bin.gz` from the Firmware update
+  card. Settings, saved faces and photos are kept.
+- **A new clock** (stock firmware, or SmartClock-OSS 1.3.x or earlier): install
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
+  `AIAgentMonitor_v1.7.0.bin.gz`.
+
 ### Changed
 
+- **The plugin (0.5.1)**: the skill says which changes repaint only around an item.
 - The address screen shown after a restart (IP address and name) also shows the
   firmware version.
 - **Less flicker in custom faces with moving parts.** When a shape (rect, circle,
