@@ -7,8 +7,23 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 1.8.0 - 2026-10-30
+
+Custom faces that move without blinking, big-font digits that redraw one at a time,
+and two flip clocks among new and livelier example faces.
+
+### Upgrading
+
+- **From 1.4.0 on:** install `AIAgentMonitor_v1.8.0.bin.gz` from the Firmware update
+  card. Settings, saved faces and photos are kept. Example faces on the clock are not
+  updated by themselves: send them again to get the new versions.
+- **A new clock** (stock firmware, or SmartClock-OSS 1.3.x or earlier): install
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
+  `AIAgentMonitor_v1.8.0.bin.gz`.
+
 ### Changed
 
+- **The plugin (0.5.2)**: the skill says what now redraws without a blink.
 - **Custom faces no longer blink when something moves.** The area around a moved or
   changed item is drawn off screen, a strip at a time, then copied to the panel, so
   the rest of the face stays as it is. This now covers sprites, text and repeats too:
