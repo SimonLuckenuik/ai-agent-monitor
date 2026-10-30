@@ -73,6 +73,8 @@ static uint32_t fakeMillis = 0;
 uint32_t millis() { return fakeMillis; }
 void delay(unsigned long ms) { fakeMillis += ms; }
 TFT_eSPI& clockDisplay() { static TFT_eSPI panel; return panel; }
+uint16_t panelTint() { return 0; }   // main.cpp: no night tint here
+uint16_t tintColor(uint32_t c, uint16_t) { return c; }
 
 static std::string outDir;
 static void save(const std::string& name) {

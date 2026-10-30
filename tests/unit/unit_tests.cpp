@@ -41,6 +41,8 @@ void wmoText(int, bool fr, String& main, String& desc) { main = fr ? "Nuageux" :
 uint32_t millis() { return 0; }
 void delay(unsigned long) {}
 TFT_eSPI& clockDisplay() { static TFT_eSPI panel; return panel; }
+uint16_t panelTint() { return 0; }   // main.cpp: no night tint here
+uint16_t tintColor(uint32_t c, uint16_t) { return c; }
 
 // ---- A tiny harness.
 static int checks = 0, failures = 0;

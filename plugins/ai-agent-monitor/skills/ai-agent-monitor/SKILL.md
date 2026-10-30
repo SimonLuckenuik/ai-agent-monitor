@@ -131,10 +131,10 @@ variables, names 1–15 of `A-Z a-z 0-9 _`, values up to 160 characters.
   symbols, `°` among them; it is slower to draw, so keep it for a few large items.
 - **Redraws.** There is no frame buffer. An item whose content changes in place (text,
   icon, sprite or spark with a `bg`; ring; bar) redraws alone; any other change
-  (position, visibility, a repeat's entries, the palette) repaints around it when it
-  is a shape (rect, circle, line, path, ring, bar, icon, spark), and the whole face,
-  which flickers, for text, sprites, repeats and palettes. Keep moving parts few and
-  small, and give changing text a `bg` and a `pad`.
+  (position, visibility, a repeat's entries) is drawn again off screen around its old
+  and new places, without a blink; wrapped text, images, the palette and the face's
+  `bg` redraw the whole face, which flickers. Small moving parts redraw fastest; give
+  changing text a `bg` and a `pad`.
 - **Legibility.** The screen is 1.54″: one idea per face, large text, strong
   contrast, at most about 3 short lines of font 2 under a title in font 4.
 - **Attention.** There is no sound and no button. Colour and icon carry the meaning;

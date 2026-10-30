@@ -115,12 +115,14 @@ hidden item is not drawn: two items with opposite conditions (`"{sun.up}"` and
   redrawn. Text with a `bg` colour, rings, bars, and icons, sprites and sparklines
   with a `bg` are redrawn on their own when their content (text, value, colour,
   frame) changes. `pad` (pixels) clears the area around text whose width varies.
-  When a rect, circle, line, path, ring, bar, icon or spark moves, changes size,
-  shows or hides, only the area around its old and new places is repainted (with the
-  items under and over it, clipped to that area). Anything else that changes, such as
-  the position or visibility of text or a sprite, a repeat's entries, the palette or
-  the face's `bg`, redraws the whole face, which you will see as a flicker. There is
-  no RAM for a full-screen buffer.
+  When any other item moves, changes size, shows or hides, or changes without a
+  `bg`, only the area around its old and new places is drawn again, with the items
+  under and over it: off screen a strip at a time, then copied to the panel, so
+  nothing else blinks. This covers every item type and a repeat's entries, except
+  wrapped text (`w`) and images. Those, the palette and the face's `bg` redraw the
+  whole face, which you will see as a flicker. There is no RAM for a full-screen
+  buffer. `"font": "big"` text with a `bg` whose length stays the same redraws only
+  the characters that changed.
 
 ## Placeholders
 
@@ -130,7 +132,7 @@ clock's own; a name without a dot is a [variable](#variables).
 
 | Group | Placeholders (example) |
 |---|---|
-| `time.` | `hm` (`9:54`, 12/24 h as set), `hour` (`9`; `09` in 24 h), `min` (`05`), `sec` (`07`), `ms` (`0`–`999`, for animation), `ampm` (`PM`, 12 h only), `epoch` (Unix time), `daymin` (minutes since midnight, `0`–`1439`), `zone` (`EDT`) |
+| `time.` | `hm` (`9:54`, 12/24 h as set), `hour` (`9`; `09` in 24 h), `min` (`05`), `sec` (`07`), `ms` (`0`–`999` since the second began, the same for every item of a frame: for animation), `ampm` (`PM`, 12 h only), `epoch` (Unix time), `daymin` (minutes since midnight, `0`–`1439`), `zone` (`EDT`) |
 | `date.` | `text` (`5 October`), `day` (`5`), `wday` (`Monday`), `wday3` (`MON`), `month` (`October`), `month3` (`Oct`), `monthnum` (`10`), `year` (`2026`), `yday` (`278`, day of the year), `week` (`41`, ISO week), `wdaynum` (`1` Monday to `7` Sunday), `mdays` (`31`, days in the month) |
 | `now.` | The current weather: `temp`, `feels` (`21`, °C/°F as set), `hum` (`64`, %), `wind` (`15`, km/h or mph as set), `press` (`1013`, hPa), `clouds` (`75`, %), `code` (`61`, WMO weather code), `icon` (`wi-day-rain`), `text` (`light rain`), `kind` (`Rain`), `age` (minutes since the last update), `err` (the last error, or empty) |
 | `day0.` to `day3.` | Today and the next three days: `wday`, `wday3`, `low`, `high`, `feels` (feels-like high), `rain` (chance, %), `wind` (highest), `hum` (mean), `rise`, `set` (sunrise, sunset), `icon` |

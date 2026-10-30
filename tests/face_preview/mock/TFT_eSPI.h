@@ -72,3 +72,14 @@ class TFT_eSPI {
   bool swap = false;
   void blend(int32_t x, int32_t y, float a, uint32_t c, uint32_t bg);
 };
+
+// TFT_eSPI's off-screen sprite. It never gets memory here, so faces.cpp draws its
+// repaints straight on the panel, clipped, and the frames stay comparable.
+class TFT_eSprite : public TFT_eSPI {
+ public:
+  explicit TFT_eSprite(TFT_eSPI*) {}
+  void* createSprite(int16_t, int16_t, uint8_t = 1) { return nullptr; }
+  void deleteSprite() {}
+  void* getPointer() { return nullptr; }
+  bool pushSprite(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t) { return false; }
+};

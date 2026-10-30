@@ -16,7 +16,19 @@
 #include <ArduinoJson.h>
 
 TFT_eSPI& clockDisplay();   // main.cpp
-static TFT_eSPI& D() { return clockDisplay(); }
+TFT_eSPI* drawTarget = nullptr;   // an off-screen band while part of a custom face repaints
+int bandX, bandY, bandW, bandH;   // that band's place on the screen
+// The rows and columns being drawn (a band while repainting): paths skip the rest.
+int clipX0 = 0, clipY0 = 0, clipX1 = 239, clipY1 = 239;
+static TFT_eSPI& D() { return drawTarget ? *drawTarget : clockDisplay(); }
+// drawWedgeLine clips by the viewport's datum but draws without it: in a band, draw it
+// in the band's own coordinates with no datum.
+void wedge(float ax, float ay, float bx, float by, float r, uint32_t c, uint32_t bg) {
+  if (!drawTarget) { D().drawWedgeLine(ax, ay, bx, by, r, r, c, bg); return; }
+  D().setViewport(0, 0, bandW, bandH, false);
+  D().drawWedgeLine(ax - bandX, ay - bandY, bx - bandX, by - bandY, r, r, c, bg);
+  D().setViewport(-bandX, -bandY, bandX + bandW, bandY + bandH, true);
+}
 // For the emulator's drawing speed: the path loops below are float maths, software on
 // the ESP8266 and hardware on the PC, so they count their work in estimated ESP8266
 // cycles instead of being timed (emulator/panel.cpp). Nothing on the clock.
@@ -516,6 +528,14 @@ uint32_t customVer = 0, customEvalAt = 0;
 bool customLoaded = false;
 constexpr size_t CUSTOM_ITEMS = 32;
 uint32_t customHash[CUSTOM_ITEMS], customGeo[CUSTOM_ITEMS];
+// The item being drawn on its own (-1: in a repaint), and whether only its content
+// changed: big text then redraws just the characters that differ.
+int drawnItem = -1;
+bool drawnInPlace = false;
+// {time.ms}: milliseconds since the clock's second began (faceDraw notes when), fixed
+// for the whole of one frame so every part of it sees the same moment.
+uint32_t secondAt = 0;
+int frameMs = 0;
 
 // Field access through a few out-of-line helpers: inlined ArduinoJson lookups at
 // every use cost several KB of flash.
@@ -626,7 +646,7 @@ String fieldValue(const String& key, const struct tm& t) {
         case 1: snprintf(b, sizeof(b), cfg.hour12 ? "%d" : "%02d", clockHour(t)); return b;
         case 2: snprintf(b, sizeof(b), "%02d", t.tm_min); return b;
         case 3: snprintf(b, sizeof(b), "%02d", t.tm_sec); return b;
-        case 4: return numText(millis() % 1000);
+        case 4: return numText(frameMs);
         case 5: return ampm(t);
         case 6: return numText(time(nullptr));
         case 7: return numText(mod);
@@ -1319,7 +1339,7 @@ void fillPoly(const Poly& P, const Paint& paint, uint16_t under, bool evenOdd) {
   if (P.n < 3) return;
   float minY = 1e9f, maxY = -1e9f;
   for (int i = 0; i < P.n; ++i) { minY = std::min(minY, P.y[i]); maxY = std::max(maxY, P.y[i]); }
-  int y0 = std::max(0, (int)floorf(minY)), y1 = std::min(SCR_H - 1, (int)ceilf(maxY));
+  int y0 = std::max(clipY0, (int)floorf(minY)), y1 = std::min(clipY1, (int)ceilf(maxY));
   constexpr int SUB = 4, MAX_X = 64;
   float xs[MAX_X];
   int8_t dir[MAX_X];
@@ -1373,7 +1393,7 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
   float rOut = r + 0.5f, rIn = r - 0.5f, out2 = rOut * rOut, in2 = rIn * rIn;
   float minY = 1e9f, maxY = -1e9f;
   for (int i = 0; i < P.n; ++i) { minY = std::min(minY, P.y[i]); maxY = std::max(maxY, P.y[i]); }
-  int y0 = std::max(0, (int)floorf(minY - r - 1)), y1 = std::min(SCR_H - 1, (int)ceilf(maxY + r + 1));
+  int y0 = std::max(clipY0, (int)floorf(minY - r - 1)), y1 = std::min(clipY1, (int)ceilf(maxY + r + 1));
   for (int y = y0; y <= y1; ++y) {
     // A large glyph takes over a second without an FPU; the software watchdog resets
     // the chip after about 3 s without a yield.
@@ -1396,7 +1416,7 @@ void strokePoly(const Poly& P, float width, const Paint& paint, uint16_t under) 
           float mid = ax + (py - ay) * dx / dy, half = (rOut + 1) * sqrtf(len2) / fabsf(dy);
           left = std::max(left, mid - half); right = std::min(right, mid + half);
         }
-        int xa = std::max(0, (int)floorf(left)), xb = std::min(SCR_W - 1, (int)ceilf(right));
+        int xa = std::max(clipX0, (int)floorf(left)), xb = std::min(clipX1, (int)ceilf(right));
         for (int x = xa; x <= xb; ++x) {
           EMU_WORK(900);
           float px = x + 0.5f, u = ((px - ax) * dx + (py - ay) * dy) * inv;
@@ -1472,16 +1492,17 @@ void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
 // ---- Text, possibly wrapped to "w" pixels over at most "lines" lines.
 void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg);
 
+int textFont(JsonObjectConst it, const struct tm& t) {
+  int font = inum(it, "font", 4, t);
+  if (font == 8) font = 6;   // font 8 left the build (flash); 6 is the next digit font
+  return font == 2 || font == 6 ? font : 4;
+}
+
 void drawText(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
   if (!strcmp(js(it, "font", ""), "big")) { drawBig(it, t, x, y, c, bg); return; }
   String s = resolve(js(it, "text", ""), t);
-  int font = inum(it, "font", 4, t);
-  if (font == 8) font = 6;   // font 8 left the build (flash); 6 is the next digit font
-  if (font != 2 && font != 4 && font != 6 && font != 8) font = 4;
-  static const char* const names[] = {"tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"};
-  uint8_t datum = TL_DATUM;
-  const char* a = js(it, "align", "tl");
-  for (uint8_t i = 0; i < 9; ++i) if (!strcmp(a, names[i])) datum = i;
+  int font = textFont(it, t);
+  uint8_t datum = alignOf(it);
   bool opaque = jhas(it, "bg");
   int w = inum(it, "w", 0, t);
   if (w <= 0) {
@@ -1577,6 +1598,18 @@ void ring(int x, int y, int r, int w, int value, int max, uint16_t c, uint16_t t
 // {"type":"sprite","x","y","scale","align","palette":{"r":"#ff453a"},"rows":["..r.."]}:
 // pixel art, one character per pixel; characters not in the palette are transparent.
 // "frames": [[rows], [rows]] and "frame": an expression pick one for animation.
+// A sprite's size in cells: its largest frame's, at most 64 x 64.
+void spriteCells(JsonObjectConst it, int& w, int& h) {
+  w = h = 0;
+  auto measure = [&](JsonArrayConst f) {
+    h = std::max<int>(h, f.size());
+    for (JsonVariantConst r : f) w = std::max<int>(w, strlen(r | ""));
+  };
+  if (it["frames"].is<JsonArrayConst>()) for (JsonArrayConst f : it["frames"].as<JsonArrayConst>()) measure(f);
+  else measure(it["rows"]);
+  w = std::min(w, 64); h = std::min(h, 64);
+}
+
 void drawSprite(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t bg, bool opaque) {
   JsonArrayConst rows = it["rows"];
   if (it["frames"].is<JsonArrayConst>()) {
@@ -1586,9 +1619,9 @@ void drawSprite(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t b
     int k = inum(it, "frame", 0, t) % n;
     rows = frames[k < 0 ? k + n : k];
   }
-  int s = std::max(1, std::min(16, inum(it, "scale", 1, t))), h = std::min<int>(rows.size(), 64), w = 0;
-  for (JsonVariantConst r : rows) w = std::max<int>(w, strlen(r | ""));
-  w = std::min(w, 64);
+  // The largest frame's size, so that a smaller (or empty) frame still clears the last.
+  int s = std::max(1, std::min(16, inum(it, "scale", 1, t))), w, h;
+  spriteCells(it, w, h);
   uint8_t datum = alignOf(it);
   x -= (datum % 3) * w * s / 2;
   y -= (datum / 3) * h * s / 2;
@@ -1645,7 +1678,7 @@ void drawSpark(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t bg
       int top = (int)(py + (cy - py) * (col - px) / std::max(1.0f, cx - px));
       D().drawFastVLine(col, top + 1, y + h - top - 1, fc2);
     }
-    if (i) D().drawWedgeLine(px, py, cx, cy, 0.75f, 0.75f, c, bg);
+    if (i) wedge(px, py, cx, cy, 0.75f, c, bg);
     px = cx; py = cy;
   }
 }
@@ -1666,6 +1699,84 @@ void repeatAt(int i) {
   if (rep.of == 'm') for (int s = 0, k = 0; s < MESSAGE_MAX; ++s) if (messageActive(s) && k++ == i) rep.slot = s;
 }
 
+// The screen box an item covers (x0 > x1 when hidden), so that an item that moves or
+// changes repaints only around its old and new places. False for wrapped text and
+// images: those still repaint the whole face.
+struct Box { int16_t x0, y0, x1, y1; };
+Box customBox[CUSTOM_ITEMS];
+bool customBoxOk[CUSTOM_ITEMS];
+bool clipOn = false;   // repainting clipBox: items outside it are skipped
+Box clipBox;
+
+bool overlaps(const Box& a, const Box& b) { return a.x0 <= b.x1 && a.x1 >= b.x0 && a.y0 <= b.y1 && a.y1 >= b.y0; }
+
+void growBox(Box& d, const Box& b) {
+  if (b.x0 > b.x1) return;
+  if (d.x0 > d.x1) { d = b; return; }
+  d.x0 = std::min(d.x0, b.x0); d.y0 = std::min(d.y0, b.y0);
+  d.x1 = std::max(d.x1, b.x1); d.y1 = std::max(d.y1, b.y1);
+}
+
+bool bigBox(JsonObjectConst it, const struct tm& t, int x, int y, Box& b);
+
+bool itemBox(JsonObjectConst it, const struct tm& t, Box& b) {
+  b = {1, 1, 0, 0};
+  if (!visible(it, t)) return true;
+  const char* type = js(it, "type", "");
+  int x = inum(it, "x", 0, t) + offX, y = inum(it, "y", 0, t) + offY, x0 = x, y0 = y, x1 = x, y1 = y, m = 2;
+  bool rect = !strcmp(type, "rect"), bar = !strcmp(type, "bar");
+  if (rect || bar || !strcmp(type, "spark")) {
+    x1 = x + inum(it, "w", rect ? 0 : 100, t);
+    y1 = y + inum(it, "h", rect ? 0 : bar ? 8 : 30, t);
+  } else if (!strcmp(type, "circle") || !strcmp(type, "ring") || !strcmp(type, "icon")) {
+    int r = !strcmp(type, "icon") ? inum(it, "size", 48, t) / 2 + 2 : inum(it, "r", !strcmp(type, "ring") ? 50 : 10, t);
+    x0 -= r; y0 -= r; x1 += r; y1 += r;
+  } else if (!strcmp(type, "line")) {
+    int x2 = (int)num(it, "x2", x - offX, t) + offX, y2 = (int)num(it, "y2", y - offY, t) + offY;
+    x0 = std::min(x, x2); x1 = std::max(x, x2); y0 = std::min(y, y2); y1 = std::max(y, y2);
+    m += (int)num(it, "w", 2, t) / 2;
+  } else if (!strcmp(type, "path")) {
+    float size = num(it, "size", 48, t), w = num(it, "w", size, t), h = num(it, "h", size, t);
+    uint8_t datum = alignOf(it);
+    x0 = x - (datum % 3) * w / 2; y0 = y - (datum / 3) * h / 2; x1 = x0 + w; y1 = y0 + h;
+    if (jhas(it, "rotate")) { int e = (int)std::max(w, h) / 4 + 1; x0 -= e; y0 -= e; x1 += e; y1 += e; }
+    m += (int)(num(it, "sw", 2, t) * size / 24) + 1;   // a stroke is scaled with the path
+  } else if (!strcmp(type, "sprite")) {
+    int w, h, s = std::max(1, std::min(16, inum(it, "scale", 1, t)));
+    spriteCells(it, w, h);
+    w *= s; h *= s;
+    uint8_t datum = alignOf(it);
+    x0 = x - (datum % 3) * w / 2; y0 = y - (datum / 3) * h / 2; x1 = x0 + w; y1 = y0 + h;
+  } else if (!strcmp(type, "text")) {
+    if (!strcmp(js(it, "font", ""), "big")) return bigBox(it, t, x, y, b);
+    if (inum(it, "w", 0, t) > 0) return false;   // wrapped
+    int font = textFont(it, t), w = D().textWidth(resolve(js(it, "text", ""), t), font), h = D().fontHeight(font);
+    if (jhas(it, "bg")) w = std::max(w, inum(it, "pad", 0, t));
+    uint8_t datum = alignOf(it);
+    x0 = x - (datum % 3) * w / 2; y0 = y - (datum / 3) * h / 2; x1 = x0 + w; y1 = y0 + h;
+  } else if (!strcmp(type, "repeat")) {
+    if (rep.of) return false;
+    int n = repeatCount(it, t), dx = inum(it, "dx", 0, t), dy = inum(it, "dy", 0, t);
+    bool ok = true;
+    for (int i = 0; i < n && ok; ++i) {
+      repeatAt(i);
+      offX = x + i * dx; offY = y + i * dy;
+      for (JsonObjectConst c : it["items"].as<JsonArrayConst>()) {
+        Box cb;
+        if (!itemBox(c, t, cb)) { ok = false; break; }
+        growBox(b, cb);
+      }
+    }
+    offX = offY = 0;
+    rep = Repeat();
+    return ok;
+  } else {
+    return false;
+  }
+  b = {(int16_t)(x0 - m), (int16_t)(y0 - m), (int16_t)(x1 + m), (int16_t)(y1 + m)};
+  return true;
+}
+
 void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg);
 void drawRepeat(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t faceBg) {
   if (rep.of) return;   // not inside another repeat
@@ -1682,6 +1793,8 @@ void drawRepeat(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t f
 void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
   if (!visible(it, t)) return;
   const char* type = js(it, "type", "");
+  Box b;
+  if (clipOn && strcmp(type, "repeat") && itemBox(it, t, b) && !overlaps(b, clipBox)) return;
   int x = inum(it, "x", 0, t) + offX, y = inum(it, "y", 0, t) + offY;
   uint16_t bg = colorOf(it["bg"], faceBg, t);
   if (!strcmp(type, "text")) {
@@ -1710,7 +1823,7 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
     if (jhas(it, "border")) D().drawSmoothArc(x, y, r, std::max(0, r - std::max(1, inum(it, "bw", 2, t))), 0, 360, colorOf(it["border"], WHITE, t), faceBg);
   } else if (!strcmp(type, "line")) {
     float w = num(it, "w", 2, t) / 2.0f;
-    D().drawWedgeLine(x, y, num(it, "x2", x - offX, t) + offX, num(it, "y2", y - offY, t) + offY, w, w, colorOf(it["color"], WHITE, t), faceBg);
+    wedge(x, y, num(it, "x2", x - offX, t) + offX, num(it, "y2", y - offY, t) + offY, w, colorOf(it["color"], WHITE, t), faceBg);
   } else if (!strcmp(type, "ring")) {
     ring(x, y, inum(it, "r", 50, t), inum(it, "w", 8, t), inum(it, "value", 0, t), inum(it, "max", 100, t),
          colorOf(it["color"], WHITE, t), colorOf(it["track"], PANEL_HI, t), faceBg);
@@ -1740,48 +1853,6 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
 
 void renderItems(const struct tm& t, bool force);
 
-// The screen box an item covers (x0 > x1 when hidden), so that an item that moves
-// repaints only around its old and new places. False for types with no simple box
-// (text, sprite, image, repeat): those still repaint the whole face.
-struct Box { int16_t x0, y0, x1, y1; };
-Box customBox[CUSTOM_ITEMS];
-bool customBoxOk[CUSTOM_ITEMS];
-
-bool itemBox(JsonObjectConst it, const struct tm& t, Box& b) {
-  b = {1, 1, 0, 0};
-  if (!visible(it, t)) return true;
-  const char* type = js(it, "type", "");
-  int x = inum(it, "x", 0, t), y = inum(it, "y", 0, t), x0 = x, y0 = y, x1 = x, y1 = y, m = 2;
-  bool rect = !strcmp(type, "rect"), bar = !strcmp(type, "bar");
-  if (rect || bar || !strcmp(type, "spark")) {
-    x1 = x + inum(it, "w", rect ? 0 : 100, t);
-    y1 = y + inum(it, "h", rect ? 0 : bar ? 8 : 30, t);
-  } else if (!strcmp(type, "circle") || !strcmp(type, "ring") || !strcmp(type, "icon")) {
-    int r = !strcmp(type, "icon") ? inum(it, "size", 48, t) / 2 + 2 : inum(it, "r", !strcmp(type, "ring") ? 50 : 10, t);
-    x0 -= r; y0 -= r; x1 += r; y1 += r;
-  } else if (!strcmp(type, "line")) {
-    int x2 = (int)num(it, "x2", x, t), y2 = (int)num(it, "y2", y, t);
-    x0 = std::min(x, x2); x1 = std::max(x, x2); y0 = std::min(y, y2); y1 = std::max(y, y2);
-    m += (int)num(it, "w", 2, t) / 2;
-  } else if (!strcmp(type, "path")) {
-    float size = num(it, "size", 48, t), w = num(it, "w", size, t), h = num(it, "h", size, t);
-    uint8_t datum = alignOf(it);
-    x0 = x - (datum % 3) * w / 2; y0 = y - (datum / 3) * h / 2; x1 = x0 + w; y1 = y0 + h;
-    if (jhas(it, "rotate")) { int e = (int)std::max(w, h) / 4 + 1; x0 -= e; y0 -= e; x1 += e; y1 += e; }
-    m += (int)(num(it, "sw", 2, t) * size / 24) + 1;   // a stroke is scaled with the path
-  } else {
-    return false;
-  }
-  b = {(int16_t)(x0 - m), (int16_t)(y0 - m), (int16_t)(x1 + m), (int16_t)(y1 + m)};
-  return true;
-}
-
-void growBox(Box& d, const Box& b) {
-  if (b.x0 > b.x1) return;
-  d.x0 = std::min(d.x0, b.x0); d.y0 = std::min(d.y0, b.y0);
-  d.x1 = std::max(d.x1, b.x1); d.y1 = std::max(d.y1, b.y1);
-}
-
 void custom(const struct tm& t, bool force) {
   if (customName != customWanted || customVer != customFacesVersion()) {
     customName = customWanted;
@@ -1799,12 +1870,53 @@ void custom(const struct tm& t, bool force) {
   renderItems(t, force);
 }
 
+// A box of the face drawn again: off screen a band at a time (5 KB), then pushed, so
+// what does not change stays on the panel. Without the RAM: on the panel, clipped.
+constexpr int BAND_PX = 2560;
+
+void repaintBox(const Box& b, JsonArrayConst items, size_t n, const struct tm& t, const Paint& bgPaint, uint16_t bg) {
+  int x0 = std::max<int>(0, b.x0), y0 = std::max<int>(0, b.y0);
+  int x1 = std::min<int>(SCR_W - 1, b.x1), y1 = std::min<int>(SCR_H - 1, b.y1);
+  if (x0 > x1 || y0 > y1) return;
+  int w = x1 - x0 + 1, band = std::max(1, std::min(y1 - y0 + 1, BAND_PX / w));
+  TFT_eSprite spr(&clockDisplay());
+  bool off = spr.createSprite(w, band) != nullptr;
+  uint16_t tint = panelTint();
+  clipOn = true;
+  for (int y = y0; y <= y1; y += band) {
+    int h = std::min(band, y1 - y + 1);
+    clipBox = {(int16_t)x0, (int16_t)y, (int16_t)x1, (int16_t)(y + h - 1)};
+    clipX0 = x0; clipY0 = y; clipX1 = x1; clipY1 = y + h - 1;
+    if (off) { drawTarget = &spr; bandX = x0; bandY = y; bandW = w; bandH = h; spr.setViewport(-x0, -y, x0 + w, y + h, true); }
+    else D().setViewport(x0, y, w, h, false);
+    if (bgPaint.n > 1) for (int r = y; r < y + h; ++r) span(bgPaint, x0, x1, r);
+    else D().fillRect(x0, y, w, h, bg);
+    for (size_t i = 0; i < n; ++i) drawItem(items[i], t, bg);
+    D().resetViewport();
+    if (off) {
+      drawTarget = nullptr;
+      if (tint) {   // pixels pushed as they are: tint them as the panel would
+        uint16_t* px = (uint16_t*)spr.getPointer();
+        for (int i = 0; i < w * h; ++i) {
+          uint16_t c = tintColor((uint16_t)(px[i] >> 8 | px[i] << 8), tint);
+          px[i] = c >> 8 | c << 8;
+        }
+      }
+      spr.pushSprite(x0, y, 0, 0, w, h);
+    }
+  }
+  clipOn = false;
+  clipX0 = clipY0 = 0; clipX1 = SCR_W - 1; clipY1 = SCR_H - 1;
+  if (off) spr.deleteSprite();
+}
+
 // The face in customDoc, item by item.
 void renderItems(const struct tm& t, bool force) {
   // A face asks for faster updates with "fps" (default 4, at most 20).
   int fps = std::max(1, std::min(20, (int)(customDoc["fps"] | 4)));
   if (!force && millis() - customEvalAt < 1000u / fps) return;
   customEvalAt = millis();
+  frameMs = std::min<uint32_t>(999, millis() - secondAt);
   static String drawnPalette;
   const char* pal = customDoc["palette"];
   paletteName = pal ? evalStr(resolve(pal, t)) : String();
@@ -1827,36 +1939,38 @@ void renderItems(const struct tm& t, bool force) {
   }
   static uint16_t drawnBg = 0;
   if (bg != drawnBg) { full = true; drawnBg = bg; }
-  // Items that moved: repaint the box around their old and new places, clipped to it.
-  Box dirty = {SCR_W, SCR_H, -1, -1};
+  // Items that moved: the boxes around their old and new places (up to 4, overlapping
+  // ones merged) are repainted off screen, so the rest of the face does not blink.
+  Box dirty[4];
+  int nd = 0;
+  auto add = [&](const Box& b) {
+    if (b.x0 > b.x1) return;
+    for (int k = 0; k < nd; ++k) if (overlaps(dirty[k], b)) { growBox(dirty[k], b); return; }
+    if (nd < 4) dirty[nd++] = b; else growBox(dirty[3], b);
+  };
   for (size_t i = 0; i < n && !full; ++i) {
     if (!moved[i]) continue;
     Box nb;
     if (!customBoxOk[i] || !itemBox(items[i], t, nb)) { full = true; break; }
-    growBox(dirty, customBox[i]);
-    growBox(dirty, nb);
+    add(customBox[i]);
+    add(nb);
     customBox[i] = nb;
   }
-  int x0 = std::max<int>(0, dirty.x0), y0 = std::max<int>(0, dirty.y0);
-  int x1 = std::min<int>(SCR_W - 1, dirty.x1), y1 = std::min<int>(SCR_H - 1, dirty.y1);
-  bool clip = !full && x0 <= x1 && y0 <= y1;
   if (full) {
-    x0 = y0 = 0; x1 = SCR_W - 1; y1 = SCR_H - 1;
+    if (bgPaint.n > 1) for (int y = 0; y < SCR_H; ++y) span(bgPaint, 0, SCR_W - 1, y);
+    else D().fillScreen(bg);
     for (size_t i = 0; i < n; ++i) customBoxOk[i] = itemBox(items[i], t, customBox[i]);
-  } else if (clip) {
-    D().setViewport(x0, y0, x1 - x0 + 1, y1 - y0 + 1, false);
+  } else {
+    for (int k = 0; k < nd; ++k) repaintBox(dirty[k], items, n, t, bgPaint, bg);
   }
-  if (full || clip) {
-    if (bgPaint.n > 1) for (int y = y0; y <= y1; ++y) span(bgPaint, x0, x1, y);
-    else D().fillRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1, bg);
-  }
-  for (size_t i = 0; i < n && clip; ++i) {
-    const Box& b = customBox[i];
-    if (!customBoxOk[i] || (b.x0 <= x1 && b.x1 >= x0 && b.y0 <= y1 && b.y1 >= y0)) drawItem(items[i], t, bg);
-  }
-  if (clip) D().resetViewport();
   for (size_t i = 0; i < n; ++i) {
-    if (full || (h[i] != customHash[i] && !moved[i])) drawItem(items[i], t, bg);
+    bool inPlace = !full && h[i] != customHash[i] && !moved[i];
+    if (full || inPlace) {
+      drawnItem = i; drawnInPlace = inPlace;
+      drawItem(items[i], t, bg);
+      drawnItem = -1;
+    }
+    if (inPlace) customBoxOk[i] = itemBox(items[i], t, customBox[i]);   // its text may be wider now
     customHash[i] = h[i];
     customGeo[i] = g[i];
   }
@@ -2022,10 +2136,38 @@ void monoDraw(const char* s, float x, float top, float k, uint16_t color, uint16
   }
 }
 
+// Redraws only the characters of s that differ from old, drawn at the same place: a
+// line-font glyph takes about 0.1 s, and the unchanged ones stay on the panel. False
+// (nothing drawn) when the two do not line up character for character.
+bool monoDiff(const char* s, const char* old, float x, float top, float k, uint16_t color, uint16_t bg, int y0, int y1) {
+  auto cell = [](char c) { return !monoGlyph(c) ? 0 : monoNarrow(c) ? 1 : 2; };
+  if (strlen(s) != strlen(old)) return false;
+  for (int i = 0; s[i]; ++i) if (cell(s[i]) != cell(old[i])) return false;
+  for (; *s; ++s, ++old) {
+    if (!cell(*s)) continue;
+    float adv = (monoNarrow(*s) ? MONO_ADV / 2 : MONO_ADV) * k;
+    if (*s != *old) {
+      int cx0 = (int)floorf(x), cw = (int)ceilf(x + adv) - cx0;
+      D().setViewport(cx0, y0, cw, y1 - y0 + 1, false);
+      D().fillRect(cx0, y0, cw, y1 - y0 + 1, bg);
+      char one[2] = {*s, 0};
+      monoDraw(one, x, top, k, color, bg);
+      D().resetViewport();
+    }
+    x += adv;
+  }
+  return true;
+}
+
 // Draws s centred on cx in the box from y to y+maxH, as large as maxW and maxH allow.
-void monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color) {
+// With old (what is there now): only the characters that changed, if they line up;
+// false when the caller must clear the box and draw it all.
+bool monoText(const char* s, int cx, int y, int maxW, int maxH, uint16_t color, const char* old = nullptr) {
   float k = std::min(maxH / (MONO_H + MONO_STROKE), maxW / (monoWidth(s) + MONO_STROKE));
-  monoDraw(s, cx - (monoWidth(s) / 2 + MONO_SB) * k, y + (maxH - MONO_H * k) / 2, k, color, BG);
+  float x = cx - (monoWidth(s) / 2 + MONO_SB) * k, top = y + (maxH - MONO_H * k) / 2;
+  if (old) return monoDiff(s, old, x, top, k, color, BG, y, y + maxH - 1);
+  monoDraw(s, x, top, k, color, BG);
+  return true;
 }
 
 // Text for the line font: the symbols it has (arrows, check, cross, bullet, heart,
@@ -2041,20 +2183,47 @@ String monoPrep(const String& in) {
 
 // A text item with "font": "big": the line font, "size" pixels tall (40), narrowed to
 // at most "w" pixels; "align", "bg" and "pad" as for other text.
-void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
-  String s = monoPrep(resolve(js(it, "text", ""), t));
-  float k = std::max(6.0f, std::min(240.0f, num(it, "size", 40, t))) / MONO_H;
-  float tw = (monoWidth(s.c_str()) + MONO_STROKE) * k;
+struct BigText { String s; float k, tw, th, left, top; int pad; };
+BigText bigLayout(JsonObjectConst it, const struct tm& t, int x, int y) {
+  BigText b;
+  b.s = monoPrep(resolve(js(it, "text", ""), t));
+  b.k = std::max(6.0f, std::min(240.0f, num(it, "size", 40, t))) / MONO_H;
+  b.tw = (monoWidth(b.s.c_str()) + MONO_STROKE) * b.k;
   int maxW = inum(it, "w", 0, t);
-  if (maxW > 0 && tw > maxW) { k *= maxW / tw; tw = maxW; }
-  float th = (MONO_H + MONO_STROKE) * k;
+  if (maxW > 0 && b.tw > maxW) { b.k *= maxW / b.tw; b.tw = maxW; }
+  b.th = (MONO_H + MONO_STROKE) * b.k;
   uint8_t datum = alignOf(it);
-  float left = x - (datum % 3) * tw / 2, top = y - (datum / 3) * th / 2;
-  if (jhas(it, "bg")) {
-    int pad = inum(it, "pad", 0, t);
-    D().fillRect(left - pad, top, tw + 2 * pad + 1, th + 1, bg);
+  b.left = x - (datum % 3) * b.tw / 2; b.top = y - (datum / 3) * b.th / 2;
+  b.pad = jhas(it, "bg") ? inum(it, "pad", 0, t) : 0;
+  return b;
+}
+
+bool bigBox(JsonObjectConst it, const struct tm& t, int x, int y, Box& b) {
+  BigText l = bigLayout(it, t, x, y);
+  b = {(int16_t)(l.left - l.pad - 2), (int16_t)(l.top - 2), (int16_t)(l.left + l.tw + l.pad + 3), (int16_t)(l.top + l.th + 3)};
+  return true;
+}
+
+// What each item's big text last showed, and where: a change of the same length in
+// the same place redraws only the characters that differ.
+String bigShown[CUSTOM_ITEMS];
+uint32_t bigWhere[CUSTOM_ITEMS];
+
+void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
+  BigText l = bigLayout(it, t, x, y);
+  float gx = l.left + (MONO_STROKE / 2 - MONO_SB) * l.k, gy = l.top + MONO_STROKE / 2 * l.k;
+  bool opaque = jhas(it, "bg");
+  int slot = drawnItem >= 0 && !rep.of && opaque ? drawnItem : -1;
+  uint32_t where = ((uint32_t)(l.k * 256) * 31 + (int)gx) * 31 + (int)gy;
+  where = (where * 31 + c) * 31 + bg;
+  if (slot >= 0 && drawnInPlace && bigWhere[slot] == where &&
+      monoDiff(l.s.c_str(), bigShown[slot].c_str(), gx, gy, l.k, c, bg, l.top, l.top + l.th)) {
+    bigShown[slot] = l.s;
+    return;
   }
-  monoDraw(s.c_str(), left + (MONO_STROKE / 2 - MONO_SB) * k, top + MONO_STROKE / 2 * k, k, c, bg);
+  if (opaque) D().fillRect(l.left - l.pad, l.top, l.tw + 2 * l.pad + 1, l.th + 1, bg);
+  monoDraw(l.s.c_str(), gx, gy, l.k, c, bg);
+  if (slot >= 0) { bigShown[slot] = l.s; bigWhere[slot] = where; }
 }
 
 // ---- Weather icons: Erik Flowers' Weather Icons (weather_icons.h), filled as paths.
@@ -2127,14 +2296,21 @@ void bigTime(int cx, int cy, const struct tm& t, uint16_t fg, uint16_t bg, bool 
   int c = bigTimeColonX(cx, t), top = cy - TIME_H / 2;
   bool all = force || c != lastColon;
   if (all) { D().fillRect(0, cy - 38, SCR_W, 76, bg); colon(c, cy, fg, bg); lastColon = c; }
+  // Only the digits that changed ("40" to "41": the 1), when the half keeps its width.
   if (all || strcmp(h, lastH)) {
-    if (!all) D().fillRect(0, cy - 38, c - 6, 76, bg);
-    monoText(h, c - 12 - int(monoWidth(h) * TIME_K) / 2, top, SCR_W, TIME_H, fg);
+    int hx = c - 12 - int(monoWidth(h) * TIME_K) / 2;
+    if (all || !monoText(h, hx, top, SCR_W, TIME_H, fg, lastH)) {
+      if (!all) D().fillRect(0, cy - 38, c - 6, 76, bg);
+      monoText(h, hx, top, SCR_W, TIME_H, fg);
+    }
     strcpy(lastH, h);
   }
   if (all || strcmp(m, lastM)) {
-    if (!all) D().fillRect(c + 6, cy - 38, SCR_W - c - 6, 76, bg);
-    monoText(m, c + 12 + int(monoWidth(m) * TIME_K) / 2, top, SCR_W, TIME_H, fg);
+    int mx = c + 12 + int(monoWidth(m) * TIME_K) / 2;
+    if (all || !monoText(m, mx, top, SCR_W, TIME_H, fg, lastM)) {
+      if (!all) D().fillRect(c + 6, cy - 38, SCR_W - c - 6, 76, bg);
+      monoText(m, mx, top, SCR_W, TIME_H, fg);
+    }
     strcpy(lastM, m);
   }
 }
@@ -2157,19 +2333,26 @@ void bigDate(const struct tm& t, bool force) {
 // ---- 7 Big time: the hours, the minutes below
 void bigTimeFace(const struct tm& t, bool force) {
   static int hour = -1, minute = -1;
+  static char hb[4], mb[4];   // what each line shows: only changed digits are redrawn
   if (force) hour = minute = -1;
   int h = clockHour(t);
   char b[4];
   if (h != hour) {
-    D().fillRect(0, 0, SCR_W, 120, BG);
     snprintf(b, sizeof(b), cfg.hour12 ? "%d" : "%02d", h);
-    monoText(b, 120, 8, TILE_W, 106, WHITE);
+    if (hour < 0 || !monoText(b, 120, 8, TILE_W, 106, WHITE, hb)) {
+      D().fillRect(0, 0, SCR_W, 120, BG);
+      monoText(b, 120, 8, TILE_W, 106, WHITE);
+    }
+    strcpy(hb, b);
     hour = h;
   }
   if (t.tm_min != minute) {
-    D().fillRect(0, 120, SCR_W, 120, BG);
     snprintf(b, sizeof(b), "%02d", t.tm_min);
-    monoText(b, 120, 126, TILE_W, 106, R[R_TIME]);
+    if (minute < 0 || !monoText(b, 120, 126, TILE_W, 106, R[R_TIME], mb)) {
+      D().fillRect(0, 120, SCR_W, 120, BG);
+      monoText(b, 120, 126, TILE_W, 106, R[R_TIME]);
+    }
+    strcpy(mb, b);
     minute = t.tm_min;
   }
 }
@@ -2374,6 +2557,8 @@ bool faceAvailable(int face) {
 
 void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFace) {
   customWanted = customFace ? customFace : cfg.customFace.c_str();
+  static int msSec = -1;
+  if (t.tm_sec != msSec) { msSec = t.tm_sec; secondAt = millis(); }
   // The roles' colours: once a second (a role may follow the time or the weather),
   // and at once when the settings or the night palette change.
   static int colorSec = -1;

@@ -7,6 +7,30 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Changed
+
+- **Custom faces no longer blink when something moves.** The area around a moved or
+  changed item is drawn off screen, a strip at a time, then copied to the panel, so
+  the rest of the face stays as it is. This now covers sprites, text and repeats too:
+  Binary clock, Block world, Sun arc and Bauhaus change without a flash.
+- **Big-font numbers redraw only the digits that change** (10:40 to 10:41: just the
+  1), in Big time, Classic, Simple and custom faces' `"font": "big"` text with a `bg`.
+- An animated sprite's frames are drawn in the size of its largest frame, so a
+  smaller or empty frame clears the last one.
+- `{time.ms}` counts from the start of the clock's second (it was `millis()` modulo
+  1000, unrelated to it), and is the same for every item of one frame, so
+  `{time.sec}==0&&{time.ms}<400` means the first 0.4 s of a minute.
+- Paths and the big font draw only the rows of the strip being repainted, so moving
+  items over large text animate several times faster.
+- **2 new example faces**: **flip-clock** (hours above minutes) and **flip-clock-wide**
+  (on one line), with a leaf that folds down on every change.
+- Example faces: the fish in **aquarium** swim across the tank (bubbles follow the
+  orange one), and the sleeping **claude-mascot** has rising "z Z Z". **night-lake**
+  goes through night, dawn, day and dusk, with the sun and moon crossing the sky and
+  their reflection on the lake. **orbit**'s ring passes behind the planet; in
+  **sun-arc** the sun sets behind the grass; **seaside**'s weather icon is no longer cut
+  by the time's padding.
+
 ## 1.7.0 - 2026-10-29
 
 Less flicker in custom faces with moving parts, and the firmware version on the

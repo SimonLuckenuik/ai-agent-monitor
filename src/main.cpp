@@ -66,12 +66,7 @@ class NightPanel : public TFT_eSPI {
     bool outer;
     explicit Nest(NightPanel* p) : p(p), outer(p->depth++ == 0) {}
     ~Nest() { --p->depth; }
-    uint16_t ink(uint32_t c) const {
-      if (!outer || !p->tint) return c;
-      // Brightness of the RGB565 colour, 0..16022 (red and blue doubled to 6 bits).
-      uint32_t l = ((c >> 11) & 31) * 154 + ((c >> 5) & 63) * 150 + (c & 31) * 58, t = p->tint;
-      return uint16_t(((t >> 11) * l / 16022) << 11 | (((t >> 5) & 63) * l / 16022) << 5 | (t & 31) * l / 16022);
-    }
+    uint16_t ink(uint32_t c) const { return outer ? tintColor(c, p->tint) : c; }
   };
 };
 // Construct the driver only during optional startup: even its constructor touches GPIO.
@@ -80,6 +75,14 @@ NightPanel& nightPanel() {
   return panel;
 }
 TFT_eSPI& clockDisplay() { return nightPanel(); }
+uint16_t panelTint() { return nightPanel().tint; }
+
+uint16_t tintColor(uint32_t c, uint16_t t) {
+  if (!t) return c;
+  // Brightness of the RGB565 colour, 0..16022 (red and blue doubled to 6 bits).
+  uint32_t l = ((c >> 11) & 31) * 154 + ((c >> 5) & 63) * 150 + (c & 31) * 58;
+  return uint16_t(((t >> 11) * l / 16022) << 11 | (((t >> 5) & 63) * l / 16022) << 5 | (t & 31) * l / 16022);
+}
 ESP8266WebServer server(80);
 DNSServer dns;
 Config cfg;

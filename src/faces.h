@@ -30,3 +30,6 @@ bool roleKnown(const char* name);   // a colour role ("time", "bg", ...)
 // main.cpp: {net.*}, {sys.*}, {theme.night}, {time.zone} for custom faces; "" if unknown.
 String deviceValue(const String& key);
 bool nightActive();               // main.cpp: inside the night hours (night palette)
+// The night tint: colour c as the panel shows it with tint t (RGB565, 0 = none).
+uint16_t tintColor(uint32_t c, uint16_t t);
+uint16_t panelTint();             // main.cpp: the tint the panel adds as it draws
