@@ -156,6 +156,29 @@ class Emulator:
         """Stops the clock at a Unix time (0: the real time again)."""
         self.request("POST", self.screen + f"/time?epoch={int(when)}", b"")
 
+    def set_time(self, local=None, epoch=None, speed=0, add=0):
+        """The mocked clock: a local time in the clock's zone (or a Unix time), running at
+        `speed` times real time (0 stops it). Returns /time's reply."""
+        q = {"speed": speed, "add": add}
+        if local is not None:
+            q["local"] = local
+        if epoch is not None:
+            q["epoch"] = int(epoch)
+        return json.loads(self.request("POST", self.screen + "/time?" + urllib.parse.urlencode(q), b"")[1])
+
+    def clock(self):
+        """{"epoch", "local", "zone", "mocked", "speed"}: the clock the firmware sees."""
+        return json.loads(self.request("GET", self.screen + "/time")[1])
+
+    def mqtt(self, topic, body=""):
+        """A message as if the MQTT broker sent it to <base>/<topic> (no broker needed)."""
+        data = body if isinstance(body, (str, bytes)) else json.dumps(body)
+        return self.request("POST", self.screen + "/mqtt?topic=" + urllib.parse.quote(topic), data)[1].decode()
+
+    def emu_vars(self):
+        """The emulator's view: {"facesApi", "showing", "faces", "vars": {name: {...}}}."""
+        return json.loads(self.request("GET", self.screen + "/vars")[1])
+
     def fix_weather(self, reply):
         """Replaces the Open-Meteo fetch with this reply (None: the network again)."""
         if reply is None:

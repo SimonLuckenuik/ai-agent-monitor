@@ -88,7 +88,8 @@ def baseline(emu):
     emu.fix_weather(open_meteo())
     emu.settings(lang="en", celsius=1, hour12=0, mile=0, nightmode=0, themeInterval=0,
                  brightness=100, palettes=json.dumps(DEFAULT_PALETTES), palette="day", nightpalette="night",
-                 roles="{}", order="", customoff="", turns="", orientation=0, facesapi=1)
+                 roles="{}", order="", customoff="", turns="", orientation=0, gamma="2.2", nightgamma="",
+                 nightoff=0, facesapi=1)
     for name in emu.faces()["faces"]:   # no custom faces, variables or messages left from a case
         emu.delete_face(name)
     emu.clear_vars()
@@ -455,6 +456,94 @@ def orientation(emu):
     expect_error(400, "Orientation", emu.set, "orientation", 45)
     emu.set("orientation", 0)
     check(emu.config()["orientation"] == 0, "back upright")
+
+
+@case
+def display_features(emu):
+    """The display's own: a face's "invert", the gamma curve, the panel off at night."""
+    emu.push_face("flip", {"invert": "{flip}==1", "bg": "#204060", "items": [
+        {"type": "text", "x": 120, "y": 120, "text": "FLIP", "font": 4, "align": "mc", "color": "#ffcc00"}]}, show=True)
+    emu.vars(flip=0)
+    normal = emu.settle()
+    emu.vars(flip=1)
+    time.sleep(0.8)
+    flipped, _ = emu.framebuffer()
+    n = len(normal) // 2
+    a = [int.from_bytes(normal[2 * i:2 * i + 2], "little") for i in range(0, n, 97)]
+    b = [int.from_bytes(flipped[2 * i:2 * i + 2], "little") for i in range(0, n, 97)]
+    check(all(x ^ y == 0xFFFF for x, y in zip(a, b)), "invert: every colour flipped")
+    shot(emu, "display_invert")
+    emu.vars(flip=0)
+    emu.show(0)
+    plain = emu.screenshot(OUT / "display_gamma_2.2.png")
+    emu.set("gamma", "1.0")
+    time.sleep(1.2)
+    flat = shot(emu, "display_gamma_1.0")
+    check(list(plain.getdata()) != list(flat.getdata()), "gamma 1.0 changes the picture")
+    expect_error(400, "Gamma", emu.set, "gamma", "3")
+    emu.set("gamma", "2.2")
+    # The panel off at night; an error message wakes it.
+    emu.fix_time(epoch(2026, 10, 5, 23, 30))
+    emu.settings(nightmode=1, starttime=22, stoptime=7, nightface="#7", nightoff=1)
+    time.sleep(1.5)
+    raw, backlight = emu.framebuffer()
+    check(not any(raw) and backlight == 0, f"panel off at night (backlight {backlight}%)")
+    emu.message(id="wake", title="Disk full", text="nas", icon="error", show=True)
+    time.sleep(2)
+    raw, backlight = emu.framebuffer()
+    check(any(raw) and backlight == 100, f"an error wakes it (backlight {backlight}%)")
+    shot(emu, "display_woken_by_error")
+    emu.clear_messages()
+    emu.settings(nightmode=0, nightoff=0)
+    emu.fix_time(FIXED_TIME)
+
+
+@case
+def scenarios(emu):
+    """The emulator's Scenarios panel: a running mocked clock, MQTT-style pushes, presets."""
+    c = emu.set_time(local="2026-10-05T07:45", speed=60)
+    check(c["local"] == "2026-10-05T07:45:00" and c["mocked"] and c["speed"] == 60, f"set_time {c}")
+    time.sleep(2)
+    moved = emu.clock()["epoch"] - c["epoch"]
+    check(60 <= moved <= 600, f"60x clock moved {moved} s in about 2 s")
+    c = emu.set_time(speed=0)   # the pace alone: the time stays
+    time.sleep(1.5)
+    check(emu.clock()["epoch"] == c["epoch"], "a stopped clock moved")
+    check(emu.status()["time"].startswith(c["local"].replace("T", " ")[:16]), f"status time {emu.status()['time']}")
+
+    check(emu.mqtt("vars", {"cpu": 5, "$history": True}) == "OK", "vars over MQTT")
+    emu.mqtt("vars", {"cpu": 9, "$history": True})
+    v = emu.emu_vars()["vars"].get("cpu", {})
+    check(v.get("value") == "9" and v.get("history") == [5, 9], f"cpu {v}")
+    emu.mqtt("message", {"id": "mq", "title": "From MQTT", "icon": "success"})
+    check(any(m["id"] == "mq" for m in emu.messages()), "message over MQTT")
+    emu.mqtt("face/set", "Big time")
+    check(emu.emu_vars()["showing"] == "Big time", f"showing {emu.emu_vars()['showing']}")
+    emu.request("POST", emu.screen + "/facesapi?on=0", b"")
+    expect_error(400, "Custom faces are turned off", emu.mqtt, "vars", {"cpu": 1})
+    emu.request("POST", emu.screen + "/facesapi?on=1", b"")
+
+    presets = json.loads(emu.request("GET", emu.screen + "/presets")[1])
+    weathers = {w["name"]: w["weather"] for w in presets["weather"]}
+    for name, w in weathers.items():
+        emu.fix_weather(open_meteo(**w))
+    for t in presets["time"]:
+        check(emu.set_time(local=t["local"])["local"].startswith(t["local"][:16]) or "forward" in t["name"],
+              f"time preset {t['name']}")
+    builtin = {"Classic", "Weather", "Big date", "Simple", "Forecast", "Big time", "Big weather", "Agents",
+               "Weather today", "Weather forecast - Day 1", "Weather forecast - Day 2", "Weather forecast - Day 3"}
+    for s in presets["scenarios"]:
+        check(s.get("weather") in weathers, f"scenario {s['name']}: weather {s.get('weather')}")
+        check(s.get("face") is None or s["face"] in builtin, f"scenario {s['name']}: face {s.get('face')}")
+    index = json.loads(emu.request("GET", emu.screen + "/examples/index")[1])
+    check("samples.json" in index and len(index) >= 38, f"examples {len(index)}")
+    expect_error(404, "No such example", emu.request, "GET", emu.screen + "/examples/..%2Fpresets.json")
+
+    emu.set_time(local="2027-01-18T07:40")
+    emu.fix_weather(open_meteo(**weathers["Blizzard"]))
+    emu.mqtt("face/set", "Big weather")
+    shot(emu, "scenario_blizzard")
+    emu.fix_time(FIXED_TIME)
 
 
 @case
