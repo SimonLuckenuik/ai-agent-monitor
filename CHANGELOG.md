@@ -7,8 +7,19 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 1.6.0 - 2026-10-29
+
+Custom faces join the rotation, palettes and roles colour every face, the big font in
+custom faces, screen orientation, colour inversion, contrast curves and screen off at
+night, and an emulator that mocks the time, the weather and pushed values.
+
 ### Upgrading
 
+- **From 1.4.0 or 1.5.0:** install `AIAgentMonitor_v1.6.0.bin.gz` from the Firmware
+  update card. Settings, saved faces and photos are kept.
+- **A new clock** (stock firmware, or SmartClock-OSS 1.3.x or earlier): install
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
+  `AIAgentMonitor_v1.6.0.bin.gz`.
 - **Settings move over by themselves.** The three colours become `accent1`-`accent3`
   of the new day palette, the rotation's order keeps its built-in faces, and the
   night face is kept. The settings keys `faceorder` and `color1`-`color3` are still
@@ -22,6 +33,8 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
+- **The plugin (0.5.0)**: the skill and `face.schema.json` describe palettes and roles,
+  the big font, `invert` and the new settings.
 - **Emulator: Scenarios panel.** The screen page mocks the time (any date, stopped or up
   to 3600× real pace), the weather (a form for the current conditions and four forecast
   days, plus presets from sunny to blizzard) and the values agents push (variables,
