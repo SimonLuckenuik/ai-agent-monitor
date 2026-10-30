@@ -1,0 +1,28 @@
+{
+  "fps": 10,
+  "bg": "#0b0b0e",
+  "items": [
+    {"type": "text", "x": 120, "y": 34, "text": "{date.wday:u}", "font": "big", "size": 22, "align": "mc", "color": "#8a8a96"},
+    {"type": "rect", "x": 6, "y": 66, "w": 52, "h": 84, "r": 6, "color": "#1f1f25"},
+    {"type": "rect", "x": 62, "y": 66, "w": 52, "h": 84, "r": 6, "color": "#1f1f25"},
+    {"type": "rect", "x": 130, "y": 66, "w": 52, "h": 84, "r": 6, "color": "#1f1f25"},
+    {"type": "rect", "x": 186, "y": 66, "w": 52, "h": 84, "r": 6, "color": "#1f1f25"},
+    {"type": "text", "x": 32, "y": 108, "text": "{({time.hour}-{time.hour}%10)/10}", "font": "big", "size": 54, "w": 42, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 8, "y": "66+42*{time.ms}/400", "w": 48, "h": "42-42*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.hour}%10==0&&{time.ms}<400"},
+    {"type": "rect", "x": 8, "y": 108, "w": 48, "h": "42*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.hour}%10==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "text", "x": 88, "y": 108, "text": "{{time.hour}%10}", "font": "big", "size": 54, "w": 42, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 64, "y": "66+42*{time.ms}/400", "w": 48, "h": "42-42*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.ms}<400"},
+    {"type": "rect", "x": 64, "y": 108, "w": 48, "h": "42*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "text", "x": 156, "y": 108, "text": "{({time.min}-{time.min}%10)/10}", "font": "big", "size": 54, "w": 42, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 132, "y": "66+42*{time.ms}/400", "w": 48, "h": "42-42*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}%10==0&&{time.ms}<400"},
+    {"type": "rect", "x": 132, "y": 108, "w": 48, "h": "42*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}%10==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "text", "x": 212, "y": 108, "text": "{{time.min}%10}", "font": "big", "size": 54, "w": 42, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 188, "y": "66+42*{time.ms}/400", "w": 48, "h": "42-42*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.ms}<400"},
+    {"type": "rect", "x": 188, "y": 108, "w": 48, "h": "42*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "line", "x": 6, "y": 108, "x2": 234, "y2": 108, "w": 3, "color": "#0b0b0e"},
+    {"type": "circle", "x": 124, "y": 94, "r": 3, "color": "#8a8a96"},
+    {"type": "circle", "x": 124, "y": 122, "r": 3, "color": "#8a8a96"},
+    {"type": "text", "x": 120, "y": 176, "text": "{date.day} {date.month}", "font": 4, "align": "mc", "color": "#8a8a96", "bg": "#0b0b0e", "pad": 220},
+    {"type": "text", "x": 120, "y": 212, "text": "{now.temp|--} {units.temp}  {now.text|}", "font": 2, "align": "mc", "color": "#5f5f6b", "bg": "#0b0b0e", "pad": 220}
+  ]
+}

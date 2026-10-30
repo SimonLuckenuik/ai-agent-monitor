@@ -12,8 +12,9 @@
     {"type": "repeat", "of": 12, "items": [
       {"type": "circle", "x": "120+68*sin({it.index}*30)", "y": "98-68*cos({it.index}*30)", "r": "{it.index}%3==0?3:2", "color": "#3a4170"}
     ]},
+    {"type": "path", "x": 120, "y": 98, "size": 120, "align": "mc", "vb": "0 0 120 120", "rotate": -18, "stroke": "#b8914d", "sw": 3, "d": "M114 60a54 13 0 0 0 -108 0"},
     {"type": "circle", "x": 120, "y": 98, "r": 36, "color": {"stops": ["#7b5cff", "#2bd2ff"], "angle": 135}},
-    {"type": "path", "x": 120, "y": 98, "size": 120, "align": "mc", "vb": "0 0 120 120", "rotate": -18, "stroke": "#ffcf70", "sw": 3, "d": "M6 60a54 13 0 1 0 108 0a54 13 0 1 0 -108 0"},
+    {"type": "path", "x": 120, "y": 98, "size": 120, "align": "mc", "vb": "0 0 120 120", "rotate": -18, "stroke": "#ffcf70", "sw": 3, "d": "M6 60a54 13 0 0 0 108 0"},
     {"type": "circle", "x": "120+68*sin({time.min}*6)", "y": "98-68*cos({time.min}*6)", "r": 8, "color": "#e8e8f0"},
     {"type": "text", "x": 120, "y": 200, "text": "{time.hm}", "font": 6, "align": "mc", "color": "#ffffff", "bg": "#05060f", "pad": 200},
     {"type": "text", "x": 120, "y": 230, "text": "{date.wday} {date.day} {date.month}", "font": 2, "align": "mc", "color": "#7f8bd9", "bg": "#05060f", "pad": 200}

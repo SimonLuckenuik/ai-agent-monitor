@@ -1,0 +1,25 @@
+{
+  "fps": 10,
+  "bg": "#0b0b0e",
+  "items": [
+    {"type": "rect", "x": 8, "y": 6, "w": 108, "h": 104, "r": 8, "color": "#1f1f25"},
+    {"type": "rect", "x": 124, "y": 6, "w": 108, "h": 104, "r": 8, "color": "#1f1f25"},
+    {"type": "rect", "x": 8, "y": 118, "w": 108, "h": 104, "r": 8, "color": "#1f1f25"},
+    {"type": "rect", "x": 124, "y": 118, "w": 108, "h": 104, "r": 8, "color": "#1f1f25"},
+    {"type": "text", "x": 62, "y": 58, "text": "{({time.hour}-{time.hour}%10)/10}", "font": "big", "size": 82, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 11, "y": "6+52*{time.ms}/400", "w": 102, "h": "52-52*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.hour}%10==0&&{time.ms}<400"},
+    {"type": "rect", "x": 11, "y": 58, "w": 102, "h": "52*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.hour}%10==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "text", "x": 178, "y": 58, "text": "{{time.hour}%10}", "font": "big", "size": 82, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 127, "y": "6+52*{time.ms}/400", "w": 102, "h": "52-52*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.ms}<400"},
+    {"type": "rect", "x": 127, "y": 58, "w": 102, "h": "52*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "text", "x": 62, "y": 170, "text": "{({time.min}-{time.min}%10)/10}", "font": "big", "size": 82, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 11, "y": "118+52*{time.ms}/400", "w": 102, "h": "52-52*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}%10==0&&{time.ms}<400"},
+    {"type": "rect", "x": 11, "y": 170, "w": 102, "h": "52*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.min}%10==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "text", "x": 178, "y": 170, "text": "{{time.min}%10}", "font": "big", "size": 82, "align": "mc", "color": "#f2f0ea"},
+    {"type": "rect", "x": 127, "y": "118+52*{time.ms}/400", "w": 102, "h": "52-52*{time.ms}/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.ms}<400"},
+    {"type": "rect", "x": 127, "y": 170, "w": 102, "h": "52*({time.ms}-400)/400", "color": "#3a3a45", "show": "{time.sec}==0&&{time.ms}>=400&&{time.ms}<800"},
+    {"type": "line", "x": 8, "y": 58, "x2": 232, "y2": 58, "w": 3, "color": "#0b0b0e"},
+    {"type": "line", "x": 8, "y": 170, "x2": 232, "y2": 170, "w": 3, "color": "#0b0b0e"},
+    {"type": "text", "x": 120, "y": 231, "text": "{date.wday} {date.day} {date.month}", "font": 2, "align": "mc", "color": "#8a8a96", "bg": "#0b0b0e", "pad": 200}
+  ]
+}

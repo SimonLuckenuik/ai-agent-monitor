@@ -1,6 +1,6 @@
 # Example custom faces
 
-37 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
+39 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
 push to the clock (`POST /api/faces`, or `python clock.py push <name> <file>` from the
 Claude Code skill); the format is in
 [docs/specifications/integrations-api.md](../../docs/specifications/integrations-api.md#custom-faces).
@@ -18,8 +18,10 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "m
 
 | | Face | Shows how to |
 |---|---|---|
+| ![](../../docs/images/faces/flip-clock.png) | **flip-clock**: a flip clock, hours above minutes | One card per digit, `"font": "big"`; on the minute a leaf folds down to the hinge and the next drops, from `{time.sec}==0` and `{time.ms}` (`"fps": 10`); only the cards whose digit changed flip |
+| ![](../../docs/images/faces/flip-clock-wide.png) | **flip-clock-wide**: the flip clock on one line | The same cards, four in a row, with the day above and the date and weather below |
 | ![](../../docs/images/faces/bauhaus.png) | **bauhaus**: an analog clock in primary colours | Draw hands with `line` items and `sin`/`cos` expressions |
-| ![](../../docs/images/faces/orbit.png) | **orbit**: a planet that orbits once an hour | Move an item along a circle; hour marks from one `repeat` |
+| ![](../../docs/images/faces/orbit.png) | **orbit**: a ringed planet and a moon that orbits once an hour | Move an item along a circle; hour marks from one `repeat`; the ring in two halves, one drawn before the planet and one after |
 | ![](../../docs/images/faces/retro-lcd.png) | **retro-lcd**: a 1980s digital watch | Layer opaque text (`bg`) on a panel; `{date.week}` |
 | ![](../../docs/images/faces/binary-clock.png) | **binary-clock**: hours and minutes in binary | Compute every bit of a `repeat` of 16 with an expression |
 | ![](../../docs/images/faces/calendar.png) | **calendar**: the month, today circled | A 6-week grid from `{date.wdaynum}`, `{date.mdays}` and one `repeat`; weekday initials from a map |
@@ -35,13 +37,13 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "m
 |---|---|---|
 | ![](../../docs/images/faces/forecast-strip.png) | **forecast-strip**: four days at a glance | `repeat` over `"days"` with `{it.*}`; a day/night palette; a border on today |
 | ![](../../docs/images/faces/weather-poster.png) | **weather-poster**: the sky's colour | A palette picked from `{now.code}` by an expression |
-| ![](../../docs/images/faces/sun-arc.png) | **sun-arc**: the sun's path across the sky | Place the sun from `{sun.until_set}` and `{sun.daylen}`; a moon at night |
+| ![](../../docs/images/faces/sun-arc.png) | **sun-arc**: the sun's path across the sky | Place the sun from `{sun.until_set}` and `{sun.daylen}`; a moon at night; drawn before the ground, so both set behind it |
 | ![](../../docs/images/faces/daylight.png) | **daylight**: day length and the next sunset | Hours and minutes from minutes in text expressions; sun or moon by `show` |
 | ![](../../docs/images/faces/moon-phase.png) | **moon-phase**: tonight's moon | Shade the moon from `{moon.lit}`; phase names from a map; a starfield `repeat` |
 | ![](../../docs/images/faces/seaside.png) | **seaside**: a beach that turns to night | A day/night palette; the weather icon |
-| ![](../../docs/images/faces/night-lake.png) | **night-lake**: mountains under the moon | Layered SVG paths |
+| ![](../../docs/images/faces/night-lake.png) | **night-lake**: a mountain lake through the day | Layered SVG paths; four palettes (night, dawn, day, dusk) chosen from `{sun.*}`; the sun and moon cross the sky and set behind the hills, their reflection follows them on the lake |
 | ![](../../docs/images/faces/synthwave.png) | **synthwave**: an 80s sunset | Gradients on paths and circles |
-| ![](../../docs/images/faces/aquarium.png) | **aquarium**: fish that swim in place | Animated `sprite` frames with a `bg`, so only they redraw |
+| ![](../../docs/images/faces/aquarium.png) | **aquarium**: fish that swim across | `sprite`s whose `x` and `y` follow `{time.sec}` and `{time.ms}`, with tail frames, and bubbles that follow the orange fish; a moving sprite repaints only around itself |
 | ![](../../docs/images/faces/what-to-wear.png) | **what-to-wear**: dress for today's weather | A palette and an outfit `sprite` frame from feels-like bands (°F converted in the expression); an umbrella, sunglasses or a scarf by `show` |
 | ![](../../docs/images/faces/sky-window.png) | **sky-window**: the sky through a window | A gradient from a palette picked by time of day (dawn, day, dusk, night) and weather; clouds from `{now.clouds}`; rain, snow or fog `repeat`s; a moon shaded by `{moon.lit}`; walls drawn last to clip the sky |
 | ![](../../docs/images/faces/golden-hour.png) | **golden-hour**: the hour of warm light | `"when"`: only in the hour after sunrise and before sunset, with its own `duration`; the sun sinks with `{sun.until_set}` |
@@ -61,7 +63,7 @@ curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "m
 | ![](../../docs/images/faces/homelab.png) | **homelab**: servers and CPU | Blinking LED sprites; `{net.ip}`, `{net.host}`, `{sys.uptime}`; a `spark`. Push `cpu` with `$history` |
 | ![](../../docs/images/faces/power-cell.png) | **power-cell**: a battery | A width from a value; colour by level; a bolt shown while charging. Push `batt`, `charging` (1 or 0), `eta`, `device` |
 | ![](../../docs/images/faces/pixel-pet.png) | **pixel-pet**: a pet that needs feeding | A blinking `sprite` coloured by mood through a map; a food bar. Push `pet`, `mood` (`happy`, `hungry`, `sleepy`), `food` (0-100) |
-| ![](../../docs/images/faces/claude-mascot.png) | **claude-mascot**: Claude Code at work | One `sprite` with 9 frames chosen by an expression: typing, cheering, thinking, a slump on failure, asleep at night; a message badge. Push `state` (`thinking`, `working`, `done`, `fail`, or none), `task` |
+| ![](../../docs/images/faces/claude-mascot.png) | **claude-mascot**: Claude Code at work | One `sprite` with 9 frames chosen by an expression: typing, cheering, thinking, a slump on failure, asleep at night under rising "z Z Z" (a second `sprite` with 4 frames); a message badge. Push `state` (`thinking`, `working`, `done`, `fail`, or none), `task` |
 | ![](../../docs/images/faces/scoreboard.png) | **scoreboard**: passes and failures, stadium style | Big text with `✓ ✗ ↑ ↓`; zero-padded numbers (`{fail:03|000}`); a colour from a value (`{fail}>0`); `@time`. Push `pass` and `fail` (with `$add`) |
 
 ## Games and worlds
