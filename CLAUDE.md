@@ -26,7 +26,8 @@ branch has **not run on hardware yet**.
   mDNS (`SMARTCLOCK_MDNS`, ~21 KB); the emulator leaves it out (no multicast).
 - **RAM.** ~24 KB free heap at run time. No frame buffer (240×240×2 = 115 KB): faces
   redraw only what changed, text needs a `bg`/`pad` to overwrite itself, and anything
-  that moves redraws the face (flicker). Paths allocate 3.2 KB while drawing
+  that moves repaints the box around its old and new places (`itemBox`, clipped with
+  TFT_eSPI's viewport), or the whole face for text, sprites and repeats (flicker). Paths allocate 3.2 KB while drawing
   (`new (std::nothrow)`, checked).
 - **Fonts are ASCII.** TFT_eSPI fonts 2 (16 px) and 4 (26 px) have letters; 6 (48 px)
   and 8 (75 px) are digits only. No accents: incoming text goes through `asciiFold()`

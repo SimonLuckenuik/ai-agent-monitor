@@ -1740,6 +1740,48 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
 
 void renderItems(const struct tm& t, bool force);
 
+// The screen box an item covers (x0 > x1 when hidden), so that an item that moves
+// repaints only around its old and new places. False for types with no simple box
+// (text, sprite, image, repeat): those still repaint the whole face.
+struct Box { int16_t x0, y0, x1, y1; };
+Box customBox[CUSTOM_ITEMS];
+bool customBoxOk[CUSTOM_ITEMS];
+
+bool itemBox(JsonObjectConst it, const struct tm& t, Box& b) {
+  b = {1, 1, 0, 0};
+  if (!visible(it, t)) return true;
+  const char* type = js(it, "type", "");
+  int x = inum(it, "x", 0, t), y = inum(it, "y", 0, t), x0 = x, y0 = y, x1 = x, y1 = y, m = 2;
+  bool rect = !strcmp(type, "rect"), bar = !strcmp(type, "bar");
+  if (rect || bar || !strcmp(type, "spark")) {
+    x1 = x + inum(it, "w", rect ? 0 : 100, t);
+    y1 = y + inum(it, "h", rect ? 0 : bar ? 8 : 30, t);
+  } else if (!strcmp(type, "circle") || !strcmp(type, "ring") || !strcmp(type, "icon")) {
+    int r = !strcmp(type, "icon") ? inum(it, "size", 48, t) / 2 + 2 : inum(it, "r", !strcmp(type, "ring") ? 50 : 10, t);
+    x0 -= r; y0 -= r; x1 += r; y1 += r;
+  } else if (!strcmp(type, "line")) {
+    int x2 = (int)num(it, "x2", x, t), y2 = (int)num(it, "y2", y, t);
+    x0 = std::min(x, x2); x1 = std::max(x, x2); y0 = std::min(y, y2); y1 = std::max(y, y2);
+    m += (int)num(it, "w", 2, t) / 2;
+  } else if (!strcmp(type, "path")) {
+    float size = num(it, "size", 48, t), w = num(it, "w", size, t), h = num(it, "h", size, t);
+    uint8_t datum = alignOf(it);
+    x0 = x - (datum % 3) * w / 2; y0 = y - (datum / 3) * h / 2; x1 = x0 + w; y1 = y0 + h;
+    if (jhas(it, "rotate")) { int e = (int)std::max(w, h) / 4 + 1; x0 -= e; y0 -= e; x1 += e; y1 += e; }
+    m += (int)(num(it, "sw", 2, t) * size / 24) + 1;   // a stroke is scaled with the path
+  } else {
+    return false;
+  }
+  b = {(int16_t)(x0 - m), (int16_t)(y0 - m), (int16_t)(x1 + m), (int16_t)(y1 + m)};
+  return true;
+}
+
+void growBox(Box& d, const Box& b) {
+  if (b.x0 > b.x1) return;
+  d.x0 = std::min(d.x0, b.x0); d.y0 = std::min(d.y0, b.y0);
+  d.x1 = std::max(d.x1, b.x1); d.y1 = std::max(d.y1, b.y1);
+}
+
 void custom(const struct tm& t, bool force) {
   if (customName != customWanted || customVer != customFacesVersion()) {
     customName = customWanted;
@@ -1777,19 +1819,44 @@ void renderItems(const struct tm& t, bool force) {
   JsonArrayConst items = customDoc["items"];
   size_t n = std::min(items.size(), CUSTOM_ITEMS);
   uint32_t h[CUSTOM_ITEMS], g[CUSTOM_ITEMS];
+  bool moved[CUSTOM_ITEMS];
   for (size_t i = 0; i < n; ++i) {
     h[i] = g[i] = 2166136261u;
     mixItem(items[i].as<JsonObjectConst>(), t, h[i], g[i]);
-    if (g[i] != customGeo[i] || (h[i] != customHash[i] && !itemOpaque(items[i]))) full = true;
+    moved[i] = g[i] != customGeo[i] || (h[i] != customHash[i] && !itemOpaque(items[i]));
   }
   static uint16_t drawnBg = 0;
   if (bg != drawnBg) { full = true; drawnBg = bg; }
-  if (full) {
-    if (bgPaint.n > 1) for (int y = 0; y < SCR_H; ++y) span(bgPaint, 0, SCR_W - 1, y);
-    else D().fillScreen(bg);
+  // Items that moved: repaint the box around their old and new places, clipped to it.
+  Box dirty = {SCR_W, SCR_H, -1, -1};
+  for (size_t i = 0; i < n && !full; ++i) {
+    if (!moved[i]) continue;
+    Box nb;
+    if (!customBoxOk[i] || !itemBox(items[i], t, nb)) { full = true; break; }
+    growBox(dirty, customBox[i]);
+    growBox(dirty, nb);
+    customBox[i] = nb;
   }
+  int x0 = std::max<int>(0, dirty.x0), y0 = std::max<int>(0, dirty.y0);
+  int x1 = std::min<int>(SCR_W - 1, dirty.x1), y1 = std::min<int>(SCR_H - 1, dirty.y1);
+  bool clip = !full && x0 <= x1 && y0 <= y1;
+  if (full) {
+    x0 = y0 = 0; x1 = SCR_W - 1; y1 = SCR_H - 1;
+    for (size_t i = 0; i < n; ++i) customBoxOk[i] = itemBox(items[i], t, customBox[i]);
+  } else if (clip) {
+    D().setViewport(x0, y0, x1 - x0 + 1, y1 - y0 + 1, false);
+  }
+  if (full || clip) {
+    if (bgPaint.n > 1) for (int y = y0; y <= y1; ++y) span(bgPaint, x0, x1, y);
+    else D().fillRect(x0, y0, x1 - x0 + 1, y1 - y0 + 1, bg);
+  }
+  for (size_t i = 0; i < n && clip; ++i) {
+    const Box& b = customBox[i];
+    if (!customBoxOk[i] || (b.x0 <= x1 && b.x1 >= x0 && b.y0 <= y1 && b.y1 >= y0)) drawItem(items[i], t, bg);
+  }
+  if (clip) D().resetViewport();
   for (size_t i = 0; i < n; ++i) {
-    if (full || h[i] != customHash[i]) drawItem(items[i], t, bg);
+    if (full || (h[i] != customHash[i] && !moved[i])) drawItem(items[i], t, bg);
     customHash[i] = h[i];
     customGeo[i] = g[i];
   }

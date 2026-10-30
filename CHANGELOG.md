@@ -11,6 +11,10 @@ versioning. `/version` on the device reports the version it was built as; a
 
 - The address screen shown after a restart (IP address and name) also shows the
   firmware version.
+- **Less flicker in custom faces with moving parts.** When a shape (rect, circle,
+  line, path, ring, bar, icon, spark) moves, resizes, shows or hides, only the area
+  around its old and new places is repainted, not the whole face. Bauhaus's hands
+  now redraw in about 40 ms, without the rest of the face blinking.
 
 ## 1.6.0 - 2026-10-29
 

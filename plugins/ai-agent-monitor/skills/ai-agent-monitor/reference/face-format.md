@@ -115,9 +115,12 @@ hidden item is not drawn: two items with opposite conditions (`"{sun.up}"` and
   redrawn. Text with a `bg` colour, rings, bars, and icons, sprites and sparklines
   with a `bg` are redrawn on their own when their content (text, value, colour,
   frame) changes. `pad` (pixels) clears the area around text whose width varies.
-  Anything else that changes, including the position, size or visibility of any
-  item, a repeat's entries, the palette or the face's `bg`, redraws the whole face,
-  which you will see as a flicker. There is no RAM for a full-screen buffer.
+  When a rect, circle, line, path, ring, bar, icon or spark moves, changes size,
+  shows or hides, only the area around its old and new places is repainted (with the
+  items under and over it, clipped to that area). Anything else that changes, such as
+  the position or visibility of text or a sprite, a repeat's entries, the palette or
+  the face's `bg`, redraws the whole face, which you will see as a flicker. There is
+  no RAM for a full-screen buffer.
 
 ## Placeholders
 
