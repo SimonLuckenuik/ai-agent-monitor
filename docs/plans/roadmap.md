@@ -12,9 +12,11 @@ approved.
 
 ## Next (proposed, waiting for approval)
 
-1. [018 Check 1.5-1.8 on the real clock](../../specs/018-first-run-on-the-clock/SPEC.md):
+1. [024 Weather, sun times and face uploads within the heap](../../specs/024-memory-headroom/SPEC.md):
+   the weather stopped loading on 1.9.0; first, as a regression.
+2. [018 Check 1.5-1.8 on the real clock](../../specs/018-first-run-on-the-clock/SPEC.md):
    nothing after 1.4.0 has run on the clock.
-2. [019 Claude Code hooks that drive the clock](../../specs/019-claude-code-hooks/SPEC.md).
+3. [019 Claude Code hooks that drive the clock](../../specs/019-claude-code-hooks/SPEC.md).
 
 ## Ideas (no spec yet)
 

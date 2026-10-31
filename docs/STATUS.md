@@ -63,7 +63,7 @@ on the clock). In 1.9.0 on the clock, not yet seen at work there (no crash since
 [021](../specs/021-crash-report/SPEC.md) (crash records, crash-loop protection, safe mode),
 [022](../specs/022-emulator-device-memory/SPEC.md) (the emulator with the clock's memory;
 the clock's 3,050 B against the emulator's 2,752 B leaves `EMU_STACK` at 4096). Proposed:
-[018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
+[024](../specs/024-memory-headroom/SPEC.md) (weather, sun times and face uploads within the heap), [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
 Dropped: [020](../specs/020-esp-now/SPEC.md). Order: [roadmap](plans/roadmap.md).
 
 ## Open issues
