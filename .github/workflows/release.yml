@@ -93,5 +93,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ steps.version.outputs.version }}" --target "$GITHUB_SHA" \
-            release/*.bin.gz release/SHA256SUMS.txt \
+            release/*.bin.gz release/*.elf release/SHA256SUMS.txt \
             --title "AI Agent Monitor ${{ steps.version.outputs.version }}" --notes-file notes.md

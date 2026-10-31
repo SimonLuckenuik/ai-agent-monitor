@@ -9,6 +9,8 @@ secrets.ini. Writes to release/:
 - AIAgentMonitor_v<version>.bin.gz: the firmware, compressed, for clocks running 1.4.0
   or later. No "SDP" prefix: a stock clock cannot unpack it, and its update page only
   accepts names starting with "SDP".
+- AIAgentMonitor_v<version>.elf: the same build with its symbols, for
+  scripts/decode_crash.py (a crash's addresses to file:line). Not for the clock.
 - SHA256SUMS.txt
 
 A new clock first installs the plain SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin from the
@@ -60,7 +62,8 @@ out = root / "release"
 out.mkdir(exist_ok=True)
 for old in out.glob("*AIAgentMonitor_v*"):
     old.unlink()   # one release's files at a time
-files = ((full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),)
+files = ((full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),
+         (full.with_suffix(".elf"), f"AIAgentMonitor_v{version}.elf"))
 sums = ""
 for src, dst in files:
     shutil.copy(src, out / dst)

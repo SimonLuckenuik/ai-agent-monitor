@@ -382,6 +382,13 @@ a{color:var(--accent)}
       <div class="pw"><input type="password" id="newPass" autocomplete="new-password" spellcheck="false" placeholder="8 to 31 characters, no spaces"><button type="button" onclick="reveal('newPass',this)">Show</button></div></div>
     <div class="btns"><button class="btn" onclick="changePassword()">Change password</button><button class="btn" onclick="logout()">Sign out</button></div>
 
+    <div class="sub">Crashes</div>
+    <p class="note" id="crashNote" style="margin-top:0">None recorded.</p>
+    <ul class="note" id="crashList" hidden></ul>
+    <div class="btns"><button class="btn primary" id="crashResume" onclick="crashAct('resume')" hidden>Resume faces</button>
+      <a class="btn" id="crashGet" href="/api/crashes" download="crashes.bin" hidden>Download for decoding</a>
+      <button class="btn" id="crashClear" onclick="crashAct('clear')" hidden>Clear</button></div>
+
     <div class="sub">Backup</div>
     <p class="note" style="margin-top:0">Settings only; WiFi details, the password and photos are not included.</p>
     <div class="btns"><a class="btn" href="/api/settings/export" download="smartclock-settings.json">Download backup</a>
@@ -636,6 +643,7 @@ function fillStatus(s){
   const kb=b=>(b/1024).toFixed(1)+' KB';
   $('sHeap').textContent=kb(s.heap)+(s.heapLow?' · lowest '+kb(s.heapLow):'');
   $('sReset').textContent=s.resetReason||'—';
+  if((s.crashes||0)+(s.safeMode||0)!==loadCrashes.seen&&!recovery){loadCrashes.seen=(s.crashes||0)+(s.safeMode||0);loadCrashes(s)}
   $('fmtBtn').hidden=$('fmtNote').hidden=!s.storageMountFailed;
 }
 async function poll(){try{const s=await(await fetch('/status')).json();fillStatus(s);if(s.signedIn===false&&!s.recovery)showLogin();if(!checkUpdate.done&&s.version){checkUpdate.done=1;checkUpdate(s.version)}}catch(e){const p=$('pill');p.className='pill bad';p.lastElementChild.textContent='Offline'}}
@@ -680,6 +688,32 @@ async function connect(){
   try{await req('/connect',form({ssid,password}));waitForReboot('Connecting to '+ssid,'If the network is different, reconnect this device to it, then open '+(st.mdns||'its address (router client list: '+(st.host||'agentmonitor-…')+')')+'.')}
   catch(e){toast(e.message||'Could not save WiFi',1)}}
 
+// The crash log (/api/crashes): the firmware's file as it is, read here (src/crash.cpp's layout).
+async function loadCrashes(s){
+  const lv=s.safeMode||0;
+  $('crashNote').textContent=lv>1?`Safe mode: after ${s.crashLoop} crashes in a row the clock draws no face. Look at the crashes below, then resume.`
+    :lv?`Custom faces are off: the clock crashed ${s.crashLoop} times in a row. Remove or fix the face, then resume.`
+    :s.crashes?`${s.crashes} crash${s.crashes>1?'es':''} recorded.`:'None recorded.';
+  $('crashResume').hidden=!lv;$('crashGet').hidden=$('crashClear').hidden=!s.crashes;
+  const ul=$('crashList');ul.replaceChildren();ul.hidden=!s.crashes;if(!s.crashes)return;
+  try{
+    const r=await fetch('/api/crashes');if(r.status!==200)return;
+    const d=new DataView(await r.arrayBuffer()),u=o=>d.getUint32(o,true),h=v=>'0x'+v.toString(16).padStart(8,'0');
+    const txt=(o,n)=>String.fromCharCode(...new Uint8Array(d.buffer,o,n)).replace(/\0.*$/s,'');
+    const why={1:'hardware watchdog',2:'exception',3:'software watchdog',253:'stack overflow',254:'panic'};
+    for(let i=0;i<u(16)&&20+(i+1)*160<=d.byteLength;i++){
+      const o=20+i*160,at=u(o+144),face=d.getInt32(o+48,true),name=txt(o+52,24);
+      const li=document.createElement('li');
+      li.textContent=`${why[u(o+8)]||'crash'}${at?' on '+new Date(at*1000).toLocaleString():''} after ${u(o+36)} s up`
+        +(face>=0?`, drawing ${name||'face '+face}`:'')+`, v${txt(o+148,12)}`
+        +(u(o+8)===2?`, exception ${u(o+12)} at ${h(u(o+16))}`:'');
+      ul.append(li)}
+  }catch(e){}
+}
+async function crashAct(a){
+  if(a==='clear'&&!confirm('Clear the crash log?'))return;
+  const r=await fetch('/api/crashes/'+a,{method:'POST'});
+  toast(r.ok?(a==='resume'?'Faces resumed':'Crash log cleared'):'Failed',!r.ok);loadCrashes.seen=-1;poll()}
 async function restart(){if(!confirm('Restart the clock?'))return;try{await fetch('/restart',{method:'POST'})}catch(e){}waitForReboot('Restarting')}
 
 async function formatFs(){if(!confirm('Erase the clock storage area? This cannot be undone.'))return;

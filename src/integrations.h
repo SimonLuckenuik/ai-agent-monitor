@@ -39,5 +39,7 @@ int  messageShowing();                              // the slot the Message face
 void messageShowSlot(int slot);
 uint32_t messageVersion();                          // bumped whenever a message changes
 
+bool integrationKeyOk();   // the request carries the custom faces' API key
+
 // Photos: per-photo slideshow switch, shared with the stock-compatible API.
 bool photoEnabled(const String& name);

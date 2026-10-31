@@ -29,6 +29,7 @@
 #include "weather.h"
 #include "faces.h"
 #include "integrations.h"
+#include "crash.h"
 
 
 #define FW_VERSION "1.8.0"   // see CHANGELOG.md
@@ -108,6 +109,7 @@ enum Mode { MODE_AP, MODE_RUN } mode = MODE_AP;
 bool recoveryMode = false, recoveryDisplay = true, recoveryLinkShown = false;
 bool storageReady = false, storageMountFailed = false, displayReady = false;
 bool optionalStarted = false, bootHealthy = false, powerCyclesCleared = false;
+bool safeShown = false;   // safe mode's screen is up (drawSafeScreen)
 uint32_t bootStarted = 0;
 // RTC user memory starts after eboot's reserved first 128 bytes (word offset 32).
 struct BootMarker { uint32_t magic, state; };
@@ -322,7 +324,7 @@ int entryFace(const String& e) { return e[0] == '#' ? e.substring(1).toInt() : F
 constexpr int FACE_ENTRIES = FACE_COUNT + FACES_MAX;
 int faceEntries(String* out) {
   String customs[FACES_MAX];
-  int nc = cfg.facesApi ? customFaceNames(customs, FACES_MAX) : 0, n = 0;
+  int nc = cfg.facesApi && !crashLevel() ? customFaceNames(customs, FACES_MAX) : 0, n = 0;   // off after a crash loop
   auto add = [&](const String& e) {
     for (int i = 0; i < n; ++i) if (out[i] == e) return;
     if (e[0] == '#') {
@@ -362,7 +364,7 @@ bool nightTile() {
     seen = cfg.nightFace; seenVer = customFacesVersion(); seenAt = millis();
     ok = customFaceExists(seen);
   }
-  return cfg.facesApi && ok;
+  return cfg.facesApi && ok && !crashLevel();
 }
 
 // Moves to the next face: the faces in rotation order (in the rotation, when rotating,
@@ -1060,6 +1062,30 @@ void setupRoutes() {
   server.on("/api/settings/export", handleSettingsExport);
   server.on("/api/settings/import", HTTP_POST, handleSettingsImport);
   server.on("/api/settings/reset", HTTP_POST, handleSettingsReset);
+  // Crash log and crash-loop protection (crash.cpp): a signed-in session or the API key.
+  auto crashAuth = [] {
+    if (requestAuthorized() || integrationKeyOk()) return true;
+    server.send(401, "text/plain", "Sign in or send the API key (X-Api-Key)");
+    return false;
+  };
+  server.on("/api/crashes", HTTP_GET, [crashAuth] {   // the log file as it is (crash.cpp's layout)
+    if (!crashAuth()) return;
+    const char* path = crashLogPath();
+    if (!path) { server.send(204); return; }
+    File f = LittleFS.open(path, "r");
+    server.streamFile(f, "application/octet-stream");
+    f.close();
+  });
+  server.on("/api/crashes/resume", HTTP_POST, [crashAuth] {
+    if (!crashAuth()) return;
+    crashResume(); faceInvalidate(); safeShown = false;
+    server.send(200, "text/plain", "OK");
+  });
+  server.on("/api/crashes/clear", HTTP_POST, [crashAuth] {
+    if (!crashAuth()) return;
+    crashClear(); faceInvalidate(); safeShown = false;
+    server.send(200, "text/plain", "OK");
+  });
   server.on("/api/wifi/forget", HTTP_POST, handleWifiForget);
   server.collectHeaders("Cookie", "X-Api-Key");   // sessions; the faces API key
   integrationsRoutes();
@@ -1173,6 +1199,17 @@ void drawRecoveryScreen() {
   if (storageMountFailed) centerText("Storage not mounted", 228, 2, TFT_RED);
 }
 
+// Safe mode (crash.cpp, after 5 crashes in a row): no face, so the clock stays reachable.
+void drawSafeScreen() {
+  clockDisplay().fillScreen(TFT_BLACK);
+  centerText(F("Safe mode"), 50, 4, TFT_ORANGE);
+  centerText(String(crashLoopCount()) + F(" crashes in a row"), 82, 2, TFT_WHITE);
+  centerText(WiFi.localIP().toString(), 120, 4, TFT_YELLOW);
+  centerText(deviceHost() + (SMARTCLOCK_MDNS ? ".local" : ""), 152, 2, TFT_CYAN);
+  centerText(F("v" FW_VERSION), 174, 2, TFT_LIGHTGREY);
+  centerText(F("Settings > System > Crashes: Resume"), 208, 2, TFT_WHITE);
+}
+
 void startOptionalServices() {
   optionalStarted = true;
   markBoot(BOOT_STARTING); // A reset/crash during optional startup forces the next boot into recovery.
@@ -1186,6 +1223,7 @@ void startOptionalServices() {
     return;
   }
   cfg.load();
+  crashBoot(FW_VERSION);   // a crash record from RTC memory into the log; crash-loop level
   displayBegin();
   drawSetupScreen();
   // The unit may have no button fitted; GPIO4 is never used to choose recovery.
@@ -1225,6 +1263,7 @@ void handleStatus() {
   doc["storageMountFailed"] = storageMountFailed;
   doc["version"] = FW_VERSION; doc["build"] = FW_BUILD; doc["uptime"] = millis() / 1000; doc["heap"] = ESP.getFreeHeap();
   doc["heapLow"] = heapLow;   // (getMaxFreeBlockSize() would add 1.6 KB of umm stats)
+  doc["stackFree"] = ESP.getFreeContStack();   // the least free stack since boot (of 4 KB)
   doc["resetReason"] = ESP.getResetReason();
   doc["cpuMHz"] = ESP.getCpuFreqMHz();
   JsonObject draws = doc["drawMs"].to<JsonObject>();   // {"<face id>": [last, slowest]}
@@ -1273,6 +1312,7 @@ void handleStatus() {
     snprintf(sun, sizeof(sun), "%02u:%02u", rise / 60, rise % 60); doc["sunrise"] = sun;
     snprintf(sun, sizeof(sun), "%02u:%02u", set / 60, set % 60); doc["sunset"] = sun;
   }
+  crashStatus(doc);
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
 }
@@ -1368,6 +1408,7 @@ void loop() {
     markBoot(BOOT_CLEAN);
     bootHealthy = true;
   }
+  crashTick();
   serviceSta();
   if (WiFi.status() == WL_CONNECTED && mode != MODE_RUN) {
     mode = MODE_RUN;
@@ -1380,7 +1421,9 @@ void loop() {
     centerText(WiFi.localIP().toString(), 100, 4, TFT_YELLOW);
     centerText(deviceHost() + (SMARTCLOCK_MDNS ? ".local" : ""), 140, 2, TFT_CYAN);
     centerText(F("v" FW_VERSION), 165, 2, TFT_LIGHTGREY);
+    if (crashLevel()) centerText(crashLevel() > 1 ? F("Safe mode: crashed") : F("Custom faces off: crashed"), 195, 2, TFT_ORANGE);
     faceHoldUntil = millis() + 3000;   // let the address be read
+    safeShown = false;
     faceInvalidate();
   } else if (WiFi.status() != WL_CONNECTED && mode == MODE_RUN) {
     mode = MODE_AP;
@@ -1443,9 +1486,15 @@ void loop() {
       shown = entryFace(cfg.nightFace);
       if (shown == FACE_CUSTOM) custom = cfg.nightFace.c_str();
     }
-    if (!revealUntil && !panelOff && (int32_t)(millis() - faceHoldUntil) >= 0) {
+    if (shown == FACE_CUSTOM && crashLevel()) { shown = FACE_CLASSIC; custom = nullptr; }   // off after a crash loop
+    if (crashLevel() > 1) {   // safe mode: no face, the address screen stays for troubleshooting
+      if (!safeShown && (int32_t)(millis() - faceHoldUntil) >= 0) { drawSafeScreen(); safeShown = true; }
+    } else if (!revealUntil && !panelOff && (int32_t)(millis() - faceHoldUntil) >= 0) {
+      crashFace = shown;
+      crashCustom = shown != FACE_CUSTOM ? nullptr : custom ? custom : cfg.customFace.c_str();
       uint32_t start = micros();
       faceDraw(shown, t, timeValid, custom);
+      crashFace = -1; crashCustom = nullptr;
       uint32_t ms = (micros() - start) / 1000;
       if (ms > 1 && shown >= 0 && shown <= FACE_MESSAGE) {
         drawLast[shown] = std::min<uint32_t>(ms, 65535);

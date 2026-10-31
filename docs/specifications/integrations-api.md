@@ -264,6 +264,7 @@ words with no operator are left as they are.
 A word that is not a number (such as `warn` or `#ff9f0a`) is text. False is `0`, an
 empty value, `false` or `off`. A text result keeps its spaces (`"1?light rain:clear"`),
 but cannot contain operator characters such as `:` or `-`.
+An expression may hold up to 11 pending values or operators at once (parentheses, functions and operators waiting for their right side count); beyond that it gives `0`.
 
 ```json
 {"type": "circle", "x": "120+90*sin({time.sec}*6)", "y": "120-90*cos({time.sec}*6)", "r": 8,
@@ -447,6 +448,47 @@ as two stops. `angle` is in degrees as in CSS: `180` (the default) runs top to b
 Text drawn over a gradient background needs its own `bg`, or is drawn transparent.
 Gradients cost more to draw than solid colours: keep them off items that change
 several times a second.
+
+## Device status and crashes
+
+`GET /status` (no sign-in) describes the clock: version and build, uptime, `heap` and
+`heapLow` (bytes free now, and the least since boot), `stackFree` (the least free of
+the 4 KB stack since boot), `resetReason`, `cpuMHz`, `drawMs` (per face id: the last
+and the slowest draw, in ms), the network, the weather, the face shown. After a crash
+it also has:
+
+| Field | |
+|---|---|
+| `crashes` | Crashes in the log since it was last cleared |
+| `crashLoop` | Crashes in a row, each within 10 minutes of boot (cleared after 10 minutes up) |
+| `safeMode` | 0 normal; 1 custom faces off (3 in a row); 2 safe mode, no face drawn (2 more) |
+| `lastCrash` | `{"reason", "at" (Unix time, once the clock had the time), "uptime", "face", "custom"}` |
+
+The crash log and the protection need a signed-in session or the API key (`X-Api-Key`):
+
+| Request | |
+|---|---|
+| `GET /api/crashes` | The log file as it is (`application/octet-stream`; 204 when empty). `scripts/decode_crash.py` reads it |
+| `POST /api/crashes/resume` | Back to normal: faces drawn again, the count cleared; the log stays |
+| `POST /api/crashes/clear` | The log too |
+
+The file (`/crashes.bin` in the clock's storage, little-endian): a 20-byte header (`"CRLG"`,
+crashes ever logged, in a row now, level, entries), then up to 8 entries of 160 bytes,
+newest first. An entry: magic, build hash, the core's reason (1 hardware watchdog, 2
+exception, 3 software watchdog, 253 stack overflow, 254 panic), `exccause`, `epc1`-`epc3`,
+`excvaddr`, `depc`, uptime, free heap, free stack (each 4 bytes), the face id (signed), the
+custom face's name (24 bytes), the number of addresses and 16 code addresses found on the
+stack (4 bytes each), the time of the crash and the version (12 bytes). `src/crash.cpp`
+is the reference.
+
+```bash
+python scripts/decode_crash.py http://192.168.1.50   # CLOCK_API_KEY or CLOCK_PASSWORD
+python scripts/decode_crash.py crashes.bin           # the settings page's download
+```
+
+The script prints each crash with its cause and its addresses as function and file:line,
+using the matching release's `AIAgentMonitor_v<version>.elf` (attached to each release
+since 1.9.0).
 
 ## Home Assistant dashboards (geekmagic-hacs)
 

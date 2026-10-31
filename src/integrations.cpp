@@ -544,6 +544,9 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
 
 }  // namespace
 
+// The API key alone (the crash log's API accepts it as well as a signed-in session).
+bool integrationKeyOk() { return apiKeyOk(); }
+
 // ---------------------------------------------------------------- public
 uint32_t customFacesVersion() { return facesVersion; }
 
