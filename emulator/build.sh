@@ -30,24 +30,42 @@ if ! grep -q 'emulator: give up' "$mock"; then
   sed -i 's|^\(\s*\)int ret  = poll(&p, 1, timeout_ms);|&\n\1if (ret == 0) break;   // emulator: give up when the peer stops reading|' "$mock"
   grep -q 'emulator: give up' "$mock" || { echo "build.sh: could not patch $mock" >&2; exit 1; }
 fi
+# The clock's memory (memory.cpp) replaces the mock's fixed heap and stack numbers, its
+# reset reason and its restart(). Taken out of a pristine copy at each build.
+git -C /esp8266 checkout -q -- tests/host/common/MockEsp.cpp
+python3 - common/MockEsp.cpp <<'PY'
+import re, sys
+path = sys.argv[1]
+s = open(path).read()
+for name in ("getFreeHeap", "getMaxFreeBlockSize", "getFreeContStack", "getResetReason",
+             "restart", "getHeapStats"):
+    s, n = re.subn(r"\n[^\n]*EspClass::%s\([^)]*\)\n\{.*?\n\}\n" % name, "\n", s, flags=re.S)
+    if not n:
+        sys.exit("build.sh: could not take EspClass::%s out of %s" % (name, path))
+open(path, "w").write(s)
+PY
 # emu_build_flags.h: platformio.ini's build_flags, in every source. F_CPU also goes on
 # the command line: the core's forced includes (common/mock.h) read it before that
 # header. The core's objects do not track flags, so a new F_CPU rebuilds everything.
+# 32-bit (the chip's sizes for pointers, String and JSON slots, so memory use matches
+# it; needs g++-multilib) unless EMU_BITS=64.
 fcpu=$(sed -n 's/^#define F_CPU //p' "$work/generated/emu_build_flags.h")
-if [ "$(cat "$work/f_cpu" 2>/dev/null)" != "$fcpu" ]; then
+bits=${EMU_BITS:-32}
+if [ "$bits" = 32 ]; then force32=1; bindir=bin32; else force32=0; bindir=bin; fi
+if [ "$(cat "$work/f_cpu" 2>/dev/null)" != "$fcpu $bits" ]; then
   make clean >/dev/null
-  echo "$fcpu" > "$work/f_cpu"
+  echo "$fcpu $bits" > "$work/f_cpu"
 fi
 # -no-pie: TFT_eSPI keeps font addresses in 32-bit variables (pgm_read_dword), so the
 # binary's data must sit below 4 GB, as it does on the chip.
-make -j"$(nproc)" FORCE32=0 OPTZ=-O1 R=noexec USERLDFLAGS=-no-pie \
+make -j"$(nproc)" FORCE32=$force32 OPTZ=-O1 R=noexec USERLDFLAGS=-no-pie \
   ULIBDIRS=/libs/ArduinoJson:/libs/PubSubClient \
-  USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/emulator/panel.cpp \
-                  $root/src/faces.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/ascii.cpp \
+  USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/emulator/panel.cpp $root/emulator/memory.cpp \
+                  $root/src/faces.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/ascii.cpp $root/src/crash.cpp \
                   $work/TFT_eSPI/TFT_eSPI.cpp" \
   USERCSOURCES=/libs/TJpg_Decoder/src/tjpgd.c \
-  USERCFLAGS="-UF_CPU -DF_CPU=$fcpu -DSMARTCLOCK_EMULATOR=1 -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \
+  USERCFLAGS="-g -finstrument-functions -finstrument-functions-exclude-file-list=/emulator/,/esp8266/,/usr/ -UF_CPU -DF_CPU=$fcpu -DSMARTCLOCK_EMULATOR=1 -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \
               -I$work/TFT_eSPI -I/libs/TJpg_Decoder/src" \
   "$work/sketch/smartclock"
-cp -L bin/smartclock/smartclock "$out"
+cp -L $bindir/smartclock/smartclock "$out"
 echo "build.sh: $out"

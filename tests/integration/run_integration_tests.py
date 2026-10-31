@@ -276,6 +276,77 @@ def example_faces(emu):
         emu.delete_face(name)
 
 
+# Example faces known to crash under the clock's memory (a panic, then a restart), each
+# with its issue record; the case fails both on a new crash and on a listed face that
+# runs. Empty since the expression parser stopped recursing (spec 023).
+KNOWN_CRASHES = set()
+
+
+@case
+def example_faces_memory(emu):
+    """Every example face for 8 s with the clock running through a minute change, under
+    the clock's heap and stack (emulator/README.md "Memory"): no panic but the known ones."""
+    emu.set("facesapi", 1)
+    samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
+    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
+    crashed = {}
+    for name in names:
+        face = json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8"))
+        emu.clear_vars()
+        emu.clear_messages()
+        emu.apply_sample(samples.get(name, {}))
+        before = (emu.stats()["lastCrash"] or {}).get("at")
+        try:
+            emu.push_face(name, face, show=True)
+            emu.set_time(local="2026-10-05T10:09:55", speed=1)
+            time.sleep(8)
+        except OSError:
+            pass   # a panic drops the request in flight: the crash record tells
+        crash = emu.stats()["lastCrash"]
+        if crash and crash.get("at") != before:
+            # The firmware boots back into the face and panics again, as the clock did:
+            # start again from blank storage.
+            crashed[name] = crash["reason"]
+            emu.start(build=False)
+            emu.sign_in()
+            emu.set("tz", TZ)
+            baseline(emu)
+            emu.set("facesapi", 1)
+        else:
+            emu.fix_time(FIXED_TIME)
+            emu.delete_face(name)
+    new = {n: r for n, r in crashed.items() if n not in KNOWN_CRASHES}
+    check(not new, f"crashed under the clock's memory: {new}")
+    check(not KNOWN_CRASHES - set(crashed), f"no longer crash, take them out of KNOWN_CRASHES: {KNOWN_CRASHES - set(crashed)}")
+    stats = emu.stats()
+    print(f"  heap {stats['heap']['free']} B free, lowest {stats['heap']['low']} B, "
+          f"stack {stats['stack']['maxUsed']} of {stats['stack']['size']} B")
+
+
+@case
+def crash_loop_protection(emu):
+    """Crash records and crash-loop protection (spec 021): 3 crashes in a row turn custom
+    faces off, 2 more give safe mode; Resume and Clear; the log is the firmware's file."""
+    for n in range(1, 6):
+        emu.panic()
+        s = emu.status()
+        check(s["resetReason"] == "Software/System restart", f"crash {n}: reset reason {s['resetReason']}")
+        check(s["crashes"] == n and s["crashLoop"] == n, f"crash {n}: {s.get('crashes')}, {s.get('crashLoop')} in a row")
+        check(s["lastCrash"]["reason"] == "panic", f"crash {n}: {s['lastCrash']}")
+        check(s["safeMode"] == (2 if n >= 5 else 1 if n >= 3 else 0), f"crash {n}: level {s['safeMode']}")
+    shot(emu, "safe_mode")
+    emu.sign_in()
+    expect_error(401, "Sign in", lambda: Emulator().request("GET", emu.api + "/api/crashes"))
+    status, blob, headers = emu.request("GET", emu.api + "/api/crashes")
+    check(status == 200 and blob[:4] == b"CRLG" and len(blob) == 20 + 5 * 160, f"log file: {status}, {len(blob)} B")
+    emu.post("/api/crashes/resume")
+    s = emu.status()
+    check(s["safeMode"] == 0 and s["crashLoop"] == 0 and s["crashes"] == 5, f"after Resume: {s}")
+    emu.post("/api/crashes/clear")
+    check("crashes" not in emu.status(), "after Clear: crash fields still in /status")
+    check(emu.request("GET", emu.api + "/api/crashes")[0] == 204, "after Clear: the log is still there")
+
+
 @case
 def face_variables(emu):
     """Variable options: names, null, $add, $ttl, $history, age, and $persist across a restart."""

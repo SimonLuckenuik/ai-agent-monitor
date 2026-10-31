@@ -22,11 +22,13 @@ The screen server's endpoints, for scripts:
 | Endpoint | Returns |
 |---|---|
 | `GET /ws` | WebSocket. Binary messages: byte 0 = 1, byte 1 = backlight percent, bytes 2–3 = first row, bytes 4–5 = row count (little-endian), then those rows as RGB565 little-endian. The whole screen on connect, then only rows that changed, at most every 33 ms; a message with 0 rows reports a backlight change. Up to 4 viewers |
+| `GET /stats` | The device's statistics: `{"uptime","cpuMHz","cpuLoad" (% of the last second the modelled clock was busy drawing),"heap":{"size","free","low","maxBlock"},"stack":{"size","maxUsed"},"lastCrash"}`. `lastCrash` is null or `{"reason","detail","uptime","at" (Unix time),"trace":["function at file:line", ...]}`, kept in `/data/last-crash.json` until the next crash. Also sent on `/ws` as a text message each second |
 | `GET /fb` | The framebuffer: 240×240 RGB565, little-endian (115,200 bytes); headers `X-Backlight` (percent) and `X-Frame` |
 | `GET /password` | The device password (plain text) |
 | `GET /fs?path=/faces` | A directory: `{"path","total","used","entries":[{"name","dir","size"}]}` |
 | `GET /fs/file?path=/config.json` | A file; `&download=1` as an attachment |
 | `POST /power`, `POST /reset` | Power cycle, external reset |
+| `POST /panic` | The firmware panics in its next `loop()`: its crash record, the crash log and crash-loop protection (spec 021) run as on the clock. The screen page's **Crash** button. A panic in the first 30 s after boot starts recovery instead, as on the clock |
 | `POST /time?epoch=N` | Sets the firmware's clock to Unix time N, stopped, across restarts (`0`: the real time again). `local=2026-10-05T07:45[:SS]` instead of `epoch` is a time in the clock's zone; `add=S` moves it by S seconds; `speed=X` runs it at X times real time (0 stops it; alone, it changes the pace and keeps the time) |
 | `GET /time` | `{"epoch","local","zone","mocked","speed"}`: the time the firmware sees |
 | `POST /weather` | An Open-Meteo forecast reply (the clock's own request: `current` and `daily`, plus an optional `"city"`) used instead of the network, and applied now; `DELETE /weather` goes back to fetching; `GET /weather` returns it (`null`: live) |
@@ -87,6 +89,7 @@ version PlatformIO uses (3.1.2) and the library versions `platformio.ini` resolv
 | File | Does |
 |---|---|
 | `fw_main.cpp` | Includes `src/main.cpp` with `setup()`/`loop()` renamed, and reroutes what the host core lacks: `configTime()` (the core's is a stub that ignores the zone), `EEPROM.end()`'s return value, the backlight PWM |
+| `memory.cpp` | The clock's heap and stack (below): the allocator, the stack depth hook, the panic and its crash record |
 | `emulator.cpp` | Wraps `setup()`/`loop()`, serves the screen on port 8080, and provides the RTC user memory, reset reason, hardware RNG and button interrupt |
 | `run.sh` | The power supply: restarts the firmware when it reboots, with the matching reset reason |
 | `screen.html` | The screen page |
@@ -148,9 +151,33 @@ step with the work it does.
 | RTC memory (crash marker) | `/data/rtc.bin`, cleared by **Power cycle** |
 | Reboot (`ESP.restart()`) | The process exits and `run.sh` starts it again |
 | Firmware update | The upload and all its checks run, plain `.bin` or `.bin.gz`, and the image is staged; the final commit fails ("Firmware commit failed": the host emulation has no flash outside the storage area), so the emulator keeps its build |
-| Free heap | Fixed at 30,000 bytes: memory limits are not emulated |
+| Heap, stack | The chip's sizes and failures (below) |
 
 The flash budget is not checked here: `pio run` still decides whether a change fits.
+
+## Memory
+
+The emulator is a 32-bit program (`build.sh`, `EMU_BITS=64` for a native one), so
+pointers, `String` and JSON slots have the chip's sizes. While the firmware runs
+(`setup()` and each `loop()`), its allocations come from a fixed arena run the way the
+chip's allocator (umm_malloc) runs its heap: 8-byte blocks, 4 bytes of header, best fit,
+so fragmentation adds up as it does there. A single block of 64 KB or more is the host
+mock's own (a UDP socket takes 128 KB) and stays on the host heap.
+
+The firmware's own frames are held to the chip's 4 KB stack: it is built with
+`-finstrument-functions`, and each function entry measures its depth. The host mock and
+glibc under it (network lookups, `printf`) are much deeper than their chip counterparts
+and are not counted.
+
+| Variable | Default | |
+|---|---|---|
+| `EMU_HEAP` | 25600 | Arena bytes: the clock had about 15.7 KB free at rest with built-in faces (1.8.0), the emulator's firmware uses about 9.8 KB there |
+| `EMU_STACK` | 4096 | Stack bytes for the firmware's frames. The host's x86 frames are not the chip's Xtensa ones: compare `stackFree` in `/status` on the clock and here, and adjust |
+
+Out of memory in `new` and a stack overflow end as on the chip: a panic, and the next
+boot reports "Software/System restart". The log shows the cause and the call chain
+(`addr2line`), and `GET /stats` and the screen page's **Device** panel show it as the
+last crash. `malloc()` returning null is not a panic, as on the chip.
 
 ## Reset reasons
 

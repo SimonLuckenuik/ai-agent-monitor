@@ -8,7 +8,7 @@
 # ---- Dependencies: the same core and library versions as platformio.ini resolves.
 FROM debian:bookworm-slim AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential git python3 ca-certificates \
+      build-essential g++-multilib git python3 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 ARG CORE_VERSION=3.1.2
 RUN git clone --quiet --depth 1 --branch ${CORE_VERSION} https://github.com/esp8266/Arduino /esp8266 \
@@ -31,7 +31,12 @@ COPY emulator /app/emulator
 RUN sh /app/emulator/build.sh /app /smartclock
 
 # ---- Run: the emulator binary, the screen page and the supervisor.
+# The binary is 32-bit, as the chip is (build.sh); addr2line turns a crash's addresses
+# into file:line for the log and the screen page.
 FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libc6-i386 lib32stdc++6 lib32gcc-s1 binutils \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /smartclock /emulator/smartclock
 COPY emulator/screen.html emulator/presets.json emulator/run.sh /emulator/
 # The Scenarios panel loads the example faces and their sample values.

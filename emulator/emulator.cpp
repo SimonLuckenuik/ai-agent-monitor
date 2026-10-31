@@ -3,12 +3,16 @@
 //
 //   port 80    the firmware's own web server, unchanged
 //   port 8080  GET /          screen.html
-//              GET /ws        WebSocket: the screen as it changes (see wsPush)
+//              GET /ws        WebSocket: the screen as it changes (see wsPush), and /stats
+//                             as a text message each second
 //              GET /fb        the 240x240 RGB565 framebuffer (little-endian, 115,200 B);
 //                             X-Backlight: percent, X-Frame: frame counter
 //              GET /timing    the drawing-speed model's totals (panel.cpp); &reset=1 zeroes them
+//              GET /stats     the device's statistics: uptime, CPU load (modelled), heap and
+//                             stack (memory.cpp), the last crash; also sent on /ws each second
 //              POST /power    power cycle (the supervisor restarts with a power-on reset)
 //              POST /reset    external reset (same reset reason as the EN pin)
+//              POST /panic    the firmware panics in its next loop() (crash record, crash loops)
 //              GET /password  the device password, for the settings link's auto sign-in
 //              GET /fs?path=  a LittleFS directory as JSON (read-only)
 //              GET /fs/file?path=[&download=1]  a LittleFS file
@@ -37,6 +41,11 @@
 
 void fw_setup();
 void fw_loop();
+void emuRunFirmware(void (*f)());   // memory.cpp: the clock's heap and stack
+void emuExit(int code);
+void emuRequestPanic();
+String emuMemoryJson();
+extern double emuBusy;   // panel.cpp: the modelled clock's busy time, us
 extern uint16_t emuPanel[240 * 240];   // panel.cpp: what the panel's glass shows
 String emuTimingJson(bool reset);       // panel.cpp
 constexpr int PANEL_W = 240, PANEL_H = 240;
@@ -137,9 +146,14 @@ String readFile(const char* path) {
 
 // The supervisor (run.sh) reads this marker to pick the next boot's reset reason.
 // exit() rather than _exit(): the core's atexit handler writes the flash image back.
-void exitWith(const char* reason) {
+}  // namespace
+void emuSetNextReset(const char* reason) {   // memory.cpp too
   FILE* f = fopen(dataPath("next-reset").c_str(), "w");
   if (f) { fputs(reason, f); fclose(f); }
+}
+namespace {
+void exitWith(const char* reason) {
+  emuSetNextReset(reason);
   exit(0);
 }
 
@@ -329,6 +343,45 @@ bool wsSend(WiFiClient& c, int firstRow, int rows) {
 
 void wsPush(bool now = false);
 
+bool wsSendText(WiFiClient& c, const String& text) {
+  size_t n = text.length();
+  uint8_t head[4] = {0x81};   // FIN, text
+  size_t headLen = 2;
+  if (n < 126) head[1] = uint8_t(n);
+  else { head[1] = 126; head[2] = uint8_t(n >> 8); head[3] = uint8_t(n); headLen = 4; }
+  return writeAll(c, head, headLen) && writeAll(c, reinterpret_cast<const uint8_t*>(text.c_str()), n) &&
+         c.connected();
+}
+
+// ---- Device statistics (GET /stats, and on /ws each second)
+double busyAt = 0, busyLoad = 0;   // emuBusy at the last tick; its share of the last second
+uint32_t statsAt = 0;
+
+String lastCrashJson() {
+  String s = readFile(dataPath("last-crash.json").c_str());
+  s.trim();
+  return s.length() ? s : String("null");
+}
+
+String statsJson() {
+  char b[96];
+  snprintf(b, sizeof(b), "{\"uptime\":%u,\"cpuMHz\":%d,\"cpuLoad\":%.0f,", unsigned(millis() / 1000),
+           int(F_CPU / 1000000), busyLoad);
+  String memory = emuMemoryJson();   // {"heap":...,"stack":...}
+  return b + memory.substring(1, memory.length() - 1) + ",\"lastCrash\":" + lastCrashJson() + "}";
+}
+
+void statsTick() {
+  uint32_t now = millis();
+  if (now - statsAt < 1000) return;
+  busyLoad = std::min(100.0, (emuBusy - busyAt) / ((now - statsAt) * 10.0));
+  busyAt = emuBusy;
+  statsAt = now;
+  String json = statsJson();
+  for (WiFiClient& c : wsClients)
+    if (c && !wsSendText(c, json)) { c.stop(); c = WiFiClient(); }
+}
+
 void wsAccept(WiFiClient& c, const String& key) {
   int slot = -1;
   for (int i = 0; i < WS_MAX; ++i) if (!wsClients[i] || !wsClients[i].connected()) { slot = i; break; }
@@ -435,6 +488,8 @@ void handleRequest(WiFiClient& c, const String& head) {
     sendHeaders(c, "application/octet-stream", sizeof(emuPanel),
                 "X-Backlight: " + String(backlightPercent()) + "\r\nX-Frame: " + String(frames) + "\r\n");
     writeAll(c, reinterpret_cast<const uint8_t*>(emuPanel), sizeof(emuPanel));
+  } else if (path == "/stats") {
+    sendText(c, 200, "application/json", statsJson());
   } else if (path == "/timing") {
     sendText(c, 200, "application/json", emuTimingJson(queryArg(query, "reset") == "1"));
   } else if (path == "/password") {   // for the screen page's sign-in link
@@ -506,6 +561,9 @@ void handleRequest(WiFiClient& c, const String& head) {
       bool ok = fetchWeather();   // applied now; the faces redraw on their next pass
       sendText(c, ok ? 200 : 502, "text/plain", ok ? String("OK") : wx.error);
     }
+  } else if (method == "POST" && path == "/panic") {
+    sendText(c, 200, "text/plain", "OK");
+    emuRequestPanic();
   } else if (method == "POST" && (path == "/power" || path == "/reset")) {
     sendHeaders(c, "text/plain", 2);
     c.print("OK");
@@ -538,6 +596,27 @@ bool rtcAccess(uint8_t block, uint32_t* data, size_t size, bool write) {
 
 }  // namespace
 
+// memory.cpp, on a panic: kept in the data folder for /stats until the next one.
+void emuRecordCrash(const char* reason, const char* detail, const String& trace) {
+  String lines = "[";
+  int at = 0;
+  while (at < int(trace.length())) {
+    int end = trace.indexOf('\n', at);
+    if (end < 0) end = trace.length();
+    String line = trace.substring(at, end);
+    line.trim();
+    if (line.length()) lines += String(lines.length() > 1 ? "," : "") + "\"" + jsonEscape(line) + "\"";
+    at = end + 1;
+  }
+  lines += "]";
+  FILE* f = fopen(dataPath("last-crash.json").c_str(), "w");
+  if (!f) return;
+  fprintf(f, "{\"reason\":\"%s\",\"detail\":\"%s\",\"uptime\":%u,\"at\":%ld,\"trace\":%s}\n",
+          jsonEscape(reason).c_str(), jsonEscape(detail).c_str(), unsigned(millis() / 1000),
+          long(time(nullptr)), lines.c_str());
+  fclose(f);
+}
+
 // panel.cpp, while it sleeps off a slow draw: the screen page sees it as it happens.
 void emuScreenPush() { wsPush(false); }
 
@@ -558,17 +637,30 @@ bool EspClass::rtcUserMemoryWrite(uint32_t offset, uint32_t* data, size_t size) 
   return rtcAccess(offset, data, size, true);
 }
 
-// Reset reason for this boot, from the supervisor: power-on, external, software or crash.
+// Reset reason for this boot, from the supervisor: power-on, external, software, a
+// panic (out of memory in new, stack overflow: memory.cpp) or a crash.
 struct rst_info* EspClass::getResetInfoPtr() {
   static rst_info info{};
   const char* r = getenv("EMU_RESET");
   String reason = r ? r : "power";
   info.reason = reason == "soft" ? REASON_SOFT_RESTART
               : reason == "ext"  ? REASON_EXT_SYS_RST
+              : reason == "panic" ? REASON_SOFT_RESTART   // as the chip reports a panic
               : reason == "crash" ? REASON_EXCEPTION_RST
               : REASON_DEFAULT_RST;
   return &info;
 }
+String EspClass::getResetReason() {
+  switch (getResetInfoPtr()->reason) {
+    case REASON_SOFT_RESTART:  return "Software/System restart";
+    case REASON_EXT_SYS_RST:   return "External System";
+    case REASON_EXCEPTION_RST: return "Exception";
+    default:                   return "Power on";
+  }
+}
+// The mock's restart() calls exit() where it stands, which may be the clock's small
+// stack; emuExit() leaves from the host's.
+void EspClass::restart() { emuExit(EXIT_SUCCESS); }
 
 // The backlight PWM (GPIO5, active-low) feeds the brightness shown by screen.html.
 void emuAnalogWrite(uint8_t pin, int value) {
@@ -588,15 +680,17 @@ void setup() {
     LittleFS.begin();
     LittleFS.end();
   }
+  setvbuf(stdout, nullptr, _IOLBF, 0);   // docker logs: each line as it is written
   screenServer.begin();
   printf("emulator: firmware on port 80, screen on port 8080 (reset: %s)\n",
          getenv("EMU_RESET") ? getenv("EMU_RESET") : "power");
-  fw_setup();
+  emuRunFirmware(fw_setup);
 }
 
 void loop() {
-  fw_loop();
+  emuRunFirmware(fw_loop);
   ++frames;
   serveScreen();
   wsPush();
+  statsTick();
 }

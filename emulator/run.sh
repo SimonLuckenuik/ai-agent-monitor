@@ -35,6 +35,9 @@ while true; do
   else
     reset=crash
     echo "emulator: firmware exited with $code, restarting as after a crash"
+    # A panic writes its own record (memory.cpp); this is any other crash.
+    printf '{"reason":"crash (exit code %s)","detail":"see the emulator log","at":%s,"trace":[]}\n' \
+      "$code" "$(date +%s)" > last-crash.json
   fi
   [ "$reset" = power ] && rm -f rtc.bin
   sleep 1

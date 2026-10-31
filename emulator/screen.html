@@ -61,6 +61,29 @@
   .viewer pre { margin: 0; font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
   .viewer img { max-width: 100%; image-rendering: pixelated; background: #000; }
 
+  dialog#status-dialog { width: min(720px, calc(100vw - 32px)); height: min(640px, calc(100vh - 64px)); padding: 16px;
+                         border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--text);
+                         flex-direction: column; gap: 10px; }
+  dialog#status-dialog[open] { display: flex; }
+  dialog#status-dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog#status-dialog header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  dialog#status-dialog .buttons { margin: 0; }
+  dialog#status-dialog iframe { flex: 1; width: 100%; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .device { grid-column: 1 / -1; }
+  .device header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 18px; }
+  .meter .label { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+  .meter .value { font-size: 20px; font-variant-numeric: tabular-nums; }
+  .meter .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; }
+  .meter .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .meter.hot .bar span { background: var(--warn); }
+  .meter.hot .value { color: var(--warn); }
+  .crash { margin-top: 14px; border: 1px solid var(--warn); border-radius: 10px; padding: 10px 12px; }
+  .crash strong { color: var(--warn); }
+  .fwlog h2 { margin: 16px 0 4px; }
+  .fwlog ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+  .fwlog .on { color: var(--warn); }
+  .crash pre { margin: 8px 0 0; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
   .scenarios { grid-column: 1 / -1; }
   .scenarios header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
@@ -109,15 +132,35 @@
     </dl>
     <div class="buttons">
       <a class="button primary" id="settings" target="_blank" rel="noopener">Settings page</a>
-      <a class="button" id="status" target="_blank" rel="noopener">/status</a>
+      <button id="status" title="The firmware's /status, in a window over this page">/status</button>
     </div>
     <div class="buttons">
       <button data-post="/power" title="Unplug and plug back in: a power-on reset, RTC memory cleared">Power cycle</button>
       <button data-post="/reset" title="An external (EN pin) reset">Reset</button>
+      <button data-post="/panic" title="The firmware panics in its next loop: a crash record, and a step toward crash-loop protection">Crash</button>
       <button id="recovery" title="Three boots that each end within 10 s">Enter recovery</button>
     </div>
     <small>The clock's own web server is the firmware on port 80 of the container
       (<span id="clockurl"></span>). Open this page with <code>?clock=&lt;port&gt;</code> if you mapped it elsewhere.</small>
+  </section>
+  <section class="panel device">
+    <header>
+      <div><h1>Device</h1><small>The clock's memory and load as the firmware sees them: the heap and the 4 KB stack are the chip's sizes, the load is the drawing-speed model's.</small></div>
+      <small id="dev-up">–</small>
+    </header>
+    <div class="meters">
+      <div class="meter" id="m-cpu"><div class="label"><span>CPU</span><span id="m-cpu-mhz"></span></div><div class="value">–</div><div class="bar"><span></span></div></div>
+      <div class="meter" id="m-heap"><div class="label"><span>Heap free</span><span id="m-heap-size"></span></div><div class="value">–</div><div class="bar"><span></span></div></div>
+      <div class="meter" id="m-low"><div class="label"><span>Lowest free</span><span>since boot</span></div><div class="value">–</div><div class="bar"><span></span></div></div>
+      <div class="meter" id="m-block"><div class="label"><span>Largest block</span><span>free</span></div><div class="value">–</div><div class="bar"><span></span></div></div>
+      <div class="meter" id="m-stack"><div class="label"><span>Stack, deepest</span><span id="m-stack-size"></span></div><div class="value">–</div><div class="bar"><span></span></div></div>
+    </div>
+    <div class="crash" id="crash" hidden></div>
+    <div class="fwlog" id="fwlog" hidden>
+      <h2>The firmware's crash log</h2>
+      <small id="fwlog-state"></small>
+      <ul id="fwlog-list"></ul>
+    </div>
   </section>
   <section class="panel scenarios">
     <header>
@@ -222,6 +265,19 @@
     </div>
   </section>
 </main>
+<dialog id="status-dialog">
+  <header>
+    <h1>/status</h1>
+    <div class="buttons">
+      <button id="status-refresh">Refresh</button>
+      <a class="button" id="status-open" target="_blank" rel="noopener">Open in a tab</a>
+      <button id="status-close">Close</button>
+    </div>
+  </header>
+  <!-- A frame: the firmware's port is another origin, and /status sends no CORS
+       header (as on the clock), so this page cannot read it to reformat it. -->
+  <iframe id="status-frame" title="The firmware's /status"></iframe>
+</dialog>
 <script>
 const params = new URLSearchParams(location.search);
 const clock = `${location.protocol}//${location.hostname}:${params.get("clock") || "8000"}`;
@@ -236,6 +292,12 @@ async function refreshSettingsLink() {
   } catch {}
 }
 refreshSettingsLink();
+// Always a separate tab (one, reused), even where a plain target=_blank opens in place.
+settings.onclick = e => {
+  if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;   // the browser's own link handling
+  e.preventDefault();
+  window.open(settings.href, "aam-settings");
+};
 setInterval(refreshSettingsLink, 5000);   // it changes with the System card, or a new volume
 
 // ---- Zoom. "Real" is the panel's physical size: 1.54" diagonal, a 1.09" square
@@ -257,7 +319,13 @@ for (const [label, px] of zooms) {
 let savedZoom = 360;
 try { savedZoom = Number(localStorage.getItem("emu-zoom")) || 360; } catch {}
 setZoom(zooms.some(([, px]) => px === savedZoom) ? savedZoom : 360);
-document.getElementById("status").href = clock + "/status";
+const statusDialog = document.getElementById("status-dialog"), statusFrame = document.getElementById("status-frame");
+const loadStatus = () => { statusFrame.src = `${clock}/status?t=${Date.now()}`; };
+document.getElementById("status-open").href = clock + "/status";
+document.getElementById("status").onclick = () => { loadStatus(); statusDialog.showModal(); };
+document.getElementById("status-refresh").onclick = loadStatus;
+document.getElementById("status-close").onclick = () => statusDialog.close();
+statusDialog.onclick = e => { if (e.target === statusDialog) statusDialog.close(); };   // the backdrop
 document.getElementById("clockurl").textContent = clock;
 
 const canvas = document.getElementById("screen");
@@ -293,6 +361,7 @@ function connect() {
   ws.binaryType = "arraybuffer";
   ws.onopen = () => { state.textContent = "running"; state.className = ""; };
   ws.onmessage = e => {
+    if (typeof e.data === "string") { showStats(JSON.parse(e.data)); return; }
     const head = new DataView(e.data, 0, 6);
     setBacklight(head.getUint8(1));
     const first = head.getUint16(2, true), rows = head.getUint16(4, true);
@@ -304,6 +373,83 @@ function connect() {
   };
 }
 connect();
+
+// ---- Device statistics: /stats on load, then a text message on /ws each second.
+const kb = n => `${(n / 1024).toFixed(1)} KB`;
+function meter(id, value, share, hot) {
+  const m = document.getElementById(id);
+  m.querySelector(".value").textContent = value;
+  m.querySelector(".bar span").style.width = `${Math.max(0, Math.min(100, share * 100))}%`;
+  m.classList.toggle("hot", hot);
+}
+function crashAgo(at) {
+  const s = Math.max(0, Math.round(Date.now() / 1000 - at));
+  return s < 90 ? `${s} s ago` : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : new Date(at * 1000).toLocaleString();
+}
+function showStats(s) {
+  document.getElementById("dev-up").textContent = `up ${s.uptime} s`;
+  document.getElementById("m-cpu-mhz").textContent = `${s.cpuMHz} MHz`;
+  meter("m-cpu", `${s.cpuLoad} %`, s.cpuLoad / 100, s.cpuLoad >= 90);
+  const h = s.heap, k = s.stack;
+  document.getElementById("m-heap-size").textContent = `of ${kb(h.size)}`;
+  meter("m-heap", kb(h.free), h.free / h.size, h.free < 4096);
+  meter("m-low", kb(h.low), h.low / h.size, h.low < 4096);
+  meter("m-block", kb(h.maxBlock), h.maxBlock / h.size, h.maxBlock < 6144);
+  document.getElementById("m-stack-size").textContent = `of ${k.size} B`;
+  meter("m-stack", `${k.maxUsed} B`, k.maxUsed / k.size, k.maxUsed > k.size * 0.85);
+  const box = document.getElementById("crash"), c = s.lastCrash;
+  box.hidden = !c;
+  if (!c) { crashShown = null; return; }
+  // Rebuilt only for a new crash, so an open call chain stays open; the age ticks.
+  const key = `${c.at}|${c.reason}`;
+  if (key !== crashShown) {
+    crashShown = key;
+    box.replaceChildren(
+      el("div", {}, el("strong", { textContent: `Last crash: ${c.reason}` }), el("span", { id: "crash-when" })),
+      el("small", { textContent: c.detail || "" }),
+      ...(c.trace && c.trace.length ? [el("details", {}, el("summary", { textContent: `Call chain (${c.trace.length})` }),
+          el("pre", { textContent: c.trace.join("\n") }))] : []));
+  }
+  document.getElementById("crash-when").textContent =
+    ` ${c.at ? crashAgo(c.at) : ""}${c.uptime !== undefined ? `, after ${c.uptime} s up` : ""}`;
+}
+let crashShown = null;
+fetch("/stats", { cache: "no-store" }).then(r => r.json()).then(showStats).catch(() => {});
+
+// The firmware's own crash log (/crashes.bin in its storage, src/crash.cpp's layout): what the
+// clock keeps and its settings page shows. Read through the storage reader, no sign-in.
+let fwlogSeen = "";
+async function showFirmwareLog() {
+  let buf;
+  try {
+    const r = await fetch("/fs/file?path=/crashes.bin", { cache: "no-store" });
+    buf = r.ok ? await r.arrayBuffer() : null;
+  } catch { return; }
+  const box = document.getElementById("fwlog");
+  if (!buf || buf.byteLength < 20) { box.hidden = true; fwlogSeen = ""; return; }
+  const d = new DataView(buf), u = o => d.getUint32(o, true);
+  const key = Array.from(new Uint8Array(buf, 0, 20)).join(",") + buf.byteLength;
+  if (key === fwlogSeen) return;
+  fwlogSeen = key;
+  const txt = (o, n) => String.fromCharCode(...new Uint8Array(buf, o, n)).replace(/\0.*$/s, "");
+  const why = { 1: "hardware watchdog", 2: "exception", 3: "software watchdog", 253: "stack overflow", 254: "panic" };
+  const level = u(12);
+  const state = document.getElementById("fwlog-state");
+  state.textContent = `${u(4)} crash${u(4) === 1 ? "" : "es"} logged, ${u(8)} in a row now. ` +
+    (level > 1 ? "Safe mode: no face is drawn." : level ? "Custom faces are off." : "Faces run normally.");
+  state.className = level ? "on" : "";
+  const items = [];
+  for (let i = 0; i < u(16) && 20 + (i + 1) * 160 <= buf.byteLength; i++) {
+    const o = 20 + i * 160, at = u(o + 144), face = d.getInt32(o + 48, true), name = txt(o + 52, 24);
+    items.push(el("li", { textContent: `${why[u(o + 8)] || "crash"}${at ? " " + crashAgo(at) : ""}, after ${u(o + 36)} s up` +
+      (face >= 0 ? `, drawing ${name || "face " + face}` : "") +
+      `, heap ${u(o + 40)} B, stack ${u(o + 44)} B free, v${txt(o + 148, 12)}` }));
+  }
+  document.getElementById("fwlog-list").replaceChildren(...items);
+  box.hidden = false;
+}
+showFirmwareLog();
+setInterval(showFirmwareLog, 5000);
 setInterval(() => { document.getElementById("frames").textContent = `${updates} / s`; updates = 0; }, 1000);
 
 const post = path => fetch(path, { method: "POST" }).catch(() => {});

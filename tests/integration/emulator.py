@@ -179,6 +179,30 @@ class Emulator:
         """The emulator's view: {"facesApi", "showing", "faces", "vars": {name: {...}}}."""
         return json.loads(self.request("GET", self.screen + "/vars")[1])
 
+    def stats(self, timeout=30):
+        """GET :8080/stats: {"uptime", "cpuLoad", "heap", "stack", "lastCrash"}. Waits out a
+        restart (the screen server is the firmware's process)."""
+        end = time.time() + timeout
+        while True:
+            try:
+                return json.loads(self.request("GET", self.screen + "/stats", timeout=5)[1])
+            except (OSError, HttpError, ValueError):
+                if time.time() > end:
+                    raise
+                time.sleep(0.5)
+
+    def panic(self, after=40):
+        """The firmware panics in its next loop() (POST :8080/panic), once it has been up
+        `after` seconds (a crash in the first 30 s after setup() is the startup-recovery
+        case instead, and setup() itself takes a moment);
+        returns when the next boot has settled."""
+        while self.status()["uptime"] < after:
+            time.sleep(1)
+        self.request("POST", self.screen + "/panic", b"")
+        time.sleep(3)
+        self.wait_ready()
+        self.jar.clear()
+
     def fix_weather(self, reply):
         """Replaces the Open-Meteo fetch with this reply (None: the network again)."""
         if reply is None:

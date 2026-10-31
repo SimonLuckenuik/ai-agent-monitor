@@ -127,6 +127,9 @@ struct Clock {
 
 void emuScreenPush();   // emulator.cpp: the screen page sees a slow draw as it happens
 
+// The modelled clock's busy time so far, in us (GET :8080/stats turns it into a load).
+double emuBusy = 0;
+
 // One TFT_eSPI call that sent `bytes` bytes.
 void emuCharge(uint32_t bytes) {
   double now = nowUs(), gap = now - clk.lastExit;
@@ -135,6 +138,7 @@ void emuCharge(uint32_t bytes) {
   clk.cur.cpuUs += gap; clk.cur.workCycles += clk.pendingCycles; clk.pendingCycles = 0;
   clk.cur.spiUs += spi; clk.cur.clockUs += cost; clk.cur.calls++;
   clk.debtUs += cost;
+  emuBusy += cost;
   if (!clk.on) clk.debtUs = 0;
   if (clk.debtUs >= 1000) {
     double until = now + clk.debtUs;
