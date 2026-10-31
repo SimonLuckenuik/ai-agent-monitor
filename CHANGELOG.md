@@ -7,6 +7,21 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 1.9.0 - 2026-10-31
+
+Custom faces that can no longer run out of the clock's stack, crash records, and a
+clock that stops itself from crashing in a loop.
+
+### Upgrading
+
+- **From 1.4.0 on:** install `AIAgentMonitor_v1.9.0.bin.gz` from the Firmware update
+  card. Settings, saved faces and photos are kept. Faces that restarted the clock
+  (retro-runner, flip-clock-wide, night-lake) can be sent again.
+- **A new clock** (stock firmware, or SmartClock-OSS 1.3.x or earlier): install
+  `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
+  `AIAgentMonitor_v1.9.0.bin.gz`.
+- `AIAgentMonitor_v1.9.0.elf` is for `scripts/decode_crash.py`, not for the clock.
+
 ### Fixed
 
 - **Custom faces with nested expressions no longer restart the clock.** Retro-runner,
@@ -42,6 +57,15 @@ and two flip clocks among new and livelier example faces.
 - **A new clock** (stock firmware, or SmartClock-OSS 1.3.x or earlier): install
   `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
   `AIAgentMonitor_v1.8.0.bin.gz`.
+
+### Known issue
+
+- Retro-runner, flip-clock-wide and night-lake (and other custom faces with
+  expressions nested in parentheses) can restart the clock, and keep restarting it
+  while the face is selected: the expression parser ran out of the clock's 4 KB stack.
+  Fixed in 1.9.0, which also turns custom faces off by itself after three crashes in a
+  row. Until you update, delete the face through the API in the seconds after a
+  restart, or turn Custom faces off in Integrations.
 
 ### Changed
 
@@ -81,6 +105,16 @@ address screen after a restart.
   `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release first, then
   `AIAgentMonitor_v1.7.0.bin.gz`.
 
+### Known issue
+
+- Custom faces with expressions nested in parentheses can restart the clock while it
+  repaints a moving item (retro-runner, flip-clock-wide and night-lake among the
+  example faces), and keep restarting it while the face is selected: the expression
+  parser ran out of the clock's 4 KB stack. Fixed in 1.9.0, which also turns custom
+  faces off by itself after three crashes in a row. Until you update, delete the face
+  through the API in the seconds after a restart, or turn Custom faces off in
+  Integrations.
+
 ### Changed
 
 - **The plugin (0.5.1)**: the skill says which changes repaint only around an item.
@@ -114,6 +148,14 @@ night, and an emulator that mocks the time, the weather and pushed values.
   `waiting` icon is orange (was yellow) and `running` blue (was light blue).
 - **Custom faces without `bg` or `color`** now take the clock's background and text
   colours (black and white unless the user changes them).
+
+### Known issue
+
+- Custom faces with expressions nested several levels deep in parentheses can restart
+  the clock, and keep restarting it while the face is selected: the expression parser
+  ran out of the clock's 4 KB stack. Fixed in 1.9.0, which also turns custom faces off
+  by itself after three crashes in a row. Until you update, delete the face through
+  the API in the seconds after a restart, or turn Custom faces off in Integrations.
 
 ### Added
 
@@ -184,6 +226,14 @@ faces.
   `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release, then the latest
   `.bin.gz`. The firmware is no longer held to the size of a plain image.
 
+### Known issue
+
+- Custom faces with expressions nested several levels deep in parentheses can restart
+  the clock, and keep restarting it while the face is selected: the expression parser
+  ran out of the clock's 4 KB stack. Fixed in 1.9.0, which also turns custom faces off
+  by itself after three crashes in a row. Until you update, delete the face through
+  the API in the seconds after a restart, or turn Custom faces off in Integrations.
+
 ### Added
 
 - **Placeholders** in groups: `time.` (also `epoch`, `daymin`, `zone`), `date.` (also
@@ -251,6 +301,14 @@ tiles and Day tiles, Weather Icons, French, night color, and compressed updates.
   update.
 - The setup network, hostname and MQTT topics change names (see Changed): with MQTT
   on, remove the old device in Home Assistant.
+
+### Known issue
+
+- Custom faces with expressions nested several levels deep in parentheses can restart
+  the clock, and keep restarting it while the face is selected: the expression parser
+  ran out of the clock's 4 KB stack. Fixed in 1.9.0, which also turns custom faces off
+  by itself after three crashes in a row. Until you update, delete the face through
+  the API in the seconds after a restart, or turn Custom faces off in Integrations.
 
 ### Added
 

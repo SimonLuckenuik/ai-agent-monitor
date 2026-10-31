@@ -6,15 +6,17 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **1.8.0** (2026-10-30, tag `v1.8.0`), published on GitHub as
-`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v1.8.0.bin.gz` and
-`SHA256SUMS.txt`, built and tested by `.github/workflows/release.yml` on the push to
-`main`. `main` and `faces-v2` are the same commit. The plugin is 0.5.2 (0.5.3 unreleased: the expression depth limit).
+The latest release is **1.9.0** (2026-10-31, tag `v1.9.0`), published on GitHub as
+`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v1.9.0.bin.gz`,
+`AIAgentMonitor_v1.9.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
+and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
+`faces-v2` are the same commit. The plugin is 0.5.3.
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
 last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,
 display features, emulator scenarios), 1.7.0 and 1.8.0 (flicker-free redraws, flip
-clocks), all 2026-10-29/30.
+clocks), all 2026-10-29/30; 1.9.0 (2026-10-31: faces within the stack, crash records,
+crash-loop protection).
 
 ## The clock
 
@@ -24,8 +26,8 @@ seen at 192.168.66.229) runs **1.8.0** (build bed88cb, installed by the owner by
 Retro-runner, flip-clock-wide and night-lake restart it: a stack overflow in the
 expression parser while repainting, reproduced in the emulator
 ([issue](issues/2026-10-31-animated-faces-restart-the-clock.md)); they were deleted from
-the clock. Fixed in the code (spec 023) and protected against (spec 021, crash records
-and safe mode); not released yet. Shown there in the 1.4.0 work:
+the clock. Fixed in 1.9.0 (spec 023), with crash records and crash-loop protection
+(spec 021); 1.9.0 is not yet installed on the clock. Shown there in the 1.4.0 work:
 
 | Feature | Device result |
 |---|---|
@@ -48,13 +50,13 @@ and `scripts/screenshots.py`. CI (`.github/workflows/build.yml`) runs the build,
 
 ## Flash budget
 
-Unreleased build: `firmware.bin` 594,240 B; `firmware.bin.gz` 422,897 B; compressed update
+1.9.0: `firmware.bin` 594,240 B; `firmware.bin.gz` 422,897 B; compressed update
 limit 614,400 B (it shrinks as the image grows), **97% used** (about 18 KB left). Crash
 records and protection cost about 3 KB compressed; 1.8.0 was 419,030 B.
 
 ## Specs in flight
 
-In progress, built and tested in the emulator, not released:
+Released in 1.9.0, not yet run on the clock:
 [023](../specs/023-renderer-stack/SPEC.md) (faces within the 4 KB stack),
 [021](../specs/021-crash-report/SPEC.md) (crash records, crash-loop protection, safe mode),
 [022](../specs/022-emulator-device-memory/SPEC.md) (the emulator with the clock's memory;
