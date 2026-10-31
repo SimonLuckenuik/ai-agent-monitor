@@ -7,6 +7,9 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **The plugin (0.5.4)**: the skill's face format reference gives the 507 "Not enough
+  memory" answer and the new `/status` fields (`weatherHeap`, `mqttHeap`, `mdnsHeap`).
+
 ## 2.0.0 - 2026-10-31
 
 About 12 KB of memory back, and MQTT and mDNS working again.
