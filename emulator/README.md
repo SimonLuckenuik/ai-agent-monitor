@@ -29,7 +29,8 @@ The screen server's endpoints, for scripts:
 | `GET /fs/file?path=/config.json` | A file; `&download=1` as an attachment |
 | `POST /power`, `POST /reset` | Power cycle, external reset |
 | `POST /panic` | The firmware panics in its next `loop()`: its crash record, the crash log and crash-loop protection (spec 021) run as on the clock. The screen page's **Crash** button. A panic in the first 30 s after boot starts recovery instead, as on the clock |
-| `GET /heapmap` | With `EMU_HEAPMAP=1` (`EMU_HEAPMAP=1 docker compose ... up -d`): the arena's live blocks grouped by the first firmware function in their call chain, largest first. Every allocation is unwound, so it runs slower. Objects built before `setup()` stay on the host heap and are not listed |
+| `GET /heapmap` | The heap in use, grouped by the firmware function that allocated it and its caller, largest first: the Device panel's **Heap map**. `?raw=1` lists every block with its whole call chain. On by default in `emulator/docker-compose.yml` (`EMU_HEAPMAP=0` turns it off: every allocation is unwound). Objects built before `setup()` stay on the host heap and are not listed |
+| `GET /stats?resetlow=1` | The lowest-free reading starts again from now (the panel's **Reset lowest free**) |
 | `POST /time?epoch=N` | Sets the firmware's clock to Unix time N, stopped, across restarts (`0`: the real time again). `local=2026-10-05T07:45[:SS]` instead of `epoch` is a time in the clock's zone; `add=S` moves it by S seconds; `speed=X` runs it at X times real time (0 stops it; alone, it changes the pace and keeps the time) |
 | `GET /time` | `{"epoch","local","zone","mocked","speed"}`: the time the firmware sees |
 | `POST /weather` | An Open-Meteo forecast reply (the clock's own request: `current` and `daily`, plus an optional `"city"`) used instead of the network, and applied now; `DELETE /weather` goes back to fetching; `GET /weather` returns it (`null`: live) |

@@ -11,8 +11,8 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - clock-data:/data   # storage, EEPROM: survives restarts and rebuilds
-    environment:   # EMU_HEAPMAP=1: GET :8080/heapmap (slower: every allocation is unwound)
-      EMU_HEAPMAP: ${EMU_HEAPMAP:-0}
+    environment:   # EMU_HEAPMAP=0 turns the page's heap map off (every allocation is unwound)
+      EMU_HEAPMAP: ${EMU_HEAPMAP:-1}
     restart: unless-stopped
 
 volumes:

@@ -38,19 +38,44 @@ the clock's `/status` and the emulator (`EMU_HEAP`, spec 022). Scripts:
 | Crash records (spec 021) | 1.8 KB | |
 | Firmware update | about 2 KB | validation and the gz check, on top of the core's Updater |
 
-## RAM held all the time
+## Static RAM by category
 
-| What | Bytes | Note |
-|---|---|---|
-| String literals in `.rodata` | about 7,900 | 478 strings outside `F()`/`PSTR`: error messages, URLs, the default palettes (386 B), the Open-Meteo query (347 B), the face names (190 B). Copied into RAM at boot |
-| `firmware` (the update check buffer, `firmware_validation.h`) | 4,148 | In `.data`; only an update uses it |
-| SDK and lwIP (`g_ic`, `pmc`, ARP and DNS tables, ...) | about 5,000 | fixed |
-| Face variables (`vars`) | 1,440 | the variable table |
-| `sinf`/`cosf` reduction table (`ef_rem_pio2`) | 920 | in RAM because newlib keeps it in `.data` |
-| Value histories (sparklines) | 592 | |
-| Big tiles' shown state (`bigShown`) | 384 | |
-| Config (`cfg`), web server, `Update` | 360, 272, 228 | plus the Strings they point to, on the heap |
-| Message slots, repaint sprite object, item boxes, changed-region cover | 288, 288, 256, 240 | |
+`.data`, `.rodata` and `.bss` share the 80 KB of data RAM with the heap and the SDK's own
+use. Measured by `scripts/ram_report.py`, which attributes each symbol to the object or
+library that defines it, and each SDK buffer without a size to the symbol before it:
+
+| Category | 0.1.2 | 1.9.1 | Change |
+|---|---|---|---|
+| ESP8266 SDK (WiFi, PHY, system buffers) | 24,008 | 24,008 | 0 |
+| String literals, ours | 3,943 | 8,199 | +4,256 |
+| Settings, web API, WiFi, update (`main.cpp`; the 4,148 B update buffer) | 5,280 | 5,511 | +231 |
+| Faces (tables, state, the big font) | 254 | 4,017 | +3,763 |
+| Integrations (variables 1,440, histories 592, messages 288) | 0 | 2,603 | +2,603 |
+| C and C++ runtime (newlib; the `sinf`/`cosf` table 920) | 1,763 | 1,763 | 0 |
+| Arduino core | 1,688 | 1,688 | 0 |
+| Network stack (lwIP) | 1,274 | 1,274 | 0 |
+| String literals, libraries | 912 | 1,045 | +133 |
+| File system, weather, crash records, libraries, padding | about 1,600 | about 1,800 | +200 |
+| **Total** | **40,752** | **51,944** | **+11,192** |
+
+The fixed part (SDK, runtime, core, lwIP, about 28.7 KB) has not moved. Everything that
+grew is ours: the strings (+4.3 KB), the faces' tables and state (+3.8 KB) and the
+integrations' tables (+2.6 KB).
+
+### The strings we keep in RAM
+
+There are 7.6 KB of our literals in 1.9.1, 3.9 KB of them added since 0.1.2
+(`scripts/ram_report.py ELF --strings` lists every one):
+
+| Kind | Bytes | Added since 0.1.2 | Where | Examples |
+|---|---|---|---|---|
+| Keys and keywords | 2,843 | 1,802 | `faces.cpp` 1,058, `config.h` 708, `main.cpp` 409 | JSON keys of the settings and `/status` (`weatherHeap`, `cpuMHz`, `drawMs`), face item fields (`sprite`, `repeat`, `stroke`, `invert`), placeholders (`sys.heap`, `net.ssid`, `until_rise`), French day and month names, message states (`success`, `waiting`) |
+| Messages | 2,654 | 995 | `main.cpp` 1,383, `faces.cpp` 613, `integrations.cpp` 413 | HTTP replies and errors ("Just synced; try again in a few seconds", "Only .jpg photos can be uploaded"), screen labels |
+| URL paths | 745 | 399 | `integrations.cpp` 307, `main.cpp` 293 | the routes (`/api/settings/export`, `/api/photos/upload`), file paths |
+| HTTP headers, MIME types, character sets | 557 | 290 | `main.cpp`, `integrations.cpp`, `ascii.cpp` | `Content-Disposition`, `application/octet-stream`, the password alphabet |
+| Weather and geocoding URLs | 303 | 33 | `weather.cpp` | the Open-Meteo query (347 B) |
+| JSON defaults and templates | 277 | 277 | `integrations.cpp`, `config.h` | the default palettes, the MQTT discovery's face list |
+| `printf` formats | 200 | 91 | `faces.cpp`, `main.cpp` | `%04d-%02d-%02d %02d:%02d:%02d %s` |
 
 ## Heap in use (transient or while shown)
 
@@ -60,8 +85,8 @@ the clock's `/status` and the emulator (`EMU_HEAP`, spec 022). Scripts:
 | A big face while shown (document and drawing) | retro-runner and night-lake about 7 KB, flip-clock-wide about 4.5 KB with dips to 3.7 KB free while animating | clock `/status` |
 | A weather fetch | 6.1 KB | emulator `weatherHeap`; the clock reports its own with 1.9.1 |
 | A face upload | the body twice for a moment (up to 8 KB), then once, plus a filtered check (about 1 KB) | ESP8266WebServer copies the body into the `plain` argument |
-| mDNS once started | not measured | it needs 28 KB free to start |
-| MQTT connection | not measured | it needs 16 KB free to connect |
+| mDNS once started | about 0.4 KB held (emulator), under about 2 KB on the chip | its 28 KB gate keeps it off |
+| MQTT connection | about 2-2.5 KB held, 2-3 KB more while connecting (from the code) | its 16 KB gate keeps it off |
 
 ## Where the RAM went since 0.1.x
 
@@ -91,40 +116,51 @@ That's 11.2 KB more static RAM since 0.1.2:
   repaint sprite object 288, item boxes and hashes about 900 B, the night panel 184,
   crash record 144, the config's new fields 220, the role and name tables.
 
-The remaining drop (about 7 KB, 32 KB minus 11 KB minus 14 KB) is heap held at runtime.
-The emulator's heap map (`EMU_HEAPMAP=1`, `GET :8080/heapmap`) shows 10.4 KB in use at
-rest. The largest holders:
+The remaining drop (about 7 KB: 32 KB, less 11 KB, less 14 KB) is heap held at runtime.
+The emulator's heap map (the Device panel's **Heap map**, or `GET :8080/heapmap`) shows
+10.3 KB in use at rest:
 
-- **The settings' Strings (palettes, roles, order, names): about 2.4 KB.**
-- **The web server's routes: 53 handlers of about 56 B each, 3.0 KB.**
-- **The photo upload handler: 1 KB.**
-- **The current weather and forecast: about 0.6 KB.**
+| Holder | Bytes |
+|---|---|
+| The web server's routes: about 60 `server.on()` handlers (handler object, `Uri`, `std::function`), about 80 B each | about 4,700 |
+| The host's own network mock (not on the chip) | 1,952 |
+| The palettes and roles parsed for drawing (`palDoc`, `roleDoc`) | 792 |
+| The settings' Strings | about 280 |
+| Weather, forecast, time zone, setup network, the rest | about 1,000 |
 
-Objects built before `setup()` (the MQTT client's buffer, for one) are not counted there.
+Objects built before `setup()` (the MQTT client's buffer, for one) stay on the host heap
+and are not counted there.
 
 ## MQTT and mDNS against the free heap
 
 | | Needs (held) | Needs (at start) | Gate today | Fits at rest (14 KB) |
 |---|---|---|---|---|
 | MQTT | about 2-2.5 KB: the 1,536 B message buffer, the TCP connection (lwIP pcb, receive buffers) | about 2-3 KB more while the Home Assistant discovery messages are built (one String of 400-900 B each, the face list growing with each custom face) | 16 KB | **Yes**: about 11.5 KB would be left; with a big face shown, about 4.5 KB (the weather and uploads free the face first, spec 024) |
-| mDNS (LEAmDNS) | not measured: the responder, its host and service records, a multicast UDP socket | probing and announcing at start, a reply buffer per query | 28 KB | **Unknown**: likely 3-5 KB, to measure on the chip |
+| mDNS (LEAmDNS) | 420 B measured: the responder's host, service and TXT records. On the chip, plus about 100 B for its UDP socket and multicast group | 0 B from the firmware while answering (120 queries answered); on the chip, the network buffers for each query and answer, ≤ about 0.5-1 KB | 28 KB | **Yes**: under about 2 KB in all |
 
-Measured in the emulator against a local broker (2026-10-31): MQTT connects and
-publishes discovery; the arena saw only 40 B more because the client's buffer is
-allocated from the host heap before `setup()`. The figure above comes from the code.
-The emulator does not run mDNS (the build leaves it out), and neither the emulator's
-lwIP nor its sockets are the chip's, so the TCP and UDP parts must be measured on the
-clock: a `/status` field per feature (as `weatherHeap` does for the weather).
+**MQTT** was measured in the emulator against a local broker (2026-10-31). It connects and
+publishes discovery, but the arena saw only 40 B more: the client's buffer is allocated
+from the host heap before `setup()`. The figure above comes from the code.
 
-**So MQTT never lacked room for itself: the 16 KB gate blocks it.** mDNS's 28 KB gate was
-reachable only up to about 1.3.x. To bring both back:
+**mDNS** was measured in the emulator with a test build that turns it on 60 s after boot
+with no gate (the emulator normally leaves it out). It held 420 B. A burst of 240 queries
+(the host name, `_http._tcp`, the service list) got 120 answers, and the lowest free heap
+did not move: answers are written straight into the UDP buffer.
+
+The emulator's lwIP and sockets are not the chip's, so the network buffers still need
+measuring on the clock: a `/status` field per feature, as `weatherHeap` does for the
+weather.
+
+**So neither ever lacked room: their gates block them.** MQTT's gate is 16 KB for about
+2.5 KB. mDNS's gate is 28 KB for under about 2 KB. Both gates were set in 0.1.1, when
+32 KB was free, without being measured. To bring both back:
 
 1. Have `/status` report the heap each one takes when it starts (`mqttHeap`,
    `mdnsHeap`), and gate on that plus a margin (as spec 024 did for the weather).
-2. Win back room. The update buffer only during an update is 4.1 KB, and the strings in
-   flash are about 6-7 KB.
-3. MQTT then fits beside a big face. mDNS probably does too. Otherwise it could start on
-   demand, or be dropped for 21 KB of flash.
+2. Win back room for the big faces. The update buffer only during an update is 4.1 KB,
+   the strings in flash 6-7 KB, and one route dispatcher about 4 KB of heap.
+3. With both on, about 10 KB stays free at rest, and about 3 KB beside a big face (the
+   weather and uploads free the face first, spec 024).
 
 ## Keeping the strings in flash
 
@@ -140,12 +176,14 @@ reachable only up to about 1.3.x. To bring both back:
 
 | Change | Saves | Cost or risk |
 |---|---|---|
+| One request handler that dispatches by path instead of about 60 `server.on()` routes | about 4 KB of heap | The router is ours to keep; the auth and method checks move into it |
 | Allocate the update buffer only during an update | 4.1 KB RAM | An update needs 4.1 KB of heap free when it starts (the settings page could say so) |
 | Move the remaining string literals to flash (`F()`, `PSTR`, `FPSTR`) | up to about 7 KB RAM | Mechanical, spread over many files; slightly slower to read |
-| Drop mDNS (it never starts) or start it on demand | 21 KB flash (about 10 KB compressed) | The `.local` name goes away. The DHCP hostname already names the clock in the router |
+| Lower mDNS's 28 KB gate to its measured need (under about 2 KB) | makes `<host>.local` work again | Measure on the chip first |
+| Or drop mDNS | 21 KB flash (about 10 KB compressed) | The `.local` name goes away. The DHCP hostname already names the clock in the router |
 | Lower MQTT's 16 KB gate to a measured need | makes MQTT work again | Measure first, as for the weather (spec 024) |
 | One ArduinoJson input type (always `const char*`, or always a Stream) | about 2 KB flash per instantiation dropped | Small changes at each call site |
-| Drop `scanf` | 3.4 KB flash | Not called from `src/`: a core or library function pulls it in (find which with a link map) |
+| Drop `scanf` | 3.4 KB flash | Not possible: newlib's time-zone parser (`tzset`) uses it |
 | `-fno-exceptions` if the core allows it | about 3 KB flash | The core and libraries may rely on it; check |
 | `sinf`/`cosf` on reduced angles only (or a small table) | 920 B RAM, 2.6 KB flash | The expressions' `sin()`/`cos()` take degrees; reduce to ±180 first |
 
@@ -155,8 +193,9 @@ reachable only up to about 1.3.x. To bring both back:
 python -m platformio run
 python scripts/footprint_files.py .pio/build/esp12e/firmware.elf       # by source file
 python scripts/footprint_sections.py .pio/build/esp12e/firmware.elf .  # by "// ----" section
+python scripts/ram_report.py .pio/build/esp12e/firmware.elf --strings  # static RAM by category, strings
 ```
 
 Stack frames come from `-fstack-usage` (see
 CLAUDE.md), and live heap from `/status` (`heap`, `heapLow`, `weatherHeap`) and the
-emulator's `GET :8080/stats`.
+emulator's `GET :8080/stats` (`?resetlow=1` starts the lowest free again) and heap map.

@@ -83,6 +83,16 @@
   .fwlog h2 { margin: 16px 0 4px; }
   .fwlog ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
   .fwlog .on { color: var(--warn); }
+  .heapmap { margin-top: 16px; }
+  .heapmap summary { cursor: pointer; font-weight: 600; }
+  .heapmap .row { margin: 8px 0; }
+  .heapmap table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .heapmap td { padding: 3px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  .heapmap td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .heapmap td.w { font-family: ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+  .heapmap td.w small { color: var(--muted); }
+  .heapmap .bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 3px; }
+  .heapmap .bar span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
   .crash pre { margin: 8px 0 0; font: 12px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
   .scenarios { grid-column: 1 / -1; }
   .scenarios header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
@@ -161,6 +171,17 @@
       <small id="fwlog-state"></small>
       <ul id="fwlog-list"></ul>
     </div>
+    <details class="heapmap" id="heapmap">
+      <summary>Heap map</summary>
+      <small>The heap in use, grouped by the firmware function that allocated it (its caller after the arrow).
+        Objects built before <code>setup()</code> are not in the arena and not listed.</small>
+      <div class="row">
+        <button id="hm-refresh">Refresh</button>
+        <button id="hm-resetlow" title="The lowest-free meter starts again from now">Reset lowest free</button>
+        <small id="hm-state"></small>
+      </div>
+      <table><tbody id="hm-rows"></tbody></table>
+    </details>
   </section>
   <section class="panel scenarios">
     <header>
@@ -450,6 +471,33 @@ async function showFirmwareLog() {
 }
 showFirmwareLog();
 setInterval(showFirmwareLog, 5000);
+
+// ---- Heap map: GET /heapmap (EMU_HEAPMAP=1), "bytes blocks where" per line, largest first.
+async function showHeapMap() {
+  const state = document.getElementById("hm-state");
+  let text;
+  try { text = await (await fetch("/heapmap", { cache: "no-store" })).text(); }
+  catch { state.textContent = "The emulator is not answering."; return; }
+  const lines = text.trim().split("\n");
+  const head = lines[0].match(/^(\d+) bytes in use of (\d+)/);
+  if (!head) { state.textContent = text.trim(); document.getElementById("hm-rows").replaceChildren(); return; }
+  const used = +head[1];
+  state.textContent = `${kb(used)} in use of ${kb(+head[2])}, ${new Date().toLocaleTimeString()}`;
+  const rows = lines.slice(1).map(l => l.match(/^\s*(\d+)\s+(\d+)\s+(.*)$/)).filter(Boolean).map(m => {
+    const [where, caller] = m[3].split(" <- ");
+    return el("tr", {},
+      el("td", { className: "n", textContent: `${m[1]} B` }),
+      el("td", { className: "n", textContent: `${m[2]}×` }),
+      el("td", { className: "w" }, el("div", { textContent: where }),
+        ...(caller ? [el("small", { textContent: `← ${caller}` })] : []),
+        el("div", { className: "bar" }, el("span", { style: `width:${Math.max(1, m[1] / used * 100)}%` }))));
+  });
+  document.getElementById("hm-rows").replaceChildren(...rows);
+}
+document.getElementById("heapmap").addEventListener("toggle", e => { if (e.target.open) showHeapMap(); });
+document.getElementById("hm-refresh").onclick = showHeapMap;
+document.getElementById("hm-resetlow").onclick = () =>
+  fetch("/stats?resetlow=1", { cache: "no-store" }).then(r => r.json()).then(showStats).catch(() => {});
 setInterval(() => { document.getElementById("frames").textContent = `${updates} / s`; updates = 0; }, 1000);
 
 const post = path => fetch(path, { method: "POST" }).catch(() => {});

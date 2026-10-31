@@ -62,7 +62,8 @@ void noteSite(size_t i) {
   int n = backtrace(f, SITE_FRAMES + 3);
   fwRunning = was;
   tracing = false;
-  for (int k = 0; k < SITE_FRAMES; ++k) site[i][k] = k + 3 < n ? f[k + 3] : nullptr;   // past noteSite, arenaAlloc, malloc
+  // Return addresses, less one: the call itself, not the line after it.
+  for (int k = 0; k < SITE_FRAMES; ++k) site[i][k] = k + 3 < n ? static_cast<char*>(f[k + 3]) - 1 : nullptr;   // past noteSite, arenaAlloc, malloc
 }
 
 void arenaInit() {
@@ -309,6 +310,9 @@ void emuExit(int code) {
   siglongjmp(hostJump, 1);
 }
 
+// GET :8080/stats?resetlow=1: the lowest free heap starts again from now.
+void emuResetLow() { arenaInit(); lowFree = freeBlocks; }
+
 // The memory part of GET :8080/stats.
 String emuMemoryJson() {
   arenaInit();
@@ -331,7 +335,7 @@ bool firmwareFile(const std::string& w) {
 
 // GET :8080/heapmap: the live blocks grouped by the first firmware function (src/) in
 // their call chain, largest first: "bytes blocks function (file:line) <- the caller".
-String emuHeapMap() {
+String emuHeapMap(bool raw) {
   arenaInit();
   if (heapMap != 1) return "Start the emulator with EMU_HEAPMAP=1\n";
   // Every distinct address, through one addr2line run.
@@ -344,18 +348,43 @@ String emuHeapMap() {
   bool was = fwRunning;
   fwRunning = false;
   for (size_t at = 0; at < addrs.size(); at += 200) {
-    std::string cmd = "addr2line -f -C -p -e /proc/" + std::to_string(getpid()) + "/exe";
+    std::string cmd = "addr2line -f -C -p -i -e /proc/" + std::to_string(getpid()) + "/exe";
     char a[24];
-    for (size_t k = at; k < std::min(addrs.size(), at + 200); ++k) { snprintf(a, sizeof(a), " %p", addrs[k]); cmd += a; }
+    size_t end = std::min(addrs.size(), at + 200);
+    for (size_t k = at; k < end; ++k) { snprintf(a, sizeof(a), " %p", addrs[k]); cmd += a; }
     if (FILE* f = popen(cmd.c_str(), "r")) {
-      char line[512];
-      for (size_t k = at; k < std::min(addrs.size(), at + 200) && fgets(line, sizeof(line), f); ++k) {
+      // With -i an address prints the function inlined there first, then " (inlined by) ..."
+      // lines out to the function the code sits in: that outermost one is kept.
+      char* line = nullptr;   // getline, not fgets: template names run past any fixed buffer
+      size_t cap = 0, k = at;
+      while (getline(&line, &cap, f) > 0) {
         std::string s = line;
         while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
-        where[addrs[k]] = s;
+        size_t in = s.find("(inlined by) ");
+        if (in != std::string::npos && in < 4) {
+          if (k > at) where[addrs[k - 1]] = s.substr(in + 13);
+        } else if (k < end) {
+          where[addrs[k++]] = s;
+        }
       }
+      free(line);
       pclose(f);
     }
+  }
+  if (raw) {   // ?raw=1: every live block with its whole call chain
+    std::string out;
+    for (size_t i = 0; i < blocks; i += runLen[i]) {
+      if (!runUsed[i]) continue;
+      out += std::to_string(runLen[i] * BLOCK) + " B\n";
+      for (int k = 0; k < SITE_FRAMES && site[i][k]; ++k) {
+        char a[24];
+        snprintf(a, sizeof(a), "%p ", site[i][k]);
+        out += "    " + std::string(a) + where[site[i][k]].substr(0, 140) + "\n";
+      }
+      if (out.size() > 48000) { out += "...\n"; break; }
+    }
+    fwRunning = was;
+    return String(out.c_str());
   }
   std::map<std::string, std::pair<size_t, size_t>> groups;   // site -> bytes, blocks
   for (size_t i = 0; i < blocks; i += runLen[i]) {
@@ -364,7 +393,9 @@ String emuHeapMap() {
     for (int k = 0; k < SITE_FRAMES && site[i][k]; ++k) {
       const std::string& w = where[site[i][k]];
       if (firmwareFile(w)) {
-        key = w.substr(0, w.find(" at ")) + " (" + w.substr(w.rfind('/') + 1) + ")";
+        // The function and its file, without the line: one row per function.
+        std::string file = w.substr(w.rfind('/') + 1);
+        key = w.substr(0, w.find(" at ")) + " (" + file.substr(0, file.find(':')) + ")";
         if (k + 1 < SITE_FRAMES && site[i][k + 1]) {
           const std::string& up = where[site[i][k + 1]];
           key += " <- " + up.substr(0, up.find('('));

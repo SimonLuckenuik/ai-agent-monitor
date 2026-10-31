@@ -45,7 +45,8 @@ void emuRunFirmware(void (*f)());   // memory.cpp: the clock's heap and stack
 void emuExit(int code);
 void emuRequestPanic();
 String emuMemoryJson();
-String emuHeapMap();
+String emuHeapMap(bool raw);
+void emuResetLow();
 extern double emuBusy;   // panel.cpp: the modelled clock's busy time, us
 extern uint16_t emuPanel[240 * 240];   // panel.cpp: what the panel's glass shows
 String emuTimingJson(bool reset);       // panel.cpp
@@ -490,9 +491,10 @@ void handleRequest(WiFiClient& c, const String& head) {
                 "X-Backlight: " + String(backlightPercent()) + "\r\nX-Frame: " + String(frames) + "\r\n");
     writeAll(c, reinterpret_cast<const uint8_t*>(emuPanel), sizeof(emuPanel));
   } else if (path == "/stats") {
+    if (queryArg(query, "resetlow") == "1") emuResetLow();
     sendText(c, 200, "application/json", statsJson());
   } else if (path == "/heapmap") {
-    sendText(c, 200, "text/plain", emuHeapMap());
+    sendText(c, 200, "text/plain", emuHeapMap(queryArg(query, "raw") == "1"));
   } else if (path == "/timing") {
     sendText(c, 200, "application/json", emuTimingJson(queryArg(query, "reset") == "1"));
   } else if (path == "/password") {   // for the screen page's sign-in link
