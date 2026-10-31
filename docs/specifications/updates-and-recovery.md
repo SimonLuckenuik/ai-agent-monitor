@@ -1,8 +1,8 @@
-# Firmware migration and recovery
+# Updates and recovery
 
 Installed over stock SD Pro V1.0.6 from its own update page on 2026-10-05, and updated
 through our own updater several times since
-([record](decisions/2026-10-05-first-flash-over-stock.md)). One unit has been tested.
+([record](../decisions/2026-10-05-first-flash-over-stock.md)). One unit has been tested.
 Going back to stock still needs UART, so a full flash backup over UART beforehand is the
 only way to keep the vendor firmware; the vendor update binaries are not full-device
 backups. The first install over stock uses `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0
@@ -35,7 +35,7 @@ it, refuses it).
    **Rename it to start with `SDP`** (for example `SDPro_AIAgentMonitor.bin`): the stock
    page refuses any other filename in the browser, with "Please use the correct
    firmware". It does not check the contents
-   ([record](decisions/2026-10-05-first-flash-over-stock.md)). Our own update page
+   ([record](../decisions/2026-10-05-first-flash-over-stock.md)). Our own update page
    ignores the filename.
    Do not interrupt power during upload or reboot/copying.
 
@@ -73,6 +73,25 @@ In recovery the screen shows "Recovery", the AP name and address, and the LAN IP
 connected. If the panel itself reset the previous recovery boot, the panel is skipped. In
 recovery, settings requests return HTTP 503. Only OTA, format (after a failed mount),
 status, and restart work. **Restart** leaves recovery.
+
+### Crash records, crash loops and safe mode
+
+On any crash (exception, watchdog, panic, stack overflow) the firmware keeps a record in
+RTC memory: the cause, the exception registers, the code addresses on the stack, the
+face being drawn, free heap and stack. The next boot moves it into `/crashes.bin` (the
+last 8), which the settings page shows under **System > Crashes** and
+[`GET /api/crashes`](integrations-api.md#device-status-and-crashes) returns.
+
+A crash within 10 minutes of boot counts toward a loop; 10 minutes up clears the count.
+
+- **3 in a row:** custom faces are off. The built-in faces run, and the address screen
+  says "Custom faces off: crashed".
+- **2 more:** safe mode. No face is drawn: the screen shows "Safe mode", the address,
+  the name and the version, while the settings page and the API work, to remove or fix
+  the face (or install an update).
+- **Resume** (System > Crashes, or `POST /api/crashes/resume`) goes back to normal.
+
+A crash in the first 30 s after boot still starts recovery mode (below), as before.
 
 ### Build-time WiFi defaults (optional)
 

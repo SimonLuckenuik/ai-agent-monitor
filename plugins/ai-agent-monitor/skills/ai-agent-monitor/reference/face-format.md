@@ -182,6 +182,7 @@ words with no operator are left as they are.
 A word that is not a number (such as `warn` or `#ff9f0a`) is text. False is `0`, an
 empty value, `false` or `off`. A text result keeps its spaces (`"1?light rain:clear"`),
 but cannot contain operator characters such as `:` or `-`.
+An expression may hold up to 11 pending values or operators at once (parentheses, functions and operators waiting for their right side count); beyond that it gives `0`.
 
 ```json
 {"type": "circle", "x": "120+90*sin({time.sec}*6)", "y": "120-90*cos({time.sec}*6)", "r": 8,

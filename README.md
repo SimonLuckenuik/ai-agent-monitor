@@ -272,9 +272,13 @@ password, backup and firmware updates.
   on and leave it. The screen shows "Recovery". In recovery the setup network is open
   and no sign-in is needed. You can install firmware, and **Restart** returns to
   normal. The clock also enters recovery by itself if it crashes during startup.
+- **Crash loops:** if the clock crashes three times in a row, it turns custom faces
+  off; two more and it starts in safe mode, which draws no face but keeps the settings
+  page and the API working. **System > Crashes** lists what happened and has
+  **Resume faces**.
 - Settings and photos live in the clock's own storage and survive firmware updates.
 
-More detail: [docs/MIGRATION.md](docs/MIGRATION.md).
+More detail: [updates and recovery](docs/specifications/updates-and-recovery.md).
 
 ## Known limitations
 

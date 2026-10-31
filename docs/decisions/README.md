@@ -17,6 +17,8 @@ it belongs to ([specs](../../specs/README.md)).
 - [2026-10-29 An empty saved night palette is repaired in the data, not the firmware](2026-10-29-empty-night-palette-fixed-in-data.md)
 - [2026-10-30 Moving items repaint off screen, in TFT_eSprite strips](2026-10-30-off-screen-repaint.md)
 - [2026-10-30 Spec-driven development](2026-10-30-spec-driven-development.md)
+- [2026-10-31 The emulator models the clock's heap and stack](2026-10-31-emulator-memory-model.md)
+- [2026-10-31 The crash log is a binary file the API serves as it is](2026-10-31-crash-log-as-a-binary-file.md)
 
 ## SmartClock-OSS (upstream, before the fork)
 

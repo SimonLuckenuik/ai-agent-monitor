@@ -12,7 +12,7 @@
       "name": "ai-agent-monitor",
       "source": "./plugins/ai-agent-monitor",
       "description": "Show messages, progress, status and custom graphics on an AI Agent Monitor desk clock or its emulator.",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "category": "productivity"
     }
   ]

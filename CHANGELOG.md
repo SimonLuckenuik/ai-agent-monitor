@@ -7,6 +7,28 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Fixed
+
+- **Custom faces with nested expressions no longer restart the clock.** Retro-runner,
+  flip-clock-wide and night-lake ran out of the clock's 4 KB stack: the expression parser
+  used about 500 bytes per level of parentheses. It now takes the same small amount
+  however deep they go, and the drawing path uses less (spec 023).
+
+### Added
+
+- **The plugin (0.5.3)**: the skill gives the expression depth limit.
+- **Crash records.** After a crash the clock keeps its cause, where it happened and what
+  it was drawing; **System > Crashes** on the settings page lists the last 8, and
+  `GET /api/crashes` returns them. `scripts/decode_crash.py` turns the addresses into
+  file and line, with the release's `.elf`, now attached to each release.
+- **Crash-loop protection.** Three crashes in a row turn custom faces off; two more start
+  the clock in safe mode (no face, the settings page and API still up). **Resume faces**
+  goes back to normal.
+- **`stackFree` in `/status`**: the least free stack since boot.
+- **The emulator has the clock's memory**: a 25.6 KB heap and the 4 KB stack, with the
+  chip's failures and a call chain in the log; its page shows the device's CPU load,
+  memory and the last crash live, and a **Crash** button tries the protection.
+
 ## 1.8.0 - 2026-10-30
 
 Custom faces that move without blinking, big-font digits that redraw one at a time,
@@ -559,7 +581,7 @@ the stock LittleFS volume mounted
   Unused TFT fonts were dropped to make room.
 - **The stock update page only accepts filenames starting with `SDP`.** It is
   a browser-side check; renaming the image is enough. See
-  [MIGRATION.md](docs/MIGRATION.md).
+  [updates and recovery](docs/specifications/updates-and-recovery.md).
 
 ### Recovery without a button
 

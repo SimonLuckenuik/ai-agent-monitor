@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **021**.
+Next free number: **024**.
 
 | Spec | Status |
 |---|---|
@@ -15,7 +15,7 @@ Next free number: **021**.
 | [003 Custom faces v2: dynamic rendering](003-custom-faces-v2/SPEC.md) | Done in 1.4.0 |
 | [004 Agent messages and the Agents board](004-agent-messages/SPEC.md) | Done in 1.4.0 |
 | [005 The clock in French](005-french/SPEC.md) | Done in 1.4.0 |
-| [006 Claude Code plugin and skill](006-claude-code-plugin/SPEC.md) | Done, kept in step (0.5.2) |
+| [006 Claude Code plugin and skill](006-claude-code-plugin/SPEC.md) | Done, kept in step (0.5.3) |
 | [007 Big tiles and the line font](007-big-tiles-and-line-font/SPEC.md) | Done in 1.4.0 |
 | [008 Rotation order, night colour and the night face](008-rotation-and-night/SPEC.md) | Done in 1.4.0 / 1.6.0 |
 | [009 Compressed updates and releases from main](009-compressed-updates-and-releases/SPEC.md) | Done in 1.4.0 / 1.5.0 |
@@ -29,7 +29,10 @@ Next free number: **021**.
 | [017 Example faces gallery](017-example-faces/SPEC.md) | Done, grows with new faces |
 | [018 Check 1.5-1.8 on the real clock](018-first-run-on-the-clock/SPEC.md) | Draft |
 | [019 Claude Code hooks that drive the clock](019-claude-code-hooks/SPEC.md) | Draft |
-| [020 ESP-NOW between clocks](020-esp-now/SPEC.md) | Draft (idea) |
+| [020 ESP-NOW between clocks](020-esp-now/SPEC.md) | Dropped |
+| [021 Crash records and crash-loop protection](021-crash-report/SPEC.md) | In progress |
+| [022 The emulator runs out of memory where the clock does](022-emulator-device-memory/SPEC.md) | In progress |
+| [023 Custom faces within the 4 KB stack](023-renderer-stack/SPEC.md) | In progress |
 
 ## Templates
 

@@ -1,6 +1,6 @@
 # 020 ESP-NOW between clocks
 
-Status: Draft (idea, 2026-10-29: explained to the owner, not requested)
+Status: Dropped (2026-10-31: the owner rejected it for now)
 
 ## Problem
 

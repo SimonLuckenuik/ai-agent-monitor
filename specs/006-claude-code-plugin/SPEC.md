@@ -1,6 +1,6 @@
 # 006 Claude Code plugin and skill
 
-Status: Done (0.2.0 in 1.4.0, now 0.5.2); kept in step with the firmware
+Status: Done (0.2.0 in 1.4.0, now 0.5.3); kept in step with the firmware
 
 ## Problem
 

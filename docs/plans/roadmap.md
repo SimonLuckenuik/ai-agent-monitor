@@ -1,12 +1,16 @@
 # Roadmap
 
-Updated: 2026-10-30. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-10-31. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
 ## In progress
 
-None.
+1. [023 Custom faces within the 4 KB stack](../../specs/023-renderer-stack/SPEC.md): the fix
+   for the faces that restarted the clock.
+2. [022 The emulator with the clock's memory](../../specs/022-emulator-device-memory/SPEC.md):
+   heap, stack, crash traces, live device statistics.
+3. [021 Crash records and crash-loop protection](../../specs/021-crash-report/SPEC.md).
 
 ## Next (proposed, waiting for approval)
 
@@ -18,10 +22,10 @@ None.
 
 - An error, or eviction of expired values, when the variable table is full
   ([issue](../issues/2026-10-29-new-variable-dropped-when-table-full.md)).
-- [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md) (explained, not requested).
+- [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
 - Hardware scrolling and the panel's idle (8-colour) mode (spec 014 research).
-- A way back to stock over WiFi; crash reports kept across a reboot (upstream ideas).
-- Flash: about 29 KB of update room left (618,496 B limit, 95% used). The next large
+- A way back to stock over WiFi (upstream idea).
+- Flash: about 25 KB of update room left (618,496 B limit, 96% used). The next large
   feature needs a saving first (mDNS is ~21 KB).
 
 ## Done

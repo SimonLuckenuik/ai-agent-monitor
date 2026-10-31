@@ -108,6 +108,7 @@ product as it is, and change with the code; specs describe a piece of work.
 | `src/main.cpp` | Boot, recovery, WiFi/AP, web API, settings, OTA, rotation, night tile, backlight |
 | `src/faces.cpp` | Every face; the custom-face renderer (expressions, SVG paths, gradients, wrapping); the Message face; the Big tiles and their monoline font; weather icons |
 | `src/integrations.cpp` | Custom faces API, agent messages, geekmagic-hacs compatibility, MQTT |
+| `src/crash.cpp` | Crash records (RTC memory, then `/crashes.bin`), crash-loop protection and safe mode |
 | `src/weather.cpp` | Open-Meteo, WMO words in English and French |
 | `src/config.h` | Settings stored in `/config.json` (load/save/migrations) |
 | `src/ascii.cpp` | UTF-8 to ASCII folding |
@@ -130,7 +131,7 @@ tests (`python -m pip install ziglang==0.13.0 --target .pio-tools`).
 
 ```bash
 python -m platformio run                        # firmware + size guard
-python tests/unit/run_unit_tests.py             # 274 checks
+python tests/unit/run_unit_tests.py             # 286 checks
 python tests/run_safety_tests.py                # needs the firmware.bin from pio run
 python tests/face_preview/run_face_preview.py   # .pio/face-preview/*.png, sheet.png
 claude plugin validate .                        # plugin and marketplace manifests
@@ -198,13 +199,18 @@ settings page and API all work; WiFi is always "connected", time is the host's. 
 the real TFT_eSPI on a simulated ST7789 (`emulator/panel.cpp`), so drawing is the
 clock's, and draws take about the clock's time at `board_build.f_cpu` (calibrated,
 ±20%; `emulator/README.md` "Drawing speed"). `EMU_TIMING=0` makes them instant.
+Memory is the clock's too: a 25.6 KB heap and the 4 KB stack for the firmware's frames,
+with the chip's failures (a panic, "Software/System restart") and the call chain in
+the log (`emulator/README.md` "Memory").
 
 ```bash
 docker compose -f emulator/docker-compose.yml up -d --build
 ```
 
 - http://127.0.0.1:8080: the screen (WebSocket), zoom, Power cycle / Reset / Enter
-  recovery, storage browser, a Settings button that signs in by itself, and a
+  recovery, a **Device** panel (CPU load, heap, largest block, stack, the last crash
+  with its call chain; `GET :8080/stats`, also on the WebSocket each second), storage
+  browser, a Settings button that signs in by itself, and a
   **Scenarios** panel: mocked time (any date, 0-3600× pace), weather form and presets,
   variables/messages/any topic pushed as if over MQTT, example faces with their sample
   values (`emulator/presets.json`; endpoints in `emulator/README.md`).
@@ -240,6 +246,11 @@ change.
   own storage (volume `emulator_clock-data`), which starts empty: none of the stock
   firmware's files. The firmware itself has no storage listing (flash is full); on the
   real clock only `/api/photos` lists a folder (`/photo`).
+- **Crashes on the clock:** `python scripts/decode_crash.py http://<clock>` (with
+  `CLOCK_API_KEY`) or a `crashes.bin` from System > Crashes: cause, face, and the
+  addresses as file:line from the release's `.elf` (or `--elf .pio/build/esp12e/firmware.elf`).
+  In the emulator the log has the call chain itself. Chip stack frames per function:
+  `PLATFORMIO_BUILD_FLAGS=-fstack-usage PLATFORMIO_BUILD_DIR=.pio/su pio run` (`.su` files).
 - **Drawing speed:** `GET /status` has `cpuMHz` and `drawMs`, `{"<face id>": [last,
   slowest]}` in ms (draws over 1 ms only; the slowest is usually the full redraw when
   the face comes up). The emulator's numbers are modelled (`GET :8080/timing` has the
