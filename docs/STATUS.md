@@ -1,65 +1,56 @@
 # Current status and next work
 
-Updated: 2026-10-17. Update this page when a release, device result or next
-step changes; keep the dated [decision records](decisions/README.md) as the
-history.
+Updated: 2026-10-30. Update this page when a release, a device result, a spec's state or
+the next step changes; the history is in the [decision records](decisions/README.md),
+the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **1.3.2** (2026-10-17, tag `v1.3.2`), published on GitHub as
-`michaeldale/smartclock-oss` with `SDPro_SmartClockOSS_v1.3.2.bin` built by
-`scripts/make_release.py` (no WiFi details). It adds the router's disconnect code to
-a failed WiFi join (issue #2, where a SmallTV-Ultra reported only "no answer").
-1.3.1 fixed **Connect & restart** doing nothing in phone captive-portal windows
-and saved the build-time WiFi network on first join; the test unit is back on WiFi
-after 1.3.0 left it on the setup screen. 1.3.0 added a switch to hide the time on
-photos (issue #1) and showed why the clock cannot join WiFi (issue #2). Earlier: 1.2.0 added the integrations (custom faces,
-geekmagic-hacs, MQTT), all off by default, and runs on the test unit at 10.0.1.118;
-0.1.2 added the device password; 0.1.1 was the first public release;
-0.1.0 (`v0.1.0`, `6d94d08`) was the first image flashed over stock SD Pro V1.0.6
-([record](decisions/2026-10-05-first-flash-over-stock.md)).
+The latest release is **1.8.0** (2026-10-30, tag `v1.8.0`), published on GitHub as
+`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v1.8.0.bin.gz` and
+`SHA256SUMS.txt`, built and tested by `.github/workflows/release.yml` on the push to
+`main`. `main` and `faces-v2` are the same commit. The plugin is 0.5.2.
 
-## What has been shown on the device
+Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
+last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,
+display features, emulator scenarios), 1.7.0 and 1.8.0 (flicker-free redraws, flip
+clocks), all 2026-10-29/30.
+
+## The clock
+
+The owner's clock (MAC 8C:8C:29:AD:EC:8A, `agentmonitor-adec8a`; address moves, last
+seen at 192.168.66.57) last ran **1.4.0** builds. Shown there in the 1.4.0 work:
 
 | Feature | Device result |
 |---|---|
-| OTA over stock through the stock page | Works, with the image renamed to start with `SDP` |
-| Stock LittleFS volume mounts (4m3m layout) | Yes: `storageReady` true, not in recovery |
-| Build-time WiFi from `secrets.ini` | Joined the network on first boot |
-| Power-cycle recovery | Enters recovery as intended |
-| Local time | Correct: `/status` reported `21:54:26 AEDT` matching local time ([issue](issues/2026-10-05-clock-one-hour-behind-during-dst.md)) |
-| mDNS name | Workstation is on another subnet, so `.local` cannot resolve there ([issue](issues/2026-10-05-smartclock-local-not-resolving-on-windows.md)). The checkout uses `smartclock-<chip id>` and sets it as the DHCP hostname |
-| Open-Meteo weather, reset-reason power cycles, heap gates | Flashed (`016451e`): geocoding resolved "Sydney, New South Wales, AU" at boot, but the forecast fetches in the first ~2 min failed as "unreachable"; a manual sync then succeeded in 1.1 s with 4 forecast days. The checkout waits 5 s after the link comes up, uses a 10 s timeout and reports the client error code ([record](decisions/2026-10-05-open-meteo-reset-reason-and-discovery.md)) |
-| Hostname | `smartclock-adf20d`; last reset reported as "Software/System restart" after OTA |
-| Our own `/update_ota` | Works: 0.1.0 to 0.1.1-dev |
-| New settings page | Flashed; served gzipped (9,942 B), `/status` reports live state |
-| Seven clock faces, forecast, photos | Flashed (`4252007`). Live: current weather (light rain, 18.3 C), 4 forecast days, free heap 32 KB. Look on the panel not yet reported ([record](decisions/2026-10-05-clock-faces-without-a-framebuffer.md)) |
-| Stock photos | All removed on request: `1.jpg` (replaced by a generic `dusk.jpg`), then `like.gif` and `space man.gif` once `016451e` could delete any file. `space man.gif` showed broken because `/photo/` did not decode `%20`; fixed in the checkout |
-| Crash-marker recovery, format storage | Offline tests only |
-| 1.2.0: custom faces, geekmagic-hacs API, MQTT (all off by default) | Flashed. The geekmagic-hacs SD_PRO sequence, replayed without sign-in (detect, upload, exclusive photo and face, 1 s interval, theme=2), showed the test dashboard; settings, WiFi and firmware stayed refused. The 1 s interval made the Photo face re-decode and blink once a second; fixed in the checkout (no redraw of the same photo, no clear before a full-screen photo). MQTT and a real Home Assistant not yet tried ([record](decisions/2026-10-06-integrations.md)) |
-| 0.1.2: device password, update banner, sunset night mode, backup/restore | Flashed: sign-in, Show on clock (hidden again on sign-in) and the build ID confirmed on the device ([record](decisions/2026-10-06-passwords-and-flash-savings.md)) |
+| Install over SmartClock-OSS, then updates | The owner installed both 1.4.0 images (`_nomqtt.bin`, then `.bin.gz`) |
+| Line font and Big tiles | Drew glyph by glyph at 80 MHz; Big date tripped the watchdog; fixed by faster strokes and 160 MHz, re-measured with `drawMs` |
+| Agent messages | Each icon sent in parallel and shown; solid backgrounds chosen on the panel |
+| Night color | Dark grey at night, chosen on the panel |
+| French | Shown |
+| Setup network after a reboot | Once showed the old name in recovery ([issue](issues/2026-10-25-setup-network-kept-old-name-after-reboot.md)) |
 
-## Offline checks
+**Not run on the clock:** everything from 1.5.0 on (face model, palettes and roles,
+orientation, gamma, screen off, off-screen repaints, flip clocks), mDNS, MQTT with a
+broker. That check is [spec 018](../specs/018-first-run-on-the-clock/SPEC.md).
 
-`python tests/run_safety_tests.py` after `pio run`: the OTA handler against a
-mocked updater, the power-cycle counter against a simulated EEPROM, the image's
-LittleFS constants against stock, the size budget, and source invariants.
+## Checks
 
-`python tests/face_preview/run_face_preview.py`: every face rendered to PNG in
-`.pio/face-preview/` (with `sheet.png`), and incremental redraws compared with
-full redraws.
+Before each commit of firmware: `pio run` (size guard), unit tests (274 checks), safety
+tests, face preview, and for visible changes the integration tests (24 cases, Docker)
+and `scripts/screenshots.py`. CI (`.github/workflows/build.yml`) runs the build, unit, safety, face preview and integration tests on every push.
 
 ## Flash budget
 
-The checkout's image is 502,416 bytes, 97% of the 0x7E000 OTA limit, leaving about
-14 KB, with the integrations ([record](decisions/2026-10-06-integrations.md)). mDNS
-(19.9 KB) is the next lever if space runs out.
-Measure any addition before it lands; the build refuses an image over the limit.
+`firmware.bin` 589,456 B; `firmware.bin.gz` 419,030 B; compressed update limit
+618,496 B, **95% used** (about 29 KB left). Off-screen repaints (1.8.0) cost 10.7 KB.
 
-## Next
+## Specs in flight
 
-1. Then the [roadmap](plans/roadmap.md) candidates: a way back to stock, CI, crash reports.
+None in progress. Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md),
+[019](../specs/019-claude-code-hooks/SPEC.md). Order: [roadmap](plans/roadmap.md).
 
 ## Open issues
 
-See [issues](issues/README.md).
+See [issues](issues/README.md): the old setup network name after a reboot, and a new
+variable dropped when the table is full.

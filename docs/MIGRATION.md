@@ -23,10 +23,12 @@ it, refuses it).
    constants (checked by the safety tests). So after OTA our firmware mounts the existing
    stock volume. Our `/config.json` does not collide with stock's `/theme_config.txt` or
    `/photo_config.json`.
-   With 4m3m the first 1 MB holds the running sketch **and** the staged update, so an
-   image must stay under 0x7E000 bytes (about 504 KB). `scripts/build_options.py` fails the
-   build and deletes `firmware.bin` above that. The first flash through the stock updater
-   allows about 552 KB (1 MB minus the 488 KB stock image).
+   With 4m3m the first 1 MB holds the running sketch **and** the staged update. A plain
+   image must stay under 0x7E000 bytes (516,096 B); the full firmware is over that since
+   1.4.0, so it is installed as `firmware.bin.gz`, whose limit is the image plus the
+   `.gz` within 1 MB (`scripts/build_options.py` prints both and fails above). The first
+   flash through the stock updater allows about 552 KB (1 MB minus the 488 KB stock
+   image); use v1.4.0's `_nomqtt.bin` for it.
 4. Establish recovery and back up the device before using its stock OTA page. The stock
    updater controls the first transfer; our validation applies only to subsequent uploads.
 5. If proceeding with the stock updater, use the built firmware image and stable power.
@@ -86,16 +88,18 @@ Stock images lack the length/CRC fields that our updater requires, so **you cann
 back to the vendor firmware**. Returning to stock needs UART. Back up the full flash over
 UART before the first flash if you may ever want to go back.
 
-The AP and OTA endpoint still have no authentication. Anyone within WiFi range can
-reflash the device. Firmware recovery cannot rescue an image that never reaches this code;
-UART remains the fallback.
+The setup network and the updater are protected by the device password (since 0.1.2;
+the clock shows it on request). Firmware recovery cannot rescue an image that never
+reaches this code; UART remains the fallback.
 
 ## Subsequent updates
 
 Use the embedded **Firmware Update (OTA)** form, or POST a single multipart firmware
-file to `/update_ota`. Only raw project-compatible ESP8266 Arduino images are accepted:
-4 MB/DIO/40 MHz, with the embedded image length and CRC produced by `elf2bin.py`.
-Compressed, filesystem, and vendor binaries without these fields are unsupported.
+file to `/update_ota`. Accepted: the compressed `AIAgentMonitor_v<version>.bin.gz` (gzip
+with an "AM" header field: unpacked size, file size, CRC; the bootloader unpacks it), and
+raw project-compatible ESP8266 Arduino images that fit a plain update: 4 MB/DIO/40 MHz,
+with the embedded image length and CRC produced by `elf2bin.py`. Filesystem and vendor
+binaries are refused.
 The filename never selects a flash region; uploads always use `U_FLASH`.
 
 The updater buffers and validates the image header before staging. It checks the declared

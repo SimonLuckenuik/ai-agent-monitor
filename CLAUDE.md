@@ -4,13 +4,58 @@ Firmware for a small ESP8266 desk clock (sold as the "Smart Weather Clock" **SD 
 GeekMagic SmallTV look-alike) that shows time, weather, photos and, above all,
 **messages and screens pushed by AI agents**. A fork of
 [michaeldale/smartclock-oss](https://github.com/michaeldale/smartclock-oss) (GPL-3.0),
-at github.com/SimonLuckenuik/ai-agent-monitor. Development happens on `faces-v2`;
-`main` is still upstream 1.3.2. Upstream is the `upstream` remote: no pull requests to
-it for now.
+at github.com/SimonLuckenuik/ai-agent-monitor. Development happens on `faces-v2`, and
+`main` is fast-forwarded to it (a push to `main` releases, see below). Upstream is the
+`upstream` remote: no pull requests to it for now.
 
-The owner's clock is at **192.168.66.55** (MAC `8C:8C:29:AD:EC:8A`, so hostname
-`agentmonitor-adec8a`), on an isolated IoT VLAN. It runs SmartClock-OSS 1.3.2; this
-branch has **not run on hardware yet**.
+The owner's clock (MAC `8C:8C:29:AD:EC:8A`, so hostname `agentmonitor-adec8a`) is on an
+isolated IoT VLAN; its address moves (192.168.66.55, later .57). What it runs and what
+has been checked on it is in [docs/STATUS.md](docs/STATUS.md).
+
+## How we work: spec-driven development
+
+Every new piece of work starts as a spec, and nothing is implemented before the owner
+approves it.
+
+- **`specs/NNN-<slug>/`**, numbered in order (`017-example-faces`, next free number in
+  [specs/README.md](specs/README.md)), with four documents:
+  - `SPEC.md`: what and why. Status line (`Draft`, `Approved YYYY-MM-DD`,
+    `In progress`, `Done in <version>`, `Superseded by NNN`, `Dropped`), the problem,
+    goals and non-goals, requirements (numbered, testable), the user-visible behaviour
+    (settings, API, screens), the flash and RAM budget, and open questions.
+  - `PLAN.md`: how. Steps in order (files, tests, docs to touch), how each is checked
+    (unit, face preview, integration case, emulator screenshots, the real clock), and
+    the release it lands in.
+  - `RESEARCH.md`: what was looked at and measured: hardware and library facts, sizes,
+    draw times, options weighed and why they lost, links.
+  - `PROGRESS.md`: a dated log (newest last): steps done with commits, measurements,
+    test results, decisions taken on the way, what is left, what was not verified.
+- **Start a new spec** whenever work starts on something new: a feature, a face, a
+  setting, a tool. A fix to something a spec already covers goes in that spec's
+  PROGRESS (and an issue record when it is a defect); a typo or a one-line tweak needs
+  neither.
+- **Approval.** Write the spec (and a first plan), show it, and wait. The owner's go
+  in the chat approves it: set `Approved <date>` and only then write code. A spec the
+  owner rejects is `Dropped`, kept for the record.
+- **Decisions on the way.** When the work turns up something that changes the plan (a
+  cost, a limit, the owner's new choice), update SPEC.md and PLAN.md to what is now
+  true, log it in PROGRESS.md, and write a decision record when it is a choice others
+  would ask about. A change of scope after approval goes back to the owner.
+- **Done.** When it ships, set `Done in <version>`, finish PROGRESS (what was checked,
+  what was not), and update [specs/README.md](specs/README.md).
+
+Alongside the specs, keep these current as you go (not at the end):
+
+| Where | What | When |
+|---|---|---|
+| [docs/decisions/](docs/decisions/README.md) | Dated decision records: the choice, the evidence, the alternatives. Never edited; a later record supersedes | A choice that changes the design, a budget or a release |
+| [docs/issues/](docs/issues/README.md) | Dated defect records: symptom, cause, fix, status. Append, do not rewrite | A defect found (by tests, the emulator, the clock or the owner) |
+| [docs/plans/roadmap.md](docs/plans/roadmap.md) | The order of work: specs in progress, approved, proposed, and ideas not yet specs | A spec is created, approved, done or dropped |
+| [docs/STATUS.md](docs/STATUS.md) | Now: latest release, what runs on the clock and what was checked there, specs in flight, open issues, next steps | A release, a device result, a spec changing state |
+| `CHANGELOG.md` | User-visible changes, under `## Unreleased` | With each change |
+
+Reference documents (`docs/specifications/`: hardware, settings, the API) describe the
+product as it is, and change with the code; specs describe a piece of work.
 
 ## Hard constraints (read before changing firmware)
 
@@ -34,8 +79,10 @@ branch has **not run on hardware yet**.
 - **Fonts are ASCII.** TFT_eSPI fonts 2 (16 px) and 4 (26 px) have letters; 6 (48 px)
   and 8 (75 px) are digits only. No accents: incoming text goes through `asciiFold()`
   (src/ascii.cpp). French is written without accents. Larger type uses the monoline
-  stroke font in faces.cpp (`monoText()`, glyphs A–Z, 0–9, `-`, space, `*` = degree),
-  traced from Roboto Mono's centre lines: monospaced, 16.9-unit cells, plain zero.
+  stroke font in faces.cpp (`monoText()`, `"font": "big"`: A–Z, 0–9, punctuation and
+  `° ↑ ↓ ← → ✓ ✗ • ♥ ⚡`; lowercase drawn as capitals), traced from Roboto Mono's
+  centre lines: monospaced, 16.9-unit cells, plain zero. `monoDiff()` redraws only the
+  characters that changed.
 - **Flash layout** must stay `eagle.flash.4m3m.ld` (LittleFS at 0x100000–0x3FA000), the
   stock layout, or an OTA over stock lands on the wrong filesystem. LittleFS never
   auto-formats on the device.
@@ -71,6 +118,8 @@ branch has **not run on hardware yet**.
 | `tests/run_safety_tests.py` | OTA handler, flash layout, size budget, no float printf, guards |
 | `plugins/ai-agent-monitor/` | Claude Code plugin + skill; `.claude-plugin/marketplace.json` at the root |
 | `docs/specifications/integrations-api.md` | The API reference: source of truth for messages and the face format |
+| `specs/` | One folder per piece of work (spec-driven development, above) |
+| `docs/decisions/`, `docs/issues/`, `docs/plans/`, `docs/STATUS.md` | Decision and issue records, the roadmap, the current status |
 | `.github/workflows/` | `build.yml` (every push), `release.yml` (tags `v*`) |
 | `release/` | Local flash images (gitignored) |
 
@@ -81,7 +130,7 @@ tests (`python -m pip install ziglang==0.13.0 --target .pio-tools`).
 
 ```bash
 python -m platformio run                        # firmware + size guard
-python tests/unit/run_unit_tests.py             # 173 checks
+python tests/unit/run_unit_tests.py             # 274 checks
 python tests/run_safety_tests.py                # needs the firmware.bin from pio run
 python tests/face_preview/run_face_preview.py   # .pio/face-preview/*.png, sheet.png
 claude plugin validate .                        # plugin and marketplace manifests
@@ -252,22 +301,5 @@ change.
 
 ## Status and next priorities
 
-Done on `faces-v2` (see CHANGELOG Unreleased): emulator, custom faces v2 (expressions,
-`show`, `fps`, SVG paths, gradients, wrapping, `{name|fallback}`), agent messages
-(`/api/message`, 8 icons, rotation turns, backlight boost), French, Big tiles (Big date,
-Big time, Big weather) and the Agents board, night tile option, hostname and setup
-network `agentmonitor-XXXXXX` / `AI Agent Monitor XXXXXX`, unit tests, CI, plugin 0.2.0.
-
-Next:
-1. **First run on the real clock**: the owner flashes `release/…bin`; check heap
-   (`/status` heap, heapLow), path drawing time, full-screen gradient speed, the Big
-   tiles' drawing time (stroke rendering is float-heavy on a CPU without an FPU).
-2. Merge `faces-v2` into `main` (the README's plugin install line needs it).
-3. Claude Code hooks in the plugin (Notification → waiting, Stop → done,
-   UserPromptSubmit → clear), using `/api/message`.
-4. Flash headroom: the plain limit (516,096) has ~3 KB left, but compressed updates
-   raise the real limit to about 610 KB: the image plus its `.bin.gz` must fit the
-   1 MB area (`build_options.py` prints both). Past 516 KB, a clock updates only with
-   the `.bin.gz`, and only from a firmware that takes it: install one with
-   compressed-update support as a plain `.bin` first.
-5. The settings page stays English and self-contained (no CDN).
+In [docs/STATUS.md](docs/STATUS.md) (now) and [docs/plans/roadmap.md](docs/plans/roadmap.md)
+(the order of work).
