@@ -112,6 +112,19 @@ static void testExpressions() {
   CHECK_NUM(evalNum("0?5:6"), 6);
   CHECK_NUM(evalNum("0?1:0?2:3"), 3);       // nested, right to left
   CHECK_NUM(evalNum("--"), 0);              // a weather placeholder with no data yet
+  // Without recursion (4 KB of stack): any depth of parentheses within the stacks' 12.
+  CHECK_NUM(evalNum("((((((1+2))))))*2"), 6);
+  CHECK_NUM(evalNum("(7-(2*13+(400>=500))%8)==1?3:4"), 4);   // retro-runner's frame
+  CHECK_NUM(evalNum("(3%8)*30+((3-3%8)/8)*15-15"), 75);
+  CHECK_NUM(evalNum("min(1+2,max(4,5))"), 3);
+  CHECK_NUM(evalNum("max(min(9,(2+3)*2),-(-4))"), 9);
+  CHECK_NUM(evalNum("1?0?7:8:9"), 8);
+  CHECK_NUM(evalNum("0?2"), 0);             // no ":" gives 0
+  CHECK_NUM(evalNum("(1+2"), 3);            // a missing ")"
+  CHECK_NUM(evalNum("4)+1"), 4);            // a stray ")" ends it
+  CHECK_NUM(evalNum("day==day?1:2"), 1);    // text compares as words
+  CHECK_NUM(evalNum("day!=night"), 1);
+  CHECK_NUM(evalNum("((((((((((((((1))))))))))))))"), 0);   // too deep: 0, no crash
 
   CHECK_STR(evalStr("warn==warn"), "1");    // words compare as text
   CHECK_STR(evalStr("warn==ok"), "0");

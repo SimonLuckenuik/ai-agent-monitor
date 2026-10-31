@@ -7,6 +7,7 @@ here from Open to Closed when it is fixed or explained.
 
 ## Open
 
+- [2026-10-31 Animated custom faces restart the clock](2026-10-31-animated-faces-restart-the-clock.md): fixed in the code (spec 023), to confirm on the clock
 - [2026-10-25 After a reboot the clock showed the old setup network name](2026-10-25-setup-network-kept-old-name-after-reboot.md)
 - [2026-10-29 A new face variable is dropped silently when the table is full](2026-10-29-new-variable-dropped-when-table-full.md)
 

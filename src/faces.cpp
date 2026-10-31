@@ -925,106 +925,205 @@ bool truth(const Val& v) {
 double numOf(const Val& v) { const char* s = v.s; return v.num ? v.n : parseNumD(s); }
 Val number(double n) { Val v; v.n = n; return v; }
 
+// Expressions, evaluated without recursion: operator precedence over two small stacks,
+// so the stack this takes is the same however deep the parentheses go (the clock has
+// 4 KB of stack; a recursive parser took about 500 B per level of parentheses).
+//   precedence: ?: (right)  ||  &&  == != <= >= < >  + -  * / %  unary - !
+// Words that are not numbers are text (compared with == and !=); sin cos min max abs
+// round rand are functions. Malformed input stops where it stops making sense, with 0
+// for anything missing.
 class Expr {
  public:
   explicit Expr(const char* src) : p(src) {}
-  Val parse() { return ternary(); }
 
- private:
-  const char* p;
-  void ws() { while (*p == ' ') ++p; }
-  bool eat(const char* tok) {
-    ws();
-    size_t n = strlen(tok);
-    if (strncmp(p, tok, n)) return false;
-    p += n;
-    return true;
-  }
-  Val ternary() {
-    Val c = orOp();
-    if (!eat("?")) return c;
-    Val a = ternary(), b;
-    if (eat(":")) b = ternary();
-    return truth(c) ? a : b;
-  }
-  Val orOp() {
-    Val a = andOp();
-    while (eat("||")) { bool l = truth(a); a = number(truth(andOp()) || l); }
-    return a;
-  }
-  Val andOp() {
-    Val a = cmp();
-    while (eat("&&")) { bool l = truth(a); a = number(truth(cmp()) && l); }
-    return a;
-  }
-  Val cmp() {
-    Val a = add();
-    static const char* const ops[] = {"==", "!=", "<=", ">=", "<", ">"};
-    for (int i = 0; i < 6; ++i) {
-      if (!eat(ops[i])) continue;
-      Val b = add();
-      if (i < 2 && (!a.num || !b.num)) {   // text: equal only if both are the same word
-        bool same = !a.num && !b.num && a.len == b.len && !strncmp(a.s, b.s, a.len);
-        return number(same == (i == 0));
-      }
-      double x = numOf(a), y = numOf(b);
-      bool r[] = {x == y, x != y, x <= y, x >= y, x < y, x > y};
-      return number(r[i]);
-    }
-    return a;
-  }
-  Val add() {
-    Val a = mul();
-    for (;;) {
-      if (eat("+")) { double l = numOf(a); a = number(l + numOf(mul())); }
-      else if (eat("-")) { double l = numOf(a); a = number(l - numOf(mul())); }
-      else return a;
-    }
-  }
-  Val mul() {
-    Val a = unary();
+  Val parse() {
+    bool operand = true;   // expecting a value (or a prefix operator) next
     for (;;) {
       ws();
-      char op = *p;
-      if (op != '*' && op != '/' && op != '%') return a;
-      ++p;
-      double l = numOf(a), r = numOf(unary());
-      a = number(op == '*' ? l * r : !r ? 0 : op == '/' ? l / r : l - r * (long long)(l / r));
+      char ch = *p;
+      if (operand) {
+        if (ch == '(') { ++p; if (!pushOp(OPEN)) return fail(); continue; }
+        if (ch == '-' || ch == '!') { ++p; if (!pushOp(ch == '-' ? NEG : NOT)) return fail(); continue; }
+        int got = word();
+        if (!got) return fail();
+        operand = got == CALL;   // after "name(", its first argument
+        continue;
+      }
+      if (!ch) break;
+      if (ch == ')') {
+        ++p;
+        if (!closeParen()) break;   // a stray ")": the expression ends here
+        continue;
+      }
+      if (ch == ',') {   // between a function's arguments
+        if (!unwindTo(OPEN)) break;
+        ++p;
+        if (nOps >= 2 && ops[nOps - 2].op == FUNC) ops[nOps - 2].argc = 2;
+        operand = true;
+        continue;
+      }
+      if (ch == '?') {
+        ++p;
+        while (nOps && prec(ops[nOps - 1].op) > 1) apply();
+        if (!pushOp(QUEST)) return fail();
+        operand = true;
+        continue;
+      }
+      if (ch == ':') {
+        while (nOps && ops[nOps - 1].op != QUEST && ops[nOps - 1].op != OPEN) apply();
+        if (!nOps || ops[nOps - 1].op != QUEST) break;   // ":" without "?": the end
+        ++p;
+        ops[nOps - 1].op = TERN;
+        operand = true;
+        continue;
+      }
+      uint8_t op = binary();
+      if (!op) break;   // not an operator: the expression ends here
+      while (nOps && prec(ops[nOps - 1].op) >= prec(op)) apply();
+      if (!pushOp(op)) return fail();
+      operand = true;
+    }
+    while (nOps) {
+      if (ops[nOps - 1].op == OPEN) closeParen();   // a missing ")"
+      else apply();
+    }
+    return nVals ? vals[nVals - 1] : Val();
+  }
+
+ private:
+  enum : uint8_t { OPEN = 1, FUNC, QUEST, TERN, OR, AND, EQ, NE, LE, GE, LT, GT, ADD, SUB, MUL, DIV, MOD, NEG, NOT };
+  struct Op { uint8_t op; uint8_t argc; uint8_t len; const char* name; };
+  static constexpr int DEPTH = 12;
+  const char* p;
+  Val vals[DEPTH];
+  Op ops[DEPTH];
+  int nVals = 0, nOps = 0;
+
+  static int prec(uint8_t op) {
+    switch (op) {
+      case QUEST: case TERN: return 1;
+      case OR: return 2;
+      case AND: return 3;
+      case EQ: case NE: case LE: case GE: case LT: case GT: return 4;
+      case ADD: case SUB: return 5;
+      case MUL: case DIV: case MOD: return 6;
+      case NEG: case NOT: return 7;
+      default: return 0;   // "(" and functions: only ")" or "," end them
     }
   }
-  Val unary() {
-    if (eat("-")) return number(-numOf(unary()));
-    if (eat("!")) return number(!truth(unary()));
-    return primary();
+  void ws() { while (*p == ' ') ++p; }
+  Val fail() { return Val(); }   // too deep to follow: 0, as for anything malformed
+  bool pushOp(uint8_t op, const char* name = nullptr, uint8_t len = 0) {
+    if (nOps >= DEPTH) return false;
+    ops[nOps++] = {op, 1, len, name};
+    return true;
   }
-  Val primary() {
-    if (eat("(")) { Val v = ternary(); eat(")"); return v; }
-    ws();
+  bool pushVal(const Val& v) {
+    if (nVals >= DEPTH) return false;
+    vals[nVals++] = v;
+    return true;
+  }
+  Val pop() { return nVals ? vals[--nVals] : Val(); }
+
+  uint8_t binary() {
+    static const struct { char s[3]; uint8_t op; } table[] = {
+      {"||", OR}, {"&&", AND}, {"==", EQ}, {"!=", NE}, {"<=", LE}, {">=", GE}, {"<", LT}, {">", GT},
+      {"+", ADD}, {"-", SUB}, {"*", MUL}, {"/", DIV}, {"%", MOD}};
+    for (const auto& e : table) {
+      size_t n = strlen(e.s);
+      if (!strncmp(p, e.s, n)) { p += n; return e.op; }
+    }
+    return 0;
+  }
+
+  // A word: a number or text (VALUE), or a function's name followed by "(" (CALL); 0 when
+  // too deep.
+  enum { VALUE = 1, CALL = 2 };
+  int word() {
     const char* start = p;
     while (*p && !strchr("+-*/%()?:<>=!&|,", *p)) ++p;
     const char* end = p;
     while (end > start && end[-1] == ' ') --end;
-    Val v;
-    v.s = start; v.len = std::min(255, (int)(end - start)); v.num = false;
+    uint8_t len = std::min(255, (int)(end - start));
     ws();
-    if (*p == '(' && v.len) {   // a function call
+    if (*p == '(' && len) {   // a function call: its arguments follow
       ++p;
-      double a = numOf(ternary()), b = eat(",") ? numOf(ternary()) : 0;
-      eat(")");
-      if (sliceIs(v, "sin")) return number(sinf((float)(a * DEG_TO_RAD)));
-      if (sliceIs(v, "cos")) return number(cosf((float)(a * DEG_TO_RAD)));
-      if (sliceIs(v, "min")) return number(std::min(a, b));
-      if (sliceIs(v, "max")) return number(std::max(a, b));
-      if (sliceIs(v, "abs")) return number(fabs(a));
-      if (sliceIs(v, "round")) return number(floor(a + 0.5));
-      if (sliceIs(v, "rand")) return number(a >= 1 ? random((long)a) : 0);
-      return number(0);
+      return pushOp(FUNC, start, len) && pushOp(OPEN) ? CALL : 0;
     }
     const char* s = start;
     bool ok;
     double n = parseNumD(s, &ok);
-    if (ok && s == end) return number(n);   // the whole word is a number
-    return v;
+    if (ok && s == end) return pushVal(number(n)) ? VALUE : 0;   // the whole word is a number
+    Val v;
+    v.s = start; v.len = len; v.num = false;
+    return pushVal(v) ? VALUE : 0;
+  }
+
+  // Applies the operators down to the "(" (false when there is none).
+  bool unwindTo(uint8_t open) {
+    while (nOps && ops[nOps - 1].op != open) apply();
+    return nOps > 0;
+  }
+  bool closeParen() {
+    if (!unwindTo(OPEN)) return false;
+    --nOps;
+    if (nOps && ops[nOps - 1].op == FUNC) apply();
+    return true;
+  }
+
+  void apply() {
+    Op o = ops[--nOps];
+    if (o.op == OPEN) return;
+    if (o.op == NEG || o.op == NOT) {
+      Val a = pop();
+      pushVal(number(o.op == NEG ? -numOf(a) : !truth(a)));
+      return;
+    }
+    if (o.op == FUNC) {
+      double b = o.argc > 1 ? numOf(pop()) : 0, a = numOf(pop());
+      Val fn;
+      fn.s = o.name; fn.len = o.len; fn.num = false;
+      double r = sliceIs(fn, "sin") ? sinf((float)(a * DEG_TO_RAD))
+               : sliceIs(fn, "cos") ? cosf((float)(a * DEG_TO_RAD))
+               : sliceIs(fn, "min") ? std::min(a, b)
+               : sliceIs(fn, "max") ? std::max(a, b)
+               : sliceIs(fn, "abs") ? fabs(a)
+               : sliceIs(fn, "round") ? floor(a + 0.5)
+               : sliceIs(fn, "rand") ? (a >= 1 ? random((long)a) : 0)
+               : 0;
+      pushVal(number(r));
+      return;
+    }
+    if (o.op == QUEST || o.op == TERN) {   // "c ? a" without ":" gives 0 when c is false
+      Val b = o.op == TERN ? pop() : Val(), a = pop(), c = pop();
+      pushVal(truth(c) ? a : b);
+      return;
+    }
+    Val b = pop(), a = pop();
+    if ((o.op == EQ || o.op == NE) && (!a.num || !b.num)) {   // text: equal only if the same word
+      bool same = !a.num && !b.num && a.len == b.len && !strncmp(a.s, b.s, a.len);
+      pushVal(number(same == (o.op == EQ)));
+      return;
+    }
+    if (o.op == OR || o.op == AND) {
+      bool l = truth(a), r = truth(b);
+      pushVal(number(o.op == OR ? l || r : l && r));
+      return;
+    }
+    double l = numOf(a), r = numOf(b);
+    switch (o.op) {
+      case EQ: pushVal(number(l == r)); break;
+      case NE: pushVal(number(l != r)); break;
+      case LE: pushVal(number(l <= r)); break;
+      case GE: pushVal(number(l >= r)); break;
+      case LT: pushVal(number(l < r)); break;
+      case GT: pushVal(number(l > r)); break;
+      case ADD: pushVal(number(l + r)); break;
+      case SUB: pushVal(number(l - r)); break;
+      case MUL: pushVal(number(l * r)); break;
+      case DIV: pushVal(number(!r ? 0 : l / r)); break;
+      default: pushVal(number(!r ? 0 : l - r * (long long)(l / r))); break;   // MOD
+    }
   }
 };
 
@@ -1874,12 +1973,14 @@ void custom(const struct tm& t, bool force) {
 // what does not change stays on the panel. Without the RAM: on the panel, clipped.
 constexpr int BAND_PX = 2560;
 
-void repaintBox(const Box& b, JsonArrayConst items, size_t n, const struct tm& t, const Paint& bgPaint, uint16_t bg) {
+// Not inlined, and the sprite static: neither weighs on renderItems' stack (4 KB in all).
+__attribute__((noinline)) void repaintBox(const Box& b, JsonArrayConst items, size_t n, const struct tm& t,
+                                          const Paint& bgPaint, uint16_t bg) {
   int x0 = std::max<int>(0, b.x0), y0 = std::max<int>(0, b.y0);
   int x1 = std::min<int>(SCR_W - 1, b.x1), y1 = std::min<int>(SCR_H - 1, b.y1);
   if (x0 > x1 || y0 > y1) return;
   int w = x1 - x0 + 1, band = std::max(1, std::min(y1 - y0 + 1, BAND_PX / w));
-  TFT_eSprite spr(&clockDisplay());
+  static TFT_eSprite spr(&clockDisplay());
   bool off = spr.createSprite(w, band) != nullptr;
   uint16_t tint = panelTint();
   clipOn = true;
@@ -1930,8 +2031,8 @@ void renderItems(const struct tm& t, bool force) {
   uint16_t bg = bgPaint.first();
   JsonArrayConst items = customDoc["items"];
   size_t n = std::min(items.size(), CUSTOM_ITEMS);
-  uint32_t h[CUSTOM_ITEMS], g[CUSTOM_ITEMS];
-  bool moved[CUSTOM_ITEMS];
+  static uint32_t h[CUSTOM_ITEMS], g[CUSTOM_ITEMS];   // static: off the 4 KB stack
+  static bool moved[CUSTOM_ITEMS];
   for (size_t i = 0; i < n; ++i) {
     h[i] = g[i] = 2166136261u;
     mixItem(items[i].as<JsonObjectConst>(), t, h[i], g[i]);
