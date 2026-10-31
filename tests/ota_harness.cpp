@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <new>
 #include <string>
 #include <vector>
 #include "firmware_validation.h"
@@ -76,7 +77,7 @@ void reset() {
   assert(!Update.running);
   server = MockServer{}; ESP = MockESP{}; Update = MockUpdate{};
   otaStarted = otaReady = otaFailed = false; otaFiles = 0; otaError = "";
-  firmware.reset();
+  assert(!firmware);   // freed after every upload, accepted or not
 }
 void event(int status, uint8_t* data = nullptr, size_t size = 0) {
   server.up.status = status; server.up.buf = data; server.up.currentSize = size;

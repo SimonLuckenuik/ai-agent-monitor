@@ -12,7 +12,7 @@ root = Path(__file__).resolve().parents[1]
 out = root / ".pio" / "safety-tests"
 out.mkdir(parents=True, exist_ok=True)
 source = (root / "src/main.cpp").read_text(encoding="utf-8")
-handler = source[source.index("FirmwareValidation firmware;"):source.index("void setupRoutes()")]
+handler = source[source.index("FirmwareValidation* firmware = nullptr;"):source.index("void setupRoutes()")]
 cycles = source[source.index("constexpr int CYCLE_ADDR"):source.index("// Every deliberate reboot")]
 harness = (root / "tests/ota_harness.cpp").read_text(encoding="utf-8")
 harness = harness.replace("// OTA_IMPLEMENTATION", handler).replace("// CYCLE_IMPLEMENTATION", cycles)

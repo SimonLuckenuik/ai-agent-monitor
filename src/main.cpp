@@ -22,6 +22,7 @@
 #include <Updater.h>
 #include <time.h>
 #include <algorithm>
+#include <new>
 #include "pins.h"
 #include "config.h"
 #include "web_index.h"   // generated from web/index.html by scripts/build_options.py
@@ -967,11 +968,14 @@ void sendIndex() {
 void handleVersion() { server.send(200, "text/plain", "SmartClock-OSS V" FW_VERSION); }
 
 // Firmware-only OTA, plain .bin or compressed .bin.gz (firmware_validation.h). Stage
-// bytes in free sketch space; never write U_FS.
-FirmwareValidation firmware;
+// bytes in free sketch space; never write U_FS. The check's 4.1 KB is allocated when an
+// upload starts and freed when it ends: only an update needs it (spec 025).
+FirmwareValidation* firmware = nullptr;
 bool otaStarted = false, otaReady = false, otaFailed = false;
 unsigned otaFiles = 0;
 String otaError;
+
+void releaseOta() { delete firmware; firmware = nullptr; }
 
 void failOta(const char* message) {
   otaFailed = true;
@@ -980,6 +984,7 @@ void failOta(const char* message) {
   // A byte is always withheld, so end(false) cannot commit a rejected image.
   if (Update.isRunning()) Update.end(false);
   otaStarted = false;
+  releaseOta();
 }
 
 void handleOtaUpload() {
@@ -987,36 +992,38 @@ void handleOtaUpload() {
   if (up.status == UPLOAD_FILE_START) {
     if (!requestAuthorized()) { failOta("Sign in first"); return; }
     if (++otaFiles != 1 || otaFailed) { failOta("Upload exactly one firmware image"); return; }
-    firmware.reset();
+    releaseOta();
+    firmware = new (std::nothrow) FirmwareValidation;
+    if (!firmware) { failOta("Not enough memory for an update: try again"); return; }
     otaError = "";
   } else if (up.status == UPLOAD_FILE_WRITE && !otaFailed) {
     const uint8_t* data = up.buf;
     size_t size = up.currentSize;
     if (!otaStarted) {
-      size_t take = std::min(size, FirmwareValidation::prefixSize - firmware.received);
-      firmware.consume(data, take);
+      size_t take = std::min(size, FirmwareValidation::prefixSize - firmware->received);
+      firmware->consume(data, take);
       data += take; size -= take;
-      if (firmware.received < FirmwareValidation::prefixSize) return;
+      if (firmware->received < FirmwareValidation::prefixSize) return;
       uint32_t freeSpace = ESP.getFreeSketchSpace();
       size_t capacity = freeSpace > 0x1000 ? (freeSpace - 0x1000) & 0xfffff000 : 0;
-      if (const char* why = firmware.check(capacity, FS_PHYS_ADDR)) { failOta(why); return; }
-      if (!Update.begin(firmware.expectedSize, U_FLASH)) { failOta("Cannot stage firmware"); return; }
+      if (const char* why = firmware->check(capacity, FS_PHYS_ADDR)) { failOta(why); return; }
+      if (!Update.begin(firmware->expectedSize, U_FLASH)) { failOta("Cannot stage firmware"); return; }
       otaStarted = true;
-      if (Update.write(firmware.prefix, FirmwareValidation::prefixSize - 1) != FirmwareValidation::prefixSize - 1) {
+      if (Update.write(firmware->prefix, FirmwareValidation::prefixSize - 1) != FirmwareValidation::prefixSize - 1) {
         failOta("Firmware staging failed"); return;
       }
     }
     if (size) {
-      if (size > firmware.expectedSize - firmware.received) { failOta("Image exceeds declared length"); return; }
-      uint8_t previous = firmware.lastByte;
-      firmware.consume(data, size);
+      if (size > firmware->expectedSize - firmware->received) { failOta("Image exceeds declared length"); return; }
+      uint8_t previous = firmware->lastByte;
+      firmware->consume(data, size);
       if (Update.write(&previous, 1) != 1 ||
           (size > 1 && Update.write(const_cast<uint8_t*>(data), size - 1) != size - 1)) {
         failOta("Firmware staging failed"); return;
       }
     }
   } else if (up.status == UPLOAD_FILE_END && !otaFailed) {
-    if (!otaStarted || !firmware.complete()) { failOta("Incomplete image or CRC mismatch"); return; }
+    if (!otaStarted || !firmware->complete()) { failOta("Incomplete image or CRC mismatch"); return; }
     otaReady = true; // Commit only after the complete HTTP request has been parsed.
   } else if (up.status == UPLOAD_FILE_ABORTED) {
     failOta("Upload aborted");
@@ -1030,7 +1037,7 @@ void handleOtaUpload() {
 void finishOta() {
   bool success = otaFiles == 1 && otaReady && !otaFailed;
   if (success) {
-    success = Update.write(&firmware.lastByte, 1) == 1 && Update.end(false);
+    success = Update.write(&firmware->lastByte, 1) == 1 && Update.end(false);
     if (!success) failOta("Firmware commit failed");
   }
   server.sendHeader("Connection", "close");
@@ -1040,6 +1047,7 @@ void finishOta() {
   otaStarted = otaReady = otaFailed = false;
   otaFiles = 0;
   otaError = "";
+  releaseOta();
 }
 
 void handleStatus();

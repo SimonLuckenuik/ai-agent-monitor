@@ -1,6 +1,6 @@
 # 025 RAM back, and MQTT and mDNS on again
 
-Status: Proposed (2026-10-31, the owner asked for it after the footprint review)
+Status: In progress (approved 2026-10-31)
 
 ## Problem
 
