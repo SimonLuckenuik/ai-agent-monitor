@@ -8,3 +8,20 @@
   allocated when an upload starts and freed when it ends or fails; out of memory answers
   "Not enough memory for an update: try again". Static RAM 51,884 -> 47,796 B. Safety
   tests pass, and the harness now asserts the buffer is freed after every case.
+- 2026-10-31: steps 2-5.
+  - **Routes:** two flash tables (`src/routes.h`), 36 B each in flash. Heap in use at rest
+    in the emulator went from 10.3 to 5.5 KB. New case `route_methods`: the same 20
+    method and path answers as 1.9.1's routes.
+  - **Strings:** `server.send` messages in `PSTR`, `failOta`/`sendHeader` in `F()`, JSON
+    keys and `key ==` comparisons in `F()`, the weather URLs and the default palettes in
+    flash. Our strings in RAM went from 8,199 to 4,600 B. The `faces.cpp` keywords and
+    messages stay: they are drawn or compared per frame through `const char*`.
+  - **Size check:** `ram_report.py --max-ours 4864`, run by the safety tests.
+  - **Static RAM:** 51,884 -> 44,240 B.
+  - **MQTT and mDNS:** `mqttHeap`, `mdnsHeap`, `mdnsState` in `/status`; gates of
+    6,144 B (MQTT) and 4,096 B (mDNS); the emulator now builds mDNS.
+  - **Case `mqtt_and_mdns`:** against a mosquitto service in the test compose file, with
+    each big face shown: MQTT connects, publishes discovery and takes `face/set`, mDNS
+    answers, and the weather syncs. retro-runner: 10,856 B free with both on;
+    `mqttHeap` 1.4 KB (plus the 1.5 KB buffer the emulator cannot see), `mdnsHeap` 560 B.
+  - **Image:** 98% of the update limit (426,379 B compressed).

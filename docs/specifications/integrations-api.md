@@ -456,7 +456,10 @@ several times a second.
 the 4 KB stack since boot), `resetReason`, `cpuMHz`, `drawMs` (per face id: the last
 and the slowest draw, in ms), the network, the weather (`weatherAge` in seconds,
 `weatherError` such as "Waiting for memory", `weatherHeap`: the most heap a weather
-fetch has taken since boot), the face shown. After a crash
+fetch has taken since boot), the face shown, MQTT (`mqtt`: `connected`, `off`, `no broker
+set`, `waiting for memory` or why it cannot connect; `mqttHeap`: what connecting took)
+and mDNS (`mdns`: the `.local` name; `mdnsState`: `on`, `starting` or `waiting for
+memory`; `mdnsHeap`: what starting took). After a crash
 it also has:
 
 | Field | |
@@ -521,8 +524,8 @@ card (or `/api/set?key=photoclock&value=0` while signed in).
 ## MQTT
 
 Set the broker, port, optional username and password, and a topic base (default:
-the clock's hostname, `agentmonitor-XXXXXX`). The clock connects when it is on WiFi,
-retries every 30 s, and announces itself to Home Assistant through **MQTT
+the clock's hostname, `agentmonitor-XXXXXX`). The clock connects when it is on WiFi
+and has about 6 KB of memory free (it waits otherwise, and says so), retries every 30 s, and announces itself to Home Assistant through **MQTT
 discovery** (prefix `homeassistant/`):
 
 | Entity | Topics |

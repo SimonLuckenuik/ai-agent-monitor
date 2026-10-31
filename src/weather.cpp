@@ -93,21 +93,21 @@ static bool geocode() {
   int comma = name.lastIndexOf(',');
   if (comma > 0) { cc = name.substring(comma + 1); cc.trim(); cc.toUpperCase(); name = name.substring(0, comma); name.trim(); }
   if (name.length() < 2) { wx.error = F("Set a city"); return false; }
-  String url = "http://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=" + urlEncode(name);
-  if (cc.length() == 2) url += "&countryCode=" + cc;
+  String url = String(F("http://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=")) + urlEncode(name);
+  if (cc.length() == 2) { url += F("&countryCode="); url += cc; }
   JsonDocument filter;   // results also carry long postcode lists
-  JsonObject r = filter["results"].add<JsonObject>();
-  r["name"] = true; r["latitude"] = true; r["longitude"] = true; r["country_code"] = true; r["admin1"] = true;
+  JsonObject r = filter[F("results")].add<JsonObject>();
+  r[F("name")] = true; r[F("latitude")] = true; r[F("longitude")] = true; r[F("country_code")] = true; r[F("admin1")] = true;
   JsonDocument doc;
   if (!httpJson(url, doc, &filter)) return false;
-  JsonObject hit = doc["results"][0];
+  JsonObject hit = doc[F("results")][0];
   if (hit.isNull()) { wx.error = F("City not found"); return false; }
-  cfg.lat = hit["latitude"] | NAN;
-  cfg.lon = hit["longitude"] | NAN;
-  String label = (const char*)(hit["name"] | "");
-  const char* region = hit["admin1"] | "";
+  cfg.lat = hit[F("latitude")] | NAN;
+  cfg.lon = hit[F("longitude")] | NAN;
+  String label = (const char*)(hit[F("name")] | "");
+  const char* region = hit[F("admin1")] | "";
   if (*region && label != region) label += String(", ") + region;
-  const char* country = hit["country_code"] | "";
+  const char* country = hit[F("country_code")] | "";
   if (*country) label += String(", ") + country;
   cfg.geoName = label;
   cfg.geoFor = cfg.city;
@@ -147,32 +147,32 @@ static bool fetchOpenMeteo() {
   if (cfg.geoFor != cfg.city || isnan(cfg.lat) || isnan(cfg.lon)) {
     if (!geocode()) return false;
   }
-  String url = "http://api.open-meteo.com/v1/forecast?latitude=" + coord(cfg.lat) +
-               "&longitude=" + coord(cfg.lon) +
-               "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day,pressure_msl,cloud_cover"
-               "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
-               "wind_speed_10m_max,relative_humidity_2m_mean"
-               "&forecast_days=4&timezone=auto&wind_speed_unit=ms";
+  String url = String(F("http://api.open-meteo.com/v1/forecast?latitude=")) + coord(cfg.lat) +
+               F("&longitude=") + coord(cfg.lon) +
+               F("&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day,pressure_msl,cloud_cover"
+                 "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
+                 "wind_speed_10m_max,relative_humidity_2m_mean"
+                 "&forecast_days=4&timezone=auto&wind_speed_unit=ms");
   if (!httpJson(url, doc)) return false;
 #if SMARTCLOCK_EMULATOR
   }
 #endif
-  JsonObject cur = doc["current"];
-  JsonObject daily = doc["daily"];
+  JsonObject cur = doc[F("current")];
+  JsonObject daily = doc[F("daily")];
   if (cur.isNull() || daily.isNull()) { wx.error = F("Unreadable weather data"); return false; }
 
-  int code = cur["weather_code"] | 3;
-  bool day = (cur["is_day"] | 1) != 0;
-  wx.temp = cur["temperature_2m"] | 0.0f;
-  wx.feels = cur["apparent_temperature"] | wx.temp;
-  wx.humidity = cur["relative_humidity_2m"] | 0;
-  wx.wind = cur["wind_speed_10m"] | 0.0f;
-  wx.pressure = lroundf(cur["pressure_msl"] | 0.0f);
-  wx.clouds = cur["cloud_cover"] | 0;
-  JsonArray dates = daily["time"], codes = daily["weather_code"], his = daily["temperature_2m_max"],
-            los = daily["temperature_2m_min"], pops = daily["precipitation_probability_max"],
-            feels = daily["apparent_temperature_max"], winds = daily["wind_speed_10m_max"],
-            hums = daily["relative_humidity_2m_mean"], rises = daily["sunrise"], sets = daily["sunset"];
+  int code = cur[F("weather_code")] | 3;
+  bool day = (cur[F("is_day")] | 1) != 0;
+  wx.temp = cur[F("temperature_2m")] | 0.0f;
+  wx.feels = cur[F("apparent_temperature")] | wx.temp;
+  wx.humidity = cur[F("relative_humidity_2m")] | 0;
+  wx.wind = cur[F("wind_speed_10m")] | 0.0f;
+  wx.pressure = lroundf(cur[F("pressure_msl")] | 0.0f);
+  wx.clouds = cur[F("cloud_cover")] | 0;
+  JsonArray dates = daily[F("time")], codes = daily[F("weather_code")], his = daily[F("temperature_2m_max")],
+            los = daily[F("temperature_2m_min")], pops = daily[F("precipitation_probability_max")],
+            feels = daily[F("apparent_temperature_max")], winds = daily[F("wind_speed_10m_max")],
+            hums = daily[F("relative_humidity_2m_mean")], rises = daily[F("sunrise")], sets = daily[F("sunset")];
   auto minutes = [](const char* iso) -> int16_t {   // "2026-10-06T05:41"
     return iso && strlen(iso) >= 16 ? atoi(iso + 11) * 60 + atoi(iso + 14) : -1;
   };
@@ -186,7 +186,7 @@ static bool fetchOpenMeteo() {
   int comma = cfg.geoName.indexOf(',');
   wx.cityName = comma > 0 ? cfg.geoName.substring(0, comma) : cfg.geoName;
 #if SMARTCLOCK_EMULATOR
-  if (fixed && doc["city"].is<const char*>()) wx.cityName = (const char*)doc["city"];
+  if (fixed && doc[F("city")].is<const char*>()) wx.cityName = (const char*)doc[F("city")];
 #endif
   wx.valid = true; wx.error = ""; wx.version++;
   wx.lastSuccess = millis();

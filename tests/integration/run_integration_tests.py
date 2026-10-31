@@ -16,6 +16,7 @@ Needs Docker and Pillow.
 """
 import argparse
 import json
+import re
 import sys
 import time
 import traceback
@@ -100,7 +101,7 @@ def baseline(emu):
 @case
 def status_and_fixed_time(emu):
     s = emu.status()
-    check(s["version"].startswith("1."), f"version {s['version']}")
+    check(re.fullmatch(r"\d+\.\d+\.\d+(-dev)?", s["version"]), f"version {s['version']}")
     check("emulator" in s["build"], f"build {s['build']}")
     check(s["time"] == "2026-10-05 10:09:00 EDT", f"time {s['time']}")
     check(round(s["weather"]["temp"]) == 18, f"weather {s['weather']}")
@@ -348,6 +349,71 @@ def faces_beside_big_faces(emu):
         print(f"  {big}: {shown} B free shown, weather synced, {len(names) - 1} faces uploaded")
         for name in emu.faces()["faces"]:
             emu.delete_face(name)
+
+
+@case
+def route_methods(emu):
+    """Spec 025: the routes table answers as server.on() did. A route takes its own method
+    (or any), a wrong method falls through to 404, and an unknown path is a 404."""
+    def code(method, path, body=b""):
+        try:
+            return emu.request(method, emu.api + path, body if method == "POST" else None)[0]
+        except HttpError as e:
+            return e.code
+    expected = [
+        ("GET", "/status", 200), ("POST", "/status", 200), ("GET", "/version", 200), ("GET", "/", 200),
+        ("GET", "/index.html", 200), ("GET", "/config", 200), ("GET", "/api/faces", 200),
+        ("GET", "/api/auth/login", 404), ("GET", "/api/weather/sync", 404), ("GET", "/api/crashes/resume", 404),
+        ("POST", "/api/crashes", 404), ("GET", "/update_ota", 404), ("GET", "/api/faces/show", 404),
+        ("GET", "/photo/upload", 404), ("GET", "/no/such/path", 404), ("GET", "/status/", 404),
+        ("POST", "/update_ota", 400), ("POST", "/api/faces/show?name=nothing", 404),
+        ("GET", "/api/crashes", 204), ("POST", "/api/crashes/clear", 200),
+    ]
+    wrong = [(m, p, want, got) for m, p, want in expected if (got := code(m, p)) != want]
+    check(not wrong, f"method, path, expected, got: {wrong}")
+
+
+@case
+def mqtt_and_mdns(emu):
+    """Spec 025: with each big example face on screen, under the clock's heap, MQTT connects
+    to the test broker, publishes discovery and takes commands, mDNS answers, and the
+    weather still syncs. /status reports what each took (mqttHeap, mdnsHeap)."""
+    import subprocess
+    broker = ["docker", "compose", "-p", "aam-itest", "-f", str(ROOT / "tests/integration/docker-compose.yml"),
+              "exec", "-T", "broker"]
+    host = emu.status()["host"]
+    emu.set("facesapi", 1)
+    emu.set("mqtthost", "broker")
+    emu.set("mqtt", 1)
+    for big in ["retro-runner", "flip-clock-wide", "night-lake"]:
+        emu.push_face(big, json.loads((EXAMPLES / f"{big}.json").read_text(encoding="utf-8")), show=True)
+        emu.set("mqtt", 0)   # connect again with the face on screen
+        emu.set("mqtt", 1)
+        end, s = time.time() + 75, {}
+        while time.time() < end:
+            s = emu.status()
+            if s.get("mqtt") == "connected" and s.get("mdnsState") == "on":
+                break
+            time.sleep(2)
+        check(s.get("mqtt") == "connected", f"MQTT beside {big}: {s.get('mqtt')}")
+        check(s.get("mdnsState") == "on", f"mDNS beside {big}: {s.get('mdnsState')}")
+        found = subprocess.run(broker + ["mosquitto_sub", "-t", "homeassistant/#", "-C", "3", "-W", "5"],
+                               capture_output=True, text=True).stdout
+        check(found.count("uniq_id") >= 3, f"discovery beside {big}: {found[:200]!r}")
+        subprocess.run(broker + ["mosquitto_pub", "-t", f"{host}/face/set", "-m", "Big time"], check=True)
+        time.sleep(3)
+        check(emu.status()["face"] == 7, f"face/set beside {big}: face {emu.status()['face']}")
+        emu.post(f"/api/faces/show?name={big}")
+        time.sleep(11)   # Sync now is limited to one request per 10 s
+        reply = emu.post("/api/weather/sync").decode()
+        check(reply == "OK", f"weather sync beside {big} with MQTT on: {reply}")
+        answers = subprocess.run(["docker", "run", "--rm", "--network", "container:aam-itest-smartclock-1",
+                                  "-v", f"{ROOT / 'tests/integration'}:/t", "python:3.12-alpine",
+                                  "python", "/t/mdns_query.py", host], capture_output=True, text=True).stdout
+        check("answers" in answers and int(answers.split()[-1]) > 0, f"mDNS answers beside {big}: {answers!r}")
+        s = emu.status()
+        print(f"  {big}: heap {s['heap']} B free, mqttHeap {s.get('mqttHeap')} B, mdnsHeap {s.get('mdnsHeap')} B")
+    emu.set("mqtt", 0)
 
 
 @case

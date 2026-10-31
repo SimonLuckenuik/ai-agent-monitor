@@ -1,6 +1,6 @@
 # 025 RAM back, and MQTT and mDNS on again
 
-Status: In progress (approved 2026-10-31)
+Status: In progress (approved 2026-10-31; 2.0.0 released, to be confirmed on the clock)
 
 ## Problem
 

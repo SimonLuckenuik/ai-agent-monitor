@@ -64,7 +64,8 @@ on the clock). In 1.9.0 on the clock, not yet seen at work there (no crash since
 [021](../specs/021-crash-report/SPEC.md) (crash records, crash-loop protection, safe mode),
 [022](../specs/022-emulator-device-memory/SPEC.md) (the emulator with the clock's memory;
 the clock's 3,050 B against the emulator's 2,752 B leaves `EMU_STACK` at 4096). In 1.9.1, not yet on the clock: [024](../specs/024-memory-headroom/SPEC.md) (the weather
-and face uploads within the heap). Proposed: [025](../specs/025-ram-mqtt-mdns/SPEC.md) (RAM back, MQTT and mDNS on again), [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
+and face uploads within the heap); in 2.0.0, not yet on the clock: [025](../specs/025-ram-mqtt-mdns/SPEC.md)
+(about 12 KB of RAM back, MQTT and mDNS on again). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
 Dropped: [020](../specs/020-esp-now/SPEC.md). Order: [roadmap](plans/roadmap.md).
 
 ## Open issues

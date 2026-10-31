@@ -11,6 +11,9 @@ services:
       - "127.0.0.1:18080:8080"
     volumes:
       - clock-data:/data
+  broker:   # an MQTT broker for the mqtt_and_mdns case (spec 025), as "broker" to the clock
+    image: eclipse-mosquitto:2.0.18
+    command: mosquitto -c /mosquitto-no-auth.conf
 
 volumes:
   clock-data:

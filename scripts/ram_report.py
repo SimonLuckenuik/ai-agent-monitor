@@ -1,6 +1,9 @@
 """Static RAM of a firmware ELF by category, and the strings it keeps in RAM by source file.
 
-    python scripts/ram_report.py .pio/build/esp12e/firmware.elf [--strings]
+    python scripts/ram_report.py .pio/build/esp12e/firmware.elf [--strings] [--max-ours BYTES]
+
+--max-ours fails (exit 1) when our string literals in RAM exceed BYTES: the safety tests
+run it so strings moved to flash (spec 025) do not creep back.
 
 RAM here is .data, .rodata and .bss (all in the ESP8266's 80 KB of data RAM). Symbols
 are attributed through the debug info (nm -l); string literals, which have no symbol,
@@ -155,6 +158,13 @@ for c, v in sorted(cats.items(), key=lambda kv: -sum(kv[1].values())):
     t = v[".data"] + v[".rodata"] + v[".bss"] + v[".noinit"]
     if t:
         print(f"{c[:62]:62} {v['.data']:6} {v['.rodata']:7} {v['.bss'] + v['.noinit']:6} {t:7}")
+
+if "--max-ours" in sys.argv:
+    limit = int(sys.argv[sys.argv.index("--max-ours") + 1])
+    if ours > limit:
+        print(f"\nFAIL: {ours} B of our string literals in RAM, over {limit} B: keep new ones in flash "
+              f"(F(), PSTR(), FPSTR()) or raise the limit in tests/run_safety_tests.py")
+        sys.exit(1)
 
 if "--strings" in sys.argv:
     for f, v in sorted(strings.items(), key=lambda kv: -sum(len(t) + 1 for t in kv[1])):

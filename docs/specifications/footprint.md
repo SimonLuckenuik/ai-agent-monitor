@@ -172,6 +172,18 @@ weather.
 | Work | | Mechanical but wide: about 470 literals across `main.cpp`, `faces.cpp`, `integrations.cpp`, `weather.cpp` and `config.h`. JSON keys (`doc["key"]`) need `F("key")` or a `const char` table in flash. Checked by the unit, integration and safety tests and a `.rodata` size check |
 | Risk | | A flash string passed where a RAM `const char*` is expected crashes on the chip (unaligned flash read). The compiler does not catch every case, so the emulator cannot either: the safety test can grep for the patterns, and the clock checks it |
 
+## Done in 2.0.0 (spec 025)
+
+| Change | Measured |
+|---|---|
+| The update check allocated only during an update | static RAM -4,148 B |
+| The routes as two tables in flash (`src/routes.h`) | heap in use at rest (emulator) 10.3 -> 5.5 KB; static RAM -452 B |
+| Our strings in flash (send messages, keys, URLs, default palettes) | our strings in RAM 8,199 -> 4,600 B |
+| In all | static RAM 51,884 -> 44,240 B, plus about 4.8 KB less heap |
+| MQTT and mDNS gates | 16 KB and 28 KB -> 6 KB and 4 KB; with both on and retro-runner shown, 10.9 KB free in the emulator |
+
+The rows below were the candidates before 2.0.0; the first three are done.
+
 ## Candidates for savings
 
 | Change | Saves | Cost or risk |

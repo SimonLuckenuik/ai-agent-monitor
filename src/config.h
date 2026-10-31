@@ -13,6 +13,8 @@
 
 // Persistent configuration. Mirrors the stock /config JSON keys so the existing
 // web UI (and expectations) line up. Stored at /config.json in LittleFS.
+inline const char DEFAULT_PALETTES_P[] PROGMEM = DEFAULT_PALETTES;
+
 struct Config {
   String ssid;
   String password;
@@ -53,7 +55,7 @@ struct Config {
   int    stopHour    = 7;            // night end
   // Colours: palettes of named colours (JSON), the day and night palettes' names, and
   // the roles' bindings that differ from the defaults (JSON). colorsRev counts changes.
-  String palettes    = DEFAULT_PALETTES;
+  String palettes    = FPSTR(DEFAULT_PALETTES_P);   // the default in flash, not RAM
   String palette     = "day";
   String nightPalette = "night";
   String roles       = "{}";
@@ -102,62 +104,62 @@ struct Config {
     JsonDocument doc;
     if (deserializeJson(doc, f)) { f.close(); return false; }
     f.close();
-    ssid        = doc["ssid"]        | ssid;
-    password    = doc["password"]    | password;
-    city        = doc["city"]        | city;
-    ntp         = doc["ntp"]         | ntp;
-    if (doc["lat5"].is<long>() && doc["lon5"].is<long>()) {   // 1e-5 degrees
-      lat = (doc["lat5"].as<long>()) / 1e5f;
-      lon = (doc["lon5"].as<long>()) / 1e5f;
+    ssid        = doc[F("ssid")]        | ssid;
+    password    = doc[F("password")]    | password;
+    city        = doc[F("city")]        | city;
+    ntp         = doc[F("ntp")]         | ntp;
+    if (doc[F("lat5")].is<long>() && doc[F("lon5")].is<long>()) {   // 1e-5 degrees
+      lat = (doc[F("lat5")].as<long>()) / 1e5f;
+      lon = (doc[F("lon5")].as<long>()) / 1e5f;
     }
-    geoName     = doc["geoname"]     | geoName;
-    geoFor      = doc["geofor"]      | geoFor;
-    timezoneMin = doc["timezone"]    | timezoneMin;
-    tz          = doc["tz"]          | tz;
-    celsius     = doc["celsius"]     | celsius;
-    hour12      = doc["hour12"]      | hour12;
-    mile        = doc["mile"]        | mile;
-    lang        = doc["lang"]        | lang;
-    order       = doc["order"]       | order;
-    if (order.isEmpty()) order = entriesOf(doc["faceorder"] | "");
-    customOff   = doc["customoff"]   | customOff;
-    turns       = doc["turns"]       | turns;
-    theme       = doc["theme"]       | theme;
-    themeInterval = doc["themeInterval"] | themeInterval;
-    faceMask    = doc["faces"]       | faceMask;
-    brightness  = doc["brightness"]  | brightness;
-    orientation = ((doc["orientation"] | 0) / 90 % 4 + 4) % 4;
-    gamma       = constrain(gammaIndex(doc["gamma"] | "2.2"), 0, 3);
-    nightGamma  = gammaIndex(doc["nightgamma"] | "");
-    nightOff    = doc["nightoff"]    | nightOff;
-    nightMode   = doc["nightmode"]   | nightMode;
-    nightAuto   = doc["nightauto"]   | nightAuto;
-    nightBrightness = doc["nightbrightness"] | nightBrightness;
-    if (doc["nightface"].is<int>()) {   // a built-in id before 1.6; -1 the rotation
-      int id = doc["nightface"];
+    geoName     = doc[F("geoname")]     | geoName;
+    geoFor      = doc[F("geofor")]      | geoFor;
+    timezoneMin = doc[F("timezone")]    | timezoneMin;
+    tz          = doc[F("tz")]          | tz;
+    celsius     = doc[F("celsius")]     | celsius;
+    hour12      = doc[F("hour12")]      | hour12;
+    mile        = doc[F("mile")]        | mile;
+    lang        = doc[F("lang")]        | lang;
+    order       = doc[F("order")]       | order;
+    if (order.isEmpty()) order = entriesOf(doc[F("faceorder")] | "");
+    customOff   = doc[F("customoff")]   | customOff;
+    turns       = doc[F("turns")]       | turns;
+    theme       = doc[F("theme")]       | theme;
+    themeInterval = doc[F("themeInterval")] | themeInterval;
+    faceMask    = doc[F("faces")]       | faceMask;
+    brightness  = doc[F("brightness")]  | brightness;
+    orientation = ((doc[F("orientation")] | 0) / 90 % 4 + 4) % 4;
+    gamma       = constrain(gammaIndex(doc[F("gamma")] | "2.2"), 0, 3);
+    nightGamma  = gammaIndex(doc[F("nightgamma")] | "");
+    nightOff    = doc[F("nightoff")]    | nightOff;
+    nightMode   = doc[F("nightmode")]   | nightMode;
+    nightAuto   = doc[F("nightauto")]   | nightAuto;
+    nightBrightness = doc[F("nightbrightness")] | nightBrightness;
+    if (doc[F("nightface")].is<int>()) {   // a built-in id before 1.6; -1 the rotation
+      int id = doc[F("nightface")];
       nightFace = id >= 0 && id < FACE_COUNT ? "#" + String(id) : String();
-    } else nightFace = doc["nightface"] | nightFace;
-    nightTint   = doc["nighttint"]   | nightTint;
-    nightColor  = doc["nightcolor"]  | nightColor;
-    startHour   = doc["starttime"]   | startHour;
-    stopHour    = doc["stoptime"]    | stopHour;
-    if (doc["palettes"].is<JsonObject>()) { palettes = ""; serializeJson(doc["palettes"], palettes); }
+    } else nightFace = doc[F("nightface")] | nightFace;
+    nightTint   = doc[F("nighttint")]   | nightTint;
+    nightColor  = doc[F("nightcolor")]  | nightColor;
+    startHour   = doc[F("starttime")]   | startHour;
+    stopHour    = doc[F("stoptime")]    | stopHour;
+    if (doc[F("palettes")].is<JsonObject>()) { palettes = ""; serializeJson(doc[F("palettes")], palettes); }
     else {   // before palettes: the three accent colours
       const char* accents[] = {"color1", "color2", "color3"}, *names[] = {"accent1", "accent2", "accent3"};
       for (int i = 0; i < 3; ++i) if (doc[accents[i]].is<int>()) setColor("day", names[i], doc[accents[i]].as<int>());
     }
-    if (doc["roles"].is<JsonObject>()) { roles = ""; serializeJson(doc["roles"], roles); }
-    palette     = doc["palette"]     | palette;
-    nightPalette = doc["nightpalette"] | nightPalette;
+    if (doc[F("roles")].is<JsonObject>()) { roles = ""; serializeJson(doc[F("roles")], roles); }
+    palette     = doc[F("palette")]     | palette;
+    nightPalette = doc[F("nightpalette")] | nightPalette;
     colorsRev++;
-    photoInterval = doc["photointerval"] | photoInterval;
-    photoClock  = doc["photoclock"]  | photoClock;
-    photoOff    = doc["photooff"]    | photoOff;
-    customFace  = doc["customface"]  | customFace;
+    photoInterval = doc[F("photointerval")] | photoInterval;
+    photoClock  = doc[F("photoclock")]  | photoClock;
+    photoOff    = doc[F("photooff")]    | photoOff;
+    customFace  = doc[F("customface")]  | customFace;
     // Face ids moved: 1.3.x had custom faces at 7 (facesv 1); 1.4 development builds
     // had the Agents board at 7 and custom faces at 8 (facesv 2), then custom faces at
     // 10 and messages at 11 (facesv 3). The new faces join the rotation.
-    int facesv = doc["facesv"] | 1;
+    int facesv = doc[F("facesv")] | 1;
     if (facesv < 3) {
       if (facesv < 2 && theme == 7) theme = 10;
       else if (facesv == 2 && theme == 7) theme = 9;
@@ -169,42 +171,42 @@ struct Config {
       else if (theme == 11) theme = FACE_MESSAGE;
       faceMask |= 0xf << FACE_DAY0;
     }
-    facesApi    = doc["facesapi"]    | facesApi;
-    haCompat    = doc["hacompat"]    | haCompat;
-    mqttOn      = doc["mqtt"]        | mqttOn;
-    mqttHost    = doc["mqtthost"]    | mqttHost;
-    mqttPort    = doc["mqttport"]    | mqttPort;
-    mqttUser    = doc["mqttuser"]    | mqttUser;
-    mqttPass    = doc["mqttpass"]    | mqttPass;
-    mqttBase    = doc["mqttbase"]    | mqttBase;
-    apiKey      = doc["apikey"]      | apiKey;
+    facesApi    = doc[F("facesapi")]    | facesApi;
+    haCompat    = doc[F("hacompat")]    | haCompat;
+    mqttOn      = doc[F("mqtt")]        | mqttOn;
+    mqttHost    = doc[F("mqtthost")]    | mqttHost;
+    mqttPort    = doc[F("mqttport")]    | mqttPort;
+    mqttUser    = doc[F("mqttuser")]    | mqttUser;
+    mqttPass    = doc[F("mqttpass")]    | mqttPass;
+    mqttBase    = doc[F("mqttbase")]    | mqttBase;
+    apiKey      = doc[F("apikey")]      | apiKey;
     return true;
   }
 
   bool save() {
     JsonDocument doc;
-    doc["ssid"] = ssid;           doc["password"] = password;
-    doc["city"] = city;           doc["ntp"] = ntp;
-    doc["timezone"] = timezoneMin;
+    doc[F("ssid")] = ssid;           doc[F("password")] = password;
+    doc[F("city")] = city;           doc[F("ntp")] = ntp;
+    doc[F("timezone")] = timezoneMin;
     // Integers, not floats: saves pulling a float writer into the file path.
-    if (!isnan(lat) && !isnan(lon)) { doc["lat5"] = lroundf(lat * 1e5f); doc["lon5"] = lroundf(lon * 1e5f); }
-    doc["geoname"] = geoName; doc["geofor"] = geoFor;
-    doc["tz"] = tz;
-    doc["celsius"] = celsius;     doc["hour12"] = hour12;   doc["mile"] = mile;   doc["lang"] = lang;
-    doc["order"] = order;         doc["customoff"] = customOff; doc["turns"] = turns;
-    doc["theme"] = theme;         doc["themeInterval"] = themeInterval;
-    doc["faces"] = faceMask;     doc["facesv"] = 4;
-    doc["brightness"] = brightness; doc["orientation"] = orientation * 90;
-    doc["gamma"] = GAMMAS[gamma]; doc["nightgamma"] = nightGamma < 0 ? "" : GAMMAS[nightGamma]; doc["nightoff"] = nightOff;
-    doc["nightmode"] = nightMode; doc["nightauto"] = nightAuto; doc["nightbrightness"] = nightBrightness; doc["nightface"] = nightFace;
-    doc["nighttint"] = nightTint; doc["nightcolor"] = nightColor;
-    doc["starttime"] = startHour; doc["stoptime"] = stopHour;
-    doc["palettes"] = serialized(palettes); doc["roles"] = serialized(roles);
-    doc["palette"] = palette;     doc["nightpalette"] = nightPalette;
-    doc["photointerval"] = photoInterval; doc["photoclock"] = photoClock; doc["photooff"] = photoOff; doc["customface"] = customFace;
-    doc["facesapi"] = facesApi;   doc["hacompat"] = haCompat; doc["mqtt"] = mqttOn;
-    doc["mqtthost"] = mqttHost;   doc["mqttport"] = mqttPort; doc["mqttuser"] = mqttUser;
-    doc["mqttpass"] = mqttPass;   doc["mqttbase"] = mqttBase; doc["apikey"] = apiKey;
+    if (!isnan(lat) && !isnan(lon)) { doc[F("lat5")] = lroundf(lat * 1e5f); doc[F("lon5")] = lroundf(lon * 1e5f); }
+    doc[F("geoname")] = geoName; doc[F("geofor")] = geoFor;
+    doc[F("tz")] = tz;
+    doc[F("celsius")] = celsius;     doc[F("hour12")] = hour12;   doc[F("mile")] = mile;   doc[F("lang")] = lang;
+    doc[F("order")] = order;         doc[F("customoff")] = customOff; doc[F("turns")] = turns;
+    doc[F("theme")] = theme;         doc[F("themeInterval")] = themeInterval;
+    doc[F("faces")] = faceMask;     doc[F("facesv")] = 4;
+    doc[F("brightness")] = brightness; doc[F("orientation")] = orientation * 90;
+    doc[F("gamma")] = GAMMAS[gamma]; doc[F("nightgamma")] = nightGamma < 0 ? "" : GAMMAS[nightGamma]; doc[F("nightoff")] = nightOff;
+    doc[F("nightmode")] = nightMode; doc[F("nightauto")] = nightAuto; doc[F("nightbrightness")] = nightBrightness; doc[F("nightface")] = nightFace;
+    doc[F("nighttint")] = nightTint; doc[F("nightcolor")] = nightColor;
+    doc[F("starttime")] = startHour; doc[F("stoptime")] = stopHour;
+    doc[F("palettes")] = serialized(palettes); doc[F("roles")] = serialized(roles);
+    doc[F("palette")] = palette;     doc[F("nightpalette")] = nightPalette;
+    doc[F("photointerval")] = photoInterval; doc[F("photoclock")] = photoClock; doc[F("photooff")] = photoOff; doc[F("customface")] = customFace;
+    doc[F("facesapi")] = facesApi;   doc[F("hacompat")] = haCompat; doc[F("mqtt")] = mqttOn;
+    doc[F("mqtthost")] = mqttHost;   doc[F("mqttport")] = mqttPort; doc[F("mqttuser")] = mqttUser;
+    doc[F("mqttpass")] = mqttPass;   doc[F("mqttbase")] = mqttBase; doc[F("apikey")] = apiKey;
     File f = LittleFS.open("/config.json", "w");
     if (!f) return false;
     serializeJson(doc, f);

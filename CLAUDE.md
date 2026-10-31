@@ -108,6 +108,7 @@ product as it is, and change with the code; specs describe a piece of work.
 | `src/main.cpp` | Boot, recovery, WiFi/AP, web API, settings, OTA, rotation, night tile, backlight |
 | `src/faces.cpp` | Every face; the custom-face renderer (expressions, SVG paths, gradients, wrapping); the Message face; the Big tiles and their monoline font; weather icons |
 | `src/integrations.cpp` | Custom faces API, agent messages, geekmagic-hacs compatibility, MQTT |
+| `src/routes.h` | The web server's routes as tables in flash, answered by one handler (no heap per route) |
 | `src/crash.cpp` | Crash records (RTC memory, then `/crashes.bin`), crash-loop protection and safe mode |
 | `src/weather.cpp` | Open-Meteo, WMO words in English and French |
 | `src/config.h` | Settings stored in `/config.json` (load/save/migrations) |
@@ -139,7 +140,8 @@ python tests/integration/run_integration_tests.py   # Docker: the firmware in th
 python scripts/screenshots.py                   # Docker + Playwright: docs/images/*.png
 ```
 
-Run the first four before committing firmware changes. The face preview's PNGs are
+Run the first four before committing firmware changes. [docs/specifications/testing.md](docs/specifications/testing.md)
+lists every case and which suite catches what. The face preview's PNGs are
 worth looking at after any drawing change. The integration tests build the emulator
 image and start their own container (ports 18000/18080, blank storage; `--no-build`,
 `--keep`, `--reuse`, `-k <case>`). They fix the clock and weather through the

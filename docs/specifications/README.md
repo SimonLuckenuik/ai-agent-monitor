@@ -4,6 +4,8 @@ Reference material: the product as it is (hardware, settings, the API) and the s
 
 - [Integrations API](integrations-api.md) - agent messages, custom faces, the stock-compatible photo API, MQTT.
 - [Settings](settings.md) - the settings for faces, rotation, palettes, roles and the display.
+- [Testing](testing.md) - the four test suites, what each case covers, how to run them, and what only the clock confirms.
+- [Flash and memory footprint](footprint.md) - where the image, static RAM and heap go, by feature and by release.
 - [Updates and recovery](updates-and-recovery.md) - first install over stock, the updater's checks, recovery mode, returning to stock.
 - [Hardware profile](hardware.md) - MCU, flash layout, display, pin map, recovery wiring.
 - [Stock firmware analysis](stock-firmware-analysis.md) - decompilation notes: display driver, GPIO, HTTP API, security issues.

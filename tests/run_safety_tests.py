@@ -12,7 +12,7 @@ root = Path(__file__).resolve().parents[1]
 out = root / ".pio" / "safety-tests"
 out.mkdir(parents=True, exist_ok=True)
 source = (root / "src/main.cpp").read_text(encoding="utf-8")
-handler = source[source.index("FirmwareValidation* firmware = nullptr;"):source.index("void setupRoutes()")]
+handler = source[source.index("FirmwareValidation* firmware = nullptr;"):source.index("// Crash log and crash-loop protection")]
 cycles = source[source.index("constexpr int CYCLE_ADDR"):source.index("// Every deliberate reboot")]
 harness = (root / "tests/ota_harness.cpp").read_text(encoding="utf-8")
 harness = harness.replace("// OTA_IMPLEMENTATION", handler).replace("// CYCLE_IMPLEMENTATION", cycles)
@@ -108,7 +108,7 @@ assert "if (!photoAccess()) { photoError" in source, "photo upload must check ph
 assert "if (!photoAccess())" in function(source, "void handlePhotoDelete()"), "photo delete must check photoAccess()"
 # /api/set without sign-in: only face and brightness, only with the integration on.
 api_set = function(source, "void handleApiSet()")
-assert 'cfg.haCompat && (key == "theme" || key == "lcd_brightness" || key == "brightness")' in api_set
+assert 'cfg.haCompat && (key == F("theme") || key == F("lcd_brightness") || key == F("brightness"))' in api_set
 # Integrations: each is off by default and every endpoint checks its own switch.
 integ = (root / "src" / "integrations.cpp").read_text(encoding="utf-8")
 config = (root / "src" / "config.h").read_text(encoding="utf-8")
@@ -121,5 +121,8 @@ for name in ("handleFaces", "handleFaceGet", "handleFaceDelete", "handleFaceShow
 for name in ("handleThemeList", "handleThemeToggle", "handleThemeInterval", "handlePhotoToggle", "handlePhotoInterval"):
     assert "compatAllowed()" in function(integ, "void " + name + "()"), f"{name} must check compatAllowed()"
 assert "requireAuth()" in function(integ, "void handleIntegrations()"), "the API key is only shown when signed in"
+# Our string literals stay in flash (spec 025): at most this much of them in RAM.
+subprocess.run(["python", str(root / "scripts/ram_report.py"), str(image.with_suffix(".elf")), "--max-ours", "4864"],
+               check=True, stdout=subprocess.DEVNULL)
 print("PASS: stock-matching 4m3m layout, OTA size budget, no float printf, sign-in and integration guards,")
-print("      non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, persistent AP")
+print("      strings in flash, non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, persistent AP")

@@ -25,6 +25,7 @@
 #include <new>
 #include "pins.h"
 #include "config.h"
+#include "routes.h"
 #include "web_index.h"   // generated from web/index.html by scripts/build_options.py
 #include "firmware_validation.h"
 #include "weather.h"
@@ -207,7 +208,11 @@ bool requireAuth();          // sign-in guard, defined with the web API below
 bool requestAuthorized();
 bool wxRefresh = true;    // fetch at once: at boot, and when the city changes
 // Optional work waits for headroom instead of risking an allocation failure.
-constexpr uint32_t MDNS_MIN_HEAP = 28000, WEATHER_MIN_HEAP = 8192;   // a fetch took 6.1 KB in the emulator (spec 024); /status weatherHeap
+// The heap each needs free to start: measured (/status mdnsHeap, weatherHeap) plus a
+// margin. mDNS held 420 B in the emulator (spec 025); a weather fetch took 6.1 KB (spec 024).
+constexpr uint32_t MDNS_MIN_HEAP = 4096, WEATHER_MIN_HEAP = 8192;
+bool mdnsStarted = false, mdnsWaiting = false;
+uint32_t mdnsHeap = 0;   // what starting mDNS took, for /status (spec 025)
 uint32_t heapLow = UINT32_MAX;   // lowest free heap seen, for /status
 // Face draw times in ms, by face id, for /status: the latest draw over 1 ms and the
 // slowest. The line font and paths are float maths, and the chip has no FPU.
@@ -431,11 +436,11 @@ void serviceWeather() {
 // Limited to one request per 10 s so the button cannot hammer the service.
 void handleWeatherSync() {
   if (!requireAuth()) return;
-  if (recoveryMode || !storageReady) { server.send(503, "text/plain", "Unavailable in recovery"); return; }
-  if (WiFi.status() != WL_CONNECTED) { server.send(503, "text/plain", "Not connected to WiFi"); return; }
-  if (wx.lastFetch && millis() - wx.lastFetch < 10000) { server.send(429, "text/plain", "Just synced; try again in a few seconds"); return; }
+  if (recoveryMode || !storageReady) { server.send(503, PSTR("text/plain"), PSTR("Unavailable in recovery")); return; }
+  if (WiFi.status() != WL_CONNECTED) { server.send(503, PSTR("text/plain"), PSTR("Not connected to WiFi")); return; }
+  if (wx.lastFetch && millis() - wx.lastFetch < 10000) { server.send(429, PSTR("text/plain"), PSTR("Just synced; try again in a few seconds")); return; }
   if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) customRelease();
-  if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) { server.send(503, "text/plain", "Low on memory; try again shortly"); return; }
+  if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) { server.send(503, PSTR("text/plain"), PSTR("Low on memory; try again shortly")); return; }
   bool ok = syncWeather();
   server.send(ok ? 200 : 502, "text/plain", ok ? String("OK") : (wx.error.length() ? wx.error : String("Weather update failed")));
 }
@@ -488,16 +493,16 @@ bool requestAuthorized() {
 // Guard for handlers: answers 401 and returns false when not signed in.
 bool requireAuth() {
   if (requestAuthorized()) return true;
-  server.send(401, "text/plain", "Sign in first");
+  server.send(401, PSTR("text/plain"), PSTR("Sign in first"));
   return false;
 }
 
 void handleLogin() {
-  if (millis() < loginLockedUntil) { server.send(429, "text/plain", "Too many attempts; wait a minute"); return; }
+  if (millis() < loginLockedUntil) { server.send(429, PSTR("text/plain"), PSTR("Too many attempts; wait a minute")); return; }
   if (!sameSecret(server.arg("password"), devicePassword)) {
     delay(800);   // slows guessing; with the lockout, ~5 tries a minute
     if (++loginFails >= 5) { loginFails = 0; loginLockedUntil = millis() + 60000; }
-    server.send(403, "text/plain", "Wrong password");
+    server.send(403, PSTR("text/plain"), PSTR("Wrong password"));
     return;
   }
   loginFails = 0;
@@ -507,59 +512,59 @@ void handleLogin() {
   static int next = 0;
   sessions[next] = token;
   next = (next + 1) % SESSIONS;
-  server.sendHeader("Set-Cookie", String("sc=") + token + "; Path=/; HttpOnly; SameSite=Strict");
-  server.send(200, "text/plain", "OK");
+  server.sendHeader(F("Set-Cookie"), String("sc=") + token + "; Path=/; HttpOnly; SameSite=Strict");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void handleLogout() {
   String t = requestToken();
   for (String& s : sessions) if (t.length() && sameSecret(s, t)) s = "";
-  server.sendHeader("Set-Cookie", "sc=; Path=/; Max-Age=0; SameSite=Strict");
-  server.send(200, "text/plain", "OK");
+  server.sendHeader(F("Set-Cookie"), F("sc=; Path=/; Max-Age=0; SameSite=Strict"));
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void drawPasswordScreen();
 // "Show on clock": puts the password on the panel for 60 s (once per 10 s).
 void handleReveal() {
-  if (!displayReady) { server.send(503, "text/plain", "The screen is not available"); return; }
-  if (revealAt && millis() - revealAt < 10000) { server.send(429, "text/plain", "Already shown"); return; }
+  if (!displayReady) { server.send(503, PSTR("text/plain"), PSTR("The screen is not available")); return; }
+  if (revealAt && millis() - revealAt < 10000) { server.send(429, PSTR("text/plain"), PSTR("Already shown")); return; }
   revealAt = millis();
   revealUntil = millis() + 60000;
   drawPasswordScreen();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void restartAP();
 void handlePasswordChange() {
   if (!requireAuth()) return;
   String p = server.arg("password");
-  if (!validPassword(p)) { server.send(400, "text/plain", "Use 8 to 31 characters, no spaces"); return; }
-  if (!storePassword(p)) { server.send(500, "text/plain", "Could not save the password"); return; }
+  if (!validPassword(p)) { server.send(400, PSTR("text/plain"), PSTR("Use 8 to 31 characters, no spaces")); return; }
+  if (!storePassword(p)) { server.send(500, PSTR("text/plain"), PSTR("Could not save the password")); return; }
   devicePassword = p;
   String keep = requestToken();   // other sessions end; this one stays signed in
   for (String& s : sessions) if (!sameSecret(s, keep)) s = "";
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
   restartAP();   // the setup network now uses the new password
 }
 
 // ---------------------------- Web API (stock-compatible) --------------------
 String configJson() {
   JsonDocument doc;
-  doc["theme"] = cfg.theme; doc["celsius"] = cfg.celsius; doc["hour12"] = cfg.hour12; doc["lang"] = cfg.lang;
-  doc["mile"] = cfg.mile;   doc["city"] = cfg.city;       doc["brightness"] = cfg.brightness;
-  doc["orientation"] = cfg.orientation * 90;
-  doc["gamma"] = Config::GAMMAS[cfg.gamma]; doc["nightgamma"] = cfg.nightGamma < 0 ? "" : Config::GAMMAS[cfg.nightGamma];
-  doc["nightoff"] = cfg.nightOff;
-  doc["location"] = cfg.geoFor == cfg.city ? cfg.geoName : "";
-  doc["nightmode"] = cfg.nightMode; doc["starttime"] = cfg.startHour; doc["stoptime"] = cfg.stopHour;
-  doc["nightbrightness"] = cfg.nightBrightness; doc["nightface"] = cfg.nightFace; doc["ntp"] = cfg.ntp;
-  doc["nighttint"] = cfg.nightTint; doc["nightcolor"] = cfg.nightColor;
-  doc["timezone"] = cfg.timezoneMin; doc["tz"] = cfg.tz; doc["themeInterval"] = cfg.themeInterval;
-  doc["faces"] = cfg.faceMask; doc["nightauto"] = cfg.nightAuto;
+  doc[F("theme")] = cfg.theme; doc[F("celsius")] = cfg.celsius; doc[F("hour12")] = cfg.hour12; doc[F("lang")] = cfg.lang;
+  doc[F("mile")] = cfg.mile;   doc[F("city")] = cfg.city;       doc[F("brightness")] = cfg.brightness;
+  doc[F("orientation")] = cfg.orientation * 90;
+  doc[F("gamma")] = Config::GAMMAS[cfg.gamma]; doc[F("nightgamma")] = cfg.nightGamma < 0 ? "" : Config::GAMMAS[cfg.nightGamma];
+  doc[F("nightoff")] = cfg.nightOff;
+  doc[F("location")] = cfg.geoFor == cfg.city ? cfg.geoName : "";
+  doc[F("nightmode")] = cfg.nightMode; doc[F("starttime")] = cfg.startHour; doc[F("stoptime")] = cfg.stopHour;
+  doc[F("nightbrightness")] = cfg.nightBrightness; doc[F("nightface")] = cfg.nightFace; doc[F("ntp")] = cfg.ntp;
+  doc[F("nighttint")] = cfg.nightTint; doc[F("nightcolor")] = cfg.nightColor;
+  doc[F("timezone")] = cfg.timezoneMin; doc[F("tz")] = cfg.tz; doc[F("themeInterval")] = cfg.themeInterval;
+  doc[F("faces")] = cfg.faceMask; doc[F("nightauto")] = cfg.nightAuto;
   {   // the faces in rotation order, and the custom faces' own rules
     String list[FACE_ENTRIES], order;
     int n = faceEntries(list);
-    JsonArray customs = doc["customs"].to<JsonArray>();
+    JsonArray customs = doc[F("customs")].to<JsonArray>();
     for (int i = 0; i < n; ++i) {
       if (i) order += ',';
       order += list[i];
@@ -570,16 +575,16 @@ String configJson() {
       customFaceRule(list[i], &when, &secs);
       c["name"] = list[i]; c["when"] = when; c["duration"] = secs;
     }
-    doc["order"] = order;
+    doc[F("order")] = order;
   }
-  doc["customoff"] = cfg.customOff; doc["turns"] = cfg.turns; doc["customface"] = cfg.customFace;
-  doc["photointerval"] = cfg.photoInterval; doc["photoclock"] = cfg.photoClock;
-  doc["facesapi"] = cfg.facesApi; doc["hacompat"] = cfg.haCompat; doc["mqtt"] = cfg.mqttOn;
-  doc["mqtthost"] = cfg.mqttHost; doc["mqttport"] = cfg.mqttPort; doc["mqttuser"] = cfg.mqttUser;
-  doc["mqttbase"] = cfg.mqttBase;   // the MQTT password and API key are never sent back
-  doc["type"] = "smartclock-oss-settings"; doc["version"] = FW_VERSION;
-  doc["palettes"] = serialized(cfg.palettes); doc["roles"] = serialized(cfg.roles);
-  doc["palette"] = cfg.palette; doc["nightpalette"] = cfg.nightPalette;
+  doc[F("customoff")] = cfg.customOff; doc[F("turns")] = cfg.turns; doc[F("customface")] = cfg.customFace;
+  doc[F("photointerval")] = cfg.photoInterval; doc[F("photoclock")] = cfg.photoClock;
+  doc[F("facesapi")] = cfg.facesApi; doc[F("hacompat")] = cfg.haCompat; doc[F("mqtt")] = cfg.mqttOn;
+  doc[F("mqtthost")] = cfg.mqttHost; doc[F("mqttport")] = cfg.mqttPort; doc[F("mqttuser")] = cfg.mqttUser;
+  doc[F("mqttbase")] = cfg.mqttBase;   // the MQTT password and API key are never sent back
+  doc[F("type")] = "smartclock-oss-settings"; doc[F("version")] = FW_VERSION;
+  doc[F("palettes")] = serialized(cfg.palettes); doc[F("roles")] = serialized(cfg.roles);
+  doc[F("palette")] = cfg.palette; doc[F("nightpalette")] = cfg.nightPalette;
   // NOTE: stock leaked ssid/password/weatherkey here in cleartext. We deliberately
   // DO NOT expose secrets via /config. (See security notes in docs.) Weather comes
   // from Open-Meteo, so stock's "weatherkey" setting is not accepted.
@@ -655,39 +660,39 @@ String setRoles(const String& val) {
 // Returns "" on success, otherwise the reason ("Unknown Key" for unknown keys).
 bool timeChanged = false;
 String applySetting(const String& key, const String& val) {
-  if      (key == "city")       { if (val != cfg.city) { cfg.city = val; cfg.geoFor = ""; wxRefresh = true; } }   // re-geocode
-  else if (key == "ntp")        { cfg.ntp = val; timeChanged = true; }
+  if      (key == F("city"))       { if (val != cfg.city) { cfg.city = val; cfg.geoFor = ""; wxRefresh = true; } }   // re-geocode
+  else if (key == F("ntp"))        { cfg.ntp = val; timeChanged = true; }
   // Stock clients send a minute offset; honour it as a fixed offset (no DST rule).
-  else if (key == "timezone")   { cfg.timezoneMin = val.toInt(); cfg.tz = ""; timeChanged = true; }
-  else if (key == "tz") {
+  else if (key == F("timezone"))   { cfg.timezoneMin = val.toInt(); cfg.tz = ""; timeChanged = true; }
+  else if (key == F("tz")) {
     if (val.length() > 63) return F("TZ rule too long");
     cfg.tz = val; timeChanged = true;
   }
-  else if (key == "theme")      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); faceTurnSec = 0; }
-  else if (key == "customface") {
+  else if (key == F("theme"))      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); faceTurnSec = 0; }
+  else if (key == F("customface")) {
     if (!customFaceExists(val)) return F("No such face");
     cfg.customFace = val; cfg.theme = FACE_CUSTOM; faceSince = millis(); faceTurnSec = 0;
   }
-  else if (key == "themeInterval") cfg.themeInterval = constrain(val.toInt(), 0, 3600);
-  else if (key == "brightness") { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
-  else if (key == "gamma" || key == "nightgamma") {   // a curve: 2.2, 1.8, 2.5 or 1.0; "" at night: the day's
+  else if (key == F("themeInterval")) cfg.themeInterval = constrain(val.toInt(), 0, 3600);
+  else if (key == F("brightness")) { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
+  else if (key == F("gamma") || key == F("nightgamma")) {   // a curve: 2.2, 1.8, 2.5 or 1.0; "" at night: the day's
     int g = Config::gammaIndex(val);
-    if (g < 0 && !(key == "nightgamma" && val.isEmpty())) return F("Gamma: 2.2, 1.8, 2.5 or 1.0");
-    (key == "gamma" ? cfg.gamma : cfg.nightGamma) = g;
+    if (g < 0 && !(key == F("nightgamma") && val.isEmpty())) return F("Gamma: 2.2, 1.8, 2.5 or 1.0");
+    (key == F("gamma") ? cfg.gamma : cfg.nightGamma) = g;
   }
-  else if (key == "nightoff")   cfg.nightOff = (val == "1" || val == "true");
-  else if (key == "orientation") {   // degrees, clockwise
+  else if (key == F("nightoff"))   cfg.nightOff = (val == "1" || val == "true");
+  else if (key == F("orientation")) {   // degrees, clockwise
     int deg = val.toInt();
     if (deg % 90) return F("Orientation: 0, 90, 180 or 270");
     cfg.orientation = (deg / 90 % 4 + 4) % 4;
     if (displayReady) { clockDisplay().setRotation(cfg.orientation); clockDisplay().fillScreen(TFT_BLACK); }
   }
-  else if (key == "celsius")    cfg.celsius = (val == "1" || val == "true");
-  else if (key == "hour12")     cfg.hour12 = (val == "1" || val == "true");
-  else if (key == "lang")       cfg.lang = val == "fr" ? "fr" : "en";
-  else if (key == "nightmode")  cfg.nightMode = (val == "1" || val == "true");
-  else if (key == "nightbrightness") cfg.nightBrightness = constrain(val.toInt(), 0, 100);
-  else if (key == "nightface") {   // an entry; "" or -1 the rotation; a number a built-in id
+  else if (key == F("celsius"))    cfg.celsius = (val == "1" || val == "true");
+  else if (key == F("hour12"))     cfg.hour12 = (val == "1" || val == "true");
+  else if (key == F("lang"))       cfg.lang = val == "fr" ? "fr" : "en";
+  else if (key == F("nightmode"))  cfg.nightMode = (val == "1" || val == "true");
+  else if (key == F("nightbrightness")) cfg.nightBrightness = constrain(val.toInt(), 0, 100);
+  else if (key == F("nightface")) {   // an entry; "" or -1 the rotation; a number a built-in id
     if (val.isEmpty() || val == "-1") cfg.nightFace = "";
     else if (isdigit((unsigned char)val[0]) || val[0] == '#') {
       int id = val.substring(val[0] == '#').toInt();
@@ -696,40 +701,40 @@ String applySetting(const String& key, const String& val) {
     } else if (val.length() <= 20 && strspn(val.c_str(), "abcdefghijklmnopqrstuvwxyz0123456789_-") == val.length()) cfg.nightFace = val;
     else return F("Unknown face");
   }
-  else if (key == "nighttint")  cfg.nightTint = (val == "1" || val == "true");
-  else if (key == "nightcolor") cfg.nightColor = (uint16_t)val.toInt();
-  else if (key == "starttime")  cfg.startHour = constrain(val.toInt(), 0, 23);
-  else if (key == "stoptime")   cfg.stopHour = constrain(val.toInt(), 0, 23);
-  else if (key == "color1" || key == "color2" || key == "color3") {   // older settings: the day accents
-    cfg.setColor("day", key == "color1" ? "accent1" : key == "color2" ? "accent2" : "accent3", (uint16_t)val.toInt());
+  else if (key == F("nighttint"))  cfg.nightTint = (val == "1" || val == "true");
+  else if (key == F("nightcolor")) cfg.nightColor = (uint16_t)val.toInt();
+  else if (key == F("starttime"))  cfg.startHour = constrain(val.toInt(), 0, 23);
+  else if (key == F("stoptime"))   cfg.stopHour = constrain(val.toInt(), 0, 23);
+  else if (key == F("color1") || key == F("color2") || key == F("color3")) {   // older settings: the day accents
+    cfg.setColor("day", key == F("color1") ? "accent1" : key == F("color2") ? "accent2" : "accent3", (uint16_t)val.toInt());
   }
-  else if (key == "palettes")   return setPalettes(val);
-  else if (key == "palette" || key == "nightpalette") {
-    bool night = key == "nightpalette";
+  else if (key == F("palettes"))   return setPalettes(val);
+  else if (key == F("palette") || key == F("nightpalette")) {
+    bool night = key == F("nightpalette");
     if (!(night && val.isEmpty()) && !paletteExists(val)) return F("No such palette");
     (night ? cfg.nightPalette : cfg.palette) = val;
     cfg.colorsRev++;
   }
-  else if (key == "roles")      return setRoles(val);
-  else if (key == "faces")      cfg.faceMask = constrain(val.toInt(), 0, (1 << FACE_COUNT) - 1);
-  else if (key == "faceorder")  cfg.order = Config::entriesOf(val);
-  else if (key == "order" || key == "customoff" || key == "turns") {
+  else if (key == F("roles"))      return setRoles(val);
+  else if (key == F("faces"))      cfg.faceMask = constrain(val.toInt(), 0, (1 << FACE_COUNT) - 1);
+  else if (key == F("faceorder"))  cfg.order = Config::entriesOf(val);
+  else if (key == F("order") || key == F("customoff") || key == F("turns")) {
     if (val.length() > 1200) return F("Too long");
-    (key == "order" ? cfg.order : key == "customoff" ? cfg.customOff : cfg.turns) = val;
+    (key == F("order") ? cfg.order : key == F("customoff") ? cfg.customOff : cfg.turns) = val;
   }
-  else if (key == "mile")       cfg.mile = (val == "1" || val == "true");
-  else if (key == "nightauto")  cfg.nightAuto = (val == "1" || val == "true");
-  else if (key == "lcd_brightness") cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key
-  else if (key == "photointerval") cfg.photoInterval = constrain(val.toInt(), 1, 3600);
-  else if (key == "photoclock") cfg.photoClock = (val == "1" || val == "true");
-  else if (key == "facesapi")   { cfg.facesApi = (val == "1" || val == "true"); integrationsSettingsChanged(); }
-  else if (key == "hacompat")   cfg.haCompat = (val == "1" || val == "true");
-  else if (key == "mqtt")       { cfg.mqttOn = (val == "1" || val == "true"); integrationsSettingsChanged(); }
-  else if (key == "mqtthost")   { cfg.mqttHost = val; integrationsSettingsChanged(); }
-  else if (key == "mqttport")   { cfg.mqttPort = constrain(val.toInt(), 1, 65535); integrationsSettingsChanged(); }
-  else if (key == "mqttuser")   { cfg.mqttUser = val; integrationsSettingsChanged(); }
-  else if (key == "mqttpass")   { cfg.mqttPass = val; integrationsSettingsChanged(); }
-  else if (key == "mqttbase")   { cfg.mqttBase = val; integrationsSettingsChanged(); }
+  else if (key == F("mile"))       cfg.mile = (val == "1" || val == "true");
+  else if (key == F("nightauto"))  cfg.nightAuto = (val == "1" || val == "true");
+  else if (key == F("lcd_brightness")) cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key
+  else if (key == F("photointerval")) cfg.photoInterval = constrain(val.toInt(), 1, 3600);
+  else if (key == F("photoclock")) cfg.photoClock = (val == "1" || val == "true");
+  else if (key == F("facesapi"))   { cfg.facesApi = (val == "1" || val == "true"); integrationsSettingsChanged(); }
+  else if (key == F("hacompat"))   cfg.haCompat = (val == "1" || val == "true");
+  else if (key == F("mqtt"))       { cfg.mqttOn = (val == "1" || val == "true"); integrationsSettingsChanged(); }
+  else if (key == F("mqtthost"))   { cfg.mqttHost = val; integrationsSettingsChanged(); }
+  else if (key == F("mqttport"))   { cfg.mqttPort = constrain(val.toInt(), 1, 65535); integrationsSettingsChanged(); }
+  else if (key == F("mqttuser"))   { cfg.mqttUser = val; integrationsSettingsChanged(); }
+  else if (key == F("mqttpass"))   { cfg.mqttPass = val; integrationsSettingsChanged(); }
+  else if (key == F("mqttbase"))   { cfg.mqttBase = val; integrationsSettingsChanged(); }
   else return F("Unknown Key");
   return "";
 }
@@ -744,41 +749,41 @@ void settingsApplied() {
 
 bool settingsWritable() {
   if (storageReady && !recoveryMode) return true;
-  server.send(503, "text/plain", "Settings unavailable in recovery");
+  server.send(503, PSTR("text/plain"), PSTR("Settings unavailable in recovery"));
   return false;
 }
 
 void handleApiSet() {
   String key = server.arg("key");
-  bool compat = cfg.haCompat && (key == "theme" || key == "lcd_brightness" || key == "brightness");
+  bool compat = cfg.haCompat && (key == F("theme") || key == F("lcd_brightness") || key == F("brightness"));
   if (!compat && !requireAuth()) return;   // geekmagic-hacs cannot sign in (Integrations)
   if (!settingsWritable()) return;
   String err = applySetting(server.arg("key"), server.arg("value"));
   if (err == "Unknown Key") { server.send(200, "text/plain", err); return; }   // stock reply
   if (err.length()) { server.send(400, "text/plain", err); return; }
-  if (!cfg.save()) { server.send(503, "text/plain", "Settings could not be saved"); return; }
+  if (!cfg.save()) { server.send(503, PSTR("text/plain"), PSTR("Settings could not be saved")); return; }
   settingsApplied();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 // ---- Backup, restore, reset (no WiFi details or password in a backup) ----
 void handleSettingsExport() {
   if (!requireAuth() || !settingsWritable()) return;
-  server.sendHeader("Content-Disposition", "attachment; filename=\"smartclock-settings.json\"");
+  server.sendHeader(F("Content-Disposition"), F("attachment; filename=\"smartclock-settings.json\""));
   server.send(200, "application/json", configJson());
 }
 
 void handleSettingsImport() {
   if (!requireAuth() || !settingsWritable()) return;
   JsonDocument doc;
-  if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>() || doc["type"] != "smartclock-oss-settings") {
-    server.send(400, "text/plain", "Not a SmartClock-OSS settings file");
+  if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>() || doc[F("type")] != "smartclock-oss-settings") {
+    server.send(400, PSTR("text/plain"), PSTR("Not a SmartClock-OSS settings file"));
     return;
   }
   int applied = 0, skipped = 0;
   for (JsonPair kv : doc.as<JsonObject>()) {
     String key = kv.key().c_str();
-    if (key == "type" || key == "version" || key == "location" || key == "customs") continue;
+    if (key == F("type") || key == F("version") || key == F("location") || key == F("customs")) continue;
     JsonVariant v = kv.value();
     String val;
     if (v.is<bool>()) val = v.as<bool>() ? "1" : "0";
@@ -786,7 +791,7 @@ void handleSettingsImport() {
     else val = v.as<String>();
     if (applySetting(key, val).length()) skipped++; else applied++;
   }
-  if (!cfg.save()) { server.send(503, "text/plain", "Settings could not be saved"); return; }
+  if (!cfg.save()) { server.send(503, PSTR("text/plain"), PSTR("Settings could not be saved")); return; }
   settingsApplied();
   server.send(200, "text/plain", String(applied) + " settings restored" + (skipped ? ", " + String(skipped) + " skipped" : ""));
 }
@@ -794,17 +799,17 @@ void handleSettingsImport() {
 // Deletes /config.json (all settings and WiFi details); photos and the password stay.
 void handleSettingsReset() {
   if (!requireAuth() || !settingsWritable()) return;
-  if (server.arg("confirm") != "reset") { server.send(400, "text/plain", "Confirmation missing"); return; }
+  if (server.arg("confirm") != "reset") { server.send(400, PSTR("text/plain"), PSTR("Confirmation missing")); return; }
   LittleFS.remove("/config.json");
-  server.send(200, "text/plain", "Settings reset. Restarting...");
+  server.send(200, PSTR("text/plain"), PSTR("Settings reset. Restarting..."));
   safeRestart();
 }
 
 void handleWifiForget() {
   if (!requireAuth() || !settingsWritable()) return;
   cfg.ssid = ""; cfg.password = "";
-  if (!cfg.save()) { server.send(503, "text/plain", "Settings could not be saved"); return; }
-  server.send(200, "text/plain", "WiFi forgotten. Restarting...");
+  if (!cfg.save()) { server.send(503, PSTR("text/plain"), PSTR("Settings could not be saved")); return; }
+  server.send(200, PSTR("text/plain"), PSTR("WiFi forgotten. Restarting..."));
   safeRestart();
 }
 
@@ -817,8 +822,8 @@ void handleScanWifi() {
   for (int i = 0; i < n; i++) {
     if (!detail) { a.add(WiFi.SSID(i)); continue; }
     JsonObject o = a.add<JsonObject>();
-    o["ssid"] = WiFi.SSID(i); o["rssi"] = WiFi.RSSI(i);
-    o["secure"] = WiFi.encryptionType(i) != ENC_TYPE_NONE;
+    o[F("ssid")] = WiFi.SSID(i); o[F("rssi")] = WiFi.RSSI(i);
+    o[F("secure")] = WiFi.encryptionType(i) != ENC_TYPE_NONE;
   }
   WiFi.scanDelete();
   String out; serializeJson(doc, out);
@@ -829,8 +834,8 @@ void handleConnect() {
   if (!requireAuth() || !settingsWritable()) return;
   cfg.ssid = server.arg("ssid");
   cfg.password = server.arg("password");
-  if (!cfg.save()) { server.send(503, "text/plain", "WiFi settings could not be saved"); return; }
-  server.send(200, "text/html", "<meta http-equiv='refresh' content='3;url=/'>Saved. Rebooting...");
+  if (!cfg.save()) { server.send(503, PSTR("text/plain"), PSTR("WiFi settings could not be saved")); return; }
+  server.send(200, PSTR("text/html"), PSTR("<meta http-equiv='refresh' content='3;url=/'>Saved. Rebooting..."));
   safeRestart();
 }
 
@@ -838,7 +843,7 @@ void handleConnect() {
 void handleFormatStorage() {
   if (!requireAuth()) return;
   if (!storageMountFailed || server.arg("confirm") != "erase") {
-    server.send(400, "text/plain", "Formatting is only available when storage failed to mount");
+    server.send(400, PSTR("text/plain"), PSTR("Formatting is only available when storage failed to mount"));
     return;
   }
   bool ok = LittleFS.format();
@@ -908,7 +913,7 @@ void finishPhotoUpload() {
 
 void handlePhotoList() {
   JsonDocument doc;
-  JsonArray files = doc["files"].to<JsonArray>();
+  JsonArray files = doc[F("files")].to<JsonArray>();
   if (storageReady) {
     Dir dir = LittleFS.openDir("/photo");
     while (dir.next()) {
@@ -916,9 +921,9 @@ void handlePhotoList() {
       JsonObject f = files.add<JsonObject>();
       f["name"] = dir.fileName(); f["size"] = dir.fileSize(); f["enabled"] = photoEnabled(dir.fileName());
     }
-    doc["interval"] = cfg.photoInterval;
+    doc[F("interval")] = cfg.photoInterval;
     FSInfo fs; LittleFS.info(fs);
-    doc["total"] = fs.totalBytes; doc["used"] = fs.usedBytes;
+    doc[F("total")] = fs.totalBytes; doc[F("used")] = fs.usedBytes;
   }
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
@@ -938,30 +943,30 @@ bool servePhoto() {
   String lower = name; lower.toLowerCase();
   const char* type = lower.endsWith(".gif") ? "image/gif" : lower.endsWith(".png") ? "image/png" :
                      (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) ? "image/jpeg" : "application/octet-stream";
-  server.sendHeader("Cache-Control", "max-age=86400");
+  server.sendHeader(F("Cache-Control"), F("max-age=86400"));
   server.streamFile(f, type);
   f.close();
   return true;
 }
 
 void handlePhotoDelete() {
-  if (!photoAccess()) { server.send(401, "text/plain", "Sign in first"); return; }
-  if (!storageReady || recoveryMode) { server.send(503, "text/plain", "Storage unavailable"); return; }
+  if (!photoAccess()) { server.send(401, PSTR("text/plain"), PSTR("Sign in first")); return; }
+  if (!storageReady || recoveryMode) { server.send(503, PSTR("text/plain"), PSTR("Storage unavailable")); return; }
   String name = server.arg("name");
   bool listed = false;
   if (name.length() && name.indexOf('/') < 0 && name != "." && name != "..") {
     Dir dir = LittleFS.openDir("/photo");
     while (!listed && dir.next()) listed = dir.isFile() && dir.fileName() == name;
   }
-  if (!listed || !LittleFS.remove("/photo/" + name)) { server.send(404, "text/plain", "No such photo"); return; }
+  if (!listed || !LittleFS.remove("/photo/" + name)) { server.send(404, PSTR("text/plain"), PSTR("No such photo")); return; }
   facePhotosChanged();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 // The page is stored gzipped in flash; every browser accepts gzip.
 void sendIndex() {
-  server.sendHeader("Content-Encoding", "gzip");
-  server.sendHeader("Cache-Control", "no-cache");
+  server.sendHeader(F("Content-Encoding"), F("gzip"));
+  server.sendHeader(F("Cache-Control"), F("no-cache"));
   server.send_P(200, "text/html", reinterpret_cast<PGM_P>(INDEX_HTML_GZ), INDEX_HTML_GZ_LEN);
 }
 
@@ -977,7 +982,7 @@ String otaError;
 
 void releaseOta() { delete firmware; firmware = nullptr; }
 
-void failOta(const char* message) {
+void failOta(const String& message) {
   otaFailed = true;
   otaReady = false;
   otaError = message;
@@ -990,11 +995,11 @@ void failOta(const char* message) {
 void handleOtaUpload() {
   HTTPUpload& up = server.upload();
   if (up.status == UPLOAD_FILE_START) {
-    if (!requestAuthorized()) { failOta("Sign in first"); return; }
-    if (++otaFiles != 1 || otaFailed) { failOta("Upload exactly one firmware image"); return; }
+    if (!requestAuthorized()) { failOta(F("Sign in first")); return; }
+    if (++otaFiles != 1 || otaFailed) { failOta(F("Upload exactly one firmware image")); return; }
     releaseOta();
     firmware = new (std::nothrow) FirmwareValidation;
-    if (!firmware) { failOta("Not enough memory for an update: try again"); return; }
+    if (!firmware) { failOta(F("Not enough memory for an update: try again")); return; }
     otaError = "";
   } else if (up.status == UPLOAD_FILE_WRITE && !otaFailed) {
     const uint8_t* data = up.buf;
@@ -1007,26 +1012,26 @@ void handleOtaUpload() {
       uint32_t freeSpace = ESP.getFreeSketchSpace();
       size_t capacity = freeSpace > 0x1000 ? (freeSpace - 0x1000) & 0xfffff000 : 0;
       if (const char* why = firmware->check(capacity, FS_PHYS_ADDR)) { failOta(why); return; }
-      if (!Update.begin(firmware->expectedSize, U_FLASH)) { failOta("Cannot stage firmware"); return; }
+      if (!Update.begin(firmware->expectedSize, U_FLASH)) { failOta(F("Cannot stage firmware")); return; }
       otaStarted = true;
       if (Update.write(firmware->prefix, FirmwareValidation::prefixSize - 1) != FirmwareValidation::prefixSize - 1) {
-        failOta("Firmware staging failed"); return;
+        failOta(F("Firmware staging failed")); return;
       }
     }
     if (size) {
-      if (size > firmware->expectedSize - firmware->received) { failOta("Image exceeds declared length"); return; }
+      if (size > firmware->expectedSize - firmware->received) { failOta(F("Image exceeds declared length")); return; }
       uint8_t previous = firmware->lastByte;
       firmware->consume(data, size);
       if (Update.write(&previous, 1) != 1 ||
           (size > 1 && Update.write(const_cast<uint8_t*>(data), size - 1) != size - 1)) {
-        failOta("Firmware staging failed"); return;
+        failOta(F("Firmware staging failed")); return;
       }
     }
   } else if (up.status == UPLOAD_FILE_END && !otaFailed) {
-    if (!otaStarted || !firmware->complete()) { failOta("Incomplete image or CRC mismatch"); return; }
+    if (!otaStarted || !firmware->complete()) { failOta(F("Incomplete image or CRC mismatch")); return; }
     otaReady = true; // Commit only after the complete HTTP request has been parsed.
   } else if (up.status == UPLOAD_FILE_ABORTED) {
-    failOta("Upload aborted");
+    failOta(F("Upload aborted"));
     // The parser may not call the response handler for a disconnected client.
     otaFiles = 0;
     otaFailed = false;
@@ -1038,9 +1043,9 @@ void finishOta() {
   bool success = otaFiles == 1 && otaReady && !otaFailed;
   if (success) {
     success = Update.write(&firmware->lastByte, 1) == 1 && Update.end(false);
-    if (!success) failOta("Firmware commit failed");
+    if (!success) failOta(F("Firmware commit failed"));
   }
-  server.sendHeader("Connection", "close");
+  server.sendHeader(F("Connection"), F("close"));
   server.send(success ? 200 : 400, "text/plain",
               success ? "OK" : (otaError.length() ? otaError : String("No complete firmware uploaded")));
   if (success) safeRestart();
@@ -1051,62 +1056,75 @@ void finishOta() {
 }
 
 void handleStatus();
+// Crash log and crash-loop protection (crash.cpp): a signed-in session or the API key.
+bool crashAuth() {
+  if (requestAuthorized() || integrationKeyOk()) return true;
+  server.send(401, PSTR("text/plain"), PSTR("Sign in or send the API key (X-Api-Key)"));
+  return false;
+}
+
+void handleCrashes() {   // the log file as it is (crash.cpp's layout)
+  if (!crashAuth()) return;
+  const char* path = crashLogPath();
+  if (!path) { server.send(204); return; }
+  File f = LittleFS.open(path, "r");
+  server.streamFile(f, "application/octet-stream");
+  f.close();
+}
+
+void handleCrashResume() {
+  if (!crashAuth()) return;
+  crashResume(); faceInvalidate(); safeShown = false;
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
+}
+
+void handleCrashClear() {
+  if (!crashAuth()) return;
+  crashClear(); faceInvalidate(); safeShown = false;
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
+}
+
+// The routes, in flash (routes.h); integrations.cpp has its own table.
+const Route ROUTES[] PROGMEM = {
+  {"/",                    HTTP_ANY,  sendIndex, nullptr},
+  {"/index.html",          HTTP_ANY,  sendIndex, nullptr},
+  {"/config",              HTTP_ANY,  []{ server.send(200, "application/json", configJson()); }, nullptr},
+  {"/api/set",             HTTP_ANY,  handleApiSet, nullptr},
+  {"/scanwifi",            HTTP_ANY,  handleScanWifi, nullptr},
+  {"/connect",             HTTP_ANY,  handleConnect, nullptr},
+  {"/restart",             HTTP_ANY,  []{ if (!requireAuth()) return; server.send(200, PSTR("text/plain"), PSTR("Restarting")); safeRestart(); }, nullptr},
+  {"/version",             HTTP_ANY,  handleVersion, nullptr},
+  {"/update_ota",          HTTP_POST, finishOta, handleOtaUpload},
+  {"/format_storage",      HTTP_POST, handleFormatStorage, nullptr},
+  {"/api/photos",          HTTP_ANY,  handlePhotoList, nullptr},
+  {"/api/weather/sync",    HTTP_POST, handleWeatherSync, nullptr},
+  {"/api/photos/upload",   HTTP_POST, finishPhotoUpload, handlePhotoUpload},
+  {"/api/photos/delete",   HTTP_POST, handlePhotoDelete, nullptr},
+  {"/status",              HTTP_ANY,  handleStatus, nullptr},
+  {"/api/auth/login",      HTTP_POST, handleLogin, nullptr},
+  {"/api/auth/logout",     HTTP_POST, handleLogout, nullptr},
+  {"/api/auth/reveal",     HTTP_POST, handleReveal, nullptr},
+  {"/api/auth/password",   HTTP_POST, handlePasswordChange, nullptr},
+  {"/api/settings/export", HTTP_ANY,  handleSettingsExport, nullptr},
+  {"/api/settings/import", HTTP_POST, handleSettingsImport, nullptr},
+  {"/api/settings/reset",  HTTP_POST, handleSettingsReset, nullptr},
+  {"/api/crashes",         HTTP_GET,  handleCrashes, nullptr},
+  {"/api/crashes/resume",  HTTP_POST, handleCrashResume, nullptr},
+  {"/api/crashes/clear",   HTTP_POST, handleCrashClear, nullptr},
+  {"/api/wifi/forget",     HTTP_POST, handleWifiForget, nullptr},
+};
+
 void setupRoutes() {
-  server.on("/",         sendIndex);
-  server.on("/index.html", sendIndex);
-  server.on("/config",   []{ server.send(200, "application/json", configJson()); });
-  server.on("/api/set",  handleApiSet);
-  server.on("/scanwifi", handleScanWifi);
-  server.on("/connect",  handleConnect);
-  server.on("/restart",  []{ if (!requireAuth()) return; server.send(200, "text/plain", "Restarting"); safeRestart(); });
-  server.on("/version",  handleVersion);
-  server.on("/update_ota", HTTP_POST, finishOta, handleOtaUpload);
-  server.on("/format_storage", HTTP_POST, handleFormatStorage);
-  server.on("/api/photos", handlePhotoList);
-  server.on("/api/weather/sync", HTTP_POST, handleWeatherSync);
-  server.on("/api/photos/upload", HTTP_POST, finishPhotoUpload, handlePhotoUpload);
-  server.on("/api/photos/delete", HTTP_POST, handlePhotoDelete);
-  server.on("/status",   handleStatus);
-  server.on("/api/auth/login", HTTP_POST, handleLogin);
-  server.on("/api/auth/logout", HTTP_POST, handleLogout);
-  server.on("/api/auth/reveal", HTTP_POST, handleReveal);
-  server.on("/api/auth/password", HTTP_POST, handlePasswordChange);
-  server.on("/api/settings/export", handleSettingsExport);
-  server.on("/api/settings/import", HTTP_POST, handleSettingsImport);
-  server.on("/api/settings/reset", HTTP_POST, handleSettingsReset);
-  // Crash log and crash-loop protection (crash.cpp): a signed-in session or the API key.
-  auto crashAuth = [] {
-    if (requestAuthorized() || integrationKeyOk()) return true;
-    server.send(401, "text/plain", "Sign in or send the API key (X-Api-Key)");
-    return false;
-  };
-  server.on("/api/crashes", HTTP_GET, [crashAuth] {   // the log file as it is (crash.cpp's layout)
-    if (!crashAuth()) return;
-    const char* path = crashLogPath();
-    if (!path) { server.send(204); return; }
-    File f = LittleFS.open(path, "r");
-    server.streamFile(f, "application/octet-stream");
-    f.close();
-  });
-  server.on("/api/crashes/resume", HTTP_POST, [crashAuth] {
-    if (!crashAuth()) return;
-    crashResume(); faceInvalidate(); safeShown = false;
-    server.send(200, "text/plain", "OK");
-  });
-  server.on("/api/crashes/clear", HTTP_POST, [crashAuth] {
-    if (!crashAuth()) return;
-    crashClear(); faceInvalidate(); safeShown = false;
-    server.send(200, "text/plain", "OK");
-  });
-  server.on("/api/wifi/forget", HTTP_POST, handleWifiForget);
+  static RouteTable routes(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0]));
+  server.addHandler(&routes);
   server.collectHeaders("Cookie", "X-Api-Key");   // sessions; the faces API key
   integrationsRoutes();
   server.onNotFound([]{
     if (servePhoto()) return;
     if (mode == MODE_AP) { // captive portal: send everything to setup
-      server.sendHeader("Location", "/", true);
-      server.send(302, "text/plain", "");
-    } else server.send(404, "text/plain", "Not found");
+      server.sendHeader(F("Location"), F("/"), true);
+      server.send(302, PSTR("text/plain"), PSTR(""));
+    } else server.send(404, PSTR("text/plain"), PSTR("Not found"));
   });
 }
 
@@ -1251,17 +1269,17 @@ String mqttStatus();   // integrations.cpp
 // {net.*}, {sys.*}, {theme.night}, {time.zone} for custom faces (faces.cpp).
 String deviceValue(const String& key) {
   bool linked = WiFi.status() == WL_CONNECTED;
-  if (key == "net.ip") return linked ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
-  if (key == "net.host") return deviceHost();
-  if (key == "net.ssid") return linked ? WiFi.SSID() : setupSsid();
-  if (key == "net.rssi") return linked ? String(WiFi.RSSI()) : "";
-  if (key == "net.mqtt") return mqttStatus() == "connected" ? "1" : "0";
-  if (key == "sys.version") return FW_VERSION;
-  if (key == "sys.uptime") return String(millis() / 1000);
-  if (key == "sys.heap") return String(ESP.getFreeHeap());
-  if (key == "sys.lang") return cfg.lang;
-  if (key == "theme.night") return nightNow ? "1" : "0";
-  if (key == "time.zone") {
+  if (key == F("net.ip")) return linked ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
+  if (key == F("net.host")) return deviceHost();
+  if (key == F("net.ssid")) return linked ? WiFi.SSID() : setupSsid();
+  if (key == F("net.rssi")) return linked ? String(WiFi.RSSI()) : "";
+  if (key == F("net.mqtt")) return mqttStatus() == "connected" ? "1" : "0";
+  if (key == F("sys.version")) return FW_VERSION;
+  if (key == F("sys.uptime")) return String(millis() / 1000);
+  if (key == F("sys.heap")) return String(ESP.getFreeHeap());
+  if (key == F("sys.lang")) return cfg.lang;
+  if (key == F("theme.night")) return nightNow ? "1" : "0";
+  if (key == F("time.zone")) {
     time_t now = time(nullptr);
     struct tm t; localtime_r(&now, &t);
     return _tzname[t.tm_isdst > 0 ? 1 : 0];
@@ -1271,27 +1289,31 @@ String deviceValue(const String& key) {
 
 void handleStatus() {
   JsonDocument doc;
-  doc["recovery"] = recoveryMode; doc["storageReady"] = storageReady;
-  doc["storageMountFailed"] = storageMountFailed;
-  doc["version"] = FW_VERSION; doc["build"] = FW_BUILD; doc["uptime"] = millis() / 1000; doc["heap"] = ESP.getFreeHeap();
-  doc["heapLow"] = heapLow;   // (getMaxFreeBlockSize() would add 1.6 KB of umm stats)
-  doc["stackFree"] = ESP.getFreeContStack();   // the least free stack since boot (of 4 KB)
-  doc["resetReason"] = ESP.getResetReason();
-  doc["cpuMHz"] = ESP.getCpuFreqMHz();
-  JsonObject draws = doc["drawMs"].to<JsonObject>();   // {"<face id>": [last, slowest]}
+  doc[F("recovery")] = recoveryMode; doc[F("storageReady")] = storageReady;
+  doc[F("storageMountFailed")] = storageMountFailed;
+  doc[F("version")] = FW_VERSION; doc[F("build")] = FW_BUILD; doc[F("uptime")] = millis() / 1000; doc[F("heap")] = ESP.getFreeHeap();
+  doc[F("heapLow")] = heapLow;   // (getMaxFreeBlockSize() would add 1.6 KB of umm stats)
+  doc[F("stackFree")] = ESP.getFreeContStack();   // the least free stack since boot (of 4 KB)
+  doc[F("resetReason")] = ESP.getResetReason();
+  doc[F("cpuMHz")] = ESP.getCpuFreqMHz();
+  JsonObject draws = doc[F("drawMs")].to<JsonObject>();   // {"<face id>": [last, slowest]}
   for (int i = 0; i <= FACE_MESSAGE; ++i) {
     if (!drawMax[i]) continue;
     JsonArray a = draws[String(i)].to<JsonArray>();
     a.add(drawLast[i]); a.add(drawMax[i]);
   }
   bool linked = WiFi.status() == WL_CONNECTED;
-  doc["connected"] = linked;
-  doc["ssid"] = linked ? WiFi.SSID() : staSsid;
-  if (!linked && staFail >= 0) { doc["wifiError"] = staFailText(); doc["wifiCode"] = staFailReason; }
-  if (linked) { doc["ip"] = WiFi.localIP().toString(); doc["rssi"] = WiFi.RSSI(); }
-  doc["apIp"] = WiFi.softAPIP().toString(); doc["apSsid"] = setupSsid();
-  doc["host"] = deviceHost();   // the DHCP hostname, as the router lists it
-  if (SMARTCLOCK_MDNS) doc["mdns"] = deviceHost() + ".local";
+  doc[F("connected")] = linked;
+  doc[F("ssid")] = linked ? WiFi.SSID() : staSsid;
+  if (!linked && staFail >= 0) { doc[F("wifiError")] = staFailText(); doc[F("wifiCode")] = staFailReason; }
+  if (linked) { doc[F("ip")] = WiFi.localIP().toString(); doc[F("rssi")] = WiFi.RSSI(); }
+  doc[F("apIp")] = WiFi.softAPIP().toString(); doc[F("apSsid")] = setupSsid();
+  doc[F("host")] = deviceHost();   // the DHCP hostname, as the router lists it
+  if (SMARTCLOCK_MDNS) {
+    doc[F("mdns")] = deviceHost() + ".local";
+    doc[F("mdnsState")] = mdnsStarted ? F("on") : mdnsWaiting ? F("waiting for memory") : F("starting");
+    if (mdnsHeap) doc[F("mdnsHeap")] = mdnsHeap;
+  }
   time_t now = time(nullptr);
   if (now > 1600000000) {            // only once NTP has set the clock
     struct tm t; localtime_r(&now, &t);
@@ -1300,30 +1322,32 @@ void handleStatus() {
     char buf[40];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d %s", t.tm_year + 1900, t.tm_mon + 1,
              t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, _tzname[t.tm_isdst > 0 ? 1 : 0]);
-    doc["time"] = buf;
+    doc[F("time")] = buf;
   }
-  if (wx.error.length()) doc["weatherError"] = wx.error;
-  if (wx.lastSuccess) doc["weatherAge"] = (millis() - wx.lastSuccess) / 1000;
-  if (wxHeapUse) doc["weatherHeap"] = wxHeapUse;
-  if (cfg.geoFor == cfg.city && cfg.geoName.length()) doc["location"] = cfg.geoName;
+  if (wx.error.length()) doc[F("weatherError")] = wx.error;
+  if (wx.lastSuccess) doc[F("weatherAge")] = (millis() - wx.lastSuccess) / 1000;
+  if (wxHeapUse) doc[F("weatherHeap")] = wxHeapUse;
+  if (cfg.geoFor == cfg.city && cfg.geoName.length()) doc[F("location")] = cfg.geoName;
   if (wx.valid) {
-    JsonObject w = doc["weather"].to<JsonObject>();
-    w["temp"] = wx.temp; w["feels"] = wx.feels; w["humidity"] = wx.humidity; w["wind"] = wx.wind;
-    w["main"] = wx.main; w["desc"] = wx.desc; w["icon"] = wx.icon; w["city"] = wx.cityName;
+    JsonObject w = doc[F("weather")].to<JsonObject>();
+    w[F("temp")] = wx.temp; w[F("feels")] = wx.feels; w[F("humidity")] = wx.humidity; w[F("wind")] = wx.wind;
+    w[F("main")] = wx.main; w[F("desc")] = wx.desc; w[F("icon")] = wx.icon; w[F("city")] = wx.cityName;
   }
-  doc["forecastDays"] = fc.valid ? fc.count : 0;
-  doc["photos"] = storageReady ? photoCount() : 0;
-  doc["face"] = cfg.theme;
-  doc["signedIn"] = requestAuthorized();
+  doc[F("forecastDays")] = fc.valid ? fc.count : 0;
+  doc[F("photos")] = storageReady ? photoCount() : 0;
+  doc[F("face")] = cfg.theme;
+  doc[F("signedIn")] = requestAuthorized();
   extern String mqttStatus();
-  doc["mqtt"] = mqttStatus();
-  if (cfg.theme == FACE_CUSTOM) doc["customFace"] = cfg.customFace;
-  doc["nightAuto"] = cfg.nightAuto;
+  doc[F("mqtt")] = mqttStatus();
+  extern uint32_t mqttHeap;
+  if (mqttHeap) doc[F("mqttHeap")] = mqttHeap;
+  if (cfg.theme == FACE_CUSTOM) doc[F("customFace")] = cfg.customFace;
+  doc[F("nightAuto")] = cfg.nightAuto;
   if (wx.sunrise >= 0 && wx.sunset >= 0) {
     char sun[12];
     unsigned rise = wx.sunrise % 1440, set = wx.sunset % 1440;
-    snprintf(sun, sizeof(sun), "%02u:%02u", rise / 60, rise % 60); doc["sunrise"] = sun;
-    snprintf(sun, sizeof(sun), "%02u:%02u", set / 60, set % 60); doc["sunset"] = sun;
+    snprintf(sun, sizeof(sun), "%02u:%02u", rise / 60, rise % 60); doc[F("sunrise")] = sun;
+    snprintf(sun, sizeof(sun), "%02u:%02u", set / 60, set % 60); doc[F("sunset")] = sun;
   }
   crashStatus(doc);
   String out; serializeJson(doc, out);
@@ -1349,16 +1373,17 @@ void recoveryLoop() {
   delay(1);
 }
 
-// mDNS waits for the station link and 28 KB of free heap (its responder allocates
-// on start), then advertises the web UI with a few identifying TXT records.
+// mDNS waits for the station link and MDNS_MIN_HEAP of free heap (its responder
+// allocates on start), then advertises the web UI with a few identifying TXT records.
 // Built with SMARTCLOCK_MDNS (the full image; the no-MQTT plain image leaves it out
 // for size). The DHCP hostname also names the clock in the router.
 void serviceMdns() {
 #if SMARTCLOCK_MDNS
-  static bool started = false;
-  if (started) { MDNS.update(); return; }
+  if (mdnsStarted) { MDNS.update(); return; }
   if (WiFi.status() != WL_CONNECTED || millis() - bootStarted < 1500) return;
-  if (ESP.getFreeHeap() < MDNS_MIN_HEAP) return;
+  mdnsWaiting = ESP.getFreeHeap() < MDNS_MIN_HEAP;
+  if (mdnsWaiting) return;
+  uint32_t before = ESP.getFreeHeap();
   String host = deviceHost();
   if (!MDNS.begin(host.c_str())) return;
   MDNS.addService("http", "tcp", 80);
@@ -1367,7 +1392,8 @@ void serviceMdns() {
   MDNS.addServiceTxt("http", "tcp", "board", "SD Pro (GeekMagic-style)");
   MDNS.addServiceTxt("http", "tcp", "api", "ai-agent-monitor");
   MDNS.addServiceTxt("http", "tcp", "path", "/");
-  started = true;
+  mdnsStarted = true;
+  mdnsHeap = before > ESP.getFreeHeap() ? before - ESP.getFreeHeap() : 0;
 #endif
 }
 

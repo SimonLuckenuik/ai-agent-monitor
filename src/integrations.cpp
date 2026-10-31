@@ -12,6 +12,7 @@
 #include "config.h"
 #include "faces.h"
 #include "weather.h"
+#include "routes.h"
 
 // ---- From main.cpp
 extern ESP8266WebServer server;
@@ -28,6 +29,8 @@ void finishPhotoUpload();
 void handlePhotoDelete();
 void handlePhotoList();
 String mqttStatus();
+
+uint32_t mqttHeap = 0;   // /status mqttHeap: what MQTT took to connect (spec 025)
 
 namespace {
 
@@ -151,8 +154,8 @@ void saveVars() {
   for (Var& v : vars) {
     if (!v.keep || v.key.isEmpty()) continue;
     JsonObject o = doc[v.key].to<JsonObject>();
-    o["v"] = v.value; o["at"] = v.at;
-    if (v.until) o["until"] = v.until;
+    o[F("v")] = v.value; o[F("at")] = v.at;
+    if (v.until) o[F("until")] = v.until;
   }
   File file = LittleFS.open("/vars.json", "w");
   if (file) { serializeJson(doc, file); file.close(); }
@@ -234,28 +237,28 @@ void clearMessages(const String& id) {
 }
 
 void handleMessage() {   // POST: store; GET: list; DELETE ?id=: clear (all without id)
-  if (server.method() == HTTP_DELETE) { clearMessages(server.arg("id")); server.send(200, "text/plain", "OK"); return; }
+  if (server.method() == HTTP_DELETE) { clearMessages(server.arg("id")); server.send(200, PSTR("text/plain"), PSTR("OK")); return; }
   if (server.method() == HTTP_POST) {
     JsonDocument doc;
     if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
-      server.send(400, "text/plain", "Expected a JSON object");
+      server.send(400, PSTR("text/plain"), PSTR("Expected a JSON object"));
       return;
     }
     storeMessage(doc.as<JsonObjectConst>());
-    server.send(200, "text/plain", "OK");
+    server.send(200, PSTR("text/plain"), PSTR("OK"));
     return;
   }
   JsonDocument doc;
-  JsonArray list = doc["messages"].to<JsonArray>();
+  JsonArray list = doc[F("messages")].to<JsonArray>();
   for (int i = 0; i < MESSAGE_MAX; ++i) {
     if (!messageActive(i)) continue;
     JsonObject o = list.add<JsonObject>();
-    o["id"] = messages[i].id; o["title"] = messages[i].title; o["text"] = messages[i].text;
-    o["icon"] = messages[i].icon;
-    if (messages[i].color.length()) o["color"] = messages[i].color;
-    if (messages[i].pct >= 0) o["pct"] = messages[i].pct;
-    o["ttl"] = (messages[i].until - millis()) / 1000;
-    o["showing"] = cfg.theme == FACE_MESSAGE && messageSlot == i;
+    o[F("id")] = messages[i].id; o[F("title")] = messages[i].title; o[F("text")] = messages[i].text;
+    o[F("icon")] = messages[i].icon;
+    if (messages[i].color.length()) o[F("color")] = messages[i].color;
+    if (messages[i].pct >= 0) o[F("pct")] = messages[i].pct;
+    o[F("ttl")] = (messages[i].until - millis()) / 1000;
+    o[F("showing")] = cfg.theme == FACE_MESSAGE && messageSlot == i;
   }
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
@@ -282,12 +285,12 @@ String storeFace(const String& name, const String& body) {
   if (body.length() > FACE_JSON_MAX) return F("Face is larger than 4 KB");
   // Checked with only the items' types kept: about 1 KB instead of the whole face (spec 024).
   JsonDocument filter, doc;
-  filter["items"][0]["type"] = true;
-  filter["show"] = true;
+  filter[F("items")][0]["type"] = true;
+  filter[F("show")] = true;
   DeserializationError e = deserializeJson(doc, body, DeserializationOption::Filter(filter));
   if (e == DeserializationError::NoMemory) return F(NO_MEMORY);
-  if (e || !doc["items"].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
-  if (doc["items"].size() > 32) return F("At most 32 items");
+  if (e || !doc[F("items")].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
+  if (doc[F("items")].size() > 32) return F("At most 32 items");
   if (!LittleFS.exists("/faces")) LittleFS.mkdir("/faces");
   if (!LittleFS.exists(facePath(name)) && customFaceCount() >= FACES_MAX) return F("At most 40 custom faces");
   File f = LittleFS.open(facePath(name), "w");
@@ -296,7 +299,7 @@ String storeFace(const String& name, const String& body) {
   f.close();
   if (!ok) return F("Could not save the face");
   facesVersion++;
-  if (doc["show"] | false) showFace(name);
+  if (doc[F("show")] | false) showFace(name);
   return "";
 }
 
@@ -309,9 +312,9 @@ bool apiKeyOk() {
 
 // Faces API guard: feature on, and a signed-in session or the API key.
 bool facesAllowed() {
-  if (!cfg.facesApi) { server.send(404, "text/plain", "Custom faces are turned off (Integrations)"); return false; }
+  if (!cfg.facesApi) { server.send(404, PSTR("text/plain"), PSTR("Custom faces are turned off (Integrations)")); return false; }
   if (requestAuthorized() || apiKeyOk()) return true;
-  server.send(401, "text/plain", "Sign in or send the API key (X-Api-Key)");
+  server.send(401, PSTR("text/plain"), PSTR("Sign in or send the API key (X-Api-Key)"));
   return false;
 }
 
@@ -319,18 +322,18 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
   if (!facesAllowed()) return;
   if (server.method() == HTTP_POST) {
     String name = faceName(server.arg("name"));
-    if (name.isEmpty()) { server.send(400, "text/plain", "name: 1-20 of a-z 0-9 _ -"); return; }
+    if (name.isEmpty()) { server.send(400, PSTR("text/plain"), PSTR("name: 1-20 of a-z 0-9 _ -")); return; }
     String err = storeFace(name, server.arg("plain"));
     if (err.length()) { server.send(err == F(NO_MEMORY) ? 507 : 400, "text/plain", err); return; }
     if (server.arg("show") == "1") showFace(name);
-    server.send(200, "text/plain", "OK");
+    server.send(200, PSTR("text/plain"), PSTR("OK"));
     return;
   }
   JsonDocument doc;
-  JsonArray list = doc["faces"].to<JsonArray>();
+  JsonArray list = doc[F("faces")].to<JsonArray>();
   for (int i = 0, n = customFaceCount(); i < n; ++i) list.add(customFaceAt(i));
-  if (cfg.theme == FACE_CUSTOM) doc["showing"] = cfg.customFace;
-  JsonObject v = doc["vars"].to<JsonObject>();
+  if (cfg.theme == FACE_CUSTOM) doc[F("showing")] = cfg.customFace;
+  JsonObject v = doc[F("vars")].to<JsonObject>();
   for (const Var& var : vars) if (var.key.length() && findVar(var.key)) v[var.key] = var.value;
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
@@ -340,7 +343,7 @@ void handleFaceGet() {   // the JSON of one face, for the editor
   if (!facesAllowed()) return;
   String name = faceName(server.arg("name"));
   File f = name.length() ? LittleFS.open(facePath(name), "r") : File();
-  if (!f) { server.send(404, "text/plain", "No such face"); return; }
+  if (!f) { server.send(404, PSTR("text/plain"), PSTR("No such face")); return; }
   server.streamFile(f, "application/json");
   f.close();
 }
@@ -348,31 +351,31 @@ void handleFaceGet() {   // the JSON of one face, for the editor
 void handleFaceDelete() {
   if (!facesAllowed()) return;
   String name = faceName(server.arg("name"));
-  if (name.isEmpty() || !customFaceExists(name)) { server.send(404, "text/plain", "No such face"); return; }
+  if (name.isEmpty() || !customFaceExists(name)) { server.send(404, PSTR("text/plain"), PSTR("No such face")); return; }
   storeFace(name, "");
   saveConfig();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void handleFaceShow() {
   if (!facesAllowed()) return;
   String name = faceName(server.arg("name"));
-  if (name.isEmpty() || !customFaceExists(name)) { server.send(404, "text/plain", "No such face"); return; }
+  if (name.isEmpty() || !customFaceExists(name)) { server.send(404, PSTR("text/plain"), PSTR("No such face")); return; }
   showFace(name);
   saveConfig();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void handleFaceVars() {   // POST {"name":value,...,"$ttl":s,...}: merged; null deletes
   if (!facesAllowed()) return;
   JsonDocument doc;
   if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
-    server.send(400, "text/plain", "Expected a JSON object");
+    server.send(400, PSTR("text/plain"), PSTR("Expected a JSON object"));
     return;
   }
   String bad = applyVars(doc.as<JsonObject>());
   if (bad.length()) { server.send(400, "text/plain", "Bad variable name \"" + bad + "\": 1-15 of A-Z a-z 0-9 _"); return; }
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 // ---------------------------------------------------------------- settings page data
@@ -382,13 +385,13 @@ void handleIntegrations() {   // GET: signed-in view; POST action=newkey: regene
     char key[33];
     for (int i = 0; i < 4; ++i) snprintf(key + i * 8, 9, "%08x", (unsigned)ESP.random());
     cfg.apiKey = key;
-    if (!saveConfig()) { server.send(503, "text/plain", "Settings could not be saved"); return; }
+    if (!saveConfig()) { server.send(503, PSTR("text/plain"), PSTR("Settings could not be saved")); return; }
   }
   JsonDocument doc;
-  doc["apiKey"] = cfg.apiKey;
-  doc["mqttStatus"] = mqttStatus();
-  doc["mqttPassSet"] = cfg.mqttPass.length() > 0;
-  doc["mqttTopic"] = cfg.mqttBase.length() ? cfg.mqttBase : deviceHost();
+  doc[F("apiKey")] = cfg.apiKey;
+  doc[F("mqttStatus")] = mqttStatus();
+  doc[F("mqttPassSet")] = cfg.mqttPass.length() > 0;
+  doc[F("mqttTopic")] = cfg.mqttBase.length() ? cfg.mqttBase : deviceHost();
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
 }
@@ -398,20 +401,20 @@ void handleIntegrations() {   // GET: signed-in view; POST action=newkey: regene
 // integration cannot send one. Only photos, face choice and brightness are reachable.
 bool compatAllowed() {   // also for a signed-in settings page (photo slideshow switches)
   if (!recoveryMode && (cfg.haCompat || requestAuthorized())) return true;
-  server.send(404, "text/plain", "Not found");
+  server.send(404, PSTR("text/plain"), PSTR("Not found"));
   return false;
 }
 
 void handleThemeList() {
   if (!compatAllowed()) return;
   JsonDocument doc;
-  JsonArray themes = doc["themes"].to<JsonArray>();
+  JsonArray themes = doc[F("themes")].to<JsonArray>();
   for (int i = 0; i < FACE_COUNT; ++i) {
     if (!*FACE_NAMES[i]) continue;   // a retired face (6, Flip)
     JsonObject t = themes.add<JsonObject>();
     t["id"] = i; t["name"] = FACE_NAMES[i]; t["enabled"] = (cfg.faceMask >> i & 1) != 0;
   }
-  doc["interval"] = cfg.themeInterval;
+  doc[F("interval")] = cfg.themeInterval;
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
 }
@@ -419,17 +422,17 @@ void handleThemeList() {
 void handleThemeToggle() {
   if (!compatAllowed()) return;
   int id = server.arg("id").toInt();
-  if (id < 0 || id >= FACE_COUNT) { server.send(400, "text/plain", "Bad id"); return; }
+  if (id < 0 || id >= FACE_COUNT) { server.send(400, PSTR("text/plain"), PSTR("Bad id")); return; }
   if (server.arg("state") == "1") cfg.faceMask |= 1 << id; else cfg.faceMask &= ~(1 << id);
   saveConfig();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void handleThemeInterval() {
   if (!compatAllowed()) return;
   cfg.themeInterval = constrain(server.arg("val").toInt(), 0, 3600);
   saveConfig();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void handlePhotoToggle() {
@@ -437,14 +440,14 @@ void handlePhotoToggle() {
   setPhotoEnabled(server.arg("name"), server.arg("state") == "1");
   saveConfig();
   facePhotosChanged();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 void handlePhotoInterval() {
   if (!compatAllowed()) return;
   cfg.photoInterval = constrain(server.arg("val").toInt(), 1, 3600);
   saveConfig();
-  server.send(200, "text/plain", "OK");
+  server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
 // ---------------------------------------------------------------- MQTT
@@ -454,6 +457,11 @@ PubSubClient mqtt(mqttNet);
 uint32_t mqttRetryAt = 0, mqttStateAt = 0, mqttFacesSent = 0;
 bool mqttReconnect = false;
 String mqttLastError = "off";
+// What connecting took (the client's buffer, the connection, discovery at its peak),
+// for /status mqttHeap; the gate is that plus a margin (spec 025).
+constexpr uint32_t MQTT_MIN_HEAP = 6144;
+uint32_t mqttHeapBefore = 0, mqttHeapLow = 0;
+void mqttHeapSample() { mqttHeapLow = std::min<uint32_t>(mqttHeapLow, ESP.getFreeHeap()); }
 
 String base() { return cfg.mqttBase.length() ? cfg.mqttBase : deviceHost(); }
 String nodeId() { char id[16]; snprintf(id, sizeof(id), "sc_%06x", (unsigned)(ESP.getChipId() & 0xffffff)); return id; }
@@ -474,6 +482,7 @@ void publishConfig(const char* component, const char* object, const String& fiel
                 F("\",\"mf\":\"SmartClock-OSS\",\"mdl\":\"SD Pro\",\"sw\":\"") + firmwareVersion() +
                 F("\",\"cu\":\"http://") + WiFi.localIP().toString() + F("/\"}}");
   String topic = String(F("homeassistant/")) + component + "/" + id + "/" + object + F("/config");
+  mqttHeapSample();   // the discovery message at its largest
   mqtt.publish(topic.c_str(), json.c_str(), true);
 }
 
@@ -523,8 +532,8 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
   if (topic == b + "/backlight/set") {
     JsonDocument d;
     if (deserializeJson(d, body)) return;
-    if (d["state"].is<const char*>()) backlightOff = d["state"] == "OFF";
-    if (d["brightness"].is<int>()) { cfg.brightness = constrain(d["brightness"].as<int>(), 0, 100); backlightOff = false; saveConfig(); }
+    if (d[F("state")].is<const char*>()) backlightOff = d[F("state")] == "OFF";
+    if (d[F("brightness")].is<int>()) { cfg.brightness = constrain(d[F("brightness")].as<int>(), 0, 100); backlightOff = false; saveConfig(); }
     brightnessDirty = true;
   } else if (topic == b + "/face/set") {
     for (int i = 0; i < FACE_COUNT; ++i)
@@ -622,13 +631,13 @@ bool messageActive(int slot) {
 String messageField(int slot, const String& key) {
   if (!messageActive(slot)) return "";
   const Message& m = messages[slot];
-  if (key == "title") return m.title;
-  if (key == "text") return m.text;
-  if (key == "icon") return m.icon;
-  if (key == "color") return m.color;
-  if (key == "pct") return String(m.pct);
-  if (key == "id") return m.id;
-  if (key == "ttl") return String((m.until - millis()) / 1000);   // seconds left
+  if (key == F("title")) return m.title;
+  if (key == F("text")) return m.text;
+  if (key == F("icon")) return m.icon;
+  if (key == F("color")) return m.color;
+  if (key == F("pct")) return String(m.pct);
+  if (key == F("id")) return m.id;
+  if (key == F("ttl")) return String((m.until - millis()) / 1000);   // seconds left
   return "";
 }
 bool messageUrgent(int slot) { return messageActive(slot) && (messages[slot].icon == "warning" || messages[slot].icon == "error"); }
@@ -651,6 +660,26 @@ void integrationsSettingsChanged() {
 #endif
 }
 
+// The integrations' routes, in flash (routes.h). Stock SD Pro shapes (/theme, /photo)
+// only answer while "Home Assistant dashboards" is on.
+const Route ROUTES[] PROGMEM = {
+  {"/api/faces",        HTTP_ANY,  handleFaces, nullptr},
+  {"/api/faces/get",    HTTP_ANY,  handleFaceGet, nullptr},
+  {"/api/faces/delete", HTTP_POST, handleFaceDelete, nullptr},
+  {"/api/faces/show",   HTTP_POST, handleFaceShow, nullptr},
+  {"/api/faces/vars",   HTTP_POST, handleFaceVars, nullptr},
+  {"/api/integrations", HTTP_ANY,  handleIntegrations, nullptr},
+  {"/api/message",      HTTP_ANY,  handleMessage, nullptr},
+  {"/theme/list",       HTTP_ANY,  handleThemeList, nullptr},
+  {"/theme/toggle",     HTTP_ANY,  handleThemeToggle, nullptr},
+  {"/theme/interval",   HTTP_ANY,  handleThemeInterval, nullptr},
+  {"/photo/list",       HTTP_ANY,  []{ if (compatAllowed()) handlePhotoList(); }, nullptr},
+  {"/photo/upload",     HTTP_POST, finishPhotoUpload, handlePhotoUpload},
+  {"/photo/toggle",     HTTP_ANY,  handlePhotoToggle, nullptr},
+  {"/photo/delete",     HTTP_ANY,  []{ if (compatAllowed()) handlePhotoDelete(); }, nullptr},
+  {"/photo/interval",   HTTP_ANY,  handlePhotoInterval, nullptr},
+};
+
 void integrationsRoutes() {
   // Before the web server reads a face's body (up to 4 KB, then copied once): the custom
   // face on screen gives its document back, so the upload fits beside it (spec 024).
@@ -658,22 +687,8 @@ void integrationsRoutes() {
     if (method == F("POST") && url == F("/api/faces")) customRelease();
     return ESP8266WebServer::CLIENT_REQUEST_CAN_CONTINUE;
   });
-  server.on("/api/faces", handleFaces);
-  server.on("/api/faces/get", handleFaceGet);
-  server.on("/api/faces/delete", HTTP_POST, handleFaceDelete);
-  server.on("/api/faces/show", HTTP_POST, handleFaceShow);
-  server.on("/api/faces/vars", HTTP_POST, handleFaceVars);
-  server.on("/api/integrations", handleIntegrations);
-  server.on("/api/message", handleMessage);
-  // Stock SD Pro shapes (only answer while "Home Assistant dashboards" is on).
-  server.on("/theme/list", handleThemeList);
-  server.on("/theme/toggle", handleThemeToggle);
-  server.on("/theme/interval", handleThemeInterval);
-  server.on("/photo/list", []{ if (compatAllowed()) handlePhotoList(); });
-  server.on("/photo/upload", HTTP_POST, finishPhotoUpload, handlePhotoUpload);
-  server.on("/photo/toggle", handlePhotoToggle);
-  server.on("/photo/delete", []{ if (compatAllowed()) handlePhotoDelete(); });
-  server.on("/photo/interval", handlePhotoInterval);
+  static RouteTable routes(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0]));
+  server.addHandler(&routes);
 }
 
 void integrationsLoop() {
@@ -690,7 +705,8 @@ void integrationsLoop() {
     if ((int32_t)(millis() - mqttRetryAt) < 0) return;
     mqttRetryAt = millis() + 30000;   // a missing broker must not stall the clock often
     if (cfg.mqttHost.isEmpty()) { mqttLastError = "no broker set"; return; }
-    if (ESP.getFreeHeap() < 16000) { mqttLastError = "low memory"; return; }
+    if (ESP.getFreeHeap() < MQTT_MIN_HEAP) { mqttLastError = F("waiting for memory"); return; }
+    mqttHeapBefore = mqttHeapLow = ESP.getFreeHeap();
     mqtt.setServer(cfg.mqttHost.c_str(), cfg.mqttPort);
     mqtt.setBufferSize(1536);
     mqtt.setCallback(onMqtt);
@@ -704,6 +720,8 @@ void integrationsLoop() {
     for (const char* t : {"/backlight/set", "/face/set", "/sync", "/custom/+", "/vars", "/message", "/message/clear"}) mqtt.subscribe((b + t).c_str());
     publishDiscovery();
     publishState();
+    mqttHeapSample();
+    mqttHeap = mqttHeapBefore - mqttHeapLow;
   }
   mqtt.loop();
   if (mqttFacesSent != customFacesVersion()) publishDiscovery();   // face list changed
@@ -734,23 +752,23 @@ String emuMqtt(const String& topic, const String& body) {
 // {"facesApi":b,"showing":face,"faces":[...],"vars":{name:{"value","age","ttl","persist","history":[...]}}}
 String emuVarsJson() {
   JsonDocument doc;
-  doc["facesApi"] = cfg.facesApi;
-  doc["showing"] = cfg.theme == FACE_CUSTOM ? cfg.customFace : cfg.theme == FACE_MESSAGE ? String("message")
+  doc[F("facesApi")] = cfg.facesApi;
+  doc[F("showing")] = cfg.theme == FACE_CUSTOM ? cfg.customFace : cfg.theme == FACE_MESSAGE ? String("message")
                  : String(FACE_NAMES[cfg.theme >= 0 && cfg.theme < FACE_COUNT ? cfg.theme : 0]);
-  JsonArray faces = doc["faces"].to<JsonArray>();
+  JsonArray faces = doc[F("faces")].to<JsonArray>();
   for (int i = 0, n = customFaceCount(); i < n; ++i) faces.add(customFaceAt(i));
-  JsonObject list = doc["vars"].to<JsonObject>();
+  JsonObject list = doc[F("vars")].to<JsonObject>();
   uint32_t now = epochNow();
   for (const Var& v : vars) {
     if (v.key.isEmpty() || !findVar(v.key)) continue;
     JsonObject o = list[v.key].to<JsonObject>();
-    o["value"] = v.value;
-    o["age"] = v.at && now >= v.at ? (long)(now - v.at) : -1;
-    if (v.until) o["ttl"] = (long)(v.until - now);
-    if (v.keep) o["persist"] = true;
+    o[F("value")] = v.value;
+    o[F("age")] = v.at && now >= v.at ? (long)(now - v.at) : -1;
+    if (v.until) o[F("ttl")] = (long)(v.until - now);
+    if (v.keep) o[F("persist")] = true;
     float h[HISTORY_LEN];
     int n = faceHistory(v.key, h, HISTORY_LEN, nullptr);
-    if (n) { JsonArray a = o["history"].to<JsonArray>(); for (int i = 0; i < n; ++i) a.add(h[i]); }
+    if (n) { JsonArray a = o[F("history")].to<JsonArray>(); for (int i = 0; i < n; ++i) a.add(h[i]); }
   }
   String out; serializeJson(doc, out);
   return out;

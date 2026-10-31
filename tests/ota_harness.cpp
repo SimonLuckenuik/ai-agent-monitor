@@ -49,6 +49,8 @@ struct MockUpdate {
   }
   bool isRunning() { return running; }
 } Update;
+#define F(s) s       // flash strings are plain ones on the host
+#define PSTR(s) s
 #define FS_PHYS_ADDR 0x100000u   // 4m3m: the filesystem starts at 1 MB
 void delay(unsigned) {}
 void yield() {}

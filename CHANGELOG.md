@@ -7,6 +7,36 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.0.0 - 2026-10-31
+
+About 12 KB of memory back, and MQTT and mDNS working again.
+
+### Upgrading
+
+- **From 1.4.0 on:** install `AIAgentMonitor_v2.0.0.bin.gz` from the Firmware update
+  card. Settings, saved faces and photos are kept.
+- A firmware update now needs about 4 KB of memory free when it starts. If the clock is
+  short, it answers "Not enough memory for an update: try again".
+
+### Fixed
+
+- **MQTT and mDNS had not run since about 1.4.0.** They waited for 16 KB and 28 KB of
+  free memory, figures set in 0.1.1 and never measured, which the clock no longer had.
+  Measured, MQTT takes about 3 KB and mDNS under 1 KB. They now start with 6 KB and
+  4 KB free, and `/status` shows when they are waiting and what they took (`mqttHeap`,
+  `mdnsHeap`, `mdnsState`). `<host>.local` answers again.
+
+### Changed
+
+- **About 12 KB more free memory.** Three changes:
+  - the update check's 4 KB buffer exists only during an update;
+  - the web server's routes are a table in flash, about 4.7 KB less heap;
+  - about 3.6 KB of messages, settings keys and URLs stay in flash instead of being
+    copied into memory at boot.
+
+  With MQTT and mDNS both on and retro-runner on screen, the emulator has 10.9 KB free.
+  On 1.9.1 it had 6.9 KB with both off.
+
 ## 1.9.1 - 2026-10-31
 
 The weather loads again, and faces can be sent while a big face is shown.

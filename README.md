@@ -337,7 +337,7 @@ python tests/run_safety_tests.py
 python tests/face_preview/run_face_preview.py
 ```
 
-The unit tests cover settings, expressions and text handling; the safety tests check
+[Testing](docs/specifications/testing.md) lists every suite and case. In short, the unit tests cover settings, expressions and text handling; the safety tests check
 update validation, recovery and the flash layout; the face preview renders every face
 to PNG and checks the screen-update logic.
 
