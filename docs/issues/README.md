@@ -7,6 +7,7 @@ here from Open to Closed when it is fixed or explained.
 
 ## Open
 
+- [2026-10-31 Weather never loads on 1.9.0 (free heap under the 16 KB fetch threshold); night-lake without its sun](2026-10-31-weather-never-fetched-under-16-kb.md)
 - [2026-10-31 Sending a face fails while a big face is loaded](2026-10-31-face-upload-needs-the-loaded-face-memory.md)
 - [2026-10-25 After a reboot the clock showed the old setup network name](2026-10-25-setup-network-kept-old-name-after-reboot.md)
 - [2026-10-29 A new face variable is dropped silently when the table is full](2026-10-29-new-variable-dropped-when-table-full.md)
