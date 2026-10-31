@@ -13,12 +13,15 @@
 #include <Arduino.h>
 #include <cerrno>
 #include <execinfo.h>
+#include <map>
 #include <new>
 #include <setjmp.h>
 #include <signal.h>
 #include <sys/mman.h>
 #include <ucontext.h>
 #include <unistd.h>
+#include <string>
+#include <vector>
 #include <user_interface.h>   // rst_info
 
 extern "C" {
@@ -42,6 +45,25 @@ uint16_t runLen[MAX_BLOCKS], runPrev[MAX_BLOCKS];
 bool runUsed[MAX_BLOCKS];
 size_t blocks = 0, freeBlocks = 0, lowFree = 0;
 bool fwRunning = false;   // allocations go to the arena
+
+// GET :8080/heapmap: each live block's call chain, taken at allocation (only with
+// EMU_HEAPMAP=1: unwinding every allocation is slow).
+constexpr int SITE_FRAMES = 10;
+void* site[MAX_BLOCKS][SITE_FRAMES];
+int heapMap = -1;
+bool tracing = false;
+void noteSite(size_t i) {
+  if (heapMap < 0) heapMap = getenv("EMU_HEAPMAP") && *getenv("EMU_HEAPMAP") == '1';
+  if (!heapMap || tracing) return;
+  tracing = true;   // backtrace() may allocate the first time: from the host heap
+  bool was = fwRunning;
+  fwRunning = false;
+  void* f[SITE_FRAMES + 3];
+  int n = backtrace(f, SITE_FRAMES + 3);
+  fwRunning = was;
+  tracing = false;
+  for (int k = 0; k < SITE_FRAMES; ++k) site[i][k] = k + 3 < n ? f[k + 3] : nullptr;   // past noteSite, arenaAlloc, malloc
+}
 
 void arenaInit() {
   if (blocks) return;
@@ -83,6 +105,7 @@ void* arenaAlloc(size_t size) {
   runUsed[best] = true;
   freeBlocks -= n;
   lowFree = std::min(lowFree, freeBlocks);
+  noteSite(best);
   return arena + best * BLOCK;
 }
 
@@ -296,6 +319,79 @@ String emuMemoryJson() {
            unsigned(blocks * BLOCK), unsigned(freeBlocks * BLOCK), unsigned(lowFree * BLOCK),
            unsigned(largestRun() * BLOCK), unsigned(stackSize), unsigned(stackMaxUsed));
   return b;
+}
+
+// A frame in the firmware's own sources (src/), not a library's src/ folder.
+bool firmwareFile(const std::string& w) {
+  for (const char* f : {"/main.cpp:", "/faces.cpp:", "/integrations.cpp:", "/weather.cpp:", "/crash.cpp:",
+                        "/config.h:", "/weather.h:", "/faces.h:", "/integrations.h:", "/ascii.cpp:"})
+    if (w.find(f) != std::string::npos && w.find("/src/") != std::string::npos) return true;
+  return false;
+}
+
+// GET :8080/heapmap: the live blocks grouped by the first firmware function (src/) in
+// their call chain, largest first: "bytes blocks function (file:line) <- the caller".
+String emuHeapMap() {
+  arenaInit();
+  if (heapMap != 1) return "Start the emulator with EMU_HEAPMAP=1\n";
+  // Every distinct address, through one addr2line run.
+  std::vector<void*> addrs;
+  for (size_t i = 0; i < blocks; i += runLen[i])
+    if (runUsed[i]) for (void* a : site[i]) if (a) addrs.push_back(a);
+  std::sort(addrs.begin(), addrs.end());
+  addrs.erase(std::unique(addrs.begin(), addrs.end()), addrs.end());
+  std::map<void*, std::string> where;
+  bool was = fwRunning;
+  fwRunning = false;
+  for (size_t at = 0; at < addrs.size(); at += 200) {
+    std::string cmd = "addr2line -f -C -p -e /proc/" + std::to_string(getpid()) + "/exe";
+    char a[24];
+    for (size_t k = at; k < std::min(addrs.size(), at + 200); ++k) { snprintf(a, sizeof(a), " %p", addrs[k]); cmd += a; }
+    if (FILE* f = popen(cmd.c_str(), "r")) {
+      char line[512];
+      for (size_t k = at; k < std::min(addrs.size(), at + 200) && fgets(line, sizeof(line), f); ++k) {
+        std::string s = line;
+        while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
+        where[addrs[k]] = s;
+      }
+      pclose(f);
+    }
+  }
+  std::map<std::string, std::pair<size_t, size_t>> groups;   // site -> bytes, blocks
+  for (size_t i = 0; i < blocks; i += runLen[i]) {
+    if (!runUsed[i]) continue;
+    std::string key = "(no firmware frame)", lib;
+    for (int k = 0; k < SITE_FRAMES && site[i][k]; ++k) {
+      const std::string& w = where[site[i][k]];
+      if (firmwareFile(w)) {
+        key = w.substr(0, w.find(" at ")) + " (" + w.substr(w.rfind('/') + 1) + ")";
+        if (k + 1 < SITE_FRAMES && site[i][k + 1]) {
+          const std::string& up = where[site[i][k + 1]];
+          key += " <- " + up.substr(0, up.find('('));
+        }
+        break;
+      }
+      if (lib.empty() && w.find("operator new") == std::string::npos && w.find("malloc") == std::string::npos &&
+          w.find("realloc") == std::string::npos && w.find("arena") == std::string::npos)
+        lib = w.substr(0, w.find('('));
+    }
+    if (key == "(no firmware frame)" && !lib.empty()) key += " " + lib;
+    groups[key].first += runLen[i] * BLOCK;
+    groups[key].second++;
+  }
+  fwRunning = was;
+  std::vector<std::pair<std::pair<size_t, size_t>, std::string>> rows;
+  for (auto& g : groups) rows.push_back({g.second, g.first});
+  std::sort(rows.rbegin(), rows.rend());
+  std::string out;
+  char head[96];
+  snprintf(head, sizeof(head), "%u bytes in use of %u\n", unsigned((blocks - freeBlocks) * BLOCK), unsigned(blocks * BLOCK));
+  out += head;
+  for (auto& r : rows) {
+    snprintf(head, sizeof(head), "%6u %4u ", unsigned(r.first.first), unsigned(r.first.second));
+    out += head + r.second + "\n";
+  }
+  return String(out.c_str());
 }
 
 // What the core reports on the chip, from the arena and the stack.

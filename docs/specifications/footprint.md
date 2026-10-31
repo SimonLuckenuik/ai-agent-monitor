@@ -63,6 +63,79 @@ the clock's `/status` and the emulator (`EMU_HEAP`, spec 022). Scripts:
 | mDNS once started | not measured | it needs 28 KB free to start |
 | MQTT connection | not measured | it needs 16 KB free to connect |
 
+## Where the RAM went since 0.1.x
+
+On 0.1.1 the clock had about **32 KB** free at rest (weather and forecast running; STATUS,
+2026-10-05). mDNS's 28 KB gate and MQTT's 16 KB gate were set against that. On 1.8.0 it
+had 15.3-16.4 KB free, and on 1.9.x it has 14.1-14.6 KB.
+
+Static RAM per release (`.data` + `.rodata` + `.bss`, each tag built again):
+
+| Release | `.rodata` | `.bss` | Static in all | Heap left before the SDK and runtime take theirs |
+|---|---|---|---|---|
+| 0.1.2 | 7,312 | 27,528 | 40,692 | 41,228 |
+| 1.3.2 | 8,624 | 28,576 | 43,060 | 38,860 |
+| 1.4.0 | 10,928 | 29,424 | 46,232 | 35,688 |
+| 1.6.0 | 12,800 | 31,304 | 50,000 | 31,920 |
+| 1.8.0 | 12,800 | 32,168 | 50,880 | 31,040 |
+| 1.9.0 | 13,024 | 32,912 | 51,872 | 30,048 |
+| 1.9.1 | 13,036 | 32,912 | 51,884 | 30,036 |
+
+That's 11.2 KB more static RAM since 0.1.2:
+
+- **Strings in `.rodata`: about +5.7 KB.** Each feature's messages, keys and URLs. Of
+  the 8.7 KB of strings in RAM today, 7.9 KB are ours: `main.cpp` 2.7 KB, `faces.cpp`
+  2.0 KB, `integrations.cpp` 1.4 KB, `weather.cpp` 0.8 KB, `config.h` 0.5 KB.
+- **Tables for the features: about +5.5 KB.** Face variables 1,440 B, value histories
+  592 B, the big font's table 456 B, the Big tiles' state 384, message slots 288, the
+  repaint sprite object 288, item boxes and hashes about 900 B, the night panel 184,
+  crash record 144, the config's new fields 220, the role and name tables.
+
+The remaining drop (about 7 KB, 32 KB minus 11 KB minus 14 KB) is heap held at runtime.
+The emulator's heap map (`EMU_HEAPMAP=1`, `GET :8080/heapmap`) shows 10.4 KB in use at
+rest. The largest holders:
+
+- **The settings' Strings (palettes, roles, order, names): about 2.4 KB.**
+- **The web server's routes: 53 handlers of about 56 B each, 3.0 KB.**
+- **The photo upload handler: 1 KB.**
+- **The current weather and forecast: about 0.6 KB.**
+
+Objects built before `setup()` (the MQTT client's buffer, for one) are not counted there.
+
+## MQTT and mDNS against the free heap
+
+| | Needs (held) | Needs (at start) | Gate today | Fits at rest (14 KB) |
+|---|---|---|---|---|
+| MQTT | about 2-2.5 KB: the 1,536 B message buffer, the TCP connection (lwIP pcb, receive buffers) | about 2-3 KB more while the Home Assistant discovery messages are built (one String of 400-900 B each, the face list growing with each custom face) | 16 KB | **Yes**: about 11.5 KB would be left; with a big face shown, about 4.5 KB (the weather and uploads free the face first, spec 024) |
+| mDNS (LEAmDNS) | not measured: the responder, its host and service records, a multicast UDP socket | probing and announcing at start, a reply buffer per query | 28 KB | **Unknown**: likely 3-5 KB, to measure on the chip |
+
+Measured in the emulator against a local broker (2026-10-31): MQTT connects and
+publishes discovery; the arena saw only 40 B more because the client's buffer is
+allocated from the host heap before `setup()`. The figure above comes from the code.
+The emulator does not run mDNS (the build leaves it out), and neither the emulator's
+lwIP nor its sockets are the chip's, so the TCP and UDP parts must be measured on the
+clock: a `/status` field per feature (as `weatherHeap` does for the weather).
+
+**So MQTT never lacked room for itself: the 16 KB gate blocks it.** mDNS's 28 KB gate was
+reachable only up to about 1.3.x. To bring both back:
+
+1. Have `/status` report the heap each one takes when it starts (`mqttHeap`,
+   `mdnsHeap`), and gate on that plus a margin (as spec 024 did for the weather).
+2. Win back room. The update buffer only during an update is 4.1 KB, and the strings in
+   flash are about 6-7 KB.
+3. MQTT then fits beside a big face. mDNS probably does too. Otherwise it could start on
+   demand, or be dropped for 21 KB of flash.
+
+## Keeping the strings in flash
+
+| | Today | With `F()` / `PSTR` / `FPSTR` |
+|---|---|---|
+| RAM | 7.9 KB of our strings copied into RAM at boot | 6-7 KB of it back. The keyword tables used per frame (`GROUPS`, `TIME_F`, ...) may stay in RAM (about 1 KB) |
+| Flash | each string is already in flash (the copy source) | about the same. `F()` strings are 4-byte aligned, and calls that take a flash string add a little code: a few hundred bytes, about 0.5 KB compressed (97% → 97-98%) |
+| Speed | RAM reads | flash reads through the cache: no visible change for messages and URLs, slower for keyword tables read many times a frame (left in RAM) |
+| Work | | Mechanical but wide: about 470 literals across `main.cpp`, `faces.cpp`, `integrations.cpp`, `weather.cpp` and `config.h`. JSON keys (`doc["key"]`) need `F("key")` or a `const char` table in flash. Checked by the unit, integration and safety tests and a `.rodata` size check |
+| Risk | | A flash string passed where a RAM `const char*` is expected crashes on the chip (unaligned flash read). The compiler does not catch every case, so the emulator cannot either: the safety test can grep for the patterns, and the clock checks it |
+
 ## Candidates for savings
 
 | Change | Saves | Cost or risk |
