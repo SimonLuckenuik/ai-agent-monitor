@@ -1,6 +1,6 @@
 # Animated custom faces restart the clock
 
-Status: Fixed in the code (2026-10-31), to be confirmed on the clock with the next release
+Status: Fixed in 1.9.0, confirmed on the clock (2026-10-31)
 
 Date: 2026-10-31
 
@@ -54,3 +54,13 @@ paths now take about 1.8-2.3 KB of the 4 KB. All 39 example faces run in the emu
 the clock's memory (integration case `example_faces_memory`). [Spec 021](../../specs/021-crash-report/SPEC.md)
 adds crash records and crash-loop protection, so a face that crashes again turns itself
 off instead of restarting the clock forever.
+
+## On the clock with 1.9.0
+
+2026-10-31, after the owner installed 1.9.0 (build 9b10951): retro-runner, flip-clock-wide
+and night-lake each shown for 90 s (the owner watched flip-clock-wide's animation), no
+restart, crash log empty. The least free stack since boot was 1,040 B: about 3,050 B of
+the 4 KB used, startup and the core's frames included (the emulator counts 2,752 B of
+firmware frames alone for the deepest example face). Sending a face after another big one
+had been shown failed for lack of heap, a separate defect:
+[issue](2026-10-31-face-upload-needs-the-loaded-face-memory.md).

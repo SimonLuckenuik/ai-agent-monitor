@@ -27,7 +27,9 @@ Retro-runner, flip-clock-wide and night-lake restart it: a stack overflow in the
 expression parser while repainting, reproduced in the emulator
 ([issue](issues/2026-10-31-animated-faces-restart-the-clock.md)); they were deleted from
 the clock. Fixed in 1.9.0 (spec 023), with crash records and crash-loop protection
-(spec 021); 1.9.0 is not yet installed on the clock. Shown there in the 1.4.0 work:
+(spec 021). The clock runs **1.9.0** (build 9b10951) since 2026-10-31: the three faces
+ran without a restart, least free stack 1,040 B. Sending a face after a big one was
+shown fails for lack of heap ([issue](issues/2026-10-31-face-upload-needs-the-loaded-face-memory.md)). Shown there in the 1.4.0 work:
 
 | Feature | Device result |
 |---|---|
@@ -56,11 +58,11 @@ records and protection cost about 3 KB compressed; 1.8.0 was 419,030 B.
 
 ## Specs in flight
 
-Released in 1.9.0, not yet run on the clock:
-[023](../specs/023-renderer-stack/SPEC.md) (faces within the 4 KB stack),
+Done: [023](../specs/023-renderer-stack/SPEC.md) (faces within the 4 KB stack, confirmed
+on the clock). In 1.9.0 on the clock, not yet seen at work there (no crash since):
 [021](../specs/021-crash-report/SPEC.md) (crash records, crash-loop protection, safe mode),
 [022](../specs/022-emulator-device-memory/SPEC.md) (the emulator with the clock's memory;
-left: calibrating `EMU_STACK` against the clock's `stackFree`). Proposed:
+the clock's 3,050 B against the emulator's 2,752 B leaves `EMU_STACK` at 4096). Proposed:
 [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
 Dropped: [020](../specs/020-esp-now/SPEC.md). Order: [roadmap](plans/roadmap.md).
 

@@ -18,3 +18,8 @@
   Also: the emulator calls the firmware's crash callback on a panic, `POST :8080/panic`
   (the page's Crash button), the firmware's crash log on the page, line-buffered output
   for `docker logs`, the Settings button opens one separate tab.
+- 2026-10-31: calibration on the clock (1.9.0): least free stack since boot 1,040 B, about
+  3,050 B used with startup and the core's frames; the emulator counts 2,752 B of firmware
+  frames for the deepest face. `EMU_STACK` stays 4096 (about 300 B of headroom against the
+  clock is the error). Heap: the emulator at rest 12.7 KB free, the clock 14.1 KB; after
+  flip-clock-wide both run out on the next upload (10.0 / 10.5 KB), so the arena matches.

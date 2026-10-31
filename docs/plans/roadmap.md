@@ -6,11 +6,9 @@ approved.
 
 ## In progress
 
-1. [023 Custom faces within the 4 KB stack](../../specs/023-renderer-stack/SPEC.md): the fix
-   for the faces that restarted the clock.
-2. [022 The emulator with the clock's memory](../../specs/022-emulator-device-memory/SPEC.md):
+1. [022 The emulator with the clock's memory](../../specs/022-emulator-device-memory/SPEC.md):
    heap, stack, crash traces, live device statistics.
-3. [021 Crash records and crash-loop protection](../../specs/021-crash-report/SPEC.md).
+2. [021 Crash records and crash-loop protection](../../specs/021-crash-report/SPEC.md).
 
 ## Next (proposed, waiting for approval)
 

@@ -10,3 +10,5 @@
   info in the ELF only). Checked in the emulator: 3 panics turn custom faces off, 5 give
   safe mode, Resume. Integration case `crash_loop_protection`. +3 KB compressed (97%).
   Not yet run on the clock.
+- 2026-10-31: on the clock with 1.9.0: `/api/crashes` answers 204 with the key, no crash
+  so far; the record path has not run on the chip yet.

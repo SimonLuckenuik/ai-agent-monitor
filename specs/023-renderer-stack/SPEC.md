@@ -1,6 +1,7 @@
 # 023 Custom faces within the 4 KB stack
 
-Status: In progress (approved 2026-10-31: the owner asked to fix the stack overflow)
+Status: Done (approved 2026-10-31: the owner asked to fix the stack overflow; released in
+1.9.0, confirmed on the clock the same day)
 
 ## Problem
 
