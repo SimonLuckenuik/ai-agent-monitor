@@ -25,3 +25,10 @@
     answers, and the weather syncs. retro-runner: 10,856 B free with both on;
     `mqttHeap` 1.4 KB (plus the 1.5 KB buffer the emulator cannot see), `mdnsHeap` 560 B.
   - **Image:** 98% of the update limit (426,379 B compressed).
+- 2026-10-31: the owner installed 2.0.0 on the clock. `/status` at 113 s up: heap 25,328 B
+  free at rest (14.1-14.6 KB on 1.9.1), `heapLow` 18,280 B, `stackFree` 960 B, weather
+  loaded (`weatherHeap` 3,080 B: the chip's fetch takes half what the emulator showed),
+  `mdnsState` on. MQTT is off on this clock (no broker), so `mqttHeap` waits for one.
+  All 39 example faces installed through the API, heap unchanged. The crash log holds
+  one panic from 1.9.1 (82 min up, 4,000 B free), most likely the update upload under
+  low memory: on 2.0.0 the update buffer is allocated or refused.
