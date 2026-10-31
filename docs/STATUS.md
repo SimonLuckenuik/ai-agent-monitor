@@ -29,7 +29,8 @@ expression parser while repainting, reproduced in the emulator
 the clock. Fixed in 1.9.0 (spec 023), with crash records and crash-loop protection
 (spec 021). The clock runs **1.9.0** (build 9b10951) since 2026-10-31: the three faces
 ran without a restart, least free stack 1,040 B. Sending a face after a big one was
-shown fails for lack of heap ([issue](issues/2026-10-31-face-upload-needs-the-loaded-face-memory.md)). Shown there in the 1.4.0 work:
+shown fails for lack of heap ([issue](issues/2026-10-31-face-upload-needs-the-loaded-face-memory.md)). The weather
+never loads on 1.9.0 (16 KB fetch threshold). Both fixed in 1.9.1 (spec 024). Shown there in the 1.4.0 work:
 
 | Feature | Device result |
 |---|---|
@@ -62,8 +63,8 @@ Done: [023](../specs/023-renderer-stack/SPEC.md) (faces within the 4 KB stack, c
 on the clock). In 1.9.0 on the clock, not yet seen at work there (no crash since):
 [021](../specs/021-crash-report/SPEC.md) (crash records, crash-loop protection, safe mode),
 [022](../specs/022-emulator-device-memory/SPEC.md) (the emulator with the clock's memory;
-the clock's 3,050 B against the emulator's 2,752 B leaves `EMU_STACK` at 4096). Proposed:
-[024](../specs/024-memory-headroom/SPEC.md) (weather, sun times and face uploads within the heap), [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
+the clock's 3,050 B against the emulator's 2,752 B leaves `EMU_STACK` at 4096). In 1.9.1, not yet on the clock: [024](../specs/024-memory-headroom/SPEC.md) (the weather
+and face uploads within the heap). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
 Dropped: [020](../specs/020-esp-now/SPEC.md). Order: [roadmap](plans/roadmap.md).
 
 ## Open issues

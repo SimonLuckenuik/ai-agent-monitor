@@ -1,6 +1,6 @@
 # Weather never loads on 1.9.0, and night-lake draws without its sun
 
-Status: Open
+Status: Fixed in 1.9.1 (spec 024), to confirm on the clock
 
 Date: 2026-10-31
 
@@ -33,3 +33,12 @@ the dusk palette.
 - `{sun.*}` from the location's latitude and longitude when the weather has none.
 - With the face-upload issue ([record](2026-10-31-face-upload-needs-the-loaded-face-memory.md)):
   free the loaded custom face when it is not needed.
+
+## Fix
+
+[Spec 024](../../specs/024-memory-headroom/SPEC.md), 1.9.1: the threshold is 8 KB (a fetch
+took 6,096 B in the emulator; `/status` reports `weatherHeap` on the clock). A custom face
+on screen gives its document back when a fetch is short of memory, and a wait shows as
+`weatherError` "Waiting for memory". Integration case `faces_beside_big_faces`: the
+weather syncs with each big face on screen. Sun times from the location were written and
+dropped at the owner's request: with the weather loading, `{sun.*}` has its values.

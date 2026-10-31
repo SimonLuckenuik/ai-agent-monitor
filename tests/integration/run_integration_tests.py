@@ -324,6 +324,33 @@ def example_faces_memory(emu):
 
 
 @case
+def faces_beside_big_faces(emu):
+    """Spec 024: with each big example face on screen, under the clock's heap, the weather
+    syncs (the face gives its document back) and every other example face uploads."""
+    emu.set("facesapi", 1)
+    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
+    for big in ["retro-runner", "flip-clock-wide", "night-lake"]:
+        emu.push_face(big, json.loads((EXAMPLES / f"{big}.json").read_text(encoding="utf-8")), show=True)
+        time.sleep(4)
+        shown = emu.stats()["heap"]["free"]
+        time.sleep(10)   # Sync now is limited to one request per 10 s
+        reply = emu.post("/api/weather/sync").decode()
+        check(reply == "OK", f"weather sync beside {big}: {reply}")
+        failed = []
+        for name in names:
+            if name == big:
+                continue
+            try:
+                emu.push_face(name, json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8")))
+            except HttpError as e:
+                failed.append(f"{name}: {e}")
+        check(not failed, f"uploads beside {big} failed: {failed}")
+        print(f"  {big}: {shown} B free shown, weather synced, {len(names) - 1} faces uploaded")
+        for name in emu.faces()["faces"]:
+            emu.delete_face(name)
+
+
+@case
 def crash_loop_protection(emu):
     """Crash records and crash-loop protection (spec 021): 3 crashes in a row turn custom
     faces off, 2 more give safe mode; Resume and Clear; the log is the firmware's file."""

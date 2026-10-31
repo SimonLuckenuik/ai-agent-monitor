@@ -7,6 +7,7 @@
 
 Weather wx;
 Forecast fc;
+uint32_t wxHeapUse = 0;
 
 static String urlEncode(const String& s) {
   static const char hex[] = "0123456789ABCDEF";
@@ -23,11 +24,16 @@ static String urlEncode(const String& s) {
 // ArduinoJson can parse the raw stream; the filter keeps only the fields we use.
 static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter = nullptr) {
   if (WiFi.status() != WL_CONNECTED) { wx.error = F("Not connected"); return false; }
+  // What a fetch takes from the heap (sampled after the headers and after the parse),
+  // reported in /status as weatherHeap: the measure behind WEATHER_MIN_HEAP.
+  uint32_t before = ESP.getFreeHeap(), low = before;
+  auto sample = [&] { low = std::min(low, ESP.getFreeHeap()); };
   WiFiClient client; HTTPClient http;
   http.useHTTP10(true);
   http.setTimeout(10000);   // api.open-meteo.com takes ~1.2 s from Australia
   if (!http.begin(client, url)) { wx.error = F("Bad request"); return false; }
   int code = http.GET();
+  sample();
   if (code != 200) {
     http.end();
     if (code == 404) wx.error = F("City not found");
@@ -37,7 +43,10 @@ static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter 
   }
   DeserializationError e = filter ? deserializeJson(doc, http.getStream(), DeserializationOption::Filter(*filter))
                                   : deserializeJson(doc, http.getStream());
+  sample();
   http.end();
+  wxHeapUse = std::max(wxHeapUse, before - low);
+  if (e == DeserializationError::NoMemory) { wx.error = F("Not enough memory"); return false; }
   if (e) { wx.error = F("Unreadable weather data"); return false; }
   return true;
 }

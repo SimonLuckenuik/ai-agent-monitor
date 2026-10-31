@@ -206,7 +206,7 @@ bool requireAuth();          // sign-in guard, defined with the web API below
 bool requestAuthorized();
 bool wxRefresh = true;    // fetch at once: at boot, and when the city changes
 // Optional work waits for headroom instead of risking an allocation failure.
-constexpr uint32_t MDNS_MIN_HEAP = 28000, WEATHER_MIN_HEAP = 16000;
+constexpr uint32_t MDNS_MIN_HEAP = 28000, WEATHER_MIN_HEAP = 8192;   // a fetch took 6.1 KB in the emulator (spec 024); /status weatherHeap
 uint32_t heapLow = UINT32_MAX;   // lowest free heap seen, for /status
 // Face draw times in ms, by face id, for /status: the latest draw over 1 ms and the
 // slowest. The line font and paths are float maths, and the chip has no FPU.
@@ -419,7 +419,10 @@ void serviceWeather() {
   if (now - linkUpAt < 5000) return;
   if (wxRefresh) { wxNext = now; wxRefresh = false; }
   if ((int32_t)(now - wxNext) < 0) return;
-  if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) { wxNext = now + 30000; return; }
+  // Short of memory: a custom face on screen gives its document back for the fetch
+  // (loaded again when drawn); still short, try again in 30 s and say why.
+  if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) customRelease();
+  if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) { wx.error = F("Waiting for memory"); wxNext = now + 30000; return; }
   syncWeather();
 }
 
@@ -430,6 +433,7 @@ void handleWeatherSync() {
   if (recoveryMode || !storageReady) { server.send(503, "text/plain", "Unavailable in recovery"); return; }
   if (WiFi.status() != WL_CONNECTED) { server.send(503, "text/plain", "Not connected to WiFi"); return; }
   if (wx.lastFetch && millis() - wx.lastFetch < 10000) { server.send(429, "text/plain", "Just synced; try again in a few seconds"); return; }
+  if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) customRelease();
   if (ESP.getFreeHeap() < WEATHER_MIN_HEAP) { server.send(503, "text/plain", "Low on memory; try again shortly"); return; }
   bool ok = syncWeather();
   server.send(ok ? 200 : 502, "text/plain", ok ? String("OK") : (wx.error.length() ? wx.error : String("Weather update failed")));
@@ -1292,6 +1296,7 @@ void handleStatus() {
   }
   if (wx.error.length()) doc["weatherError"] = wx.error;
   if (wx.lastSuccess) doc["weatherAge"] = (millis() - wx.lastSuccess) / 1000;
+  if (wxHeapUse) doc["weatherHeap"] = wxHeapUse;
   if (cfg.geoFor == cfg.city && cfg.geoName.length()) doc["location"] = cfg.geoName;
   if (wx.valid) {
     JsonObject w = doc["weather"].to<JsonObject>();

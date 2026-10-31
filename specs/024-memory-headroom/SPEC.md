@@ -1,6 +1,7 @@
 # 024 Weather, sun times and face uploads within the clock's heap
 
-Status: Proposed (2026-10-31, the owner asked for it after the weather stopped loading)
+Status: In progress (approved 2026-10-31; goal 3, sun times without the weather, dropped
+the same day by the owner: the weather is usually there)
 
 ## Problem
 
@@ -25,9 +26,8 @@ On the clock with 1.9.0, three things fail for lack of free heap (about 14.3 KB 
    example face is shown. A postponed fetch shows in `/status` as `weatherError`
    ("Waiting for memory").
 2. The fetch threshold is what a fetch takes on the chip, measured, plus a margin.
-3. `{sun.up}`, `rise`, `set`, `until_rise`, `until_set` and `daylen` have values from
-   the location's latitude and longitude when the weather has none. Within a few minutes
-   of Open-Meteo's times.
+3. ~~`{sun.*}` from the location's latitude and longitude when the weather has none.~~
+   Dropped by the owner (2026-10-31): with the weather loading again it is rarely missing.
 4. The custom face is parsed only while a custom face is on screen. Showing a built-in
    face, or deleting the face, frees it.
 5. Every example face can be sent while any other is shown, on the clock and in the

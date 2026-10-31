@@ -269,6 +269,8 @@ void showFace(const String& name) {
 }
 
 // Saves (or, with an empty body, deletes) a face. Returns "" or the reason.
+#define NO_MEMORY "Not enough memory"
+
 String storeFace(const String& name, const String& body) {
   if (!storageReady || recoveryMode) return F("Storage unavailable");
   if (body.length() == 0 || body == "{}") {
@@ -278,8 +280,13 @@ String storeFace(const String& name, const String& body) {
     return "";
   }
   if (body.length() > FACE_JSON_MAX) return F("Face is larger than 4 KB");
-  JsonDocument doc;
-  if (deserializeJson(doc, body) || !doc["items"].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
+  // Checked with only the items' types kept: about 1 KB instead of the whole face (spec 024).
+  JsonDocument filter, doc;
+  filter["items"][0]["type"] = true;
+  filter["show"] = true;
+  DeserializationError e = deserializeJson(doc, body, DeserializationOption::Filter(filter));
+  if (e == DeserializationError::NoMemory) return F(NO_MEMORY);
+  if (e || !doc["items"].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
   if (doc["items"].size() > 32) return F("At most 32 items");
   if (!LittleFS.exists("/faces")) LittleFS.mkdir("/faces");
   if (!LittleFS.exists(facePath(name)) && customFaceCount() >= FACES_MAX) return F("At most 40 custom faces");
@@ -314,7 +321,7 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
     String name = faceName(server.arg("name"));
     if (name.isEmpty()) { server.send(400, "text/plain", "name: 1-20 of a-z 0-9 _ -"); return; }
     String err = storeFace(name, server.arg("plain"));
-    if (err.length()) { server.send(400, "text/plain", err); return; }
+    if (err.length()) { server.send(err == F(NO_MEMORY) ? 507 : 400, "text/plain", err); return; }
     if (server.arg("show") == "1") showFace(name);
     server.send(200, "text/plain", "OK");
     return;
@@ -645,6 +652,12 @@ void integrationsSettingsChanged() {
 }
 
 void integrationsRoutes() {
+  // Before the web server reads a face's body (up to 4 KB, then copied once): the custom
+  // face on screen gives its document back, so the upload fits beside it (spec 024).
+  server.addHook([](const String& method, const String& url, WiFiClient*, ESP8266WebServer::ContentTypeFunction) {
+    if (method == F("POST") && url == F("/api/faces")) customRelease();
+    return ESP8266WebServer::CLIENT_REQUEST_CAN_CONTINUE;
+  });
   server.on("/api/faces", handleFaces);
   server.on("/api/faces/get", handleFaceGet);
   server.on("/api/faces/delete", HTTP_POST, handleFaceDelete);

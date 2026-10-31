@@ -7,6 +7,31 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 1.9.1 - 2026-10-31
+
+The weather loads again, and faces can be sent while a big face is shown.
+
+### Upgrading
+
+- **From 1.4.0 on:** install `AIAgentMonitor_v1.9.1.bin.gz` from the Firmware update
+  card. Settings, saved faces and photos are kept.
+
+### Fixed
+
+- **The weather never loaded on 1.9.0:** a fetch waited for 16 KB of free memory, set
+  for a weather service the clock no longer uses, and 1.9.0 has about 14 KB at rest. A
+  fetch now waits for 8 KB (it takes about 6 KB). A custom face on screen gives its
+  memory back for the fetch. While it waits, `/status` shows `weatherError` "Waiting for
+  memory". Faces that use `{sun.*}` (night-lake's sun) work again with the weather.
+- **Sending a face failed after a big face had been shown:** the last custom face stayed
+  loaded after the clock moved on, or was deleted. It's now freed when a built-in face
+  is shown and before an upload is read. An upload is checked with less memory, and
+  running short answers 507 "Not enough memory" instead of "Expected JSON".
+
+### Added
+
+- `weatherHeap` in `/status`: the most memory a weather fetch has taken since boot.
+
 ## 1.9.0 - 2026-10-31
 
 Custom faces that can no longer run out of the clock's stack, crash records, and a

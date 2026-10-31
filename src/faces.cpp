@@ -2693,5 +2693,13 @@ void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFa
     case FACE_MESSAGE:  message(t, force);  break;
     default:            classic(t, force);  break;
   }
+  // A custom face's document (up to ~5 KB) is kept only while it is on screen.
+  if (face != FACE_CUSTOM && face != FACE_MESSAGE && customName.length()) customRelease();
   drawnFace = face; dirty = false;
+}
+
+void customRelease() {
+  customDoc.clear();   // ArduinoJson 7: gives the memory back
+  customName = "";     // custom() and message() load again when next drawn
+  customLoaded = false;
 }

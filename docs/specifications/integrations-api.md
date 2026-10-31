@@ -77,7 +77,7 @@ Send the key as the header `X-Api-Key: <key>`, or as `?key=<key>`.
 
 | Method and path | Body | Does |
 |---|---|---|
-| `POST /api/faces?name=<name>` | face JSON | Saves the face; `&show=1`, or `"show": true` in the JSON, shows it now. An empty body deletes it |
+| `POST /api/faces?name=<name>` | face JSON | Saves the face; `&show=1`, or `"show": true` in the JSON, shows it now. An empty body deletes it. 400 for a face that is not valid, 507 when the clock is short of memory (try again) |
 | `GET /api/faces` | | `{"faces":[...], "showing":"<name>", "vars":{...}}` |
 | `GET /api/faces/get?name=<name>` | | The face's JSON |
 | `POST /api/faces/show?name=<name>` | | Shows the face now |
@@ -454,7 +454,9 @@ several times a second.
 `GET /status` (no sign-in) describes the clock: version and build, uptime, `heap` and
 `heapLow` (bytes free now, and the least since boot), `stackFree` (the least free of
 the 4 KB stack since boot), `resetReason`, `cpuMHz`, `drawMs` (per face id: the last
-and the slowest draw, in ms), the network, the weather, the face shown. After a crash
+and the slowest draw, in ms), the network, the weather (`weatherAge` in seconds,
+`weatherError` such as "Waiting for memory", `weatherHeap`: the most heap a weather
+fetch has taken since boot), the face shown. After a crash
 it also has:
 
 | Field | |

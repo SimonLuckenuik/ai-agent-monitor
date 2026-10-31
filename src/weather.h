@@ -46,6 +46,7 @@ String weatherIconName(int wmo, bool day);
 // The words for a WMO weather code: English, or French (without accents).
 void wmoText(int code, bool fr, String& main, String& desc);
 extern Forecast fc;
+extern uint32_t wxHeapUse;   // the most free heap a fetch has taken since boot
 
 // Current conditions and the forecast in one request, geocoding the city first
 // if it changed.
