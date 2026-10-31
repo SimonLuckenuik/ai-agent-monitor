@@ -25,8 +25,9 @@ approved.
 - [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
 - Hardware scrolling and the panel's idle (8-colour) mode (spec 014 research).
 - A way back to stock over WiFi (upstream idea).
-- Flash: about 25 KB of update room left (618,496 B limit, 96% used). The next large
-  feature needs a saving first (mDNS is ~21 KB).
+- Flash and RAM savings ([footprint](../specifications/footprint.md), 2026-10-31): the update
+  buffer held in RAM (4.1 KB), string literals in RAM (about 7 KB), mDNS that never starts
+  (21 KB of flash), MQTT gated at 16 KB of free heap. The update image is at 97%.
 
 ## Done
 
