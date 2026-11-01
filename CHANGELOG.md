@@ -7,6 +7,10 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Every time zone** (spec 033): Time & region → More time zones… lists every zone from
+  the browser's own, always current time zone database and sets the clock's rule from it;
+  "Use the city's time zone" picks the weather city's zone. The page says so when a new
+  city is in another zone.
 - **Face review**: 8 converted faces that were too close to ours or to each other are gone
   (33 remain); slogans and task counters are gone from the rest, their bars and rings
   show the day's progress. The aquarium has gradient water and a clownfish and blue tang;

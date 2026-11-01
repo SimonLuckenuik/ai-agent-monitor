@@ -257,8 +257,14 @@ a{color:var(--accent)}
         <option value="EST5EDT,M3.2.0,M11.1.0">New York</option>
         <option value="PST8PDT,M3.2.0,M11.1.0">Los Angeles</option>
         <option value="UTC0">UTC</option>
+        <option value="more">More time zones…</option>
         <option value="custom">Custom POSIX rule…</option>
       </select></div>
+    <div class="field" id="tzMoreBox" hidden><label for="tzZone">Time zone</label>
+      <input type="text" id="tzZone" list="tzZones" placeholder="Type a place: America/Toronto, Europe/Lisbon…" spellcheck="false">
+      <datalist id="tzZones"></datalist>
+      <div class="btns"><button class="btn" onclick="tzFromCity()">Use the city's time zone</button></div>
+      <span class="hint" id="tzNote" style="font-size:12.5px;color:var(--muted)">From your browser's time zone database: every zone, kept up to date by its updates.</span></div>
     <div class="field" id="tzCustomBox" hidden><label for="tzCustom">POSIX TZ rule</label>
       <input type="text" id="tzCustom" placeholder="e.g. AEST-10AEDT,M10.1.0,M4.1.0/3" spellcheck="false"></div>
     <div class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><span class="lbl">Clock format</span>
@@ -492,16 +498,75 @@ function bindInputs(){
     const key=el.dataset.key;
     if(el.classList.contains('seg')){
       el.querySelectorAll('button').forEach(b=>b.onclick=async()=>{if(await set(key,b.dataset.v)){paintSeg(el,b.dataset.v);if(key==='nightauto')nightRows(b.dataset.v);if(key==='city')setTimeout(poll,300)}});return}
-    if(el.id==='tz'){el.onchange=()=>{const c=el.value==='custom';$('tzCustomBox').hidden=!c;if(!c)set('tz',el.value);else $('tzCustom').focus()};return}
+    if(el.id==='tz'){el.onchange=()=>{const c=el.value==='custom',m=el.value==='more';$('tzCustomBox').hidden=!c;$('tzMoreBox').hidden=!m;
+      if(m){tzList();$('tzZone').focus()}else if(!c)set('tz',el.value);else $('tzCustom').focus()};return}
     if(el.type==='range'){const out=el.nextElementSibling,show=()=>out.textContent=el.value+'%';
       el.addEventListener('input',()=>{show();if(el.dataset.live){clearTimeout(el.h);el.h=setTimeout(()=>set(key,el.value),250)}});
       el.addEventListener('change',()=>{clearTimeout(el.h);set(key,el.value)});el.show=show;return}
     el.onchange=async()=>{await set(key,el.type==='checkbox'?(el.checked?1:0):el.dataset.rgb565!==undefined?to565(el.value):el.value);
-      if(key==='city')setTimeout(poll,4000)};
+      if(key==='city'){setTimeout(poll,4000);tzCityCheck()}};
   });
   $('tzCustom').onchange=e=>{const v=e.target.value.trim();if(v)set('tz',v)};
+  $('tzZone').onchange=e=>tzUse(e.target.value.trim());
   $('themeInterval').addEventListener('change',()=>{cfg.themeInterval=$('themeInterval').value;$('rotBox').hidden=!(+cfg.themeInterval>0)});
 }
+// ---- Every time zone (spec 033): rules derived from the browser's own time zone database
+// (Intl), which its updates keep current; nothing is loaded until the owner asks.
+const tzFmt={};
+function tzParts(zone,ms,style,loc='en-US'){const k=zone+style+loc;tzFmt[k]=tzFmt[k]||new Intl.DateTimeFormat(loc,{timeZone:zone,timeZoneName:style});
+  return tzFmt[k].formatToParts(new Date(ms)).find(p=>p.type==='timeZoneName').value}
+function tzOffset(zone,ms){const m=/GMT([+-])(\d\d):?(\d\d)?/.exec(tzParts(zone,ms,'longOffset'));return m?(m[1]==='-'?-1:1)*(+m[2]*60+(+m[3]||0)):0}
+function tzAbbr(zone,ms,off){for(const loc of['en-US','en-GB','en-AU','en-IN']){const s=tzParts(zone,ms,'short',loc);if(/^[A-Za-z]{3,6}$/.test(s))return s}
+  const a=Math.abs(off);return '<'+(off<0?'-':'+')+String(Math.floor(a/60)).padStart(2,'0')+(a%60?String(a%60).padStart(2,'0'):'')+'>'}
+const tzOff=o=>{const a=Math.abs(o),m=a%60;return(o>0?'-':'')+Math.floor(a/60)+(m?':'+String(m).padStart(2,'0'):'')};   // POSIX counts west
+// When a rule's change falls in year y: "nth weekday of the month" at a wall-clock minute.
+function tzWhen(r,y,before){const first=new Date(Date.UTC(y,r.mo,1)).getUTCDay(),last=new Date(Date.UTC(y,r.mo+1,0)).getUTCDate();
+  let d=1+(r.wd-first+7)%7+(r.w-1)*7;while(d>last)d-=7;return Date.UTC(y,r.mo,d)+(r.mins-before)*6e4}
+// The POSIX rule for an IANA zone, or null when it has no fixed yearly rule (it is then
+// checked against the browser for the next two years).
+function posixRule(zone,from=Date.now()){
+  const H=36e5,D=864e5,start=Math.floor(from/D)*D+12*H,offs=[];
+  for(let i=0;i<=400;i++)offs.push(tzOffset(zone,start+i*D));
+  const ch=[];
+  for(let i=1;i<offs.length;i++)if(offs[i]!==offs[i-1]){let lo=start+(i-1)*D,hi=start+i*D;
+    while(hi-lo>6e4){const mid=Math.floor((lo+hi)/12e4)*6e4;if(tzOffset(zone,mid)===offs[i-1])lo=mid;else hi=mid}
+    ch.push({at:hi,from:offs[i-1],to:offs[i]})}
+  if(!ch.length)return tzAbbr(zone,start,offs[0])+tzOff(offs[0]);
+  if(ch.length<2||new Set(offs).size!==2)return null;   // a year and a month: two changes at least
+  const std=Math.min(...offs),dst=Math.max(...offs),on=ch.find(c=>c.to===dst),off=ch.find(c=>c.to===std);
+  if(!on||!off)return null;
+  const rule=c=>{const l=new Date(c.at+c.from*6e4),d=l.getUTCDate(),last=new Date(Date.UTC(l.getUTCFullYear(),l.getUTCMonth()+1,0)).getUTCDate();
+    return{mo:l.getUTCMonth(),w:d+7>last?5:Math.ceil(d/7),wd:l.getUTCDay(),mins:l.getUTCHours()*60+l.getUTCMinutes()}};
+  const rOn=rule(on),rOff=rule(off),txt=r=>'M'+(r.mo+1)+'.'+r.w+'.'+r.wd+(r.mins===120?'':'/'+Math.floor(r.mins/60)+(r.mins%60?':'+String(r.mins%60).padStart(2,'0'):''));
+  // The check: the rule's offset against the browser's, every 3 hours for two years.
+  for(let t=start;t<start+730*D;t+=3*H){const y=new Date(t).getUTCFullYear(),a=tzWhen(rOn,y,std),b=tzWhen(rOff,y,dst);
+    const inDst=a<b?t>=a&&t<b:t>=a||t<b;if((inDst?dst:std)!==tzOffset(zone,t))return null}
+  return tzAbbr(zone,off.at+H,std)+tzOff(std)+tzAbbr(zone,on.at+H,dst)+tzOff(dst)+','+txt(rOn)+','+txt(rOff)}
+// ---- end of the time zone rules
+
+// The list, on demand: every zone the browser knows.
+function tzList(){const l=$('tzZones');if(l.children.length)return;
+  for(const z of Intl.supportedValuesOf('timeZone')){const o=document.createElement('option');o.value=z;l.appendChild(o)}}
+function tzRuleNow(){const z=$('tz');return z.value==='custom'||z.value==='more'?$('tzCustom').value.trim():z.value}
+async function tzUse(zone){const note=$('tzNote');
+  if(!Intl.supportedValuesOf('timeZone').includes(zone)){note.textContent='Not a time zone: pick one from the list.';return false}
+  const r=posixRule(zone);
+  if(!r){note.textContent=zone+' changes its clocks on no fixed yearly rule (Morocco, Israel): type its rule under Custom.';return false}
+  if(await set('tz',r)){$('tzZone').value=zone;$('tzCustom').value=r;note.textContent=zone+': '+r;toast('Time zone: '+zone);return true}
+  return false}
+// The city's zone, from Open-Meteo's geocoding (as the clock finds its weather).
+// The same request the clock makes (weather.cpp geocode()): "Saint-Hubert, CA" is the name and
+// a country code, so it finds the clock's city (there is a Saint-Hubert in Belgium too).
+async function cityZone(){const city=$('city').value.trim();if(!city)return null;
+  const comma=city.lastIndexOf(','),name=comma>0?city.slice(0,comma).trim():city,cc=comma>0?city.slice(comma+1).trim().toUpperCase():'';
+  const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(name)+(cc.length===2?'&countryCode='+cc:''));
+  if(!r.ok)return null;const g=await r.json();return g.results&&g.results[0]?g.results[0].timezone:null}
+async function tzFromCity(){const note=$('tzNote');note.textContent='Looking up the city…';
+  try{const z=await cityZone();if(!z){note.textContent='No time zone found for that city.';return}tzList();await tzUse(z)}
+  catch(e){note.textContent='Could not reach the geocoding service: '+e.message}}
+// After the city changes: say so when its zone's rule differs from the clock's.
+async function tzCityCheck(){try{const z=await cityZone(),r=z&&posixRule(z);
+  if(r&&r!==tzRuleNow())toast('The city is in '+z+'; the clock uses another time zone. Time & region → More time zones → Use the city\u2019s time zone.')}catch(e){}}
 function nightRows(auto){auto=['1','true'].includes(String(auto));all('.hoursRow').forEach(r=>r.hidden=auto);$('sunRow').hidden=!auto}
 function paintSeg(el,v){el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v)))}
 

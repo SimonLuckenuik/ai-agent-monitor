@@ -107,3 +107,6 @@ jobs:
 
       - name: The face gallery lists every example face, each with its preview
         run: python scripts/gen_marketplace.py --check
+
+      - name: The settings page's time zone rules (spec 033)
+        run: node tests/web/tz_rules.test.js

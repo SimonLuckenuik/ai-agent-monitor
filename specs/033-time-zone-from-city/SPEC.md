@@ -1,6 +1,6 @@
 # 033 Every time zone, and the city's own
 
-Status: Approved (2026-11-01; the owner agreed, loaded only on demand, from a source that
+Status: In progress (built; approved 2026-11-01; the owner agreed, loaded only on demand, from a source that
 stays up to date)
 
 ## Problem

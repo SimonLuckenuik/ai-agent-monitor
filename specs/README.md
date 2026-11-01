@@ -42,7 +42,7 @@ Next free number: **034**.
 | [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | In progress (built; to measure on the clock) |
 | [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Approved |
 | [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Approved |
-| [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Approved |
+| [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done (settings page; unreleased) |
 
 ## Templates
 
