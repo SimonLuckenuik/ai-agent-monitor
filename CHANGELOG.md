@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Faster big text**: the line font that draws the Big tiles, the flip clock and
+  `"font": "big"` in custom faces is drawn in integers from glyphs compiled at build
+  time, instead of parsing path text and computing in floats on every draw (spec 030).
+  On the emulator's model of the chip, Big time draws in about 125 ms instead of
+  650-720 ms; it looks the same.
 - **mDNS**: our own responder replaces the core's LEAmDNS (spec 027). It answers for
   `<host>.local` and advertises the web service as before, in about 4.5 KB of flash
   instead of 21 KB, and holds 136 B of heap instead of about 0.5-1 KB. The compressed

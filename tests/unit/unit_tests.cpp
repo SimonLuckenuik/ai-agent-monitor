@@ -259,16 +259,21 @@ static void testMessageFace() {
 // The Big tiles' font: every glyph inside its slot, digits the full cap height, so
 // numbers line up.
 static void testMonoFont() {
-  for (const MonoGlyph& g : MONO) {
-    String d = pgmString(g.path);
-    if (d.isEmpty()) continue;
-    Poly P;
-    parse(P, d.c_str());
+  // The compiled glyphs (src/mono_glyphs.h, spec 030): points in 1/MONO_UNIT of a unit.
+  int pt = 0, stroke = 0;
+  for (int gi = 0; gi < MONO_GLYPH_COUNT; ++gi) {
+    const MonoGlyphData& g = MONO_GLYPHS[gi];
+    CHECK(g.firstStroke == stroke);
+    int n = 0;
     float x0 = 1e9f, x1 = -1e9f, y0 = 1e9f, y1 = -1e9f;
-    for (int i = 0; i < P.n; ++i) {
-      x0 = std::min(x0, P.x[i]); x1 = std::max(x1, P.x[i]);
-      y0 = std::min(y0, P.y[i]); y1 = std::max(y1, P.y[i]);
-    }
+    for (int s = 0; s < g.strokes; ++s, ++stroke)
+      for (int j = 0; j < MONO_STROKE_LEN[stroke]; ++j, ++pt, ++n) {
+        float x = MONO_PTS[2 * pt] / float(MONO_UNIT), y = MONO_PTS[2 * pt + 1] / float(MONO_UNIT);
+        x0 = std::min(x0, x); x1 = std::max(x1, x);
+        y0 = std::min(y0, y); y1 = std::max(y1, y);
+      }
+    CHECK(monoGlyph(g.c) == gi);
+    if (!n) continue;
     bool digit = g.c >= '0' && g.c <= '9';
     bool inside = x0 >= 0 && x1 <= MONO_ADV && y0 >= -0.05f && y1 <= MONO_H + 0.05f;
     bool full = !digit || (y0 <= 0.5f && y1 >= MONO_H - 0.5f);
@@ -463,7 +468,7 @@ static void testColors() {
   customDoc.clear();
   // The big font's text: symbols to codes, accents folded, lower case drawn as capitals.
   CHECK_STR(monoPrep("\u2191 7:02 \u2713 \u00e9t\u00e9 21\u00b0"), "\x01 7:02 \x05 ete 21*");
-  CHECK(monoGlyph('a') == monoGlyph('A') && monoGlyph(':') && monoGlyph('\x09') && !monoGlyph('#'));
+  CHECK(monoGlyph('a') == monoGlyph('A') && monoGlyph(':') >= 0 && monoGlyph('\x09') >= 0 && monoGlyph('#') < 0);
   cfg.palettes = DEFAULT_PALETTES; cfg.roles = "{}"; cfg.colorsRev++;
   computeColors(t);
 }
