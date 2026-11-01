@@ -235,11 +235,21 @@ int main(int argc, char** argv) {
     {"type":"spark","x":12,"y":140,"w":216,"h":40,"var":"load","color":"#64d2ff","fill":"#16324a","bg":"@bg"},
     {"type":"circle","x":24,"y":210,"r":9,"color":"{state:st}","border":"#ffffff","bw":2},
     {"type":"text","x":42,"y":210,"text":"Build {{state}==fail?FAILED:OK} ({age.state}s)","font":2,"align":"ml","color":"@fg","bg":"@bg","pad":40}]})J");
+  // The digit fonts (spec 031) at three sizes, unlit segments and blocks, and a heavier line font.
+  writeFace("fonts", R"J({"bg":"#000000","items":[
+    {"type":"text","x":4,"y":2,"text":"{time.hm}","font":"bebas","size":64,"color":"#ffffff"},
+    {"type":"text","x":236,"y":2,"text":"{time.sec}","font":"bebas","size":30,"align":"tr","color":"#ffd60a"},
+    {"type":"text","x":4,"y":70,"text":"{time.hm}","font":"outfit","size":52,"color":"#64d2ff"},
+    {"type":"text","x":236,"y":70,"text":"-4.5","font":"outfit","size":24,"align":"tr","color":"#64d2ff"},
+    {"type":"text","x":4,"y":130,"text":"{time.hm}:{time.sec}","font":"seg7","size":40,"color":"#30d158","off":"#0b2a12"},
+    {"type":"text","x":4,"y":180,"text":"{time.hm}","font":"pixel","size":42,"color":"#ff9f0a","off":"#2a1a05"},
+    {"type":"text","x":236,"y":182,"text":"18*","font":"big","size":36,"weight":2.2,"align":"tr","color":"#ffffff"},
+    {"type":"text","x":236,"y":220,"text":"ab%","font":"bebas","size":18,"align":"tr","color":"#8e8e93"}]})J");
   cfg.facesApi = true;
   previewVars = {{"solar", "3.4"}, {"cap", "6.6"}, {"pct", "52"}, {"state", "ok"}};
   history = {3, 5, 4, 8, 6, 9, 7, 11, 10, 12};
   setWeather("03d", "Clouds", "scattered clouds", 21.4f);
-  for (const char* name : {"example", "power", "features"}) {
+  for (const char* name : {"example", "power", "features", "fonts"}) {
     cfg.customFace = name;
     fresh(FACE_CUSTOM, at(21, 54, 26), std::string("custom_") + name);
     struct tm t = at(21, 58, 50);

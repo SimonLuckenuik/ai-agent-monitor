@@ -367,14 +367,28 @@
               "$ref": "#/$defs/number"
             },
             {
-              "const": "big"
+              "enum": [
+                "big",
+                "bebas",
+                "outfit",
+                "seg7",
+                "pixel"
+              ]
             }
           ],
-          "description": "2 (16 px), 4 (26 px, default), 6 (48 px, digits : . - only), or \"big\": the Big tiles' line font at any size (capitals, digits, : . , % / + ! ? ' and the symbols arrows, check, cross, bullet, heart, bolt, degree)."
+          "description": "2 (16 px), 4 (26 px, default), 6 (48 px, digits : . - only), or \"big\": the Big tiles' line font at any size (capitals, digits, : . , % / + ! ? ' and the symbols arrows, check, cross, bullet, heart, bolt, degree). Digit fonts at any size (spec 031): \"bebas\" (Bebas Neue), \"outfit\" (Outfit), \"seg7\" (seven segments), \"pixel\" (5x7 blocks); digits, : . - and a space, other characters in the line font."
         },
         "size": {
           "$ref": "#/$defs/number",
           "description": "With font big: the letters' height in pixels (40)."
+        },
+        "weight": {
+          "$ref": "#/$defs/number",
+          "description": "With font big: the stroke, 0.5 to 3 times (1)."
+        },
+        "off": {
+          "$ref": "#/$defs/colour",
+          "description": "With font seg7 or pixel: the unlit segments or blocks."
         },
         "color": {
           "$ref": "#/$defs/colour"

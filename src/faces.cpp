@@ -1626,6 +1626,9 @@ void drawPath(JsonObjectConst it, const struct tm& t, uint16_t under) {
 
 // ---- Text, possibly wrapped to "w" pixels over at most "lines" lines.
 void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg);
+enum DigitFont : uint8_t;
+DigitFont digitFontOf(JsonObjectConst it);
+void drawDigits(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg);
 
 int textFont(JsonObjectConst it, const struct tm& t) {
   int font = inum(it, "font", 4, t);
@@ -1635,6 +1638,7 @@ int textFont(JsonObjectConst it, const struct tm& t) {
 
 void drawText(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
   if (!strcmp(js(it, "font", ""), "big")) { drawBig(it, t, x, y, c, bg); return; }
+  if (digitFontOf(it)) { drawDigits(it, t, x, y, c, bg); return; }
   String s = resolve(js(it, "text", ""), t);
   int font = textFont(it, t);
   uint8_t datum = alignOf(it);
@@ -1876,6 +1880,7 @@ void growBox(Box& d, const Box& b) {
 }
 
 bool bigBox(JsonObjectConst it, const struct tm& t, int x, int y, Box& b);
+bool digitBox(JsonObjectConst it, const struct tm& t, int x, int y, Box& b);
 
 bool itemBox(JsonObjectConst it, const struct tm& t, Box& b) {
   b = {1, 1, 0, 0};
@@ -1907,6 +1912,7 @@ bool itemBox(JsonObjectConst it, const struct tm& t, Box& b) {
     x0 = x - (datum % 3) * w / 2; y0 = y - (datum / 3) * h / 2; x1 = x0 + w; y1 = y0 + h;
   } else if (!strcmp(type, "text")) {
     if (!strcmp(js(it, "font", ""), "big")) return bigBox(it, t, x, y, b);
+    if (digitFontOf(it)) return digitBox(it, t, x, y, b);
     if (inum(it, "w", 0, t) > 0) return false;   // wrapped
     int font = textFont(it, t), w = D().textWidth(resolve(js(it, "text", ""), t), font), h = D().fontHeight(font);
     if (jhas(it, "bg")) w = std::max(w, inum(it, "pad", 0, t));
@@ -2190,6 +2196,7 @@ void message(const struct tm& t, bool force) {
 // flattened to points at build time and drawn in integers (monoStroke). The shapes and
 // spacing follow Roboto Mono's centre lines: every glyph sits in a 16.9-unit cell.
 #include "mono_glyphs.h"   // the glyphs, compiled from src/mono_glyphs.txt (spec 030)
+#include "outline_glyphs.h"   // Bebas Neue and Outfit digits (spec 031)
 // Grid units ('*' is the degree sign). MONO_SB: the side bearing left out when centring.
 constexpr float MONO_H = 20, MONO_ADV = 16.9f, MONO_SB = 1.5f, MONO_STROKE = 2.3f;
 
@@ -2225,6 +2232,8 @@ uint32_t isqrt32(uint32_t v) {   // floor(sqrt(v)), bit by bit
 
 struct MonoSeg { int32_t ax, ay, bx, by, ux, uy, len; };
 
+float monoWeight = 1;   // a big-text item's "weight" while it draws (spec 031)
+
 void monoStroke(int g, float x, float top, float k, const Paint& paint, uint16_t under) {
   int first = pgm_read_byte(&MONO_GLYPHS[g].firstStroke), strokes = pgm_read_byte(&MONO_GLYPHS[g].strokes);
   if (!strokes) return;
@@ -2253,7 +2262,7 @@ void monoStroke(int g, float x, float top, float k, const Paint& paint, uint16_t
       px = cx; py = cy;
     }
   }
-  float r = std::max(0.5f, MONO_STROKE * k / 2);
+  float r = std::max(0.5f, MONO_STROKE * k / 2 * monoWeight);
   int32_t rOut = lroundf((r + 0.5f) * 16), rIn = lroundf((r - 0.5f) * 16), out2 = rOut * rOut;
   int y0 = std::max(clipY0, (int)((minY - rOut) >> 4) - 1), y1 = std::min(clipY1, (int)((maxY + rOut) >> 4) + 1);
   for (int y = y0; y <= y1; ++y) {
@@ -2363,7 +2372,7 @@ String monoPrep(const String& in) {
 
 // A text item with "font": "big": the line font, "size" pixels tall (40), narrowed to
 // at most "w" pixels; "align", "bg" and "pad" as for other text.
-struct BigText { String s; float k, tw, th, left, top; int pad; };
+struct BigText { String s; float k, tw, th, left, top; int pad; float weight; };
 BigText bigLayout(JsonObjectConst it, const struct tm& t, int x, int y) {
   BigText b;
   b.s = monoPrep(resolve(js(it, "text", ""), t));
@@ -2372,6 +2381,7 @@ BigText bigLayout(JsonObjectConst it, const struct tm& t, int x, int y) {
   int maxW = inum(it, "w", 0, t);
   if (maxW > 0 && b.tw > maxW) { b.k *= maxW / b.tw; b.tw = maxW; }
   b.th = (MONO_H + MONO_STROKE) * b.k;
+  b.weight = std::max(0.5f, std::min(3.0f, num(it, "weight", 1, t)));
   uint8_t datum = alignOf(it);
   b.left = x - (datum % 3) * b.tw / 2; b.top = y - (datum / 3) * b.th / 2;
   b.pad = jhas(it, "bg") ? inum(it, "pad", 0, t) : 0;
@@ -2380,7 +2390,8 @@ BigText bigLayout(JsonObjectConst it, const struct tm& t, int x, int y) {
 
 bool bigBox(JsonObjectConst it, const struct tm& t, int x, int y, Box& b) {
   BigText l = bigLayout(it, t, x, y);
-  b = {(int16_t)(l.left - l.pad - 2), (int16_t)(l.top - 2), (int16_t)(l.left + l.tw + l.pad + 3), (int16_t)(l.top + l.th + 3)};
+  int m = 2 + (int)(MONO_STROKE * (l.weight - 1) / 2 * l.k + 0.99f);   // a heavier stroke reaches further
+  b = {(int16_t)(l.left - l.pad - m), (int16_t)(l.top - m), (int16_t)(l.left + l.tw + l.pad + m + 1), (int16_t)(l.top + l.th + m + 1)};
   return true;
 }
 
@@ -2396,14 +2407,212 @@ void drawBig(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, u
   int slot = drawnItem >= 0 && !rep.of && opaque ? drawnItem : -1;
   uint32_t where = ((uint32_t)(l.k * 256) * 31 + (int)gx) * 31 + (int)gy;
   where = (where * 31 + c) * 31 + bg;
+  monoWeight = l.weight;
   if (slot >= 0 && drawnInPlace && bigWhere[slot] == where &&
       monoDiff(l.s.c_str(), bigShown[slot].c_str(), gx, gy, l.k, c, bg, l.top, l.top + l.th)) {
     bigShown[slot] = l.s;
+    monoWeight = 1;
     return;
   }
+  monoWeight = 1;
   if (opaque) D().fillRect(l.left - l.pad, l.top, l.tw + 2 * l.pad + 1, l.th + 1, bg);
+  monoWeight = l.weight;
   monoDraw(l.s.c_str(), gx, gy, l.k, c, bg);
+  monoWeight = 1;
   if (slot >= 0) { bigShown[slot] = l.s; bigWhere[slot] = where; }
+}
+
+// ---- Digit fonts (spec 031): "font": "bebas" and "outfit" (outlines of Bebas Neue and
+// Outfit SemiBold, from smalltv-pomodoro, SIL OFL), "seg7" (seven segments) and "pixel"
+// (5x7 blocks), at any "size". Digits and ':' in all four, '.', '-' and a space drawn
+// here too; anything else falls back to the line font at the same height.
+enum DigitFont : uint8_t { DF_NONE, DF_BEBAS, DF_OUTFIT, DF_SEG7, DF_PIXEL };
+DigitFont digitFontOf(JsonObjectConst it) {
+  const char* f = js(it, "font", "");
+  return !strcmp(f, "bebas") ? DF_BEBAS : !strcmp(f, "outfit") ? DF_OUTFIT : !strcmp(f, "seg7") ? DF_SEG7
+       : !strcmp(f, "pixel") ? DF_PIXEL : DF_NONE;
+}
+
+// Seven segments, bit 0 = a (top) to bit 6 = g (middle), for 0-9 and '-'.
+const uint8_t SEG7[11] PROGMEM = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x40};
+// 5x7 pixel digits, one byte per row (bit 4 = left), for 0-9 and '-'.
+const uint8_t PIX57[11][7] PROGMEM = {
+    {0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E}, {0x04, 0x0C, 0x04, 0x04, 0x04, 0x04, 0x0E},
+    {0x0E, 0x11, 0x01, 0x02, 0x04, 0x08, 0x1F}, {0x1F, 0x02, 0x04, 0x02, 0x01, 0x11, 0x0E},
+    {0x02, 0x06, 0x0A, 0x12, 0x1F, 0x02, 0x02}, {0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E},
+    {0x06, 0x08, 0x10, 0x1E, 0x11, 0x11, 0x0E}, {0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08},
+    {0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E}, {0x0E, 0x11, 0x11, 0x0F, 0x01, 0x02, 0x0C},
+    {0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00}};
+
+const OutlineFont* outlineOf(DigitFont f) { return f == DF_BEBAS ? &FONT_BEBAS : f == DF_OUTFIT ? &FONT_OUTFIT : nullptr; }
+int outlineIndex(char c) { return c >= '0' && c <= '9' ? c - '0' : c == ':' ? 10 : -1; }
+
+// One character's advance at height h, in pixels.
+float digitAdvance(DigitFont f, char c, float h) {
+  if (c == ' ') return h * 0.3f;
+  if (const OutlineFont* o = outlineOf(f)) {
+    int g = outlineIndex(c);
+    if (g >= 0) return pgm_read_byte(&o->adv[g]) * h / 255;
+    if (c == '.') return h * 0.25f;
+    if (c == '-') return h * 0.42f;
+  } else if (f == DF_SEG7) {
+    if ((c >= '0' && c <= '9') || c == '-') return h * 0.72f;
+    if (c == ':' || c == '.') return h * 0.25f;
+  } else if (f == DF_PIXEL) {
+    int b = std::max(1, (int)(h / 7));
+    if ((c >= '0' && c <= '9') || c == '-') return 6 * b;
+    if (c == ':' || c == '.') return 2 * b;
+  }
+  char one[2] = {c, 0};   // the line font's
+  return monoWidth(one) * h / MONO_H + MONO_STROKE * h / MONO_H;
+}
+
+// One outline glyph, filled by the non-zero rule: 4 sub-rows a pixel row, edges in 1/16
+// px, into cov[] and out through emitRow() (so the night tint and band sprites apply).
+void outlineGlyph(const OutlineFont& f, int g, float x, float top, float h, const Paint& paint, uint16_t under) {
+  int c0 = pgm_read_byte(&f.gcont[g]), c1 = pgm_read_byte(&f.gcont[g + 1]), p0 = pgm_read_word(&f.gpt[g]), n = 0;
+  for (int c = c0; c < c1; ++c) n += pgm_read_byte(&f.clen[c]);
+  int16_t* P = new (std::nothrow) int16_t[2 * n];   // the glyph's points, in 1/16 px
+  if (!P) return;
+  int32_t ox = lroundf(x * 16), oy = lroundf(top * 16), s = lroundf(h * 16 * 256 / 255);
+  int16_t minY = INT16_MAX, maxY = INT16_MIN;
+  for (int i = 0; i < n; ++i) {
+    P[2 * i] = ox + ((int32_t)pgm_read_byte(&f.pts[2 * (p0 + i)]) * s >> 8);
+    P[2 * i + 1] = oy + ((int32_t)pgm_read_byte(&f.pts[2 * (p0 + i) + 1]) * s >> 8);
+    minY = std::min(minY, P[2 * i + 1]); maxY = std::max(maxY, P[2 * i + 1]);
+  }
+  int y0 = std::max(clipY0, minY >> 4), y1 = std::min(clipY1, (maxY + 15) >> 4);
+  for (int y = y0; y <= y1; ++y) {
+    yield();
+    EMU_WORK(40);
+    memset(cov, 0, sizeof(cov));
+    int lo = SCR_W, hi = -1;
+    for (int j = 0; j < 4; ++j) {
+      int32_t sy = y * 16 + j * 4 + 2;
+      int16_t xs[32];
+      int8_t dir[32];
+      int nx = 0;
+      for (int c = c0, a0 = 0; c < c1; a0 += pgm_read_byte(&f.clen[c]), ++c) {
+        int len = pgm_read_byte(&f.clen[c]);
+        for (int i = 0; i < len; ++i) {
+          const int16_t* A = P + 2 * (a0 + i);
+          const int16_t* B = P + 2 * (a0 + (i + 1) % len);
+          EMU_WORK(12);
+          if ((A[1] <= sy && sy < B[1]) || (B[1] <= sy && sy < A[1])) {
+            if (nx == 32) break;
+            xs[nx] = A[0] + (int32_t)(sy - A[1]) * (B[0] - A[0]) / (B[1] - A[1]);
+            dir[nx++] = A[1] < B[1] ? 1 : -1;
+          }
+        }
+      }
+      for (int i = 1; i < nx; ++i)   // a handful of crossings: insertion sort
+        for (int k = i; k > 0 && xs[k] < xs[k - 1]; --k) { std::swap(xs[k], xs[k - 1]); std::swap(dir[k], dir[k - 1]); }
+      int wn = 0;
+      for (int k = 0; k + 1 < nx; ++k) {
+        wn += dir[k];
+        if (!wn) continue;
+        int32_t a = std::max<int32_t>(xs[k], clipX0 * 16), b = std::min<int32_t>(xs[k + 1], (clipX1 + 1) * 16);
+        for (int32_t px = a >> 4; px * 16 < b; ++px) {   // each pixel gets the span's overlap, in 1/16
+          int32_t l = std::max<int32_t>(a, px * 16), r = std::min<int32_t>(b, px * 16 + 16);
+          if (r > l) { cov[px] += r - l; lo = std::min<int>(lo, px); hi = std::max<int>(hi, px); }
+        }
+      }
+    }
+    for (int i = lo; i <= hi; ++i) cov[i] = std::min(255, cov[i] * 4);   // 4 sub-rows of 16
+    emitRow(lo, hi, y, paint, under);
+  }
+  delete[] P;
+}
+
+void seg7Char(char ch, int x, int top, float h, uint16_t on, uint16_t off, bool drawOff) {
+  int idx = ch == '-' ? 10 : ch - '0';
+  int w = lroundf(h * 0.62f), t = std::max(2, (int)lroundf(h / 9)), H = lroundf(h), mid = top + H / 2;
+  struct R { int x, y, w, h; } seg[7] = {
+      {x + t / 2, top, w - t, t}, {x + w - t, top + t / 2, t, H / 2 - t / 2}, {x + w - t, mid, t, H / 2 - t / 2},
+      {x + t / 2, top + H - t, w - t, t}, {x, mid, t, H / 2 - t / 2}, {x, top + t / 2, t, H / 2 - t / 2},
+      {x + t / 2, mid - t / 2, w - t, t}};
+  uint8_t bits = pgm_read_byte(&SEG7[idx]);
+  for (int i = 0; i < 7; ++i) {
+    bool lit = bits & (1 << i);
+    if (lit || drawOff) D().fillRect(seg[i].x, seg[i].y, seg[i].w, seg[i].h, lit ? on : off);
+  }
+}
+
+void pixelChar(char ch, int x, int top, float h, uint16_t on, uint16_t off, bool drawOff) {
+  int b = std::max(1, (int)(h / 7)), dot = b >= 4 ? b - 1 : b, idx = ch == '-' ? 10 : ch - '0';
+  for (int r = 0; r < 7; ++r) {
+    uint8_t row = pgm_read_byte(&PIX57[idx][r]);
+    for (int c = 0; c < 5; ++c) {
+      bool lit = row & (0x10 >> c);
+      if (lit || drawOff) D().fillRect(x + c * b, top + r * b, dot, dot, lit ? on : off);
+    }
+  }
+}
+
+// The text, its height and box, as bigLayout() does for the line font.
+struct DigitText { String s; DigitFont f; float h, tw, left, top; int pad; };
+DigitText digitLayout(JsonObjectConst it, const struct tm& t, int x, int y) {
+  DigitText d;
+  d.f = digitFontOf(it);
+  d.s = monoPrep(resolve(js(it, "text", ""), t));
+  d.h = std::max(6.0f, std::min(240.0f, num(it, "size", 40, t)));
+  auto width = [&](float h) { float w = 0; for (const char* p = d.s.c_str(); *p; ++p) w += digitAdvance(d.f, *p, h); return w; };
+  d.tw = width(d.h);
+  int maxW = inum(it, "w", 0, t);
+  if (maxW > 0 && d.tw > maxW) { d.h *= maxW / d.tw; d.tw = width(d.h); }
+  if (d.f == DF_PIXEL) d.h = 7 * std::max(1, (int)(d.h / 7));   // whole blocks
+  uint8_t datum = alignOf(it);
+  d.left = x - (datum % 3) * d.tw / 2; d.top = y - (datum / 3) * d.h / 2;
+  d.pad = jhas(it, "bg") ? inum(it, "pad", 0, t) : 0;
+  return d;
+}
+
+bool digitBox(JsonObjectConst it, const struct tm& t, int x, int y, Box& b) {
+  DigitText d = digitLayout(it, t, x, y);
+  int m = 2 + (int)(MONO_STROKE * d.h / MONO_H);   // a fallback character's stroke
+  b = {(int16_t)(d.left - d.pad - m), (int16_t)(d.top - m), (int16_t)(d.left + d.tw + d.pad + m), (int16_t)(d.top + d.h + m)};
+  return true;
+}
+
+void drawDigits(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t c, uint16_t bg) {
+  DigitText d = digitLayout(it, t, x, y);
+  bool opaque = jhas(it, "bg"), drawOff = jhas(it, "off");
+  uint16_t under = bg, off = drawOff ? colorOf(it["off"], PANEL_HI, t) : 0;   // edges blend into bg, as drawBig()'s do
+  if (opaque) D().fillRect(d.left - d.pad, d.top, d.tw + 2 * d.pad + 1, d.h + 1, bg);
+  Paint paint;
+  paint.c[0] = c;
+  const OutlineFont* o = outlineOf(d.f);
+  float cx = d.left;
+  for (const char* p = d.s.c_str(); *p; ++p) {
+    char ch = *p;
+    float adv = digitAdvance(d.f, ch, d.h);
+    bool digit = (ch >= '0' && ch <= '9') || ch == '-';
+    if (ch == ' ') {
+    } else if (o && outlineIndex(ch) >= 0) {
+      outlineGlyph(*o, outlineIndex(ch), cx, d.top, d.h, paint, under);
+    } else if (o && (ch == '.' || ch == '-')) {   // a square dot, a bar at the middle
+      int u = std::max(2, (int)lroundf(d.h * 0.11f));
+      if (ch == '.') D().fillRect(lroundf(cx + adv / 2 - u / 2), lroundf(d.top + d.h) - u, u, u, c);
+      else D().fillRect(lroundf(cx + adv * 0.12f), lroundf(d.top + d.h * 0.55f - u / 2), lroundf(adv * 0.76f), u, c);
+    } else if (d.f == DF_SEG7 && digit) {
+      seg7Char(ch, lroundf(cx), lroundf(d.top), d.h, c, off, drawOff);
+    } else if (d.f == DF_SEG7 && (ch == ':' || ch == '.')) {
+      int u = std::max(2, (int)lroundf(d.h / 9)), mx = lroundf(cx + adv / 2 - u / 2);
+      if (ch == ':') { D().fillRect(mx, lroundf(d.top + d.h * 0.3f), u, u, c); D().fillRect(mx, lroundf(d.top + d.h * 0.65f), u, u, c); }
+      else D().fillRect(mx, lroundf(d.top + d.h) - u, u, u, c);
+    } else if (d.f == DF_PIXEL && digit) {
+      pixelChar(ch, lroundf(cx), lroundf(d.top), d.h, c, off, drawOff);
+    } else if (d.f == DF_PIXEL && (ch == ':' || ch == '.')) {
+      int b = std::max(1, (int)(d.h / 7)), dot = b >= 4 ? b - 1 : b, px = lroundf(cx), py = lroundf(d.top);
+      if (ch == ':') { D().fillRect(px, py + 2 * b, dot, dot, c); D().fillRect(px, py + 4 * b, dot, dot, c); }
+      else D().fillRect(px, py + 6 * b, dot, dot, c);
+    } else {   // the line font's character, at the same height
+      char one[2] = {ch, 0};
+      float k = d.h / (MONO_H + MONO_STROKE);
+      monoDraw(one, cx + (MONO_STROKE / 2 - MONO_SB) * k, d.top + MONO_STROKE / 2 * k, k, c, under);
+    }
+    cx += adv;
+  }
 }
 
 // ---- Weather icons: Erik Flowers' Weather Icons (weather_icons.h), filled as paths.

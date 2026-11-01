@@ -191,6 +191,14 @@ hidden item is not drawn: two items with opposite conditions (`"{sun.up}"` and
   (`"↑ {sun.rise}  ↓ {sun.set}"`, `"{now.temp}°"`, `"✓ {pass}"`). It is slower to
   draw: keep it to a few items that change at most once a minute, or give them a
   `bg`.
+- **Digit fonts** (spec 031), at any `size` like `"big"`, with `w` and `align`:
+  `"bebas"` (Bebas Neue, tall and condensed) and `"outfit"` (Outfit, bold and round),
+  filled and anti-aliased; `"seg7"` (seven segments) and `"pixel"` (5×7 blocks), where
+  `"off"` (a colour) draws the unlit segments or blocks. Digits, `:`, `.`, `-` and a
+  space; any other character is drawn in the big font at the same height. Bebas Neue
+  and Outfit are under the SIL Open Font License (`licenses/`).
+- **`weight`** on `"big"` text: the stroke, 0.5 to 3 times the normal (1), for bold
+  numbers.
 - **`align`** sets which point of the item `x`,`y` refers to: `tl`, `tc`, `tr`, `ml`,
   `mc`, `mr`, `bl`, `bc`, `br` (top/middle/bottom, left/centre/right). For wrapped
   text it places the whole block.

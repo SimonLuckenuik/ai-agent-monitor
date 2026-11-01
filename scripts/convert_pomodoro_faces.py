@@ -118,7 +118,12 @@ def keep_text(v):
         return False
     if re.fullmatch(r"(FOCUS|FOCOS|TASKS) \{FOCOS\}/\{META\}", t.strip()):
         return True   # a bar's label: it becomes DAY
+    if re.sub(TASK_PART, "", t).strip() and re.search(r"\{(?!FOCOS|META)[A-Z]+\}", t):
+        return True   # "{TEMP}° {FOCOS}/{META}": the temperature stays (text_of drops the rest)
     return t.strip() == "{FOCOS}" or not re.search(r"\{(FOCOS|META|STREAK|BEST)\}", t)
+
+
+TASK_PART = r"\s*\{FOCOS\}/\{META\}(\s*(focos|done|tasks))?"
 
 
 def text_of(v):
@@ -131,6 +136,7 @@ def text_of(v):
     if v.strip() in ("FOCUS", "FOCOS", "TASKS", "SESSIONS", "DAILY GOAL", "META DO DIA"):
         return "DAY"
     v = {"LINE 01 / FOCUS": "LINE 01 / DAY", "START": "00:00", "GOAL": "24:00"}.get(v.strip(), v)
+    v = re.sub(TASK_PART, "", v)   # a count of focus sessions beside other values
     v = re.sub(r"\{([A-Z]+)\}", lambda m: TEXT.get(m.group(1), m.group(0)), v)
     for a, b in LABELS:   # no pomodoro here: their focus sessions are tasks done
         v = re.sub(a, b, v)
@@ -200,7 +206,12 @@ def convert(src):
             if font == "pixel" and size in (2, 3) and "°" not in txt:   # fonts 2 and 4 have lower case and symbols
                 it["font"] = 2 if size == 2 else 4
                 del it["size"]
-            elif font != "pixel":   # their digit fonts are narrower: the same width as theirs
+            elif font in ("bebas", "outfit", "dseg", "dm"):   # the clock has these (spec 031)
+                it["font"] = {"bebas": "bebas", "outfit": "outfit", "dseg": "seg7", "dm": "pixel"}[font]
+                off = l.get("off") or l.get("color2")
+                if font in ("dseg", "dm") and off and off != "none":
+                    it["off"] = colour(off)
+            elif font != "pixel":   # Geo, Righteous: the line font, as wide as theirs
                 sample = re.sub(r"\{[^}]*\}", "00", txt)
                 digit, colon = WIDTH[font]
                 w = sum(colon if ch in ":." else digit for ch in sample) * (size if font != "dm" else 7 * size)

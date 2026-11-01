@@ -1,6 +1,6 @@
 # 031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight
 
-Status: Approved (2026-11-01; the owner agreed to the proposal, extras included)
+Status: In progress (approved 2026-11-01; built; our own faces to propose on a sheet)
 
 ## Problem
 
