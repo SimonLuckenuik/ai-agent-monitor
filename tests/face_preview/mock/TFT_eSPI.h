@@ -31,7 +31,11 @@ class TFT_eSPI {
   virtual void fillRect(int32_t x, int32_t y, int32_t w, int32_t h, uint32_t c);
   virtual void drawFastHLine(int32_t x, int32_t y, int32_t w, uint32_t c) { fillRect(x, y, w, 1, c); }
   virtual void drawFastVLine(int32_t x, int32_t y, int32_t h, uint32_t c) { fillRect(x, y, 1, h, c); }
-  virtual void pushColor(uint16_t) {}   // TFT_eSPI's window writes; nothing here uses them
+  // TFT_eSPI's window writes: setWindow (start and end), then each pixel in turn.
+  virtual void setWindow(int32_t x0, int32_t y0, int32_t x1, int32_t) { wx0 = wx = x0; wx1 = x1; wy = y0; }
+  virtual void pushColor(uint16_t c) { TFT_eSPI::drawPixel(wx, wy, c); if (++wx > wx1) { wx = wx0; ++wy; } }
+  void startWrite() {}
+  void endWrite() {}
   virtual int16_t drawChar(uint16_t ch, int32_t x, int32_t y, uint8_t font);
   void fillCircle(int32_t x, int32_t y, int32_t r, uint32_t c);
   void fillRoundRect(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r, uint32_t c);
@@ -67,6 +71,7 @@ class TFT_eSPI {
 
  private:
   int32_t vx = 0, vy = 0, vw = W, vh = H;
+  int32_t wx0 = 0, wx1 = 0, wx = 0, wy = 0;   // the window pushColor writes into
   uint8_t datum = 0;
   uint16_t padX = 0;
   bool swap = false;

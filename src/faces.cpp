@@ -1273,9 +1273,31 @@ void span(const Paint& p, int x0, int x1, int y) {
 }
 
 // Writes one row of coverage (0..255): full runs as spans, edge pixels blended into
-// `under` (the face background: the panel cannot be read back).
+// `under` (the face background: the panel cannot be read back). With one colour, each
+// run of covered pixels that has an edge goes out as one window of pixels (spec 030):
+// a drawPixel per edge pixel set the panel's window each time.
 uint8_t cov[SCR_W];
 void emitRow(int lo, int hi, int y, const Paint& paint, uint16_t under) {
+  if (paint.n == 1 && y >= clipY0 && y <= clipY1) {
+    lo = std::max(lo, clipX0); hi = std::min(hi, clipX1);
+    uint16_t c = paint.c[0];
+    bool screen = !drawTarget;
+    for (int x = lo; x <= hi;) {
+      if (!cov[x]) { ++x; continue; }
+      int e = x;
+      bool edge = cov[x] < 250;
+      while (e + 1 <= hi && cov[e + 1]) edge |= cov[++e] < 250;
+      if (!edge) { span(paint, x, e, y); x = e + 1; continue; }
+      if (screen) D().startWrite();
+      // A band sprite's window is in its own coordinates (its viewport datum is not applied).
+      int ox = screen ? 0 : bandX, oy = screen ? 0 : bandY;
+      D().setWindow(x - ox, y - oy, e - ox, y - oy);
+      for (int i = x; i <= e; ++i) D().pushColor(cov[i] >= 250 ? c : lerp565(under, c, cov[i] + 1));
+      if (screen) D().endWrite();
+      x = e + 1;
+    }
+    return;
+  }
   for (int x = lo; x <= hi;) {
     if (cov[x] >= 250) {
       int e = x;
@@ -1667,7 +1689,13 @@ void mixValues(JsonVariantConst v, const char* key, const struct tm& t, uint32_t
   for (const char* k : contentKeys) if (!strcmp(key, k)) isContent = true;
   uint32_t& h = isContent ? content : geo;
   // "show" counts by its outcome: "{at}-{time.epoch}>0" resolves to new text every second.
-  String r = strcmp(key, "show") ? resolve(s, t) : String(visibleField(v, t) ? "1" : "0");
+  // A position or size counts by the pixel it lands on (spec 030): a hand's
+  // "120+66*sin({time.sec}*6)" changes its text every second, its pixel less often.
+  static const char* const pixelKeys[] = {"x", "y", "x2", "y2", "w", "h", "r", "size"};
+  bool pixel = false;
+  for (const char* k : pixelKeys) if (!strcmp(key, k)) pixel = true;
+  String r = !strcmp(key, "show") ? String(visibleField(v, t) ? "1" : "0")
+           : pixel ? numText(lroundf(evalNum(resolve(s, t)))) : resolve(s, t);
   for (unsigned i = 0; i < r.length(); ++i) h = (h ^ (uint8_t)r[i]) * 16777619u;
   h = (h ^ '|') * 16777619u;
 }
@@ -1679,7 +1707,24 @@ void repeatAt(int i);
 // spark hashes its variable's history.
 void mixItem(JsonObjectConst it, const struct tm& t, uint32_t& h, uint32_t& g) {
   const char* type = js(it, "type", "");
-  for (JsonPairConst kv : it) if (strcmp(kv.key().c_str(), "items")) mixValues(kv.value(), kv.key().c_str(), t, h, g);
+  // A bar or ring counts by what it fills, in pixels or degrees, not by its value (spec 030):
+  // "{time.daymin}" of 1440 changes every minute, a 100 px bar's fill every 15.
+  bool gauge = !strcmp(type, "bar") || !strcmp(type, "ring");
+  for (JsonPairConst kv : it) {
+    const char* k = kv.key().c_str();
+    if (strcmp(k, "items") && !(gauge && (!strcmp(k, "value") || !strcmp(k, "max")))) mixValues(kv.value(), k, t, h, g);
+  }
+  if (gauge) {   // the same sums drawItem() and ring() do
+    int value = inum(it, "value", 0, t), filled;
+    if (!strcmp(type, "bar")) {
+      int w = inum(it, "w", 100, t), max = std::max(1, inum(it, "max", 100, t));
+      filled = std::min(w, std::max(0, value) * w / max);
+    } else {
+      int max = inum(it, "max", 100, t);
+      filled = max <= 0 || value <= 0 ? 0 : std::min(360, value * 360 / max);
+    }
+    h = (h ^ (uint32_t)filled) * 16777619u;
+  }
   if (!strcmp(type, "spark")) {
     uint32_t pushes = 0;
     faceHistory(resolve(js(it, "var", ""), t), nullptr, 0, &pushes);

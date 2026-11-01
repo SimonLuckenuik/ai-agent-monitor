@@ -39,3 +39,13 @@
   - Flash: firmware.bin +192 B; firmware.bin.gz +1.3 KB, since binary tables compress
     less well than path text. Static RAM -500 B.
   - Goal 6 (fonts 4 and 6 through the big font) waits for the clock's numbers.
+- 2026-11-01: goals 7 and 8 built.
+  - Goal 8: `emitRow` sends each run of covered pixels with an edge as one window
+    (`setWindow` + `pushColor`, virtual in TFT_eSPI, so the night tint and band sprites
+    still apply; a band sprite's window is offset by the band). Every face preview
+    screen is pixel-identical to before; the preview mock gained window writes.
+  - Goal 7: `mixValues` hashes positions and sizes (`x y x2 y2 w h r size`) by the pixel
+    they land on; `mixItem` hashes a bar's filled width and a ring's degrees, by the same
+    integer sums that draw them, instead of their value and max.
+  - All 32 integration cases pass (lowest heap 5,112 B). Draw-time gains are to measure
+    on the clock with the next release.
