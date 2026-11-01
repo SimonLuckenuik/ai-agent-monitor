@@ -98,7 +98,8 @@ curl -X POST "http://<clock>/api/faces/vars" -H "X-Api-Key: <key>" -d '{"solar":
 
 A variable name is 1–15 characters from `A-Z a-z 0-9 _` (no dots: dotted names are
 the clock's own, below). Values are text or numbers, up to 160 characters; `null`
-deletes a variable. Up to 40 variables exist at once. Options, for every variable in
+deletes a variable. Up to 40 variables exist at once: expired ones make room, and a new
+variable beyond that is refused with a 507 (the others in the request are set). Options, for every variable in
 the same request:
 
 | Option | Does |

@@ -114,25 +114,41 @@ void addHistory(const String& key, float value) {
   h->pushes++;
 }
 
-void setVar(const String& key, JsonVariant raw, const VarOptions& o) {
-  if (!varName(key)) return;
+Var* freeVar() {   // an empty slot, after clearing the expired ones if none is
+  for (Var& e : vars) if (e.key.isEmpty()) return &e;
+  uint32_t now = epochNow();
+  Var* free = nullptr;
+  for (Var& e : vars) {
+    if (!e.until || now < e.until) continue;
+    if (e.keep) varsDirty = true;
+    e = Var();
+    if (!free) free = &e;
+  }
+  return free;
+}
+
+// false: no room for a new variable (all VARS_MAX in use, none expired).
+bool setVar(const String& key, JsonVariant raw, const VarOptions& o) {
+  if (!varName(key)) return true;
   String value = asciiFold(raw.as<String>()).substring(0, VAR_VALUE_MAX);
   Var* v = findVar(key);
-  if (!v) for (Var& e : vars) if (e.key.isEmpty()) { v = &e; break; }
-  if (!v) return;
+  if (!v && raw.isNull()) return true;   // deleting one that is not there
+  if (!v) v = freeVar();
+  if (!v) return false;
   if (o.add && v->key.length()) value = String(v->value.toInt() + value.toInt());
-  if (raw.isNull()) { if (v->keep) varsDirty = true; *v = Var(); return; }   // null deletes
+  if (raw.isNull()) { if (v->keep) varsDirty = true; *v = Var(); return true; }   // null deletes
   v->key = key; v->value = value;
   v->at = epochNow();
   v->until = o.ttl && v->at ? v->at + o.ttl : 0;
   if (o.keep || v->keep) varsDirty = true;
   v->keep = o.keep;
   if (o.history && (raw.is<float>() || o.add)) addHistory(key, o.add ? value.toInt() : raw.as<float>());
+  return true;
 }
 
 // {"name": value, ...} with options "$ttl" (seconds), "$persist", "$history", "$add".
-// Returns "" or the first bad name.
-String applyVars(JsonObject d) {
+// Returns "" or the first bad name; *full: the first new name that found no room.
+String applyVars(JsonObject d, String* full = nullptr) {
   VarOptions o;
   o.ttl = d["$ttl"] | 0;
   o.keep = d["$persist"] | false;
@@ -143,7 +159,7 @@ String applyVars(JsonObject d) {
     String key = kv.key().c_str();
     if (key[0] == '$') continue;
     if (!varName(key)) { if (bad.isEmpty()) bad = key; continue; }
-    setVar(key, kv.value(), o);
+    if (!setVar(key, kv.value(), o) && full && full->isEmpty()) *full = key;
   }
   return bad;
 }
@@ -373,8 +389,16 @@ void handleFaceVars() {   // POST {"name":value,...,"$ttl":s,...}: merged; null 
     server.send(400, PSTR("text/plain"), PSTR("Expected a JSON object"));
     return;
   }
-  String bad = applyVars(doc.as<JsonObject>());
+  String full;
+  String bad = applyVars(doc.as<JsonObject>(), &full);
   if (bad.length()) { server.send(400, "text/plain", "Bad variable name \"" + bad + "\": 1-15 of A-Z a-z 0-9 _"); return; }
+  if (full.length()) {
+    String msg = F("No room for variable \"");
+    msg += full;
+    msg += F("\": all 40 in use; delete some with null");
+    server.send(507, "text/plain", msg);
+    return;
+  }
   server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 

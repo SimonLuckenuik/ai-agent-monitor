@@ -476,6 +476,30 @@ def face_variables(emu):
 
 
 @case
+def variables_table_full(emu):
+    """40 variables at most: a new one beyond that is refused with a 507, not dropped
+    silently; expired ones make room first; deleting a missing one is not an error."""
+    emu.fix_time(FIXED_TIME)
+    emu.clear_vars()
+    emu.post("/api/faces/vars", {f"v{i}": i for i in range(40)})
+    check(len(emu.faces()["vars"]) == 40, f"40 variables: {len(emu.faces()['vars'])}")
+    expect_error(507, 'No room for variable "extra"', emu.post, "/api/faces/vars", {"extra": 1})
+    check("extra" not in emu.faces()["vars"], "the refused variable was kept")
+    check(emu.vars(v3=33) == "OK", "changing one already there with the table full")
+    check(emu.vars(missing=None) == "OK", "deleting one that is not there")
+    emu.post("/api/faces/vars", {"v0": None})
+    check(emu.vars(extra=1) == "OK", "a new variable after deleting one")
+    emu.clear_vars()
+    emu.post("/api/faces/vars", {f"t{i}": i for i in range(40)} | {"$ttl": 60})
+    emu.fix_time(FIXED_TIME + 61)
+    check(emu.vars(fresh=1) == "OK", "expired variables make room")
+    left = emu.faces()["vars"]
+    check(left == {"fresh": "1"}, f"after the expired ones: {left}")
+    emu.fix_time(FIXED_TIME)
+    emu.clear_vars()
+
+
+@case
 def rotation_when(emu):
     """A face with "when" is in the rotation only while its condition holds."""
     mask = emu.config()["faces"]

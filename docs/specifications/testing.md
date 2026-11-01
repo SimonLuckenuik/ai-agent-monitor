@@ -139,6 +139,7 @@ python tests/integration/run_integration_tests.py --reuse      # use an emulator
 | `mqtt_and_mdns` | with each big face on screen: MQTT connects to the broker, publishes discovery, takes `face/set`; mDNS answers; the weather syncs; `mqttHeap` and `mdnsHeap` reported (spec 025) |
 | `crash_loop_protection` | 3 crashes in a row turn custom faces off, 2 more give safe mode; Resume and Clear; the crash log file (spec 021) |
 | `face_variables` | variable options: names, null, `$add`, `$ttl`, `$history`, `{age.*}`, `$persist` across a restart |
+| `variables_table_full` | 40 variables at most: a new one refused with a 507, expired ones making room |
 | `rotation_when` | a face with `when` is in the rotation only while its condition holds |
 | `rotation_list` | one rotation list: custom faces anywhere, turned off, with their own duration |
 | `night_custom_face` | a custom face all night, its `when` aside |

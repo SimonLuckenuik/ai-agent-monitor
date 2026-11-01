@@ -8,10 +8,10 @@ here from Open to Closed when it is fixed or explained.
 ## Open
 
 - [2026-10-25 After a reboot the clock showed the old setup network name](2026-10-25-setup-network-kept-old-name-after-reboot.md)
-- [2026-10-29 A new face variable is dropped silently when the table is full](2026-10-29-new-variable-dropped-when-table-full.md)
 
 ## Closed/explained
 
+- [2026-10-29 A new face variable was dropped silently when the table was full: fixed after 2.0.0](2026-10-29-new-variable-dropped-when-table-full.md)
 - [2026-10-31 Weather never loaded on 1.9.0 (the 16 KB fetch threshold): fixed in 1.9.1](2026-10-31-weather-never-fetched-under-16-kb.md)
 - [2026-10-31 Sending a face failed while a big face was loaded: fixed in 1.9.1](2026-10-31-face-upload-needs-the-loaded-face-memory.md)
 - [2026-10-31 Animated custom faces restarted the clock (stack overflow in the expression parser): fixed in 1.9.0, confirmed on the clock](2026-10-31-animated-faces-restart-the-clock.md)
