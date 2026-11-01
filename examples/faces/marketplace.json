@@ -205,11 +205,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aurora.json",
       "license": "GPL-3.0",
-      "size": 1721,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1622,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/aurora.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/aurora.png",
@@ -224,11 +221,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bauhaus.json",
       "license": "GPL-3.0",
-      "size": 839,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 838,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/bauhaus-blocks.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/bauhaus-blocks.png",
@@ -238,16 +232,13 @@
     {
       "name": "bento",
       "title": "Bento",
-      "description": "Widget-style grid of cards: time, weather and tasks",
+      "description": "Widget-style grid of cards: time, weather and the day's progress",
       "category": "Clocks and calendars",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bento.json",
       "license": "GPL-3.0",
-      "size": 994,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1016,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/bento.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/bento.png",
@@ -278,51 +269,13 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/compasso.json",
       "license": "GPL-3.0",
-      "size": 1750,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1779,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/compass.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/compass.png",
       "path": "examples/faces/smalltv-pomodoro/compass.json",
       "previewPath": "docs/images/faces/compass.png"
-    },
-    {
-      "name": "duo",
-      "title": "Duo",
-      "description": "Giant hours stacked over minutes",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/duo.json",
-      "license": "GPL-3.0",
-      "size": 483,
-      "variables": [],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/duo.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/duo.png",
-      "path": "examples/faces/smalltv-pomodoro/duo.json",
-      "previewPath": "docs/images/faces/duo.png"
-    },
-    {
-      "name": "giant-time",
-      "title": "Giant Time",
-      "description": "The time huge, with the weather and a task bar",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bebas-gigante.json",
-      "license": "GPL-3.0",
-      "size": 859,
-      "variables": [
-        "done",
-        "goal"
-      ],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/giant-time.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/giant-time.png",
-      "path": "examples/faces/smalltv-pomodoro/giant-time.json",
-      "previewPath": "docs/images/faces/giant-time.png"
     },
     {
       "name": "gradient",
@@ -332,7 +285,7 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/gradiente.json",
       "license": "GPL-3.0",
-      "size": 1511,
+      "size": 2031,
       "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/gradient.json",
@@ -348,11 +301,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/infografico.json",
       "license": "GPL-3.0",
-      "size": 2163,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 2186,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/infograph.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/infograph.png",
@@ -367,11 +317,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/memphis.json",
       "license": "GPL-3.0",
-      "size": 1444,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1329,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/memphis.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/memphis.png",
@@ -386,33 +333,13 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/modular.json",
       "license": "GPL-3.0",
-      "size": 1671,
-      "variables": [
-        "done"
-      ],
+      "size": 1693,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/modular.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/modular.png",
       "path": "examples/faces/smalltv-pomodoro/modular.json",
       "previewPath": "docs/images/faces/modular.png"
-    },
-    {
-      "name": "mono",
-      "title": "Mono",
-      "description": "Black and white blocks with unlit segments showing and one red dot",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/mono.json",
-      "license": "GPL-3.0",
-      "size": 881,
-      "variables": [
-        "done"
-      ],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/mono.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/mono.png",
-      "path": "examples/faces/smalltv-pomodoro/mono.json",
-      "previewPath": "docs/images/faces/mono.png"
     },
     {
       "name": "nixie",
@@ -422,32 +349,13 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/nixie.json",
       "license": "GPL-3.0",
-      "size": 3812,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3791,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/nixie.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/nixie.png",
       "path": "examples/faces/smalltv-pomodoro/nixie.json",
       "previewPath": "docs/images/faces/nixie.png"
-    },
-    {
-      "name": "orbit-sun",
-      "title": "Orbit",
-      "description": "Hands as orbits around the sun, under a starry sky",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/orbita.json",
-      "license": "GPL-3.0",
-      "size": 1695,
-      "variables": [],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/orbit-sun.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/orbit-sun.png",
-      "path": "examples/faces/smalltv-pomodoro/orbit-sun.json",
-      "previewPath": "docs/images/faces/orbit-sun.png"
     },
     {
       "name": "paper",
@@ -457,11 +365,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/papel.json",
       "license": "GPL-3.0",
-      "size": 1388,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1178,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/paper.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/paper.png",
@@ -476,10 +381,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/pilula.json",
       "license": "GPL-3.0",
-      "size": 3163,
-      "variables": [
-        "done"
-      ],
+      "size": 3185,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/pill.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/pill.png",
@@ -501,38 +404,6 @@
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/radar.png",
       "path": "examples/faces/smalltv-pomodoro/radar.json",
       "previewPath": "docs/images/faces/radar.png"
-    },
-    {
-      "name": "roman",
-      "title": "Roman",
-      "description": "Classic cream dial with Roman numerals",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/romano.json",
-      "license": "GPL-3.0",
-      "size": 2259,
-      "variables": [],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/roman.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/roman.png",
-      "path": "examples/faces/smalltv-pomodoro/roman.json",
-      "previewPath": "docs/images/faces/roman.png"
-    },
-    {
-      "name": "station",
-      "title": "Station",
-      "description": "Railway station clock: bold black bars and a red seconds hand",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/estacao.json",
-      "license": "GPL-3.0",
-      "size": 1751,
-      "variables": [],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/station.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/station.png",
-      "path": "examples/faces/smalltv-pomodoro/station.json",
-      "previewPath": "docs/images/faces/station.png"
     },
     {
       "name": "stripes",
@@ -558,35 +429,13 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/synthwave.json",
       "license": "GPL-3.0",
-      "size": 1889,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1763,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/synthwave-sun.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/synthwave-sun.png",
       "path": "examples/faces/smalltv-pomodoro/synthwave-sun.json",
       "previewPath": "docs/images/faces/synthwave-sun.png"
-    },
-    {
-      "name": "terminal-green",
-      "title": "Terminal",
-      "description": "The clock as a shell session, in phosphor green",
-      "category": "Clocks and calendars",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/terminal.json",
-      "license": "GPL-3.0",
-      "size": 1385,
-      "variables": [
-        "done",
-        "goal"
-      ],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/terminal-green.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/terminal-green.png",
-      "path": "examples/faces/smalltv-pomodoro/terminal-green.json",
-      "previewPath": "docs/images/faces/terminal-green.png"
     },
     {
       "name": "vinyl",
@@ -596,11 +445,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/vinil.json",
       "license": "GPL-3.0",
-      "size": 2090,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1878,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/vinyl.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/vinyl.png",
@@ -727,7 +573,7 @@
       "author": "SimonLuckenuik",
       "source": "https://github.com/SimonLuckenuik/ai-agent-monitor",
       "license": "GPL-3.0",
-      "size": 1333,
+      "size": 1396,
       "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/synthwave.json",
@@ -738,18 +584,34 @@
     {
       "name": "aquarium",
       "title": "Aquarium",
-      "description": "Fish that swim across",
+      "description": "A clownfish and a blue tang swim across",
       "category": "Weather, sun and moon",
       "author": "SimonLuckenuik",
       "source": "https://github.com/SimonLuckenuik/ai-agent-monitor",
       "license": "GPL-3.0",
-      "size": 1808,
+      "size": 1828,
       "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/aquarium.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/aquarium.png",
       "path": "examples/faces/aquarium.json",
       "previewPath": "docs/images/faces/aquarium.png"
+    },
+    {
+      "name": "umbrella",
+      "title": "Umbrella",
+      "description": "Rain or snow within the hour",
+      "category": "Weather, sun and moon",
+      "author": "SimonLuckenuik",
+      "source": "https://github.com/SimonLuckenuik/ai-agent-monitor",
+      "license": "GPL-3.0",
+      "size": 1461,
+      "variables": [],
+      "firmware": "2.0.0",
+      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/umbrella.json",
+      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/umbrella.png",
+      "path": "examples/faces/umbrella.json",
+      "previewPath": "docs/images/faces/umbrella.png"
     },
     {
       "name": "what-to-wear",
@@ -807,11 +669,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/duna.json",
       "license": "GPL-3.0",
-      "size": 1913,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1779,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/dune.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/dune.png",
@@ -821,16 +680,13 @@
     {
       "name": "tide",
       "title": "Tide",
-      "description": "Pixel lighthouse, ocean bands and tasks on the sand.",
+      "description": "Pixel lighthouse, ocean bands and the day's progress on the sand",
       "category": "Weather, sun and moon",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/mare.json",
       "license": "GPL-3.0",
-      "size": 2351,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 2208,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/tide.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/tide.png",
@@ -845,11 +701,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/janela.json",
       "license": "GPL-3.0",
-      "size": 3612,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3591,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/window.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/window.png",
@@ -864,11 +717,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/inverno.json",
       "license": "GPL-3.0",
-      "size": 3859,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 4074,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/winter.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/winter.png",
@@ -1140,11 +990,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/fitness.json",
       "license": "GPL-3.0",
-      "size": 1240,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 912,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/fitness.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/fitness.png",
@@ -1154,17 +1001,13 @@
     {
       "name": "greenhouse",
       "title": "Greenhouse",
-      "description": "A little greenhouse; the plant grows with your streak.",
+      "description": "A little greenhouse with a growing plant",
       "category": "Agents and work",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/jardim.json",
       "license": "GPL-3.0",
-      "size": 2216,
-      "variables": [
-        "done",
-        "goal",
-        "streak"
-      ],
+      "size": 2004,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/greenhouse.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/greenhouse.png",
@@ -1174,16 +1017,13 @@
     {
       "name": "metro",
       "title": "Metro",
-      "description": "A transit board whose route fills with tasks tasks.",
+      "description": "A transit board whose route fills as the day goes by",
       "category": "Agents and work",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/metro.json",
       "license": "GPL-3.0",
-      "size": 1626,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 1158,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/metro.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/metro.png",
@@ -1193,16 +1033,13 @@
     {
       "name": "rings",
       "title": "Rings",
-      "description": "Three progress rings: daily tasks, minutes of the hour and hours of the day",
+      "description": "Three progress rings: the day, the minutes of the hour and the hours of the day",
       "category": "Agents and work",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aneis.json",
       "license": "GPL-3.0",
-      "size": 911,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 798,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/rings.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/rings.png",
@@ -1251,11 +1088,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/8bit-verde.json",
       "license": "GPL-3.0",
-      "size": 3634,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3534,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/8-bit-green.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/8-bit-green.png",
@@ -1263,37 +1097,15 @@
       "previewPath": "docs/images/faces/8-bit-green.png"
     },
     {
-      "name": "aquarium-reef",
-      "title": "Aquarium",
-      "description": "A pixel art aquarium; hit your daily goal and the golden fish shows up",
-      "category": "Games and worlds",
-      "author": "davicorrea0",
-      "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aquario.json",
-      "license": "GPL-3.0",
-      "size": 4054,
-      "variables": [
-        "done",
-        "goal"
-      ],
-      "firmware": "2.0.0",
-      "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/aquarium-reef.json",
-      "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/aquarium-reef.png",
-      "path": "examples/faces/smalltv-pomodoro/aquarium-reef.json",
-      "previewPath": "docs/images/faces/aquarium-reef.png"
-    },
-    {
       "name": "arcade",
       "title": "Arcade",
-      "description": "A pixel platform level; the flag lights at your daily goal.",
+      "description": "A pixel platform level, with a hero, coins and a flag",
       "category": "Games and worlds",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/arcade.json",
       "license": "GPL-3.0",
-      "size": 3959,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3734,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/arcade.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/arcade.png",
@@ -1308,10 +1120,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/astronauta.json",
       "license": "GPL-3.0",
-      "size": 1805,
-      "variables": [
-        "done"
-      ],
+      "size": 1696,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/astronaut.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/astronaut.png",
@@ -1326,11 +1136,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/fogueira.json",
       "license": "GPL-3.0",
-      "size": 3838,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3721,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/campfire.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/campfire.png",
@@ -1345,11 +1152,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/gato-soneca.json",
       "license": "GPL-3.0",
-      "size": 3307,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3203,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/catnap.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/catnap.png",
@@ -1364,11 +1168,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/pausa-cafe.json",
       "license": "GPL-3.0",
-      "size": 3987,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3883,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/coffee-break.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/coffee-break.png",
@@ -1383,11 +1184,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/tomate-pulando.json",
       "license": "GPL-3.0",
-      "size": 2575,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 2471,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/jumping-tomato.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/jumping-tomato.png",
@@ -1397,16 +1195,13 @@
     {
       "name": "koi",
       "title": "Koi",
-      "description": "A pond from above; a lotus blooms at your goal.",
+      "description": "A pond from above, with a koi circling between the lily pads",
       "category": "Games and worlds",
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/koi.json",
       "license": "GPL-3.0",
-      "size": 3827,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3950,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/koi.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/koi.png",
@@ -1421,11 +1216,8 @@
       "author": "davicorrea0",
       "source": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/cafe-pixel.json",
       "license": "GPL-3.0",
-      "size": 3402,
-      "variables": [
-        "done",
-        "goal"
-      ],
+      "size": 3298,
+      "variables": [],
       "firmware": "2.0.0",
       "json": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/smalltv-pomodoro/pixel-cafe.json",
       "preview": "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/docs/images/faces/pixel-cafe.png",

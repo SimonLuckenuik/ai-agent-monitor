@@ -11,25 +11,16 @@
   {
     "name": "rings",
     "title": "Rings",
-    "description": "Three progress rings: daily tasks, minutes of the hour and hours of the day",
+    "description": "Three progress rings: the day, the minutes of the hour and the hours of the day",
     "category": "Agents and work",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aneis.json",
     "license": "GPL-3.0"
   },
   {
-    "name": "aquarium-reef",
-    "title": "Aquarium",
-    "description": "A pixel art aquarium; hit your daily goal and the golden fish shows up",
-    "category": "Games and worlds",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aquario.json",
-    "license": "GPL-3.0"
-  },
-  {
     "name": "arcade",
     "title": "Arcade",
-    "description": "A pixel platform level; the flag lights at your daily goal.",
+    "description": "A pixel platform level, with a hero, coins and a flag",
     "category": "Games and worlds",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/arcade.json",
@@ -63,18 +54,9 @@
     "license": "GPL-3.0"
   },
   {
-    "name": "giant-time",
-    "title": "Giant Time",
-    "description": "The time huge, with the weather and a task bar",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bebas-gigante.json",
-    "license": "GPL-3.0"
-  },
-  {
     "name": "bento",
     "title": "Bento",
-    "description": "Widget-style grid of cards: time, weather and tasks",
+    "description": "Widget-style grid of cards: time, weather and the day's progress",
     "category": "Clocks and calendars",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bento.json",
@@ -114,24 +96,6 @@
     "category": "Weather, sun and moon",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/duna.json",
-    "license": "GPL-3.0"
-  },
-  {
-    "name": "duo",
-    "title": "Duo",
-    "description": "Giant hours stacked over minutes",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/duo.json",
-    "license": "GPL-3.0"
-  },
-  {
-    "name": "station",
-    "title": "Station",
-    "description": "Railway station clock: bold black bars and a red seconds hand",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/estacao.json",
     "license": "GPL-3.0"
   },
   {
@@ -200,7 +164,7 @@
   {
     "name": "greenhouse",
     "title": "Greenhouse",
-    "description": "A little greenhouse; the plant grows with your streak.",
+    "description": "A little greenhouse with a growing plant",
     "category": "Agents and work",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/jardim.json",
@@ -209,7 +173,7 @@
   {
     "name": "koi",
     "title": "Koi",
-    "description": "A pond from above; a lotus blooms at your goal.",
+    "description": "A pond from above, with a koi circling between the lily pads",
     "category": "Games and worlds",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/koi.json",
@@ -227,7 +191,7 @@
   {
     "name": "tide",
     "title": "Tide",
-    "description": "Pixel lighthouse, ocean bands and tasks on the sand.",
+    "description": "Pixel lighthouse, ocean bands and the day's progress on the sand",
     "category": "Weather, sun and moon",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/mare.json",
@@ -245,7 +209,7 @@
   {
     "name": "metro",
     "title": "Metro",
-    "description": "A transit board whose route fills with tasks tasks.",
+    "description": "A transit board whose route fills as the day goes by",
     "category": "Agents and work",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/metro.json",
@@ -261,30 +225,12 @@
     "license": "GPL-3.0"
   },
   {
-    "name": "mono",
-    "title": "Mono",
-    "description": "Black and white blocks with unlit segments showing and one red dot",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/mono.json",
-    "license": "GPL-3.0"
-  },
-  {
     "name": "nixie",
     "title": "Nixie",
     "description": "Glass capsules, amber filaments and discreet seconds.",
     "category": "Clocks and calendars",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/nixie.json",
-    "license": "GPL-3.0"
-  },
-  {
-    "name": "orbit-sun",
-    "title": "Orbit",
-    "description": "Hands as orbits around the sun, under a starry sky",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/orbita.json",
     "license": "GPL-3.0"
   },
   {
@@ -324,30 +270,12 @@
     "license": "GPL-3.0"
   },
   {
-    "name": "roman",
-    "title": "Roman",
-    "description": "Classic cream dial with Roman numerals",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/romano.json",
-    "license": "GPL-3.0"
-  },
-  {
     "name": "synthwave-sun",
     "title": "Synthwave",
     "description": "80s retro sunset with a neon perspective grid",
     "category": "Clocks and calendars",
     "author": "davicorrea0",
     "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/synthwave.json",
-    "license": "GPL-3.0"
-  },
-  {
-    "name": "terminal-green",
-    "title": "Terminal",
-    "description": "The clock as a shell session, in phosphor green",
-    "category": "Clocks and calendars",
-    "author": "davicorrea0",
-    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/terminal.json",
     "license": "GPL-3.0"
   },
   {

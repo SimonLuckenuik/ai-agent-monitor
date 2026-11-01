@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Face review**: 8 converted faces that were too close to ours or to each other are gone
+  (33 remain); slogans and task counters are gone from the rest, their bars and rings
+  show the day's progress. The aquarium has gradient water and a clownfish and blue tang;
+  the synthwave sun sets behind the horizon; compass has a seconds hand; gradient's
+  rings are smooth.
 - **Rain or snow within the hour** (spec 028): from Open-Meteo's 15-minute forecast.
   Weather today's last cell says "RAIN IN 15 MIN" or "SNOW NOW" while one is due (in
   French too); faces get `{now.rain_in}`, `{now.snow_in}`, `{now.rain_mm}`,

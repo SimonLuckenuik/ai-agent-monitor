@@ -43,6 +43,9 @@ NAMES = {
     "romano": "roman", "synthwave": "synthwave-sun", "terminal": "terminal-green", "tomate-pulando": "jumping-tomato",
     "vinil": "vinyl",
 }
+# Left out: too close to one of ours or to each other (the owner's review, 2026-11-01).
+SKIP = {"aquario", "orbita", "terminal", "bebas-gigante", "duo", "mono", "estacao", "romano"}
+
 # Each in one of our gallery's categories (examples/faces/README.md's sections).
 CATEGORY = {
     "Clocks and calendars": ["aurora", "bauhaus-blocks", "bento", "brutal", "compass", "duo", "giant-time",
@@ -69,7 +72,7 @@ DEFAULT = {"rect": "card", "circle": "card", "bar": "work", "arc": "work"}
 
 RAIN = "(({now.code}>=51&&{now.code}<=67)||({now.code}>=80&&{now.code}<=82)||{now.code}>=95)"
 WHEN = {"day": "{sun.up}", "night": "!{sun.up}", "rain": RAIN, "dry": "!" + RAIN,
-        "goal": "{done|0}>={goal|8}", "nogoal": "{done|0}<{goal|8}", "streak": "{streak|0}>0",
+        "goal": False, "nogoal": None, "streak": False,   # no goals or streaks here: dropped / always
         "weather": None, "always": None, "noweather": False}
 TEXT = {"HH": "{time.hour:02}", "H": "{time.hour}", "MM": "{time.min}", "SS": "{time.sec}",
         "WD": "{date.wday3}", "DD": "{date.day:02}", "MON": "{date.month3:u}", "MO": "{date.monthnum:02}",
@@ -78,7 +81,7 @@ TEXT = {"HH": "{time.hour:02}", "H": "{time.hour}", "MM": "{time.min}", "SS": "{
         "CITY": "{loc.city:u}", "IP": "{net.ip}", "FOCOS": "{done|0}", "META": "{goal|8}",
         "STREAK": "{streak|0}", "BEST": "{best|0}", "RAIN": ""}
 VALUE = {"sec": ("{time.sec}", 60), "min": ("{time.min}", 60), "hour": ("{time.hour}", 24),
-         "focos": ("{done|0}", "{goal|8}"), "hum": ("{now.hum}", 100)}
+         "focos": ("{time.daymin}", 1440), "hum": ("{now.hum}", 100)}   # their focus count: the day's progress
 # Their digit fonts' advance, per unit of height: (a digit, a colon); dm's cell is 1/7 of the height.
 WIDTH = {"bebas": (0.42, 0.2), "outfit": (0.6, 0.26), "righteous": (0.62, 0.26), "geo": (0.75, 0.3),
          "dseg": (0.72, 0.25), "dm": (6 / 7, 3 / 7)}
@@ -103,9 +106,31 @@ def colour(v, kind=None):
     return NAMED.get(v, v)
 
 
+PCT = "{round({time.daymin}*100/1440)}%"   # the day's progress
+SLOGANS = {"ONE STEP AT A TIME", "TIME FOR WHAT MATTERS", "BREATHE. ONE FOCUS AT A TIME.", "KEEP MOVING FORWARD",
+           "AT YOUR OWN PACE", "THE TIME IS NOW.", "YOU HAVE ARRIVED!", "LEVEL COMPLETE!"}
+
+
+def keep_text(v):
+    """False for a slogan, or a text that counts focus sessions, goals or streaks."""
+    t = (v.get("en") or v.get("pt") or "") if isinstance(v, dict) else v
+    if t.strip() in SLOGANS:
+        return False
+    if re.fullmatch(r"(FOCUS|FOCOS|TASKS) \{FOCOS\}/\{META\}", t.strip()):
+        return True   # a bar's label: it becomes DAY
+    return t.strip() == "{FOCOS}" or not re.search(r"\{(FOCOS|META|STREAK|BEST)\}", t)
+
+
 def text_of(v):
     if isinstance(v, dict):
         v = v.get("en") or v.get("pt") or ""
+    if v.strip() == "{FOCOS}":
+        return PCT
+    if re.fullmatch(r"(FOCUS|FOCOS|TASKS) \{FOCOS\}/\{META\}", v.strip()):
+        return "DAY"
+    if v.strip() in ("FOCUS", "FOCOS", "TASKS", "SESSIONS", "DAILY GOAL", "META DO DIA"):
+        return "DAY"
+    v = {"LINE 01 / FOCUS": "LINE 01 / DAY", "START": "00:00", "GOAL": "24:00"}.get(v.strip(), v)
     v = re.sub(r"\{([A-Z]+)\}", lambda m: TEXT.get(m.group(1), m.group(0)), v)
     for a, b in LABELS:   # no pomodoro here: their focus sessions are tasks done
         v = re.sub(a, b, v)
@@ -164,6 +189,8 @@ def convert(src):
             it = {"type": "line", "x": l.get("x", 0), "y": l.get("y", 0), "x2": l.get("x2", 0), "y2": l.get("y2", 0),
                   "w": sz or 3, "color": colour(l.get("color"))}
         elif t == "text":
+            if not keep_text(l.get("text", "")):
+                continue
             font, size = l.get("font", "pixel"), sz or 2
             h = 8 * size if font == "pixel" else 7 * size if font == "dm" else size
             al = {"left": "tl", "center": "tc", "right": "tr"}[l.get("align", "left")]
@@ -273,17 +300,61 @@ def koi(items):
     return [it for i, it in enumerate(items) if i != fish[1]]
 
 
-TWEAKS = {"aquario": aquarium, "koi": koi}
+def compass(items):
+    """A thin seconds hand over the others, under the centre dot."""
+    a = ANGLE["sec"]
+    hand = {"type": "line", "x": f"120-12*sin{a}", "y": f"119+12*cos{a}", "x2": f"120+66*sin{a}",
+            "y2": f"119-66*cos{a}", "w": 1, "color": "#b86b43"}
+    dot = next(i for i, it in enumerate(items) if it["type"] == "circle" and it.get("r") == 5)
+    return items[:dot] + [hand] + items[dot:]
+
+
+def gradient(items):
+    """Their 11 bands, 15 px apart, as 34 rings 5 px apart in between colours."""
+    bands = [it for it in items if it["type"] == "circle" and it.get("r", 0) >= 20]
+    cols = [tuple(int(b["color"][k:k + 2], 16) for k in (1, 3, 5)) for b in bands]
+    steps = []
+    for i in range(34):
+        f = i / 33 * (len(cols) - 1)
+        a, b, t = cols[int(f)], cols[min(int(f) + 1, len(cols) - 1)], f - int(f)
+        steps.append("#%02x%02x%02x" % tuple(round(a[k] + (b[k] - a[k]) * t) for k in range(3)))
+    rings = {"type": "repeat", "of": 34, "items": [   # each edge blends into the ring outside it
+        {"type": "circle", "x": 120, "y": 120, "r": "170-{it.index}*5", "color": "{it.index:ring}",
+         "under": "{it.index:outer}"}]}
+    rest = [it for it in items if it not in bands]
+    maps = {"ring": {str(i): c for i, c in enumerate(steps)},
+            "outer": {str(i): steps[i - 1] if i else steps[0] for i in range(34)}}
+    return [{"_maps": maps}, rings] + rest
+
+
+def fitness(items):
+    """Their focus row became a second day row: only their own day row stays."""
+    bar = next(i for i, it in enumerate(items) if it["type"] == "bar" and it.get("max") == 1440)
+    label = next(i for i, it in enumerate(items) if it["type"] == "text" and it.get("text") == "DAY")
+    return [it for i, it in enumerate(items) if i not in (bar, label)]
+
+
+TWEAKS = {"aquario": aquarium, "koi": koi, "compasso": compass, "gradiente": gradient, "fitness": fitness}
+# Descriptions that spoke of focus sessions, goals or streaks.
+DESCS = {"aneis": "Three progress rings: the day, the minutes of the hour and the hours of the day",
+         "arcade": "A pixel platform level, with a hero, coins and a flag",
+         "bento": "Widget-style grid of cards: time, weather and the day's progress",
+         "jardim": "A little greenhouse with a growing plant",
+         "koi": "A pond from above, with a koi circling between the lily pads",
+         "mare": "Pixel lighthouse, ocean bands and the day's progress on the sand",
+         "metro": "A transit board whose route fills as the day goes by"}
 
 
 def merge_sprites(items):
     """The same sprite placed several times becomes one repeat, its places from two maps."""
+    pre = items[0]["_maps"] if items and "_maps" in items[0] else {}   # a tweak's own maps
+    items = items[1:] if pre else items
     groups = {}
     for i, it in enumerate(items):
         if it["type"] == "sprite":
             key = json.dumps({k: v for k, v in it.items() if k not in ("x", "y")}, sort_keys=True)
             groups.setdefault(key, []).append(i)
-    out, maps, done = [], {}, set()
+    out, maps, done = [], dict(pre), set()
     for i, it in enumerate(items):
         if i in done:
             continue
@@ -385,8 +456,11 @@ def main():
     TOMATO = json.loads((src / "tomate-pulando.json").read_text(encoding="utf-8"))["sprites"]["tomate"]
     OUT.mkdir(parents=True, exist_ok=True)
     index, bad = [], []
+    for old in OUT.glob("*.json"):   # faces since left out
+        if old.name != "faces.json" and old.stem not in {NAMES[k] for k in NAMES if k not in SKIP}:
+            old.unlink()
     for p in sorted(src.glob("*.json")):
-        if p.name == "catalog.json":
+        if p.name == "catalog.json" or p.stem in SKIP:
             continue
         face, out = convert(p)
         name = NAMES[p.stem]
@@ -396,6 +470,7 @@ def main():
             bad.append((name, size, len(out["items"])))
         (OUT / f"{name}.json").write_text(body + "\n", encoding="utf-8", newline="\n")
         title, desc = TITLES.get(p.stem) or (face.get("name_en") or face["name"], face.get("desc_en") or face["desc"])
+        desc = DESCS.get(p.stem, desc)
         for a, b in LABELS:
             desc = re.sub(a, b, desc)
         index.append({"name": name, "title": title, "description": desc, "category": CATEGORY_OF[name],

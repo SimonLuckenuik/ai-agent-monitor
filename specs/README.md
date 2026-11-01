@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **031**.
+Next free number: **034**.
 
 | Spec | Status |
 |---|---|
@@ -40,6 +40,9 @@ Next free number: **031**.
 | [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Approved |
 | [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | In progress (built; to check on the clock) |
 | [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | In progress (built; to measure on the clock) |
+| [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Approved |
+| [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Approved |
+| [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Approved |
 
 ## Templates
 

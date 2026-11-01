@@ -53,8 +53,19 @@ per digit, against about 50 B for one of our strokes.
    Flash freed this way can go to a new font that fits the product, drawn by the same
    row renderer (an outline digits font, say), each proposed with its flash and look.
 
+7. **Redraw only when pixels change** (added 2026-11-01, approved): each item's change
+   check uses what it would draw, not the raw value: a bar's filled width in pixels, a
+   ring's arc in steps, a line's end points rounded to pixels. A value that changes but
+   moves no pixel redraws nothing (smalltv-pomodoro's per-layer signatures).
+8. **Edge runs as one block** (added 2026-11-01, approved): `emitRow` sends each run of
+   covered pixels (anti-aliased edges and solid core together) with one window and one
+   block write instead of a `drawPixel` per edge pixel, for the big font and every path.
+   The row buffer lives on the heap while a glyph or path draws, not on the stack.
+
 ## Non-goals
 
 - Importing smalltv-pomodoro's outline fonts (Bebas, Outfit, Righteous): more flash for
   digits only, and they need a solid background behind them.
 - Lower case in the big font.
+- Compiling a custom face into structures once at load (smalltv-pomodoro does): the
+  owner judged CPU not a concern for now.
