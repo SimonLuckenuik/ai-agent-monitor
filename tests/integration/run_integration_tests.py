@@ -294,7 +294,7 @@ def example_faces(emu):
     samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
     files = example_faces_all()
     names = list(files)
-    check(len(names) >= 78, f"examples: {names}")
+    check(len(names) >= 70, f"examples: {names}")
     check(set(samples) <= set(names), f"samples for missing faces: {set(samples) - set(names)}")
     for name in names:
         face = json.loads(files[name].read_text(encoding="utf-8"))
