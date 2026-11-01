@@ -32,3 +32,9 @@
   All 39 example faces installed through the API, heap unchanged. The crash log holds
   one panic from 1.9.1 (82 min up, 4,000 B free), most likely the update upload under
   low memory: on 2.0.0 the update buffer is allocated or refused.
+- 2026-10-31: the owner showed every custom face on the clock by hand, the big ones first
+  (night-lake, retro-runner, block-world); `/status` read every 4 s throughout. No restart and
+  no new crash (uptime 12,489 s, crashes still 1). Least free heap 16,256 B (`heapLow`), with
+  retro-runner on screen 16,736 B and night-lake 17,072 B; the built-in faces 23.8-25.1 KB.
+  `stackFree` 736 B all along (960 B at boot). The rotation holds only the built-in faces: the
+  installed faces are shown on demand.

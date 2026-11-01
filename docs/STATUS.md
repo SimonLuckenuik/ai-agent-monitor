@@ -28,7 +28,7 @@ expression parser while repainting, reproduced in the emulator
 ([issue](issues/2026-10-31-animated-faces-restart-the-clock.md)); they were deleted from
 the clock. Fixed in 1.9.0 (spec 023), with crash records and crash-loop protection
 (spec 021). The clock runs **2.0.0** since 2026-10-31: 25.3 KB free at rest, the weather
-loading, mDNS on, all 39 example faces installed (spec 025). Before that, on **1.9.0**: the three faces
+loading, mDNS on, all 39 example faces installed and each shown without a restart, least free heap 16.3 KB (spec 025). Before that, on **1.9.0**: the three faces
 ran without a restart, least free stack 1,040 B. Sending a face after a big one was
 shown fails for lack of heap ([issue](issues/2026-10-31-face-upload-needs-the-loaded-face-memory.md)). The weather
 never loads on 1.9.0 (16 KB fetch threshold). Both fixed in 1.9.1 (spec 024). Shown there in the 1.4.0 work:
