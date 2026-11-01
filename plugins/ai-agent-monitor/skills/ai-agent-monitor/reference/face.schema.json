@@ -362,7 +362,14 @@
           "description": "ASCII; {placeholders}, and {expressions with {placeholders} inside}."
         },
         "font": {
-          "anyOf": [{"$ref": "#/$defs/number"}, {"const": "big"}],
+          "anyOf": [
+            {
+              "$ref": "#/$defs/number"
+            },
+            {
+              "const": "big"
+            }
+          ],
           "description": "2 (16 px), 4 (26 px, default), 6 (48 px, digits : . - only), or \"big\": the Big tiles' line font at any size (capitals, digits, : . , % / + ! ? ' and the symbols arrows, check, cross, bullet, heart, bolt, degree)."
         },
         "size": {
@@ -467,6 +474,10 @@
         },
         "bw": {
           "$ref": "#/$defs/number"
+        },
+        "under": {
+          "$ref": "#/$defs/colour",
+          "description": "The colour the edge blends into (the face's bg); set it when the circle sits on another item."
         }
       }
     },

@@ -167,7 +167,7 @@ or, where noted, a [gradient](#gradients).
 |---|---|
 | `text` | `x`, `y`, `text`, `font` (4), `color`, `align` (`tl`), `bg` (none = transparent), `pad` (0); `w` wraps to that width, `lines` (8) and `lh` (2, extra line spacing). With `"font": "big"`: `size` (40, the letters' height in pixels), and `w` shrinks the text to fit |
 | `rect` | `x`, `y`, `w`, `h`, `r` corner radius (0), `color` (or gradient), `fill` (true), `border` (colour), `bw` border width (2) |
-| `circle` | `x`, `y` (centre), `r` (10), `color` (or gradient), `fill` (true), `border`, `bw` (2) |
+| `circle` | `x`, `y` (centre), `r` (10), `color` (or gradient), `fill` (true), `border`, `bw` (2), `under` (the colour its edge blends into: the face's `bg`; set it when the circle sits on another item, such as concentric rings) |
 | `line` | `x`, `y`, `x2`, `y2`, `w` width (2), `color` |
 | `ring` | `x`, `y` (centre), `r` (50), `w` thickness (8), `value`, `max` (100), `color`, `track`: a progress ring from 12 o'clock |
 | `bar` | `x`, `y`, `w` (100), `h` (8), `value`, `max` (100), `color`, `track` |
@@ -217,7 +217,7 @@ clock's own; a name without a dot is a [variable](#variables).
 |---|---|
 | `time.` | `hm` (`9:54`, 12/24 h as set), `hour` (`9`; `09` in 24 h), `min` (`05`), `sec` (`07`), `ms` (`0`–`999` since the second began, the same for every item of a frame: for animation), `ampm` (`PM`, 12 h only), `epoch` (Unix time), `daymin` (minutes since midnight, `0`–`1439`), `zone` (`EDT`) |
 | `date.` | `text` (`5 October`), `day` (`5`), `wday` (`Monday`), `wday3` (`MON`), `month` (`October`), `month3` (`Oct`), `monthnum` (`10`), `year` (`2026`), `yday` (`278`, day of the year), `week` (`41`, ISO week), `wdaynum` (`1` Monday to `7` Sunday), `mdays` (`31`, days in the month) |
-| `now.` | The current weather: `temp`, `feels` (`21`, °C/°F as set), `hum` (`64`, %), `wind` (`15`, km/h or mph as set), `press` (`1013`, hPa), `clouds` (`75`, %), `code` (`61`, WMO weather code), `icon` (`wi-day-rain`), `text` (`light rain`), `kind` (`Rain`), `age` (minutes since the last update), `err` (the last error, or empty) |
+| `now.` | The current weather: `temp`, `feels` (`21`, °C/°F as set), `hum` (`64`, %), `wind` (`15`, km/h or mph as set), `press` (`1013`, hPa), `clouds` (`75`, %), `code` (`61`, WMO weather code), `icon` (`wi-day-rain`), `text` (`light rain`), `kind` (`Rain`), `age` (minutes since the last update), `err` (the last error, or empty); within the next hour (spec 028): `rain_in`, `snow_in` (minutes until it starts: `0` now, `15`, `30`, `45`; empty when none is due), `rain_mm`, `snow_cm` (the most in a quarter hour; in inches with mph) |
 | `day0.` to `day3.` | Today and the next three days: `wday`, `wday3`, `low`, `high`, `feels` (feels-like high), `rain` (chance, %), `wind` (highest), `hum` (mean), `rise`, `set` (sunrise, sunset), `icon` |
 | `sun.` | `up` (`1` between sunrise and sunset, else `0`), `next` (`rise` or `set`), `rise`, `set` (`7:21`), `until_rise`, `until_set` (minutes until the next one), `daylen` (minutes of daylight) |
 | `moon.` | `phase` (`0` new, `2` first quarter, `4` full, `6` last quarter; `0`–`7`), `lit` (% lit), `age` (days since the new moon) |

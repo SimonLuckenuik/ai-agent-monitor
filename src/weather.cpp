@@ -158,6 +158,7 @@ static bool fetchOpenMeteo() {
                F("&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day,pressure_msl,cloud_cover"
                  "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
                  "wind_speed_10m_max,relative_humidity_2m_mean"
+                 "&minutely_15=rain,snowfall,precipitation_probability,weather_code&forecast_minutely_15=4"
                  "&forecast_days=4&timezone=auto&wind_speed_unit=ms");
   if (!httpJson(url, doc)) return false;
 #if SMARTCLOCK_EMULATOR
@@ -189,6 +190,23 @@ static bool fetchOpenMeteo() {
   wmoText(code, false, wx.main, wx.desc);
   wx.code = code;
   wx.icon = weatherIconName(code, day);
+  // The next hour by quarter (spec 028): when rain or snow starts, and how much. A quarter
+  // counts with 0.1 mm of rain (0.1 cm of snow), or its weather code at a 50% chance.
+  JsonObject q = doc[F("minutely_15")];
+  JsonArray qRain = q[F("rain")], qSnow = q[F("snowfall")], qPop = q[F("precipitation_probability")],
+            qCode = q[F("weather_code")];
+  wx.rainIn = wx.snowIn = -1;
+  wx.rainMm = wx.snowCm = 0;
+  for (int i = 0; i < 4 && i < (int)qCode.size(); ++i) {
+    float r = qRain[i] | 0.0f, s = qSnow[i] | 0.0f;
+    int pop = qPop[i] | 0, c = qCode[i] | 0;
+    bool rainCode = (c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95;
+    bool snowCode = (c >= 71 && c <= 77) || c == 85 || c == 86;
+    if (wx.rainIn < 0 && (r >= 0.1f || (rainCode && pop >= 50))) wx.rainIn = i * 15;
+    if (wx.snowIn < 0 && (s >= 0.1f || (snowCode && pop >= 50))) wx.snowIn = i * 15;
+    wx.rainMm = std::max(wx.rainMm, r);
+    wx.snowCm = std::max(wx.snowCm, s);
+  }
   int comma = cfg.geoName.indexOf(',');
   wx.cityName = comma > 0 ? cfg.geoName.substring(0, comma) : cfg.geoName;
 #if SMARTCLOCK_EMULATOR

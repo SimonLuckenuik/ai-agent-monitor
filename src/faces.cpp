@@ -585,6 +585,13 @@ int pick(const String& s, const char* const* names) {
 const char* const DAY_F[] = {"wday", "wday3", "low", "high", "feels", "rain", "wind", "hum", "rise", "set", "icon", nullptr};
 
 String numText(long v) { char b[12]; snprintf(b, sizeof(b), "%ld", v); return b; }
+// v with `decimals` decimals (1 or 2), without float printf (the firmware leaves it out).
+String decText(float v, int decimals) {
+  long scale = decimals == 2 ? 100 : 10, n = lroundf(v * scale);
+  char b[16];
+  snprintf(b, sizeof(b), decimals == 2 ? "%ld.%02ld" : "%ld.%ld", n / scale, n % scale);
+  return b;
+}
 int windSpeed(float ms) { return lroundf(cfg.mile ? ms * 2.237f : ms * 3.6f); }
 
 // One forecast day's field: {day1.high}, or {it.high} in a repeat over "days".
@@ -627,7 +634,8 @@ int isoWeek(const struct tm& t) {
 const char* const GROUPS[] = {"time", "date", "now", "it", "sun", "moon", "units", "loc", "theme", "msg", "age", nullptr};
 const char* const TIME_F[] = {"hm", "hour", "min", "sec", "ms", "ampm", "epoch", "daymin", nullptr};
 const char* const DATE_F[] = {"text", "day", "wday", "wday3", "month", "month3", "monthnum", "year", "yday", "week", "wdaynum", "mdays", nullptr};
-const char* const NOW_F[] = {"text", "kind", "icon", "err", "temp", "feels", "hum", "wind", "press", "clouds", "code", "age", nullptr};
+const char* const NOW_F[] = {"text", "kind", "icon", "err", "temp", "feels", "hum", "wind", "press", "clouds", "code", "age",
+                             "rain_in", "snow_in", "rain_mm", "snow_cm", nullptr};
 const char* const SUN_F[] = {"up", "next", "rise", "set", "until_rise", "until_set", "daylen", nullptr};
 const char* const MOON_F[] = {"phase", "lit", "age", nullptr};
 
@@ -677,6 +685,10 @@ String fieldValue(const String& key, const struct tm& t) {
       if (k == 1) return wxMain();
       if (k == 2) return wx.icon;
       if (k == 3) return wx.error;
+      if (k == 12 || k == 13) {   // minutes until rain or snow: empty when none is due
+        int in = k == 12 ? wx.rainIn : wx.snowIn;
+        return wx.valid && in >= 0 ? numText(in) : String();
+      }
       if (k < 0) break;
       if (!wx.valid) return "--";
       switch (k) {
@@ -688,6 +700,8 @@ String fieldValue(const String& key, const struct tm& t) {
         case 9: return numText(wx.clouds);
         case 10: return numText(wx.code);
         case 11: return numText((millis() - wx.lastSuccess) / 60000);
+        case 14: return cfg.mile ? decText(wx.rainMm / 25.4f, 2) : decText(wx.rainMm, 1);   // in, or mm
+        case 15: return cfg.mile ? decText(wx.snowCm / 2.54f, 1) : decText(wx.snowCm, 1);   // in, or cm
       }
       break;
     case 3:   // it: the repeat entry being drawn
@@ -1916,8 +1930,11 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
     int r = inum(it, "r", 10, t);
     Paint p = paintOf(it["color"], WHITE, x - r, y - r, 2 * r, 2 * r, t);
     bool fill = !it["fill"].is<bool>() || it["fill"].as<bool>();
-    if (!fill) D().drawSmoothCircle(x, y, r, p.first(), faceBg);
-    else if (p.n == 1) D().fillSmoothCircle(x, y, r, p.first(), faceBg);
+    // "under": what the edge blends into, when the circle sits on another item (the panel
+    // cannot be read back): concentric rings use the ring outside them.
+    uint16_t under = jhas(it, "under") ? colorOf(it["under"], faceBg, t) : faceBg;
+    if (!fill) D().drawSmoothCircle(x, y, r, p.first(), under);
+    else if (p.n == 1) D().fillSmoothCircle(x, y, r, p.first(), under);
     else paintRect(p, x - r, y - r, 2 * r + 1, 2 * r + 1, r);
     if (jhas(it, "border")) D().drawSmoothArc(x, y, r, std::max(0, r - std::max(1, inum(it, "bw", 2, t))), 0, 360, colorOf(it["border"], WHITE, t), faceBg);
   } else if (!strcmp(type, "line")) {
@@ -2580,12 +2597,21 @@ void dayTile(int k, const struct tm& t, bool force) {
   else { sunFact(sun1, next.sunrise, true); sunFact(sun2, next.sunset, false); }
   weatherFacts(166, now ? wx.wind : d.wind, now ? wx.humidity : d.humidity, sun1, sun2);
   D().drawFastHLine(0, 179, SCR_W, PANEL_HI);
-  const char* labels[] = {tr("LOW", "MIN"), tr("HIGH", "MAX"), tr("PRECIP", "PRECIP.")};
+  // Today, with rain or snow due within the hour (spec 028), the chance of precipitation
+  // gives way to when: "RAIN IN" / "15 MIN", or "SNOW" / "NOW".
+  int soon = !now ? -1 : wx.rainIn >= 0 && (wx.snowIn < 0 || wx.rainIn <= wx.snowIn) ? wx.rainIn : wx.snowIn;
+  bool snow = soon >= 0 && soon == wx.snowIn && !(wx.rainIn >= 0 && wx.rainIn <= wx.snowIn);
+  const char* last = soon < 0 ? tr("PRECIP", "PRECIP.")
+                   : soon == 0 ? (snow ? tr("SNOW", "NEIGE") : tr("RAIN", "PLUIE"))
+                               : (snow ? tr("SNOW IN", "NEIGE DANS") : tr("RAIN IN", "PLUIE DANS"));
+  const char* labels[] = {tr("LOW", "MIN"), tr("HIGH", "MAX"), last};
   for (int i = 0; i < 3; ++i) text(labels[i], 44 + 76 * i, 194, 2, MUTED, BG, MC_DATUM);
   temp(44, 222, displayTemp(d.lo), 4, R[R_LOW], BG);
   temp(120, 222, displayTemp(d.hi), 4, R[R_HIGH], BG);
-  snprintf(b, sizeof(b), "%d%%", std::min(d.pop, 100));
-  text(b, 196, 222, 4, RAIN, BG, MC_DATUM);
+  if (soon < 0) snprintf(b, sizeof(b), "%d%%", std::min(d.pop, 100));
+  else if (soon == 0) snprintf(b, sizeof(b), "%s", tr("NOW", "EN COURS"));
+  else snprintf(b, sizeof(b), "%d MIN", soon);
+  text(b, 196, 222, soon == 0 && fr() ? 2 : 4, RAIN, BG, MC_DATUM);   // "EN COURS" is too wide for font 4
 }
 
 // ---- 9 Agents: every active agent message on one screen --------------------------

@@ -1406,6 +1406,8 @@ void handleStatus() {
     JsonObject w = doc[F("weather")].to<JsonObject>();
     w[F("temp")] = wx.temp; w[F("feels")] = wx.feels; w[F("humidity")] = wx.humidity; w[F("wind")] = wx.wind;
     w[F("main")] = wx.main; w[F("desc")] = wx.desc; w[F("icon")] = wx.icon; w[F("city")] = wx.cityName;
+    if (wx.rainIn >= 0) w[F("rainIn")] = wx.rainIn;   // minutes until rain or snow (spec 028)
+    if (wx.snowIn >= 0) w[F("snowIn")] = wx.snowIn;
   }
   doc[F("forecastDays")] = fc.valid ? fc.count : 0;
   doc[F("photos")] = storageReady ? photoCount() : 0;

@@ -169,6 +169,16 @@ int main(int argc, char** argv) {
   fresh(FACE_DAY0, at(5, 30, 0), "variant_today_before_sunrise");
   fresh(FACE_DAY0, at(13, 0, 0), "variant_today_afternoon");
   fresh(FACE_DAY0 + 3, at(13, 0, 0), "variant_day3_widest_facts");
+  // Rain or snow within the hour (spec 028): the last cell says when.
+  wx.rainIn = 15; wx.version++;
+  fresh(FACE_DAY0, at(13, 0, 0), "variant_today_rain_in_15");
+  wx.rainIn = -1; wx.snowIn = 0; wx.version++;
+  fresh(FACE_DAY0, at(13, 0, 0), "variant_today_snow_now");
+  cfg.lang = "fr";
+  wx.snowIn = 30; wx.version++;
+  fresh(FACE_DAY0, at(13, 0, 0), "variant_today_snow_in_30_fr");
+  cfg.lang = "en";
+  wx.snowIn = -1; wx.version++;
   for (int i = 0; i < 2; ++i) {   // the worst case: -NN everywhere, 100 km/h wind, 100% humidity
     ForecastDay& d = fc.days[i];
     d.hi = -38; d.lo = -46; d.feels = -52; d.wind = 27.8f; d.humidity = 100; d.sunrise = 623; d.sunset = 1256;

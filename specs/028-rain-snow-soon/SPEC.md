@@ -1,6 +1,6 @@
 # 028 Rain or snow within the hour
 
-Status: Approved (2026-10-31)
+Status: In progress (approved 2026-10-31)
 
 ## Problem
 
@@ -24,9 +24,11 @@ coming hour and shows "rain 15 min".
    A quarter hour counts as rain with at least 0.1 mm of rain, or a rain weather code
    (51-67, 80-82, 95-99) at a 50% chance or more. It counts as snow with at least 0.1 cm
    of snow, or a snow code (71-77, 85-86) at 50% or more. Sleet counts as both.
-3. **The built-in Weather today face** shows "Rain in 15 min" or "Snow in 15 min" ("Pluie
-   dans 15 min", "Neige dans 15 min") in place of its condition line while one is due
-   within the hour, and "Rain now" / "Snow now" while it falls.
+3. **The built-in Weather today face**, while rain or snow is due within the hour, shows
+   when in its last cell, in place of the chance of precipitation: "RAIN IN" / "15 MIN"
+   ("PLUIE DANS"), and "RAIN" / "NOW" ("EN COURS") while it falls; the same for snow
+   (amended while building: the face has no condition line to replace). `/status`
+   reports `rainIn` and `snowIn` in its weather object.
 4. **Documented** in the integrations API (placeholders) and the skill's face reference.
    An example face (`examples/faces/umbrella.json`) shows an umbrella or a snowflake with
    `when` on the two placeholders.

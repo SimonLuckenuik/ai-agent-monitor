@@ -11,6 +11,10 @@ struct Weather {
   String main, desc, icon, cityName;   // main and desc in English (API, MQTT)
   int code = 3;                        // WMO weather code, for other languages
   int16_t sunrise = -1, sunset = -1;   // today, minutes after local midnight; -1 unknown
+  // The next hour, by quarter (spec 028): minutes until rain or snow starts (0 now, 15,
+  // 30, 45; -1 none expected), and the most in one quarter (mm of rain, cm of snow).
+  int8_t rainIn = -1, snowIn = -1;
+  float rainMm = 0, snowCm = 0;
   String error;                        // last failure, for the page and the faces
   uint32_t lastFetch = 0;              // millis() of the last attempt
   uint32_t lastSuccess = 0;            // millis() of the last successful fetch

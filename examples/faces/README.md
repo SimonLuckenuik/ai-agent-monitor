@@ -1,6 +1,6 @@
 # Example custom faces
 
-39 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
+40 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
 push to the clock (`POST /api/faces`, or `python clock.py push <name> <file>` from the
 Claude Code skill); the format is in
 [docs/specifications/integrations-api.md](../../docs/specifications/integrations-api.md#custom-faces).
@@ -53,7 +53,8 @@ integration run: `python scripts/gen_marketplace.py --previews .pio/integration`
 | ![](../../docs/images/faces/seaside.png) | **seaside**: a beach that turns to night | A day/night palette; the weather icon |
 | ![](../../docs/images/faces/night-lake.png) | **night-lake**: a mountain lake through the day | Layered SVG paths; four palettes (night, dawn, day, dusk) chosen from `{sun.*}`; the sun and moon cross the sky and set behind the hills, their reflection follows them on the lake |
 | ![](../../docs/images/faces/synthwave.png) | **synthwave**: an 80s sunset | Gradients on paths and circles |
-| ![](../../docs/images/faces/aquarium.png) | **aquarium**: fish that swim across | `sprite`s whose `x` and `y` follow `{time.sec}` and `{time.ms}`, with tail frames, and bubbles that follow the orange fish; a moving sprite repaints only around itself |
+| ![](../../docs/images/faces/aquarium.png) | **aquarium**: a clownfish and a blue tang swim across | `sprite`s whose `x` and `y` follow `{time.sec}` and `{time.ms}`, and bubbles that follow the clownfish; gradient water; a moving sprite repaints only around itself (the two fish after smalltv-pomodoro's aquarium, by davicorrea0) |
+| ![](../../docs/images/faces/umbrella.png) | **umbrella**: rain or snow within the hour | `"when"` on `{now.rain_in}` and `{now.snow_in}` (from the 15-minute forecast): in the rotation only while rain or snow is due; an umbrella `path` or the snowflake `icon` by `show`; fallbacks (`{now.rain_in|99}`) so the conditions read as numbers when nothing is due |
 | ![](../../docs/images/faces/what-to-wear.png) | **what-to-wear**: dress for today's weather | A palette and an outfit `sprite` frame from feels-like bands (°F converted in the expression); an umbrella, sunglasses or a scarf by `show` |
 | ![](../../docs/images/faces/sky-window.png) | **sky-window**: the sky through a window | A gradient from a palette picked by time of day (dawn, day, dusk, night) and weather; clouds from `{now.clouds}`; rain, snow or fog `repeat`s; a moon shaded by `{moon.lit}`; walls drawn last to clip the sky |
 | ![](../../docs/images/faces/golden-hour.png) | **golden-hour**: the hour of warm light | `"when"`: only in the hour after sunrise and before sunset, with its own `duration`; the sun sinks with `{sun.until_set}` |

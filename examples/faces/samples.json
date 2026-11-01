@@ -264,5 +264,8 @@
    "alarm": "@age 420 Disk 97% full on nas",
    "source": "homelab watchdog"
   }
+ },
+ "umbrella": {
+  "weather": {"code": 3, "quarters": [[0, 0, 20, 3], [0.6, 0, 70, 61], [1.2, 0, 90, 63], [0.8, 0, 90, 63]]}
  }
 }

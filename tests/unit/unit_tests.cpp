@@ -322,6 +322,17 @@ static void testPlaceholders() {
   CHECK_STR(resolve("{date.wday} {date.wday3} {date.day} {date.month} {date.month3}", t), "Monday MON 26 October Oct");
   CHECK_STR(resolve("{date.monthnum}/{date.year} {date.yday} w{date.week}", t), "10/2026 299 w44");
   CHECK_STR(resolve("{date.text}", t), "26 October");
+  // Rain or snow within the hour (spec 028): minutes, or empty for the fallback.
+  CHECK_STR(resolve("{now.rain_in|dry}/{now.snow_in|none}", t), "dry/none");
+  wx.rainIn = 30; wx.rainMm = 1.26f; wx.snowIn = 0; wx.snowCm = 0.4f;
+  CHECK_STR(resolve("{now.rain_in}/{now.snow_in} {now.rain_mm} {now.snow_cm}", t), "30/0 1.3 0.4");
+  CHECK_STR(resolve("{{now.rain_in}<45?soon:later}", t), "soon");
+  cfg.mile = true;
+  CHECK_STR(resolve("{now.rain_mm} {now.snow_cm}", t), "0.05 0.2");
+  cfg.mile = false;
+  wx.valid = false;
+  CHECK_STR(resolve("{now.rain_in|dry}", t), "dry");
+  wx.valid = true; wx.rainIn = wx.snowIn = -1; wx.rainMm = wx.snowCm = 0;
   CHECK_STR(resolve("{date.wdaynum} {date.mdays}", t), "1 31");
   struct tm feb = t; feb.tm_mon = 1; feb.tm_wday = 0;
   CHECK_STR(resolve("{date.wdaynum} {date.mdays}", feb), "7 28");

@@ -7,6 +7,13 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Rain or snow within the hour** (spec 028): from Open-Meteo's 15-minute forecast.
+  Weather today's last cell says "RAIN IN 15 MIN" or "SNOW NOW" while one is due (in
+  French too); faces get `{now.rain_in}`, `{now.snow_in}`, `{now.rain_mm}`,
+  `{now.snow_cm}`; `/status` reports `rainIn` and `snowIn`. A new example face, umbrella,
+  appears only while rain or snow is due.
+- **The plugin (0.6.1)**: the skill's face reference and checker know the new
+  placeholders.
 - **Network guards** (spec 029):
   - **Request host:** on the home network the clock answers only requests addressed to
     it (its IP, its host name, `<host>.local`, or a name listed in the new setting WiFi →

@@ -167,6 +167,28 @@ def extreme_cold(emu):
 
 
 @case
+def rain_snow_soon(emu):
+    """Spec 028: rain or snow within the hour, from the 15-minute forecast: /status, the
+    placeholders' rule, and Weather today's last cell."""
+    cases = [
+        ("dry", [(0, 0, 0, 2)] * 4, None, None),
+        ("rain_in_30", [(0, 0, 10, 2), (0.05, 0, 30, 3), (0.4, 0, 70, 61), (1.2, 0, 90, 63)], 30, None),
+        ("rain_likely_15", [(0, 0, 20, 3), (0, 0, 60, 61), (0, 0, 60, 61), (0, 0, 40, 3)], 15, None),
+        ("snow_in_15", [(0, 0, 10, 3), (0, 0.2, 80, 71), (0, 0.6, 90, 73), (0, 0.6, 90, 73)], None, 15),
+        ("rain_now", [(0.8, 0, 90, 63)] * 4, 0, None),
+    ]
+    for label, quarters, rain, snow in cases:
+        emu.fix_weather(open_meteo(quarters=quarters))
+        w = emu.status()["weather"]
+        check(w.get("rainIn") == rain and w.get("snowIn") == snow, f"{label}: rainIn {w.get('rainIn')}, snowIn {w.get('snowIn')}")
+        emu.show(10)
+        shot(emu, f"rain_snow_{label}")
+    heap = emu.status().get("weatherHeap")
+    print(f"  weatherHeap {heap} B")
+    emu.fix_weather(open_meteo())
+
+
+@case
 def sun_phases(emu):
     """Weather today shows the next two sun events: before sunrise, by day, after sunset."""
     for label, when, day in (("before_sunrise", epoch(2026, 10, 5, 5, 30), 0),

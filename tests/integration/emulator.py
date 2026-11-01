@@ -32,11 +32,12 @@ def epoch(y, mo, d, h, mi, utc_offset=-4):
 
 
 def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, city="Montreal",
-               days=None, pressure=1016.4, clouds=40):
+               days=None, pressure=1016.4, clouds=40, quarters=None):
     """An Open-Meteo forecast reply, as the clock asks for it (wind in m/s).
 
     days: four (code, high, low, feels_high, precip %, wind m/s, humidity %, sunrise,
-    sunset) tuples, today first.
+    sunset) tuples, today first. quarters: the next hour by quarter (spec 028), four
+    (rain mm, snowfall cm, precipitation %, WMO code) tuples; dry by default.
     """
     days = days or [
         (2, 21, 11, 20, 10, 6.1, 64, "07:02", "18:31"),
@@ -46,6 +47,8 @@ def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, c
     ]
     dates = ["2026-10-0%d" % (5 + i) for i in range(4)]
     col = lambda i: [d[i] for d in days]
+    quarters = quarters or [(0, 0, 0, code)] * 4
+    q = lambda i: [x[i] for x in quarters]
     return {
         "city": city,
         "current": {"temperature_2m": temp, "apparent_temperature": feels,
@@ -58,6 +61,8 @@ def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, c
                   "relative_humidity_2m_mean": col(6),
                   "sunrise": [f"{t}T{d[7]}" for t, d in zip(dates, days)],
                   "sunset": [f"{t}T{d[8]}" for t, d in zip(dates, days)]},
+        "minutely_15": {"time": ["2026-10-05T10:00", "2026-10-05T10:15", "2026-10-05T10:30", "2026-10-05T10:45"],
+                        "rain": q(0), "snowfall": q(1), "precipitation_probability": q(2), "weather_code": q(3)},
     }
 
 

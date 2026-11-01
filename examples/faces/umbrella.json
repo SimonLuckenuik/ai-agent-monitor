@@ -1,0 +1,25 @@
+{
+  "when": "{now.rain_in|99}<99||{now.snow_in|99}<99",
+  "duration": 20,
+  "bg": "#0b1d33",
+  "items": [
+    {"type": "text", "x": 120, "y": 22, "text": "{time.hm}", "font": 2, "align": "mc", "color": "#8e8e93"},
+    {"type": "path", "x": 120, "y": 92, "size": 112, "align": "mc", "stroke": "#64d2ff", "sw": 1.8,
+     "show": "{now.rain_in|99}<99",
+     "d": ["M22 12a10.06 10.06 1 0 0-20 0Z", "M12 12v8a2 2 0 0 0 4 0", "M12 2v1"]},
+    {"type": "icon", "x": 120, "y": 92, "size": 112, "icon": "wi-snowflake-cold", "color": "#e8f0ff",
+     "show": "{now.rain_in|99}>=99"},
+    {"type": "text", "x": 120, "y": 172, "text": "RAIN IN {now.rain_in} MIN", "font": "big", "size": 26, "w": 220,
+     "align": "mc", "color": "#64d2ff", "show": "{now.rain_in|99}>0&&{now.rain_in|99}<99"},
+    {"type": "text", "x": 120, "y": 172, "text": "RAIN NOW", "font": "big", "size": 30, "align": "mc",
+     "color": "#64d2ff", "show": "{now.rain_in|99}==0"},
+    {"type": "text", "x": 120, "y": 172, "text": "SNOW IN {now.snow_in} MIN", "font": "big", "size": 26, "w": 220,
+     "align": "mc", "color": "#e8f0ff", "show": "{now.rain_in|99}>=99&&{now.snow_in|99}>0"},
+    {"type": "text", "x": 120, "y": 172, "text": "SNOW NOW", "font": "big", "size": 30, "align": "mc",
+     "color": "#e8f0ff", "show": "{now.rain_in|99}>=99&&{now.snow_in|99}==0"},
+    {"type": "text", "x": 120, "y": 214, "text": "up to {now.rain_mm} {{units.wind}==mph?in:mm} in 15 min",
+     "font": 2, "align": "mc", "color": "#8e8e93", "show": "{now.rain_in|99}<99"},
+    {"type": "text", "x": 120, "y": 214, "text": "up to {now.snow_cm} {{units.wind}==mph?in:cm} in 15 min",
+     "font": 2, "align": "mc", "color": "#8e8e93", "show": "{now.rain_in|99}>=99"}
+  ]
+}

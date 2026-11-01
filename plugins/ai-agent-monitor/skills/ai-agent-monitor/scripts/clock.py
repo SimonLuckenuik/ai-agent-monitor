@@ -101,7 +101,7 @@ SCHEMA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "referen
 FIELDS = {
     "time": "hm hour min sec ms ampm epoch daymin zone",
     "date": "text day wday wday3 month month3 monthnum year yday week wdaynum mdays",
-    "now": "temp feels hum wind press clouds code icon text kind age err",
+    "now": "temp feels hum wind press clouds code icon text kind age err rain_in snow_in rain_mm snow_cm",
     "sun": "up next rise set until_rise until_set daylen",
     "moon": "phase lit age",
     "units": "temp wind",
