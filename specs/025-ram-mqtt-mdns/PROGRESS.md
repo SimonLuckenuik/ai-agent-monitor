@@ -38,3 +38,10 @@
   retro-runner on screen 16,736 B and night-lake 17,072 B; the built-in faces 23.8-25.1 KB.
   `stackFree` 736 B all along (960 B at boot). The rotation holds only the built-in faces: the
   installed faces are shown on demand.
+- 2026-10-31: MQTT on the clock, to a test broker (Mosquitto 2.0.18 in Docker on the
+  owner's PC, same IOT network). Connected; `mqttHeap` 672 B on the chip (about 1.4 KB in
+  the emulator), free heap 21.2-22.6 KB with it on (about 24 KB before). Discovery
+  published (backlight, face, temperature, humidity, weather, signal, update weather),
+  state, backlight and face too; `face/set` "Big time" switched the face. Saving the
+  settings page reconnected seven times in 45 s (each MQTT key it sets restarts the
+  connection), then the connection stayed up. No restart.
