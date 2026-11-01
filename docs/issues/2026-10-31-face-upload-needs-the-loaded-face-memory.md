@@ -1,6 +1,6 @@
 # Sending a face fails while a big face is loaded
 
-Status: Fixed in 1.9.1 (spec 024), to confirm on the clock
+Status: Fixed in 1.9.1 (spec 024), confirmed on the clock (2.0.0, 2026-10-31)
 
 Date: 2026-10-31
 
@@ -43,3 +43,9 @@ face is shown, and in a web server hook before an upload's body is read; `storeF
 checks a filtered parse (the items' types only) and answers 507 "Not enough memory" on
 NoMemory. Integration case `faces_beside_big_faces`: all 38 other example faces upload
 beside retro-runner (6.9 KB free), flip-clock-wide and night-lake.
+
+## 2026-10-31: confirmed on the clock
+
+With night-lake on screen (16,464 B free), a 769-byte face uploaded with a 200 and the
+clock kept running (16,040 B free after, `heapLow` 15,960 B). Faces sent over MQTT
+(`<base>/custom/<name>`) beside the CI face stored as well.

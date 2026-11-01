@@ -1,6 +1,6 @@
 # Weather never loads on 1.9.0, and night-lake draws without its sun
 
-Status: Fixed in 1.9.1 (spec 024), to confirm on the clock
+Status: Fixed in 1.9.1 (spec 024), confirmed on the clock (2.0.0, 2026-10-31)
 
 Date: 2026-10-31
 
@@ -42,3 +42,8 @@ on screen gives its document back when a fetch is short of memory, and a wait sh
 `weatherError` "Waiting for memory". Integration case `faces_beside_big_faces`: the
 weather syncs with each big face on screen. Sun times from the location were written and
 dropped at the owner's request: with the weather loading, `{sun.*}` has its values.
+
+## 2026-10-31: confirmed on the clock
+
+On 2.0.0 the weather loads at boot and keeps loading: four forecast days, the fetch
+taking 3,080-3,896 B (`weatherHeap`), with 21-25 KB free beside it.
