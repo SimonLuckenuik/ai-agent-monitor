@@ -13,7 +13,7 @@
 #define SMARTCLOCK_MDNS 0   // see serviceMdns()
 #endif
 #if SMARTCLOCK_MDNS
-#include <ESP8266mDNS.h>
+#include "mdns.h"   // our own responder (spec 027), not the core's LEAmDNS
 #endif
 #include <DNSServer.h>
 #include <EEPROM.h>
@@ -158,6 +158,9 @@ void clearPowerCycles() {
 // Every deliberate reboot clears both recovery triggers so it cannot be mistaken
 // for a crash or a power-cycle sequence.
 void safeRestart() {
+#if SMARTCLOCK_MDNS
+  mdnsGoodbye();
+#endif
   markBoot(BOOT_CLEAN);
   clearPowerCycles();
   delay(500);
@@ -209,8 +212,9 @@ bool requestAuthorized();
 bool wxRefresh = true;    // fetch at once: at boot, and when the city changes
 // Optional work waits for headroom instead of risking an allocation failure.
 // The heap each needs free to start: measured (/status mdnsHeap, weatherHeap) plus a
-// margin. mDNS held 420 B in the emulator (spec 025); a weather fetch took 6.1 KB (spec 024).
-constexpr uint32_t MDNS_MIN_HEAP = 4096, WEATHER_MIN_HEAP = 8192;
+// margin. Our mDNS responder holds 136 B, and 512 B while it answers (spec 027); a
+// weather fetch took 6.1 KB (spec 024).
+constexpr uint32_t MDNS_MIN_HEAP = 2048, WEATHER_MIN_HEAP = 8192;
 bool mdnsStarted = false, mdnsWaiting = false;
 uint32_t mdnsHeap = 0;   // what starting mDNS took, for /status (spec 025)
 uint32_t heapLow = UINT32_MAX;   // lowest free heap seen, for /status
@@ -1381,25 +1385,19 @@ void recoveryLoop() {
   delay(1);
 }
 
-// mDNS waits for the station link and MDNS_MIN_HEAP of free heap (its responder
-// allocates on start), then advertises the web UI with a few identifying TXT records.
+// mDNS waits for the station link and MDNS_MIN_HEAP of free heap, then answers for
+// <host>.local and advertises the web UI with a few identifying TXT records (mdns.cpp).
 // Built with SMARTCLOCK_MDNS (the full image; the no-MQTT plain image leaves it out
 // for size). The DHCP hostname also names the clock in the router.
 void serviceMdns() {
 #if SMARTCLOCK_MDNS
-  if (mdnsStarted) { MDNS.update(); return; }
+  if (mdnsStarted) { mdnsLoop(); return; }
   if (WiFi.status() != WL_CONNECTED || millis() - bootStarted < 1500) return;
   mdnsWaiting = ESP.getFreeHeap() < MDNS_MIN_HEAP;
   if (mdnsWaiting) return;
   uint32_t before = ESP.getFreeHeap();
   String host = deviceHost();
-  if (!MDNS.begin(host.c_str())) return;
-  MDNS.addService("http", "tcp", 80);
-  MDNS.addServiceTxt("http", "tcp", "model", "AI Agent Monitor");
-  MDNS.addServiceTxt("http", "tcp", "version", FW_VERSION);
-  MDNS.addServiceTxt("http", "tcp", "board", "SD Pro (GeekMagic-style)");
-  MDNS.addServiceTxt("http", "tcp", "api", "ai-agent-monitor");
-  MDNS.addServiceTxt("http", "tcp", "path", "/");
+  if (!mdnsStart(host, FW_VERSION)) return;
   mdnsStarted = true;
   mdnsHeap = before > ESP.getFreeHeap() ? before - ESP.getFreeHeap() : 0;
 #endif

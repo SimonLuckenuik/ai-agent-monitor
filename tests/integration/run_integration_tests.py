@@ -411,6 +411,9 @@ def mqtt_and_mdns(emu):
                                   "-v", f"{ROOT / 'tests/integration'}:/t", "python:3.12-alpine",
                                   "python", "/t/mdns_query.py", host], capture_output=True, text=True).stdout
         check("answers" in answers and int(answers.split()[-1]) > 0, f"mDNS answers beside {big}: {answers!r}")
+        check(f"SRV 80 {host}.local" in answers and f"PTR {host}._http._tcp.local" in answers
+              and any(line.startswith("A ") for line in answers.splitlines()) and "model=AI Agent Monitor" in answers,
+              f"mDNS records beside {big}: {answers!r}")
         s = emu.status()
         print(f"  {big}: heap {s['heap']} B free, mqttHeap {s.get('mqttHeap')} B, mdnsHeap {s.get('mdnsHeap')} B")
     # Saving the settings page sends every MQTT field: unchanged ones must not reconnect.

@@ -7,6 +7,10 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **mDNS**: our own responder replaces the core's LEAmDNS (spec 027). It answers for
+  `<host>.local` and advertises the web service as before, in about 4.5 KB of flash
+  instead of 21 KB, and holds 136 B of heap instead of about 0.5-1 KB. The compressed
+  update image is 11 KB smaller, which leaves room for the features that follow.
 - **Face variables**: a new variable when all 40 are in use is refused with a 507
   "No room for variable" instead of being dropped while the API answered OK. Expired
   variables are cleared first to make room.

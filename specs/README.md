@@ -36,7 +36,7 @@ Next free number: **031**.
 | [024 Memory headroom: weather and uploads beside big faces](024-memory-headroom/SPEC.md) | In progress (released in 1.9.1) |
 | [025 RAM back, and MQTT and mDNS on again](025-ram-mqtt-mdns/SPEC.md) | In progress (released in 2.0.0) |
 | [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | Approved |
-| [027 A small mDNS responder](027-small-mdns/SPEC.md) | Approved |
+| [027 A small mDNS responder](027-small-mdns/SPEC.md) | In progress (built; to confirm on the clock) |
 | [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Approved |
 | [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | Approved |
 | [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | Approved |

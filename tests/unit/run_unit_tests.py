@@ -4,7 +4,7 @@
 
 Compiles tests/unit/unit_tests.cpp, which includes src/faces.cpp (so its internal
 functions are reachable) against the face preview's mocks, plus src/ascii.cpp, with
-Zig. Uses ArduinoJson and TFT_eSPI fonts from .pio/libdeps (run `pio run` once first).
+Zig; then tests/unit/mdns_tests.cpp against src/mdns_packet.cpp. Uses ArduinoJson and TFT_eSPI fonts from .pio/libdeps (run `pio run` once first).
 """
 from pathlib import Path
 import os
@@ -47,4 +47,9 @@ exe = build / "unit_tests.exe"
 subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", "-Wno-nullability-completeness", *inc,
                 str(here / "unit_tests.cpp"), str(build / "ascii.cpp"), str(mock / "TFT_eSPI.cpp"), str(obj),
                 "-o", str(exe)], check=True, env=env)
-sys.exit(subprocess.run([str(exe)]).returncode)
+faces = subprocess.run([str(exe)]).returncode
+# The mDNS packets (spec 027): plain C++, no mocks.
+mdns = build / "mdns_tests.exe"
+subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "mdns_tests.cpp"),
+                str(root / "src" / "mdns_packet.cpp"), "-o", str(mdns)], check=True, env=env)
+sys.exit(faces or subprocess.run([str(mdns)]).returncode)

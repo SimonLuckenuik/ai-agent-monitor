@@ -34,7 +34,7 @@ builds and tests again before it publishes.
 | The web API, settings, sign-in, routes | Safety (the guards), integration (`settings_round_trip`, `route_methods`, `face_validation`, `messages_api`) |
 | Firmware updates, recovery, the flash layout | Safety |
 | Memory: anything allocated, any new string | Safety (the strings check), integration `example_faces_memory`, `faces_beside_big_faces`, `mqtt_and_mdns`; the emulator's Device panel and heap map |
-| MQTT, mDNS, the weather fetch | Integration `mqtt_and_mdns`, `faces_beside_big_faces`, `status_and_fixed_time` |
+| MQTT, mDNS, the weather fetch | Unit (`mdns_tests`), integration `mqtt_and_mdns`, `faces_beside_big_faces`, `status_and_fixed_time` |
 | Crash handling | Integration `crash_loop_protection` |
 
 ## Unit tests
@@ -57,6 +57,10 @@ reachable, and builds against the mocks in `tests/face_preview/mock/`. 286 check
 | `testColors` | palettes and roles, the night palette, `@name` in faces |
 
 A new placeholder, function or item field gets a check here.
+
+`tests/unit/mdns_tests.cpp` checks the mDNS packets (`src/mdns_packet.cpp`, spec 027): the
+queries answered and ignored, name compression, pointer loops, truncated packets,
+200,000 random and mangled packets, and every answer read back record by record.
 
 ## Safety tests
 

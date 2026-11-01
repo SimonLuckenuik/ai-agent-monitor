@@ -26,7 +26,7 @@ the clock's `/status` and the emulator (`EMU_HEAP`, spec 022). Scripts:
 | Display (TFT_eSPI) | about 35 KB | driver 17.3 KB, sprites 6.3 KB, fonts 2, 4 and 6 7.7 KB |
 | Settings page | about 25 KB | `INDEX_HTML_GZ` 22.2 KB (72 KB of HTML), its handlers in `main.cpp` |
 | LittleFS | about 25 KB | `lfs.c` 17 KB, the Arduino wrapper 7.5 KB |
-| mDNS | about 21 KB | LEAmDNS 19.5 KB, `UdpContext` 1.8 KB. **Never runs:** `serviceMdns()` waits for 28 KB of free heap |
+| mDNS | about 4.5 KB | Our responder (`src/mdns.cpp`, `mdns_packet.cpp`, spec 027) with `WiFiUDP` and `UdpContext`. LEAmDNS took about 21 KB until 2.0.0: the compressed image fell by 11.3 KB, the plain one by 17.6 KB |
 | Web server | about 16 KB | ESP8266WebServer 9.5 KB, `std::function` handlers 4.5 KB, DNS server (setup portal) 1.9 KB |
 | Weather | about 19 KB | Open-Meteo fetch and parse 3.7 KB, HTTPClient 3.6 KB, weather icons `WI_DATA` 7.5 KB and their code 1.2 KB, Weather/Forecast/Day tiles faces 3.1 KB |
 | Built-in faces | about 10 KB | Big tiles 2.3 KB, Day tiles 1.8 KB, Message face and icons 2.3 KB, Photo 1.2 KB, Agents 1.0 KB, Weather 0.8 KB, Classic 0.6 KB, Forecast 0.6 KB, HH:MM digits 0.6 KB |
@@ -85,7 +85,7 @@ There are 7.6 KB of our literals in 1.9.1, 3.9 KB of them added since 0.1.2
 | A big face while shown (document and drawing) | retro-runner and night-lake about 7 KB, flip-clock-wide about 4.5 KB with dips to 3.7 KB free while animating | clock `/status` |
 | A weather fetch | 6.1 KB | emulator `weatherHeap`; the clock reports its own with 1.9.1 |
 | A face upload | the body twice for a moment (up to 8 KB), then once, plus a filtered check (about 1 KB) | ESP8266WebServer copies the body into the `plain` argument |
-| mDNS once started | about 0.4 KB held (emulator), under about 2 KB on the chip | its 28 KB gate keeps it off |
+| mDNS once started | 136 B held (emulator, spec 027), plus 512 B while answering; LEAmDNS held 420-560 B (emulator) and 944 B on the chip | gate 2 KB |
 | MQTT connection | about 2-2.5 KB held, 2-3 KB more while connecting (from the code) | its 16 KB gate keeps it off |
 
 ## Where the RAM went since 0.1.x
