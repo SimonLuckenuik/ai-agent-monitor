@@ -10,6 +10,8 @@ versioning. `/version` on the device reports the version it was built as; a
 - **Face variables**: a new variable when all 40 are in use is refused with a 507
   "No room for variable" instead of being dropped while the API answered OK. Expired
   variables are cleared first to make room.
+- **MQTT**: saving the settings page no longer reconnects once per field; the clock
+  connects again only when an MQTT setting actually changes.
 - **The plugin (0.5.5)**: the face format reference gives the 40-variable limit's 507.
 - **The plugin (0.5.4)**: the skill's face format reference gives the 507 "Not enough
   memory" answer and the new `/status` fields (`weatherHeap`, `mqttHeap`, `mdnsHeap`).

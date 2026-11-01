@@ -413,6 +413,15 @@ def mqtt_and_mdns(emu):
         check("answers" in answers and int(answers.split()[-1]) > 0, f"mDNS answers beside {big}: {answers!r}")
         s = emu.status()
         print(f"  {big}: heap {s['heap']} B free, mqttHeap {s.get('mqttHeap')} B, mdnsHeap {s.get('mdnsHeap')} B")
+    # Saving the settings page sends every MQTT field: unchanged ones must not reconnect.
+    # Each connection publishes "online" to <host>/status (retained: one arrives at once).
+    sub = subprocess.Popen(broker + ["mosquitto_sub", "-t", f"{host}/status", "-W", "8"],
+                           stdout=subprocess.PIPE, text=True)
+    time.sleep(1)
+    for key, value in [("mqtthost", "broker"), ("mqttport", 1883), ("mqttuser", ""), ("mqttbase", ""), ("mqtt", 1)]:
+        emu.set(key, value)
+    seen = sub.communicate()[0].split()
+    check(seen.count("online") == 1 and "offline" not in seen, f"unchanged MQTT settings reconnected: {seen}")
     emu.set("mqtt", 0)
 
 

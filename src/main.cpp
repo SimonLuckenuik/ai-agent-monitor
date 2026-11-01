@@ -657,6 +657,14 @@ String setRoles(const String& val) {
 }
 
 // Applies one setting to cfg (not saved). Shared by /api/set and settings restore.
+// An integration setting: MQTT connects again only when the value changes (the settings
+// page saves every field at once).
+template <typename T> void changed(T& setting, const T& value) {
+  if (setting == value) return;
+  setting = value;
+  integrationsSettingsChanged();
+}
+
 // Returns "" on success, otherwise the reason ("Unknown Key" for unknown keys).
 bool timeChanged = false;
 String applySetting(const String& key, const String& val) {
@@ -727,14 +735,14 @@ String applySetting(const String& key, const String& val) {
   else if (key == F("lcd_brightness")) cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key
   else if (key == F("photointerval")) cfg.photoInterval = constrain(val.toInt(), 1, 3600);
   else if (key == F("photoclock")) cfg.photoClock = (val == "1" || val == "true");
-  else if (key == F("facesapi"))   { cfg.facesApi = (val == "1" || val == "true"); integrationsSettingsChanged(); }
+  else if (key == F("facesapi"))   changed(cfg.facesApi, val == "1" || val == "true");
   else if (key == F("hacompat"))   cfg.haCompat = (val == "1" || val == "true");
-  else if (key == F("mqtt"))       { cfg.mqttOn = (val == "1" || val == "true"); integrationsSettingsChanged(); }
-  else if (key == F("mqtthost"))   { cfg.mqttHost = val; integrationsSettingsChanged(); }
-  else if (key == F("mqttport"))   { cfg.mqttPort = constrain(val.toInt(), 1, 65535); integrationsSettingsChanged(); }
-  else if (key == F("mqttuser"))   { cfg.mqttUser = val; integrationsSettingsChanged(); }
-  else if (key == F("mqttpass"))   { cfg.mqttPass = val; integrationsSettingsChanged(); }
-  else if (key == F("mqttbase"))   { cfg.mqttBase = val; integrationsSettingsChanged(); }
+  else if (key == F("mqtt"))       changed(cfg.mqttOn, val == "1" || val == "true");
+  else if (key == F("mqtthost"))   changed(cfg.mqttHost, val);
+  else if (key == F("mqttport"))   changed(cfg.mqttPort, (int)constrain(val.toInt(), 1, 65535));
+  else if (key == F("mqttuser"))   changed(cfg.mqttUser, val);
+  else if (key == F("mqttpass"))   changed(cfg.mqttPass, val);
+  else if (key == F("mqttbase"))   changed(cfg.mqttBase, val);
   else return F("Unknown Key");
   return "";
 }
