@@ -445,7 +445,7 @@ async function req(path,opt){const r=await fetch(path,opt);const t=await r.text(
 function showLogin(){if(!$('login').hidden)return;$('login').hidden=false;$('loginMsg').textContent='';setTimeout(()=>$('loginPass').focus(),50)}
 async function login(e){e.preventDefault();const m=$('loginMsg');m.className='msg';m.textContent='Signing in…';
   try{await req('/api/auth/login',form({password:$('loginPass').value}));$('login').hidden=true;$('loginPass').value='';
-    fillConfig(await(await fetch('/config')).json());await poll();loadPhotos()}
+    fillConfig(await(await fetch('/config')).json());await poll();loadPhotos();loadInteg()}
   catch(e){m.className='msg bad';m.textContent=e.message}}
 async function showOnClock(){try{await req('/api/auth/reveal',{method:'POST'});toast('Look at the clock')}catch(e){toast(e.message,1)}}
 async function logout(){try{await req('/api/auth/logout',{method:'POST'})}catch(e){}showLogin()}

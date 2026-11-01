@@ -66,9 +66,9 @@ def title(name):
 def entries():
     ours = readme_entries()
     faces = []
-    for p in sorted(FACES.glob("*.json")):
-        if p.name in ("samples.json", "marketplace.json"):
-            continue
+    order = {name: i for i, name in enumerate(ours)}   # the README's order: grouped by category
+    files = [p for p in FACES.glob("*.json") if p.name not in ("samples.json", "marketplace.json")]
+    for p in sorted(files, key=lambda p: (order.get(p.stem, len(order)), p.stem)):
         desc, cat = ours.get(p.stem, ("", "Other"))
         faces.append((p, {"title": title(p.stem), "description": desc, "category": cat,
                           "author": "SimonLuckenuik", "source": f"https://github.com/{REPO}", "license": "GPL-3.0"}))
