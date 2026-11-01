@@ -43,6 +43,19 @@ NAMES = {
     "romano": "roman", "synthwave": "synthwave-sun", "terminal": "terminal-green", "tomate-pulando": "jumping-tomato",
     "vinil": "vinyl",
 }
+# Each in one of our gallery's categories (examples/faces/README.md's sections).
+CATEGORY = {
+    "Clocks and calendars": ["aurora", "bauhaus-blocks", "bento", "brutal", "compass", "duo", "giant-time",
+                             "gradient", "infograph", "memphis", "modular", "mono", "nixie", "orbit-sun",
+                             "paper", "pill", "radar", "roman", "station", "stripes", "synthwave-sun",
+                             "terminal-green", "vinyl"],
+    "Weather, sun and moon": ["dune", "tide", "window", "winter"],
+    "Agents and work": ["fitness", "greenhouse", "metro", "rings"],
+    "Games and worlds": ["8-bit-green", "aquarium-reef", "arcade", "astronaut", "campfire", "catnap",
+                         "coffee-break", "jumping-tomato", "koi", "pixel-cafe"],
+}
+CATEGORY_OF = {name: cat for cat, names in CATEGORY.items() for name in names}
+
 # English titles and descriptions where theirs are only in Portuguese.
 TITLES = {"bebas-gigante": ("Giant Time", "The time huge, with the weather and a task bar"),
           "cafe-pixel": ("Pixel Cafe", "A pixel-art cafe table: a window that follows the day, and the tomato"),
@@ -69,7 +82,7 @@ VALUE = {"sec": ("{time.sec}", 60), "min": ("{time.min}", 60), "hour": ("{time.h
 # Their digit fonts' advance, per unit of height: (a digit, a colon); dm's cell is 1/7 of the height.
 WIDTH = {"bebas": (0.42, 0.2), "outfit": (0.6, 0.26), "righteous": (0.62, 0.26), "geo": (0.75, 0.3),
          "dseg": (0.72, 0.25), "dm": (6 / 7, 3 / 7)}
-LABELS = [(r"\bONE FOCUS\b", "ONE TASK"), (r"\bone focus\b", "one task"), (r"\bSESSIONS\b", "TASKS"), (r"\bsessions\b", "tasks"), (r"\bFOCUS\b", "TASKS"),
+LABELS = [(r"tomate@smalltv", "agent@monitor"), (r"\bSMALLTV\b", "MONITOR"), (r"\bONE FOCUS\b", "ONE TASK"), (r"\bone focus\b", "one task"), (r"\bSESSIONS\b", "TASKS"), (r"\bsessions\b", "tasks"), (r"\bFOCUS\b", "TASKS"),
           (r"\bFocus\b", "Tasks"), (r"\bfocus\b", "tasks"), (r"\bFOCOS\b", "TASKS"), (r"\bfocos\b", "tasks")]
 ANGLE = {"hour": "(({time.hour}%12)*30+{time.min}/2)", "min": "({time.min}*6)", "sec": "({time.sec}*6)"}
 
@@ -385,7 +398,8 @@ def main():
         title, desc = TITLES.get(p.stem) or (face.get("name_en") or face["name"], face.get("desc_en") or face["desc"])
         for a, b in LABELS:
             desc = re.sub(a, b, desc)
-        index.append({"name": name, "title": title, "description": desc, "author": face.get("author", "davicorrea0"),
+        index.append({"name": name, "title": title, "description": desc, "category": CATEGORY_OF[name],
+                      "author": face.get("author", "davicorrea0"),
                       "upstream": f"{UPSTREAM}/blob/{UPSTREAM_COMMIT}/faces/{p.name}", "license": "GPL-3.0"})
         print(f"{name:16} {size:5} B {len(out['items']):3} items  {title}")
     (OUT / "faces.json").write_text(json.dumps(index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")

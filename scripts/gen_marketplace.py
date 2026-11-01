@@ -77,9 +77,12 @@ def entries():
         if p.name == "faces.json":
             continue
         e = index[p.stem]
-        faces.append((p, {"title": e["title"], "description": e["description"], "category": "From smalltv-pomodoro",
+        faces.append((p, {"title": e["title"], "description": e["description"], "category": e["category"],
                           "author": e["author"], "source": e["upstream"], "license": e["license"]}))
-    return faces
+    # Grouped by category, in the README's order of sections: ours first in each, then the
+    # converted ones (sorted() keeps that order within a category).
+    cats = list(dict.fromkeys(cat for _, cat in ours.values()))
+    return sorted(faces, key=lambda f: cats.index(f[1]["category"]) if f[1]["category"] in cats else len(cats))
 
 
 def build():

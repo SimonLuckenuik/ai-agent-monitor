@@ -772,7 +772,7 @@ async function loadGallery(){const box=$('gallery');box.hidden=false;box.textCon
       const on=have.includes(f.name);b.className='btn'+(on?'':' primary');b.textContent=on?'Installed':'Install';b.disabled=on;
       b.onclick=async()=>{b.disabled=true;b.textContent='Installing...';
         try{const face=await(await fetch(f.json)).json();await req('/api/faces?name='+f.name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(face)});
-          b.textContent='Installed';toast('Installed '+f.title+(f.variables.length?'. It reads: '+f.variables.join(', '):''));loadFaces()}
+          b.className='btn';b.textContent='Installed';toast('Installed '+f.title+(f.variables.length?'. It reads: '+f.variables.join(', '):''));loadFaces()}
         catch(e){b.disabled=false;b.textContent='Install';toast(e.message,1)}};
       fig.append(img,cap,b);box.appendChild(fig)})}
   catch(e){box.textContent='Could not load the gallery: '+e.message}}

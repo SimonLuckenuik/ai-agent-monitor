@@ -30,6 +30,9 @@ python scripts/convert_pomodoro_faces.py <their faces/ folder>
   - in koi, one koi circles the pond;
   - nixie's filament lines are repeats.
 - **Names.** English, and five renamed where we already had the name: aquarium-reef,
-  bauhaus-blocks, orbit-sun, synthwave-sun, terminal-green.
+  bauhaus-blocks, orbit-sun, synthwave-sun, terminal-green. Their project's name on the
+  faces became the clock's ("SMALLTV" reads "MONITOR"; the terminal's prompt is
+  `agent@monitor`).
+- **Categories.** Each face sits in one of the gallery's categories, beside ours.
 
 `faces.json` lists each face with its title, description, author and the original file.
