@@ -38,7 +38,7 @@ Next free number: **031**.
 | [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | In progress (built; card to check on main) |
 | [027 A small mDNS responder](027-small-mdns/SPEC.md) | In progress (built; to confirm on the clock) |
 | [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Approved |
-| [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | Approved |
+| [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | In progress (built; to check on the clock) |
 | [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | In progress (built; to measure on the clock) |
 
 ## Templates

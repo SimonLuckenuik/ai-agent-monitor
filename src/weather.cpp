@@ -4,6 +4,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include "config.h"
+#include "time_guard.h"   // parseHttpDate
 
 Weather wx;
 Forecast fc;
@@ -20,6 +21,8 @@ static String urlEncode(const String& s) {
   return out;
 }
 
+void timeGuardDate(uint32_t t);   // main.cpp: the Date header confirms a held SNTP jump
+
 // GET a JSON document over plain HTTP. HTTP/1.0 keeps the body un-chunked so
 // ArduinoJson can parse the raw stream; the filter keeps only the fields we use.
 static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter = nullptr) {
@@ -32,7 +35,10 @@ static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter 
   http.useHTTP10(true);
   http.setTimeout(10000);   // api.open-meteo.com takes ~1.2 s from Australia
   if (!http.begin(client, url)) { wx.error = F("Bad request"); return false; }
+  const char* keys[] = {"Date"};
+  http.collectHeaders(keys, 1);
   int code = http.GET();
+  if (code == 200) timeGuardDate(parseHttpDate(http.header("Date").c_str()));
   sample();
   if (code != 200) {
     http.end();

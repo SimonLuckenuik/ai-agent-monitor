@@ -70,6 +70,7 @@ struct Config {
   bool   haCompat = false;           // stock SD Pro photo API for geekmagic-hacs; no sign-in
   bool   mqttOn   = false;           // MQTT with Home Assistant discovery
   String mqttHost, mqttUser, mqttPass, mqttBase;   // mqttBase "" = the hostname
+  String hostnames;                  // other names the clock answers to: comma list (spec 029)
   int    mqttPort = 1883;
   String apiKey;                     // for scripts calling the faces API; never exported
 
@@ -179,6 +180,7 @@ struct Config {
     mqttUser    = doc[F("mqttuser")]    | mqttUser;
     mqttPass    = doc[F("mqttpass")]    | mqttPass;
     mqttBase    = doc[F("mqttbase")]    | mqttBase;
+    hostnames   = doc[F("hostnames")]   | hostnames;
     apiKey      = doc[F("apikey")]      | apiKey;
     return true;
   }
@@ -207,6 +209,7 @@ struct Config {
     doc[F("facesapi")] = facesApi;   doc[F("hacompat")] = haCompat; doc[F("mqtt")] = mqttOn;
     doc[F("mqtthost")] = mqttHost;   doc[F("mqttport")] = mqttPort; doc[F("mqttuser")] = mqttUser;
     doc[F("mqttpass")] = mqttPass;   doc[F("mqttbase")] = mqttBase; doc[F("apikey")] = apiKey;
+    doc[F("hostnames")] = hostnames;
     File f = LittleFS.open("/config.json", "w");
     if (!f) return false;
     serializeJson(doc, f);

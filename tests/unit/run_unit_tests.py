@@ -52,4 +52,7 @@ faces = subprocess.run([str(exe)]).returncode
 mdns = build / "mdns_tests.exe"
 subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "mdns_tests.cpp"),
                 str(root / "src" / "mdns_packet.cpp"), "-o", str(mdns)], check=True, env=env)
-sys.exit(faces or subprocess.run([str(mdns)]).returncode)
+# The time guard (spec 029): plain C++ too.
+guard = build / "guard_tests.exe"
+subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "guard_tests.cpp"), "-o", str(guard)], check=True, env=env)
+sys.exit(faces or subprocess.run([str(mdns)]).returncode or subprocess.run([str(guard)]).returncode)

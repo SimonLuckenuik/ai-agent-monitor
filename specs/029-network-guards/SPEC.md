@@ -1,6 +1,6 @@
 # 029 Network guards: Wi-Fi downgrade, request host, clock time
 
-Status: Approved (2026-10-31)
+Status: In progress (approved 2026-10-31; built, on the emulator; Wi-Fi and time guards to check on the clock)
 
 ## Problem
 
@@ -25,7 +25,7 @@ Three attacks on the local network that smalltv-pomodoro guards against and we d
      `threshold.authmode`; networks saved by the stock firmware are raised);
    - when the connection's auth mode weakens, the clock drops it and reconnects to the
      saved network;
-   - each event goes to the log and to `/status` (`wifiDowngrades`).
+   - each event is counted in `/status` (`wifiDowngrades`; the clock keeps no event log).
 2. **Request host:**
    - on the station interface, a request is answered only when its `Host` is an IPv4
      address, the clock's mDNS name, its DHCP host name, or a name the owner lists in a
@@ -37,8 +37,9 @@ Three attacks on the local network that smalltv-pomodoro guards against and we d
 3. **Clock time:**
    - the first SNTP time after boot is taken as now;
    - a later SNTP change of more than 2 minutes is held until a second source agrees
-     within 2 minutes: the next SNTP reply from another server, or the `Date` header of
-     the weather reply (plain HTTP, but over TCP: forging it takes a machine in the path,
+     within 2 minutes: the `Date` header of the weather reply; without weather, the same
+     jump repeated by every SNTP reply for 6 hours (amended while building: a second
+     SNTP reply proves little, as a forger can send two) (plain HTTP, but over TCP: forging it takes a machine in the path,
      where one UDP packet from anywhere on the network forges SNTP);
    - until then the clock keeps its own time and reports `timeHeld` in `/status`.
 4. **No regressions:**

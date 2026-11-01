@@ -292,6 +292,8 @@ a{color:var(--accent)}
       <div class="pw"><input type="password" id="pass" autocomplete="off"><button type="button" onclick="reveal('pass',this)">Show</button></div></div>
     <div class="btns"><button class="btn primary" onclick="connect()">Connect &amp; restart</button></div>
     <p class="note">2.4 GHz networks only. The setup network <strong class="apName">AI Agent Monitor</strong> stays on as a fallback.</p>
+    <div class="field"><label for="hostnames">Other names for this clock</label><input type="text" id="hostnames" data-key="hostnames" placeholder="clock.lan" spellcheck="false"></div>
+    <p class="note">The clock answers to its IP address and its <code>.local</code> name. If your router gives it another name, list it here (separate several with commas): requests by any other name are refused, so a web page cannot reach the clock by pointing its own name at it.</p>
   </section>
 
   <section class="card settings">

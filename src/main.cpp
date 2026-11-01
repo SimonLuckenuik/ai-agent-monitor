@@ -21,6 +21,8 @@
 #include <TFT_eSPI.h>
 #include <Updater.h>
 #include <time.h>
+#include <coredecls.h>   // settimeofday_cb
+#include "time_guard.h"
 #include <algorithm>
 #include <new>
 #include "pins.h"
@@ -586,6 +588,7 @@ String configJson() {
   doc[F("facesapi")] = cfg.facesApi; doc[F("hacompat")] = cfg.haCompat; doc[F("mqtt")] = cfg.mqttOn;
   doc[F("mqtthost")] = cfg.mqttHost; doc[F("mqttport")] = cfg.mqttPort; doc[F("mqttuser")] = cfg.mqttUser;
   doc[F("mqttbase")] = cfg.mqttBase;   // the MQTT password and API key are never sent back
+  doc[F("hostnames")] = cfg.hostnames;
   doc[F("type")] = "smartclock-oss-settings"; doc[F("version")] = FW_VERSION;
   doc[F("palettes")] = serialized(cfg.palettes); doc[F("roles")] = serialized(cfg.roles);
   doc[F("palette")] = cfg.palette; doc[F("nightpalette")] = cfg.nightPalette;
@@ -747,6 +750,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == F("mqttuser"))   changed(cfg.mqttUser, val);
   else if (key == F("mqttpass"))   changed(cfg.mqttPass, val);
   else if (key == F("mqttbase"))   changed(cfg.mqttBase, val);
+  else if (key == F("hostnames"))  { if (val.length() > 200) return F("Too long"); cfg.hostnames = val; }
   else return F("Unknown Key");
   return "";
 }
@@ -1126,12 +1130,51 @@ const Route ROUTES[] PROGMEM = {
   {"/api/wifi/forget",     HTTP_POST, handleWifiForget, nullptr},
 };
 
+// DNS rebinding (spec 029): a page on another site can point its own name at the clock's
+// IP and call the API from the owner's browser. On the home network, answer only requests
+// addressed to the clock: its IP, <host>, <host>.local, or a name the owner listed. The
+// setup network and recovery answer any name (the captive portal relies on it), and so
+// does a request with no Host (HTTP/1.0 tools).
+bool hostAllowed() {
+  IPAddress ap = WiFi.softAPIP();   // a request on the setup network arrives on its address
+  if (recoveryMode || (server.client().localIP() == ap && ap != WiFi.localIP())) return true;
+  String h = server.hostHeader();
+  if (h.isEmpty()) return true;
+  int colon = h.lastIndexOf(':');
+  if (colon >= 0) h.remove(colon);   // the port
+  h.toLowerCase();
+  if (h.endsWith(".")) h.remove(h.length() - 1);
+  IPAddress ip;
+  if (ip.fromString(h)) return true;
+  String host = deviceHost();
+  host.toLowerCase();
+  if (h == host || h == host + F(".local")) return true;
+  for (int at = 0; at < (int)cfg.hostnames.length();) {
+    int comma = cfg.hostnames.indexOf(',', at);
+    if (comma < 0) comma = cfg.hostnames.length();
+    String name = cfg.hostnames.substring(at, comma);
+    name.trim();
+    name.toLowerCase();
+    if (name.length() && h == name) return true;
+    at = comma + 1;
+  }
+  return false;
+}
+
+// The time from SNTP is checked against a second source (spec 029, time_guard.h).
+TimeGuard timeGuard;
+void timeGuardDate(uint32_t t) {   // weather.cpp: the reply's Date header
+  uint32_t set = timeGuard.confirm(t, millis());
+  if (set) { timeval tv = {(time_t)set, 0}; settimeofday(&tv, nullptr); }
+}
+
 void setupRoutes() {
   static RouteTable routes(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0]));
   server.addHandler(&routes);
   server.collectHeaders("Cookie", "X-Api-Key");   // sessions; the faces API key
   integrationsRoutes();
   server.onNotFound([]{
+    if (!hostAllowed()) { server.send(403, PSTR("text/plain"), PSTR("Unknown host name")); return; }
     if (servePhoto()) return;
     if (mode == MODE_AP) { // captive portal: send everything to setup
       server.sendHeader(F("Location"), F("/"), true);
@@ -1145,7 +1188,15 @@ void setupRoutes() {
 // 4-way handshake timed out. 0 = none. The settings page explains the codes.
 volatile int staReason = 0;
 int staFailReason = 0;
-WiFiEventHandler staDisconnected;
+WiFiEventHandler staDisconnected, staAuthChanged;
+
+// A forged beacon can make the SDK carry on with weaker security on the same network
+// (CVE-2020-12638; not fixed in the NONOS SDK). WiFi.begin() with a password already
+// refuses open and WEP networks (threshold WPA); when the connection's mode weakens
+// anyway, serviceSta() drops it and connects again (spec 029).
+volatile bool staDowngraded = false;
+uint32_t wifiDowngrades = 0;   // since boot, for /status
+int authRank(uint8_t mode) { return mode == AUTH_OPEN ? 0 : mode == AUTH_WEP ? 1 : 2; }
 
 void startAP() {
   mode = MODE_AP;
@@ -1154,6 +1205,9 @@ void startAP() {
   WiFi.mode(WIFI_AP_STA); // Keep recovery accessible even when the router disappears.
   WiFi.hostname(deviceHost());   // DHCP hostname: lets the router name the clock
   staDisconnected = WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected& e) { staReason = e.reason; });
+  staAuthChanged = WiFi.onStationModeAuthModeChanged([](const WiFiEventStationModeAuthModeChanged& e) {
+    if (authRank(e.newMode) < authRank(e.oldMode)) staDowngraded = true;   // handled in the loop, out of the SDK
+  });
   WiFi.softAPConfig(IPAddress(192,168,4,1), IPAddress(192,168,4,1), IPAddress(255,255,255,0));
   restartAP();
   dns.start(53, "*", WiFi.softAPIP());
@@ -1194,6 +1248,13 @@ String staFailText() {
 void serviceSta() {
   if (staSsid.isEmpty()) return;
   uint32_t now = millis();
+  if (staDowngraded) {   // weaker security than we joined with: leave, and join again
+    staDowngraded = false;
+    wifiDowngrades++;
+    WiFi.disconnect(false);
+    staTrying = false; staRetryNow = true;
+    return;
+  }
   if (WiFi.status() == WL_CONNECTED) {
     staTrying = false;
     staRetryNow = true;              // a dropped link retries immediately
@@ -1315,7 +1376,7 @@ void handleStatus() {
     a.add(drawLast[i]); a.add(drawMax[i]);
   }
   bool linked = WiFi.status() == WL_CONNECTED;
-  doc[F("connected")] = linked;
+  doc[F("connected")] = linked; doc[F("wifiDowngrades")] = wifiDowngrades;
   doc[F("ssid")] = linked ? WiFi.SSID() : staSsid;
   if (!linked && staFail >= 0) { doc[F("wifiError")] = staFailText(); doc[F("wifiCode")] = staFailReason; }
   if (linked) { doc[F("ip")] = WiFi.localIP().toString(); doc[F("rssi")] = WiFi.RSSI(); }
@@ -1335,6 +1396,7 @@ void handleStatus() {
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d %s", t.tm_year + 1900, t.tm_mon + 1,
              t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, _tzname[t.tm_isdst > 0 ? 1 : 0]);
     doc[F("time")] = buf;
+    if (timeGuard.held()) doc[F("timeHeld")] = true;   // an SNTP jump not confirmed yet
   }
   if (wx.error.length()) doc[F("weatherError")] = wx.error;
   if (wx.lastSuccess) doc[F("weatherAge")] = (millis() - wx.lastSuccess) / 1000;
@@ -1406,6 +1468,13 @@ void serviceMdns() {
 // ---------------------------- setup / loop ----------------------------------
 void setup() {
   // No Serial.begin(): nothing is printed, and leaving it out drops the UART driver.
+#ifndef HOST_MOCK   // the emulator's host core has no SNTP; time_guard.h has unit tests
+  settimeofday_cb([](bool fromSntp) {   // spec 029: a forged reply cannot move the clock
+    if (!fromSntp) return;   // ours, below, or the clock's own restore
+    uint32_t t = time(nullptr), keep = timeGuard.sntp(t, millis());
+    if (keep != t) { timeval tv = {(time_t)keep, 0}; settimeofday(&tv, nullptr); }
+  });
+#endif
   BootMarker marker{};
   BootState previous = BOOT_CLEAN;
   if (ESP.rtcUserMemoryRead(32, reinterpret_cast<uint32_t*>(&marker), sizeof(marker)) &&

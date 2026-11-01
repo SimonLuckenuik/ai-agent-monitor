@@ -7,6 +7,16 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Network guards** (spec 029):
+  - **Request host:** on the home network the clock answers only requests addressed to
+    it (its IP, its host name, `<host>.local`, or a name listed in the new setting WiFi →
+    Other names for this clock); other names get 403, so a web page cannot reach it by
+    DNS rebinding. The setup network still answers any name.
+  - **WiFi:** if the connection's security weakens (CVE-2020-12638), the clock drops it
+    and joins again; `/status` counts it as `wifiDowngrades`.
+  - **Clock time:** an SNTP jump of more than 2 minutes waits for the weather server's
+    time to confirm it (`timeHeld` in `/status`), so one forged packet cannot move the
+    clock.
 - **41 more faces and a face gallery** (spec 026): analog dials, display styles and
   pixel-art scenes by davicorrea0, converted from smalltv-pomodoro (GPL-3.0) into
   `examples/faces/smalltv-pomodoro/`. Their pomodoro count became the variables `done`

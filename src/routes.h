@@ -10,6 +10,8 @@
 #include <ESP8266WebServer.h>
 #include <pgmspace.h>
 
+bool hostAllowed();   // main.cpp: the request is addressed to this clock (spec 029)
+
 struct Route {
   char path[24];       // a longer path does not compile
   HTTPMethod method;   // HTTP_ANY: any
@@ -26,15 +28,16 @@ class RouteTable : public esp8266webserver::RequestHandler<WiFiServer> {
     const Route* r = find(HTTP_POST, uri);
     return r && r->upload;
   }
-  bool handle(ESP8266WebServer&, HTTPMethod method, const String& uri) override {
+  bool handle(ESP8266WebServer& server, HTTPMethod method, const String& uri) override {
     const Route* r = find(method, uri);
     if (!r) return false;
+    if (!hostAllowed()) { server.send(403, PSTR("text/plain"), PSTR("Unknown host name")); return true; }
     r->handle();
     return true;
   }
   void upload(ESP8266WebServer&, const String& uri, HTTPUpload&) override {
     const Route* r = find(HTTP_POST, uri);
-    if (r && r->upload) r->upload();
+    if (r && r->upload && hostAllowed()) r->upload();   // refused: the body is dropped, handle() answers 403
   }
 
  private:

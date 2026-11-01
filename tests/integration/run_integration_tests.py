@@ -35,7 +35,7 @@ POMODORO_SAMPLE = {"vars": {"done": 5, "goal": 8, "streak": 3}}
 
 def example_faces_all():
     """Every example face: ours and the converted ones, name -> file."""
-    files = {p.stem: p for p in EXAMPLES.glob("*.json") if p.name != "samples.json"}
+    files = {p.stem: p for p in EXAMPLES.glob("*.json") if p.name not in ("samples.json", "marketplace.json")}
     files.update({p.stem: p for p in POMODORO.glob("*.json") if p.name != "faces.json"})
     return dict(sorted(files.items()))
 FACES = {0: "classic", 1: "weather", 2: "photo", 3: "big-date", 4: "simple", 5: "forecast",
@@ -339,7 +339,7 @@ def faces_beside_big_faces(emu):
     """Spec 024: with each big example face on screen, under the clock's heap, the weather
     syncs (the face gives its document back) and every other example face uploads."""
     emu.set("facesapi", 1)
-    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
+    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name not in ("samples.json", "marketplace.json"))
     for big in ["retro-runner", "flip-clock-wide", "night-lake"]:
         emu.push_face(big, json.loads((EXAMPLES / f"{big}.json").read_text(encoding="utf-8")), show=True)
         time.sleep(4)
@@ -436,6 +436,36 @@ def mqtt_and_mdns(emu):
     seen = sub.communicate()[0].split()
     check(seen.count("online") == 1 and "offline" not in seen, f"unchanged MQTT settings reconnected: {seen}")
     emu.set("mqtt", 0)
+
+
+@case
+def request_host(emu):
+    """Spec 029: on the home network the clock answers only requests addressed to it (its
+    IP, its names, or a listed name), so a page cannot reach it by DNS rebinding."""
+    import http.client
+    import urllib.parse
+    u = urllib.parse.urlparse(emu.api)
+
+    def get(host, path="/status"):
+        c = http.client.HTTPConnection(u.hostname, u.port, timeout=10)
+        c.putrequest("GET", path, skip_host=True)
+        c.putheader("Host", host)
+        c.endheaders()
+        r = c.getresponse()
+        r.read()
+        c.close()
+        return r.status
+
+    name = emu.status()["host"]
+    check(get(f"{u.hostname}:{u.port}") == 200, "by IP address")
+    check(get(f"{name}.local") == 200, "by its .local name")
+    check(get(name.upper()) == 200, "by its host name, in capitals")
+    check(get("clock.example") == 403, f"by an unknown name: {get('clock.example')}")
+    check(get("clock.example", "/no-such-page") == 403, "an unknown page by an unknown name")
+    emu.set("hostnames", "clock.example, other.lan")
+    check(get("clock.example") == 200 and get("OTHER.LAN:80") == 200, "by listed names")
+    emu.set("hostnames", "")
+    check(get("clock.example") == 403, "the name unlisted again")
 
 
 @case

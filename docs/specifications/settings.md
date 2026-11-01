@@ -129,6 +129,13 @@ steps and the default is used).
 
 ## Settings page
 
+- **WiFi: Other names for this clock** (`hostnames`, a comma list, at most 200
+  characters). On the home network the clock answers only requests addressed to it:
+  its IP address, its host name, `<host>.local`, or a name listed here (a name the
+  router gives it, say). Any other name gets 403 "Unknown host name", so a web page
+  cannot reach the clock by pointing its own name at the clock's address (DNS
+  rebinding). The setup network and recovery answer any name (spec 029).
+
 - **Display:** the face picker lists the built-in faces, then the custom faces (with
   a custom-face mark), and shows the one tapped. The rotation is one list of chips,
   built-in and custom alike: a tap turns a face on or off, a drag moves it, and a
