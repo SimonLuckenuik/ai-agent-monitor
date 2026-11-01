@@ -96,9 +96,10 @@ saved on the clock. The model:
 is the JSON Schema of a face.
 
 1. **Pick or write a face.** `examples/` has `attention`, `progress`, `done` and
-   `error`. The firmware repository's `examples/faces/` has 37 more (clocks, weather,
-   build status, pixel art, games, charts) showing every feature. Adapt one, or design a new
-   face with `reference/face-format.md`.
+   `error`. The project's face gallery has about 80 more (clocks, weather, build status,
+   pixel art, games, charts): `python scripts/clock.py gallery [word]` lists them with the
+   variables each reads, and `python scripts/clock.py install <name> --show` puts one on
+   the clock. Adapt one, or design a new face with `reference/face-format.md`.
 2. **Check it:** `python scripts/clock.py check face.json` validates it against the
    schema and flags unknown placeholders (the clock ignores what it does not know,
    silently). `push` checks too.
@@ -121,7 +122,8 @@ If a call answers `Custom faces are turned off`, ask the user to turn on
 
 **Limits.** A face is at most 4 KB of JSON (the script minifies and checks) and 32
 top-level items; 40 custom faces in all; names are 1–20 of `a-z 0-9 _ -`. At most 40
-variables, names 1–15 of `A-Z a-z 0-9 _`, values up to 160 characters.
+variables, names 1–15 of `A-Z a-z 0-9 _`, values up to 160 characters; a new one beyond
+that answers 507 "No room for variable" (delete some with `null`).
 
 ## Rules of the screen
 

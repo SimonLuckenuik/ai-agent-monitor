@@ -7,6 +7,14 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **41 more faces and a face gallery** (spec 026): analog dials, display styles and
+  pixel-art scenes by davicorrea0, converted from smalltv-pomodoro (GPL-3.0) into
+  `examples/faces/smalltv-pomodoro/`. Their pomodoro count became the variables `done`
+  and `goal`. `examples/faces/marketplace.json` lists all 80 example faces with links to
+  their JSON and previews; the settings page browses and installs them (Integrations →
+  Custom faces → Face gallery).
+- **The plugin (0.6.0)**: `clock.py gallery` and `clock.py install <name>` use the
+  gallery.
 - **Faster big text**: the line font that draws the Big tiles, the flip clock and
   `"font": "big"` in custom faces is drawn in integers from glyphs compiled at build
   time, instead of parsing path text and computing in floats on every draw (spec 030).

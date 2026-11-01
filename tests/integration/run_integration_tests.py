@@ -29,6 +29,15 @@ from emulator import (FIXED_TIME, ROOT, TZ, Emulator, HttpError, digest, epoch, 
 OUT = ROOT / ".pio" / "integration"
 EXAMPLES = ROOT / "examples" / "faces"
 SKILL_EXAMPLES = ROOT / "plugins" / "ai-agent-monitor" / "skills" / "ai-agent-monitor" / "examples"
+POMODORO = EXAMPLES / "smalltv-pomodoro"   # converted from smalltv-pomodoro (spec 026)
+POMODORO_SAMPLE = {"vars": {"done": 5, "goal": 8, "streak": 3}}
+
+
+def example_faces_all():
+    """Every example face: ours and the converted ones, name -> file."""
+    files = {p.stem: p for p in EXAMPLES.glob("*.json") if p.name != "samples.json"}
+    files.update({p.stem: p for p in POMODORO.glob("*.json") if p.name != "faces.json"})
+    return dict(sorted(files.items()))
 FACES = {0: "classic", 1: "weather", 2: "photo", 3: "big-date", 4: "simple", 5: "forecast",
          7: "big-time", 8: "big-weather", 9: "agents", 10: "weather-today",
          11: "forecast-day-1", 12: "forecast-day-2", 13: "forecast-day-3"}
@@ -257,18 +266,19 @@ def custom_faces_off(emu):
 
 @case
 def example_faces(emu):
-    """Every face in examples/faces, with its sample values (samples.json), one at a time
-    (as a user would try them)."""
+    """Every face in examples/faces and examples/faces/smalltv-pomodoro, with its sample
+    values (samples.json), one at a time (as a user would try them)."""
     emu.set("facesapi", 1)
     samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
-    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
-    check(len(names) >= 37, f"examples: {names}")
+    files = example_faces_all()
+    names = list(files)
+    check(len(names) >= 78, f"examples: {names}")
     check(set(samples) <= set(names), f"samples for missing faces: {set(samples) - set(names)}")
     for name in names:
-        face = json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8"))
+        face = json.loads(files[name].read_text(encoding="utf-8"))
         emu.clear_vars()
         emu.clear_messages()
-        emu.apply_sample(samples.get(name, {}))
+        emu.apply_sample(samples.get(name, POMODORO_SAMPLE if files[name].parent == POMODORO else {}))
         check(emu.push_face(name, face, show=True) == "OK", f"push {name}")
         check(emu.faces()["showing"] == name, f"{name} is not on screen")
         shot(emu, f"custom_{name}")
@@ -289,13 +299,13 @@ def example_faces_memory(emu):
     the clock's heap and stack (emulator/README.md "Memory"): no panic but the known ones."""
     emu.set("facesapi", 1)
     samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
-    names = sorted(p.stem for p in EXAMPLES.glob("*.json") if p.name != "samples.json")
+    files = example_faces_all()
     crashed = {}
-    for name in names:
-        face = json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8"))
+    for name in files:
+        face = json.loads(files[name].read_text(encoding="utf-8"))
         emu.clear_vars()
         emu.clear_messages()
-        emu.apply_sample(samples.get(name, {}))
+        emu.apply_sample(samples.get(name, POMODORO_SAMPLE if files[name].parent == POMODORO else {}))
         before = (emu.stats()["lastCrash"] or {}).get("at")
         try:
             emu.push_face(name, face, show=True)

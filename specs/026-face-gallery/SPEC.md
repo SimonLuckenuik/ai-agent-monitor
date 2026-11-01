@@ -1,6 +1,6 @@
 # 026 The smalltv-pomodoro faces, and a face gallery
 
-Status: Approved (2026-10-31)
+Status: In progress (approved 2026-10-31; built; the settings page's card to check once pushed)
 
 ## Problem
 
@@ -18,8 +18,8 @@ Its faces would add analog dials, pixel-art scenes and display styles we do not 
 1. **The 41 faces in our format**, in `examples/faces/smalltv-pomodoro/`, each within the
    4 KB and 32-item limits, converted by a script kept in the repo
    (`scripts/convert_pomodoro_faces.py`) so a newer upstream face can be converted again.
-   - English names; three that clash with ours are renamed (`bauhaus-blocks`,
-     `synthwave-sun`, `terminal-green`).
+   - English names; five that clash with ours are renamed (`aquarium-reef`,
+     `bauhaus-blocks`, `orbit-sun`, `synthwave-sun`, `terminal-green`).
    - No pomodoro: their focus count and daily goal become the variables `done` and `goal`
      (tasks done today, labelled TASKS), which an agent can push. The tomato stays as a
      mascot.

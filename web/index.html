@@ -69,6 +69,10 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 .theme.on svg{color:var(--accent)}
 .theme[disabled]{opacity:.45;cursor:not-allowed}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;margin-top:10px}
+.gal figure{margin:0;display:flex;flex-direction:column;gap:6px}.gal img{width:100%;aspect-ratio:1;border-radius:10px;background:#000}
+.gal figcaption{font-size:12.5px;color:var(--muted);flex:1}.gal figcaption b{display:block;color:var(--text)}
+.galcat{grid-column:1/-1;font-weight:600;margin-top:6px}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:99px;cursor:pointer}
 .chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
 #rotChips .chip{touch-action:none}.chip.drag{opacity:.5}
@@ -319,6 +323,9 @@ a{color:var(--accent)}
         <code class="key" id="apiKey">No key yet; press New key</code>
         <div class="sub">Your faces</div>
         <div class="chips" id="faceList"></div>
+        <div class="row"><span class="lbl">Face gallery<span class="hint" id="galNote">Faces from the project on GitHub, ready to install</span></span>
+          <button class="btn" onclick="loadGallery()">Browse</button></div>
+        <div class="gal" id="gallery" hidden></div>
         <div class="grid2"><div class="field"><label for="faceName">Name</label><input type="text" id="faceName" placeholder="e.g. power" spellcheck="false"></div>
           <div class="field"><label>&nbsp;</label><button class="btn" onclick="faceExample()">Insert example</button></div></div>
         <div class="field"><label for="faceJson">Face JSON</label><textarea id="faceJson" spellcheck="false"></textarea></div>
@@ -752,6 +759,21 @@ async function loadFaces(){try{const d=JSON.parse(await req('/api/faces')),box=$
     mk('edit',async()=>{try{$('faceName').value=n;$('faceJson').value=JSON.stringify(JSON.parse(await req('/api/faces/get?name='+n)),null,1)}catch(e){toast(e.message,1)}});
     mk('delete',async()=>{if(!confirm('Delete face '+n+'?'))return;try{await req('/api/faces/delete',form({name:n}));loadFaces()}catch(e){toast(e.message,1)}});
     box.appendChild(c)})}catch(e){}}
+// The face gallery (spec 026): examples/faces/marketplace.json on GitHub, as the update check reads releases.
+async function loadGallery(){const box=$('gallery');box.hidden=false;box.textContent='Loading the gallery...';
+  try{const r=await fetch('https://raw.githubusercontent.com/'+REPO+'/main/examples/faces/marketplace.json');if(!r.ok)throw Error('HTTP '+r.status);
+    const g=await r.json(),have=JSON.parse(await req('/api/faces')).faces;let cat='';box.innerHTML='';
+    $('galNote').textContent=g.faces.length+' faces; '+have.length+' of the clock’s 40 places used';
+    g.faces.forEach(f=>{if(f.category!==cat){cat=f.category;const h=document.createElement('div');h.className='galcat';h.textContent=cat;box.appendChild(h)}
+      const fig=document.createElement('figure'),img=new Image(),cap=document.createElement('figcaption'),b=document.createElement('button');
+      img.loading='lazy';img.src=f.preview;img.alt=f.title;cap.innerHTML='<b></b><span></span>';cap.firstChild.textContent=f.title;cap.lastChild.textContent=f.description;
+      const on=have.includes(f.name);b.className='btn'+(on?'':' primary');b.textContent=on?'Installed':'Install';b.disabled=on;
+      b.onclick=async()=>{b.disabled=true;b.textContent='Installing...';
+        try{const face=await(await fetch(f.json)).json();await req('/api/faces?name='+f.name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(face)});
+          b.textContent='Installed';toast('Installed '+f.title+(f.variables.length?'. It reads: '+f.variables.join(', '):''));loadFaces()}
+        catch(e){b.disabled=false;b.textContent='Install';toast(e.message,1)}};
+      fig.append(img,cap,b);box.appendChild(fig)})}
+  catch(e){box.textContent='Could not load the gallery: '+e.message}}
 function faceExample(){$('faceName').value=$('faceName').value||'example';$('faceJson').value=JSON.stringify({bg:'#000000',items:[
   {type:'text',x:120,y:24,text:'{date.wday} {date.day} {date.month3}',font:2,color:'#9aa0a6',align:'mc',bg:'#000000',pad:200},
   {type:'text',x:120,y:78,text:'{time.hm}',font:6,color:'#ffa826',align:'mc',bg:'#000000',pad:220},

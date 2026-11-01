@@ -1,0 +1,330 @@
+[
+  {
+    "name": "8-bit-green",
+    "title": "8-bit Green",
+    "description": "The four greens of classic handhelds, with a repainted tomato",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/8bit-verde.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "rings",
+    "title": "Rings",
+    "description": "Three progress rings: daily tasks, minutes of the hour and hours of the day",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aneis.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "aquarium-reef",
+    "title": "Aquarium",
+    "description": "A pixel art aquarium; hit your daily goal and the golden fish shows up",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aquario.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "arcade",
+    "title": "Arcade",
+    "description": "A pixel platform level; the flag lights at your daily goal.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/arcade.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "astronaut",
+    "title": "Astronaut",
+    "description": "Pixel art astronaut floating near a planet",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/astronauta.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "aurora",
+    "title": "Aurora",
+    "description": "Northern lights bands over mountains, with the time in Geo",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/aurora.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "bauhaus-blocks",
+    "title": "Bauhaus",
+    "description": "Primary shapes and colors from the Bauhaus school",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bauhaus.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "giant-time",
+    "title": "Giant Time",
+    "description": "The time huge, with the weather and a task bar",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bebas-gigante.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "bento",
+    "title": "Bento",
+    "description": "Widget-style grid of cards: time, weather and tasks",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/bento.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "brutal",
+    "title": "Brutal",
+    "description": "Neo-brutalism: flat colors, black borders and hard shadows",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/brutal.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "pixel-cafe",
+    "title": "Pixel Cafe",
+    "description": "A pixel-art cafe table: a window that follows the day, and the tomato",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/cafe-pixel.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "compass",
+    "title": "Compass",
+    "description": "A calm analog dial without per-second hand updates.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/compasso.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "dune",
+    "title": "Dune",
+    "description": "Sun and moon above terracotta pixel dunes.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/duna.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "duo",
+    "title": "Duo",
+    "description": "Giant hours stacked over minutes",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/duo.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "station",
+    "title": "Station",
+    "description": "Railway station clock: bold black bars and a red seconds hand",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/estacao.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "fitness",
+    "title": "Fitness",
+    "description": "Fitness band style: big time and colorful progress bars",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/fitness.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "campfire",
+    "title": "Campfire",
+    "description": "A crackling campfire under a starry sky, with sparks drifting up",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/fogueira.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "catnap",
+    "title": "Catnap",
+    "description": "An orange cat asleep on a cushion, breathing slowly while the Zzz float up",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/gato-soneca.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "gradient",
+    "title": "Gradient",
+    "description": "Soft radial gradient with white hands",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/gradiente.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "infograph",
+    "title": "Infograph",
+    "description": "Analog dial with subdials and stats in all four corners",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/infografico.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "winter",
+    "title": "Winter",
+    "description": "Snow falling on a cabin with the fire lit, among pine trees",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/inverno.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "window",
+    "title": "Window",
+    "description": "A city window with rain following actual weather.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/janela.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "greenhouse",
+    "title": "Greenhouse",
+    "description": "A little greenhouse; the plant grows with your streak.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/jardim.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "koi",
+    "title": "Koi",
+    "description": "A pond from above; a lotus blooms at your goal.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/koi.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "stripes",
+    "title": "Stripes",
+    "description": "Colorful diagonal stripes with the time on a black card",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/listras.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "tide",
+    "title": "Tide",
+    "description": "Pixel lighthouse, ocean bands and tasks on the sand.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/mare.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "memphis",
+    "title": "Memphis",
+    "description": "Playful 80s geometry in coral, blue and yellow.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/memphis.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "metro",
+    "title": "Metro",
+    "description": "A transit board whose route fills with tasks tasks.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/metro.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "modular",
+    "title": "Modular",
+    "description": "Complication grid: time, large weather and three stats below",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/modular.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "mono",
+    "title": "Mono",
+    "description": "Black and white blocks with unlit segments showing and one red dot",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/mono.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "nixie",
+    "title": "Nixie",
+    "description": "Glass capsules, amber filaments and discreet seconds.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/nixie.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "orbit-sun",
+    "title": "Orbit",
+    "description": "Hands as orbits around the sun, under a starry sky",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/orbita.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "paper",
+    "title": "Paper",
+    "description": "Editorial typography, cream paper and a red circle.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/papel.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "coffee-break",
+    "title": "Coffee Break",
+    "description": "The tomato unwinding next to a steaming cup of coffee",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/pausa-cafe.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "pill",
+    "title": "Pill",
+    "description": "Band-style capsule screen, stacked time and stats on the sides",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/pilula.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "radar",
+    "title": "Radar",
+    "description": "A night-blue analog dial with a seconds hand",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/radar-analogico.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "roman",
+    "title": "Roman",
+    "description": "Classic cream dial with Roman numerals",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/romano.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "synthwave-sun",
+    "title": "Synthwave",
+    "description": "80s retro sunset with a neon perspective grid",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/synthwave.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "terminal-green",
+    "title": "Terminal",
+    "description": "The clock as a shell session, in phosphor green",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/terminal.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "jumping-tomato",
+    "title": "Jumping Tomato",
+    "description": "A pixel-art tomato that jumps and blinks beside the time",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/tomate-pulando.json",
+    "license": "GPL-3.0"
+  },
+  {
+    "name": "vinyl",
+    "title": "Vinyl",
+    "description": "Vinyl grooves with a rim that tracks the seconds.",
+    "author": "davicorrea0",
+    "upstream": "https://github.com/davicorrea0/smalltv-pomodoro/blob/2f6836d646c59b1288a8bfafe9841317eb34a363/faces/vinil.json",
+    "license": "GPL-3.0"
+  }
+]

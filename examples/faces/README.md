@@ -14,6 +14,16 @@ curl -X POST "http://<clock>/api/faces?name=pixel-pet&show=1&key=<api key>" --da
 curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "mood": "hungry", "food": 20}'
 ```
 
+**41 more** are in [smalltv-pomodoro/](smalltv-pomodoro/README.md): analog dials, display
+styles and pixel-art scenes by davicorrea0, converted from the smalltv-pomodoro project.
+
+**The gallery.** [marketplace.json](marketplace.json) lists every face here with its
+description, the variables it reads, its size, and links to its JSON and its preview on
+GitHub (built by `scripts/gen_marketplace.py`). The settings page (Integrations → Custom
+faces → Face gallery) and the skill (`python clock.py gallery`, `python clock.py install
+<name>`) install from it. A new face needs a row in a table below, and its preview from an
+integration run: `python scripts/gen_marketplace.py --previews .pio/integration`.
+
 ## Clocks and calendars
 
 | | Face | Shows how to |

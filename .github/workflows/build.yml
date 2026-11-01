@@ -97,10 +97,13 @@ jobs:
         run: |
           python plugins/ai-agent-monitor/skills/ai-agent-monitor/scripts/clock.py check \
             plugins/ai-agent-monitor/skills/ai-agent-monitor/examples/*.json \
-            $(ls examples/faces/*.json | grep -v samples.json)
+            $(ls examples/faces/*.json examples/faces/smalltv-pomodoro/*.json | grep -v -e samples.json -e marketplace.json -e faces.json)
 
       - name: The skill's face format matches the specification
         run: python scripts/gen_face_format.py --check
 
       - name: The big font's compiled glyphs match their source
         run: python scripts/gen_mono_glyphs.py --check
+
+      - name: The face gallery lists every example face, each with its preview
+        run: python scripts/gen_marketplace.py --check

@@ -12,10 +12,15 @@
     python clock.py delete NAME
     python clock.py vars name=value [name=value ...] [--ttl S] [--persist] [--history] [--add]
     python clock.py screenshot OUT.png        (emulator only)
+    python clock.py gallery [WORD]            the face gallery on GitHub (names matching WORD)
+    python clock.py install NAME [--show]     a gallery face, onto the clock
 
 check validates faces against reference/face.schema.json (with the jsonschema package
 when it is installed, else the main rules) and flags unknown placeholder names. push
 checks first; --force pushes anyway. vars sends numbers as numbers, "null" deletes.
+
+The gallery is examples/faces/marketplace.json in the project's repo: every example face
+with its preview and the variables it reads.
 
 Messages need no key: anyone on the network may post one. Icons: info, success,
 warning, error, waiting, running, bell, done.
@@ -45,6 +50,8 @@ CLOCK = os.environ.get("CLOCK_URL", "http://127.0.0.1:8000").rstrip("/")
 KEY = os.environ.get("CLOCK_API_KEY", "")
 _u = urllib.parse.urlparse(CLOCK)
 SCREEN = os.environ.get("CLOCK_SCREEN_URL", f"{_u.scheme}://{_u.hostname}:8080").rstrip("/")
+
+GALLERY = "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/examples/faces/marketplace.json"
 
 jar = http.cookiejar.CookieJar()
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
@@ -214,6 +221,11 @@ def screenshot(out):
     print(out)
 
 
+def gallery():
+    with urllib.request.urlopen(GALLERY, timeout=20) as r:
+        return json.load(r)["faces"]
+
+
 def main(argv):
     if not argv or argv[0] in ("-h", "--help"):
         print(__doc__)
@@ -285,6 +297,23 @@ def main(argv):
             elif a in ("--persist", "--history", "--add"):
                 values["$" + a[2:]] = True
         print(call("POST", "/api/faces/vars", json.dumps(values)).decode())
+    elif cmd == "gallery":
+        word = args[0].lower() if args else ""
+        for f in gallery():
+            if word in (f["name"] + " " + f["title"] + " " + f["description"] + " " + f["category"]).lower():
+                reads = f"  reads: {', '.join(f['variables'])}" if f["variables"] else ""
+                print(f"{f['name']:18} {f['category']:24} {f['description']}{reads}")
+    elif cmd == "install" and args:
+        f = next((f for f in gallery() if f["name"] == args[0]), None)
+        if not f:
+            raise SystemExit(f"No face {args[0]!r} in the gallery: python clock.py gallery")
+        with urllib.request.urlopen(f["json"], timeout=20) as r:
+            face = json.load(r)
+        sign_in()
+        show = "&show=1" if "--show" in args[1:] else ""
+        print(call("POST", f"/api/faces?name={face_name(f['name'])}{show}", json.dumps(face, separators=(",", ":"))).decode())
+        if f["variables"]:
+            print("It reads: " + ", ".join(f["variables"]) + " (python clock.py vars name=value ...)")
     else:
         raise SystemExit(__doc__)
 
