@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **024**.
+Next free number: **031**.
 
 | Spec | Status |
 |---|---|
@@ -33,6 +33,13 @@ Next free number: **024**.
 | [021 Crash records and crash-loop protection](021-crash-report/SPEC.md) | In progress |
 | [022 The emulator runs out of memory where the clock does](022-emulator-device-memory/SPEC.md) | In progress |
 | [023 Custom faces within the 4 KB stack](023-renderer-stack/SPEC.md) | In progress |
+| [024 Memory headroom: weather and uploads beside big faces](024-memory-headroom/SPEC.md) | In progress (released in 1.9.1) |
+| [025 RAM back, and MQTT and mDNS on again](025-ram-mqtt-mdns/SPEC.md) | In progress (released in 2.0.0) |
+| [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | Approved |
+| [027 A small mDNS responder](027-small-mdns/SPEC.md) | Approved |
+| [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Approved |
+| [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | Approved |
+| [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | Approved |
 
 ## Templates
 
