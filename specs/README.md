@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **036**.
+Next free number: **037**.
 
 | Spec | Status |
 |---|---|
@@ -37,14 +37,15 @@ Next free number: **036**.
 | [025 RAM back, and MQTT and mDNS on again](025-ram-mqtt-mdns/SPEC.md) | In progress (released in 2.0.0) |
 | [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | In progress (built; card to check on main) |
 | [027 A small mDNS responder](027-small-mdns/SPEC.md) | In progress (built; to confirm on the clock) |
-| [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Done (unreleased) |
+| [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Done in 2.1.0 |
 | [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | In progress (built; to check on the clock) |
 | [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | In progress (built; to measure on the clock) |
-| [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Done (unreleased) |
-| [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Done (unreleased) |
-| [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done (unreleased) |
+| [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Done in 2.1.0 |
+| [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Done in 2.1.0 |
+| [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done in 2.1.0 |
 | [034 Custom faces in the clock's language](034-face-languages/SPEC.md) | Deferred |
-| [035 One city search, for the weather and the time zone](035-city-search/SPEC.md) | Done (unreleased) |
+| [035 One city search, for the weather and the time zone](035-city-search/SPEC.md) | Done in 2.1.0 |
+| [036 Flash room: zopfli, our own time zone parser, a minified page](036-flash-room/SPEC.md) | Approved |
 
 ## Templates
 

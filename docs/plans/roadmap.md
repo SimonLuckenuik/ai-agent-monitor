@@ -1,15 +1,17 @@
 # Roadmap
 
-Updated: 2026-11-02. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-11-03. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
 ## Next
 
-1. **Release 2.1.0** and check it on the clock: specs 026-033 and 035 (see
+1. [036 Flash room](../../specs/036-flash-room/SPEC.md): zopfli, our own time zone parser,
+   a minified page; about 24 KB back before anything else is added.
+2. **Check 2.1.0 on the clock** (released 2026-11-03): specs 026-033 and 035 (see
    [STATUS](../STATUS.md#the-clock) for what to look at). Close 026, 027, 029 and 030
    on what the clock shows.
-2. [019 Claude Code hooks that drive the clock](../../specs/019-claude-code-hooks/SPEC.md):
+3. [019 Claude Code hooks that drive the clock](../../specs/019-claude-code-hooks/SPEC.md):
    proposed, waiting for approval.
 
 ## Waiting
@@ -22,14 +24,11 @@ approved.
 
 ## Ideas (no spec yet)
 
-- Flash savings before anything big: the update image is at 99%. Candidates in the
-  [footprint](../specifications/footprint.md): string literals, the update buffer, code
-  that can move from the clock to the settings page.
 - Hardware scrolling and the panel's idle (8-colour) mode (spec 014 research).
 - A way back to stock over WiFi (upstream idea).
 - [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
 
 ## Done
 
-Specs 001-017, released from 1.4.0 to 1.8.0; 023 in 1.9.0; 028, 031, 032, 033 and 035 on
-`main` for 2.1.0. See [specs/README.md](../../specs/README.md) and `CHANGELOG.md`.
+Specs 001-017, released from 1.4.0 to 1.8.0; 023 in 1.9.0; 028, 031, 032, 033 and 035 in
+2.1.0. See [specs/README.md](../../specs/README.md) and `CHANGELOG.md`.

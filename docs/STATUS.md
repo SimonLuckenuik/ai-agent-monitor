@@ -1,14 +1,14 @@
 # Current status and next work
 
-Updated: 2026-11-02. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-03. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **2.0.0** (2026-10-31, tag `v2.0.0`), published on GitHub as
-`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.0.0.bin.gz`,
-`AIAgentMonitor_v2.0.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
+The latest release is **2.1.0** (2026-11-03, tag `v2.1.0`), published on GitHub as
+`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.1.0.bin.gz`,
+`AIAgentMonitor_v2.1.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
 and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
 `faces-v2` are the same commit. The plugin is 0.6.3.
 
@@ -17,13 +17,13 @@ last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and 
 display features, emulator scenarios), 1.7.0 and 1.8.0 (flicker-free redraws, flip
 clocks), all 2026-10-29/30; 1.9.0 (faces within the stack, crash records, crash-loop
 protection), 1.9.1 (weather and face uploads within the heap) and 2.0.0 (RAM back, MQTT
-and mDNS on again), all 2026-10-31.
+and mDNS on again), all 2026-10-31; 2.1.0 (2026-11-03):
 
-**Unreleased on `main`, for 2.1.0:** the face gallery and the converted smalltv-pomodoro
+**In 2.1.0:** the face gallery and the converted smalltv-pomodoro
 faces (026), a small mDNS responder (027), rain or snow within the hour (028), network
 guards (029), faster big text (030), four digit fonts and a stroke weight (031), backups
 with the custom faces (032), every time zone (033), one city search for the weather and
-the time zone (035). None of it has run on the clock yet.
+the time zone (035). None of it has run on the clock yet: the owner installs it next.
 
 ## The clock
 
@@ -52,8 +52,9 @@ integration tests (33 cases, Docker) and `scripts/screenshots.py`. CI
 
 ## Flash budget
 
-After 035: `firmware.bin` 597,120 B, `firmware.bin.gz` 433,251 B, the update budget **99%
-used**. The fonts took about 8 KB; the backups and city search about 2 KB. A libc float
+2.1.0: `firmware.bin` 597,104 B, `firmware.bin.gz` 433,260 B, **8,192 B of room** (the
+plain and compressed images together must fit 1 MB less two sectors).
+[Spec 036](../specs/036-flash-room/SPEC.md) wins about 24 KB back. The fonts took about 8 KB; the backups and city search about 2 KB. A libc float
 parser costs about 9 KB: parse numbers with the face code's own (`readNumber`). Savings
 to find are listed in the [footprint](specifications/footprint.md) and the
 [roadmap](plans/roadmap.md).
@@ -62,7 +63,8 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 
 Built, to check on the clock with 2.1.0: [026](../specs/026-face-gallery/SPEC.md),
 [027](../specs/027-small-mdns/SPEC.md), [029](../specs/029-network-guards/SPEC.md),
-[030](../specs/030-faster-big-text/SPEC.md). Done on `main`, unreleased:
+[030](../specs/030-faster-big-text/SPEC.md). Approved, in progress:
+[036](../specs/036-flash-room/SPEC.md) (flash room). Done in 2.1.0:
 [028](../specs/028-rain-snow-soon/SPEC.md), [031](../specs/031-more-fonts/SPEC.md),
 [032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),
 [035](../specs/035-city-search/SPEC.md). Still open from earlier releases: 021, 022, 024,
