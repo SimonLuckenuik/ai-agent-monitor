@@ -28,7 +28,9 @@ the time zone (035). None of it has run on the clock yet: the owner installs it 
 ## The clock
 
 The owner's clock (MAC 8C:8C:29:AD:EC:8A, `agentmonitor-adec8a`; the address moves) runs
-**2.1.0** since 2026-11-03, installed by the owner and working. Read from `/status` and
+**2.1.1** since 2026-11-03, installed by the owner and working as expected: five forecast
+days, the Day 4 tile (147 ms to draw), 24.7 KB free and 21.4 KB at the lowest, mDNS on,
+MQTT connected again, the time right in EST, no new crash. On 2.1.0, read from `/status` and
 `/config` after 7.6 hours up (no sign-in): 23.9 KB free, 22.2 KB at the lowest; Big
 time draws in 106 ms (148 ms at worst; 0.8 s on 1.8.0), the Day tiles in 98-132 ms;
 mDNS on and `agentmonitor-adec8a.local` resolving from the home network; a request

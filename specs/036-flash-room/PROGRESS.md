@@ -24,3 +24,5 @@
     US rule newlib assumes. The `tz` setting now refuses a rule it cannot read.
   - The emulator: its image installs terser and zopfli; `fw_main.cpp` keeps the host's TZ
     in step with the rule the firmware parses, for its own time controls.
+- 2026-11-03: released in 2.1.1; the owner installed it (the zopfli image, through the
+  update page) and it works, the time right in EST from our own rule code.
