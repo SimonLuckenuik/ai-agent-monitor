@@ -34,7 +34,7 @@ uint32_t mqttHeap = 0;   // /status mqttHeap: what MQTT took to connect (spec 02
 
 namespace {
 
-const char* const FACE_NAMES[FACE_COUNT] = {"Classic", "Weather", "Photo", "Big date", "Simple", "Forecast", "", "Big time", "Big weather", "Agents",
+const char* const FACE_NAMES[FACE_COUNT] = {"Classic", "Weather", "Photo", "Big date", "Simple", "Forecast", "Weather forecast - Day 4", "Big time", "Big weather", "Agents",
                                             "Weather today", "Weather forecast - Day 1", "Weather forecast - Day 2", "Weather forecast - Day 3"};
 uint32_t facesVersion = 1;
 
@@ -438,7 +438,7 @@ void handleThemeList() {
   JsonDocument doc;
   JsonArray themes = doc[F("themes")].to<JsonArray>();
   for (int i = 0; i < FACE_COUNT; ++i) {
-    if (!*FACE_NAMES[i]) continue;   // a retired face (6, Flip)
+    if (!*FACE_NAMES[i]) continue;   // a retired face (none since 6 became Day 4)
     JsonObject t = themes.add<JsonObject>();
     t["id"] = i; t["name"] = FACE_NAMES[i]; t["enabled"] = (cfg.faceMask >> i & 1) != 0;
   }

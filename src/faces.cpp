@@ -379,7 +379,7 @@ void forecast(const struct tm& t, bool force) {
     weatherPlaceholder(tr("No forecast yet", "Pas encore de previsions"));
     return;
   }
-  for (int i = 0; i < FORECAST_DAYS; ++i) {
+  for (int i = 0; i < FORECAST_STRIP; ++i) {
     int x = 6 + i * 58, cx = x + 27;
     D().fillSmoothRoundRect(x, 50, 54, 182, 12, PANEL, BG);
     if (i >= fc.count) continue;
@@ -1850,7 +1850,7 @@ void drawSpark(JsonObjectConst it, const struct tm& t, int x, int y, uint16_t bg
 int repeatCount(JsonObjectConst it, const struct tm& t) {
   const char* of = it["of"];
   int n = 0;
-  if (of && !strcmp(of, "days")) { rep.of = 'd'; n = fc.valid ? fc.count : 0; }
+  if (of && !strcmp(of, "days")) { rep.of = 'd'; n = fc.valid ? std::min(fc.count, FORECAST_STRIP) : 0; }
   else if (of && !strcmp(of, "msgs")) { rep.of = 'm'; for (int i = 0; i < MESSAGE_MAX; ++i) n += messageActive(i); }
   else { rep.of = 'n'; n = std::max(0, std::min(60, inum(it, "of", 0, t))); }
   rep.count = n;
@@ -2947,9 +2947,8 @@ bool faceAvailable(int face) {
     case FACE_PHOTO:    return photoCount() > 0;
     case FACE_BIGWEATHER: return wx.valid;
     case FACE_AGENTS: for (int s = 0; s < MESSAGE_MAX; ++s) if (messageActive(s)) return true; return false;
-    case FACE_FLIP:     return false;   // retired; its id stays reserved
-    case FACE_DAY0: case FACE_DAY0 + 1: case FACE_DAY0 + 2: case FACE_DAY3:
-      return fc.valid && face - FACE_DAY0 < fc.count;
+    case FACE_DAY0: case FACE_DAY0 + 1: case FACE_DAY0 + 2: case FACE_DAY3: case FACE_DAY4:
+      return fc.valid && dayOfFace(face) < fc.count;
     case FACE_CUSTOM:   return cfg.facesApi && customFaceExists(cfg.customFace);
     case FACE_MESSAGE:  return messageActive(messageShowing());
     default:            return face >= 0 && face < FACE_COUNT;
@@ -2987,8 +2986,8 @@ void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFa
     case FACE_BIGTIME:  bigTimeFace(t, force); break;
     case FACE_BIGWEATHER: bigWeather(t, force); break;
     case FACE_AGENTS:   agents(t, force);   break;
-    case FACE_DAY0: case FACE_DAY0 + 1: case FACE_DAY0 + 2: case FACE_DAY3:
-      dayTile(face - FACE_DAY0, t, force); break;
+    case FACE_DAY0: case FACE_DAY0 + 1: case FACE_DAY0 + 2: case FACE_DAY3: case FACE_DAY4:
+      dayTile(dayOfFace(face), t, force); break;
     case FACE_CUSTOM:   custom(t, force);   break;
     case FACE_MESSAGE:  message(t, force);  break;
     default:            classic(t, force);  break;

@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **A fifth forecast day** (spec 038): the weather now covers today and four more days.
+  A new tile, Weather forecast - Day 4, follows Day 3 in the rotation (on when Day 3
+  is), and custom faces get `day4.*`. The Forecast face and a `repeat` over `"days"`
+  keep their four columns.
+
 - **Weather icons match the forecast**: dense drizzle drew a snowflake, fog drew hail
   and snow showers a rain-and-snow mix. The icon table read Open-Meteo's weather codes
   as another WMO table (4680, the original app's); it now follows the codes Open-Meteo

@@ -342,7 +342,7 @@ int faceEntries(String* out) {
     for (int i = 0; i < n; ++i) if (out[i] == e) return;
     if (e[0] == '#') {
       int id = e.substring(1).toInt();
-      if (id < 0 || id >= FACE_COUNT || id == FACE_FLIP || e != "#" + String(id)) return;
+      if (id < 0 || id >= FACE_COUNT || e != "#" + String(id)) return;
     } else {
       bool known = false;
       for (int i = 0; i < nc && !known; ++i) known = customs[i] == e;
@@ -350,13 +350,20 @@ int faceEntries(String* out) {
     }
     if (n < FACE_ENTRIES) out[n++] = e;
   };
+  // The Day 4 tile (spec 038) has the lowest id left but follows Day 3 unless placed.
+  bool day4Placed = inList(cfg.order, "#6");
   for (const char* p = cfg.order.c_str(); *p;) {
     const char* e = strchr(p, ',');
-    add(e ? String(p).substring(0, e - p) : String(p));
+    String entry = e ? String(p).substring(0, e - p) : String(p);
+    add(entry);
+    if (!day4Placed && entry == "#" + String(FACE_DAY3)) add("#" + String(FACE_DAY4));
     if (!e) break;
     p = e + 1;
   }
-  for (int id = 0; id < FACE_COUNT; ++id) add("#" + String(id));
+  for (int id = 0; id < FACE_COUNT; ++id) {
+    if (id != FACE_DAY4) add("#" + String(id));
+    if (id == FACE_DAY3) add("#" + String(FACE_DAY4));
+  }
   for (int i = 0; i < nc; ++i) add(customs[i]);
   return n;
 }
@@ -369,7 +376,7 @@ bool entryOn(const String& e) {
 // checked once a minute (and when the faces change), not every frame.
 bool nightTile() {
   if (!nightNow || cfg.nightFace.isEmpty()) return false;
-  if (cfg.nightFace[0] == '#') { int id = entryFace(cfg.nightFace); return id >= 0 && id < FACE_COUNT && id != FACE_FLIP; }
+  if (cfg.nightFace[0] == '#') { int id = entryFace(cfg.nightFace); return id >= 0 && id < FACE_COUNT; }
   static String seen;
   static uint32_t seenVer = 0, seenAt = 0;
   static bool ok = false;
@@ -726,7 +733,7 @@ String applySetting(const String& key, const String& val) {
     if (val.isEmpty() || val == "-1") cfg.nightFace = "";
     else if (isdigit((unsigned char)val[0]) || val[0] == '#') {
       int id = val.substring(val[0] == '#').toInt();
-      if (id < 0 || id >= FACE_COUNT || id == FACE_FLIP) return F("Unknown face");
+      if (id < 0 || id >= FACE_COUNT) return F("Unknown face");
       cfg.nightFace = "#" + String(id);
     } else if (val.length() <= 20 && strspn(val.c_str(), "abcdefghijklmnopqrstuvwxyz0123456789_-") == val.length()) cfg.nightFace = val;
     else return F("Unknown face");

@@ -116,7 +116,7 @@ def status_and_fixed_time(emu):
     check(round(s["weather"]["temp"]) == 18, f"weather {s['weather']}")
     check(s["weather"]["icon"] == "wi-day-cloudy", f"icon {s['weather']['icon']}")
     check(s["weather"]["city"] == "Montreal", f"city {s['weather']['city']}")
-    check(s.get("forecastDays") == 4, f"forecastDays {s.get('forecastDays')}")
+    check(s.get("forecastDays") == 5, f"forecastDays {s.get('forecastDays')}")
 
 
 @case
@@ -826,7 +826,8 @@ def scenarios(emu):
         check(emu.set_time(local=t["local"])["local"].startswith(t["local"][:16]) or "forward" in t["name"],
               f"time preset {t['name']}")
     builtin = {"Classic", "Weather", "Big date", "Simple", "Forecast", "Big time", "Big weather", "Agents",
-               "Weather today", "Weather forecast - Day 1", "Weather forecast - Day 2", "Weather forecast - Day 3"}
+               "Weather today", "Weather forecast - Day 1", "Weather forecast - Day 2", "Weather forecast - Day 3",
+               "Weather forecast - Day 4"}
     for s in presets["scenarios"]:
         check(s.get("weather") in weathers, f"scenario {s['name']}: weather {s.get('weather')}")
         check(s.get("face") is None or s["face"] in builtin, f"scenario {s['name']}: face {s.get('face')}")

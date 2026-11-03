@@ -5,12 +5,17 @@
 // Clock faces. Ids 0-6 match the stock theme numbers (3 was the stock Dial) and
 // /api/set?key=theme; the others were added after them, the Agents board last.
 enum Face { FACE_CLASSIC = 0, FACE_WEATHER = 1, FACE_PHOTO = 2, FACE_DATE = 3,
-            FACE_SIMPLE = 4, FACE_FORECAST = 5, FACE_FLIP = 6 /* retired: Flip left (flash), the id stays reserved */, FACE_BIGTIME = 7,
+            FACE_SIMPLE = 4, FACE_FORECAST = 5, FACE_DAY4 = 6 /* the last Day tile, on retired Flip's id */, FACE_BIGTIME = 7,
             FACE_BIGWEATHER = 8, FACE_AGENTS = 9,
-            FACE_DAY0 = 10, FACE_DAY3 = 13,   // the Day tiles: today, then the next three days
+            FACE_DAY0 = 10, FACE_DAY3 = 13,   // the Day tiles: today, then the next days (FACE_DAY4 last)
             FACE_COUNT = 14,
             FACE_CUSTOM = 14,    // cfg.customFace, from /faces/<name>.json (integrations)
             FACE_MESSAGE = 15 }; // an agent message (integrations), never saved as the face
+
+// The forecast day a Day tile shows (0 today), or -1 for another face.
+inline int dayOfFace(int face) {
+  return face == FACE_DAY4 ? 4 : face >= FACE_DAY0 && face <= FACE_DAY3 ? face - FACE_DAY0 : -1;
+}
 
 // Draws only what changed since the last call; a face switch or faceInvalidate()
 // redraws everything. timeValid is false until NTP has set the clock.

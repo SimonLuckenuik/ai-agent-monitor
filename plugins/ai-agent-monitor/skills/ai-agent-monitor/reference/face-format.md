@@ -144,7 +144,7 @@ clock's own; a name without a dot is a [variable](#variables).
 | `time.` | `hm` (`9:54`, 12/24 h as set), `hour` (`9`; `09` in 24 h), `min` (`05`), `sec` (`07`), `ms` (`0`–`999` since the second began, the same for every item of a frame: for animation), `ampm` (`PM`, 12 h only), `epoch` (Unix time), `daymin` (minutes since midnight, `0`–`1439`), `zone` (`EDT`) |
 | `date.` | `text` (`5 October`), `day` (`5`), `wday` (`Monday`), `wday3` (`MON`), `month` (`October`), `month3` (`Oct`), `monthnum` (`10`), `year` (`2026`), `yday` (`278`, day of the year), `week` (`41`, ISO week), `wdaynum` (`1` Monday to `7` Sunday), `mdays` (`31`, days in the month) |
 | `now.` | The current weather: `temp`, `feels` (`21`, °C/°F as set), `hum` (`64`, %), `wind` (`15`, km/h or mph as set), `press` (`1013`, hPa), `clouds` (`75`, %), `code` (`61`, WMO weather code), `icon` (`wi-day-rain`), `text` (`light rain`), `kind` (`Rain`), `age` (minutes since the last update), `err` (the last error, or empty); within the next hour (spec 028): `rain_in`, `snow_in` (minutes until it starts: `0` now, `15`, `30`, `45`; empty when none is due), `rain_mm`, `snow_cm` (the most in a quarter hour; in inches with mph) |
-| `day0.` to `day3.` | Today and the next three days: `wday`, `wday3`, `low`, `high`, `feels` (feels-like high), `rain` (chance, %), `wind` (highest), `hum` (mean), `rise`, `set` (sunrise, sunset), `icon` |
+| `day0.` to `day4.` | Today and the next four days: `wday`, `wday3`, `low`, `high`, `feels` (feels-like high), `rain` (chance, %), `wind` (highest), `hum` (mean), `rise`, `set` (sunrise, sunset), `icon` |
 | `sun.` | `up` (`1` between sunrise and sunset, else `0`), `next` (`rise` or `set`), `rise`, `set` (`7:21`), `until_rise`, `until_set` (minutes until the next one), `daylen` (minutes of daylight) |
 | `moon.` | `phase` (`0` new, `2` first quarter, `4` full, `6` last quarter; `0`–`7`), `lit` (% lit), `age` (days since the new moon) |
 | `units.` | `temp` (`C` or `F`), `wind` (`km/h` or `mph`) |
@@ -268,7 +268,7 @@ The items' coordinates are relative to the repeat's `x`, `y`.
 
 | `of` | Entries | `{it.*}` |
 |---|---|---|
-| `"days"` | The forecast days, today first (up to 4) | as `day0.*`: `wday`, `wday3`, `low`, `high`, `feels`, `rain`, `wind`, `hum`, `rise`, `set`, `icon` |
+| `"days"` | The forecast days, today first (up to 4: `day4` is not in it, so four-column faces keep their layout) | as `day0.*`: `wday`, `wday3`, `low`, `high`, `feels`, `rain`, `wind`, `hum`, `rise`, `set`, `icon` |
 | `"msgs"` | The active agent messages (up to 4) | as `msg.*`: `title`, `text`, `icon`, `color`, `bg`, `pct`, `ttl`, `id` |
 | a number, or an expression | That many (0–60) | only `index` and `count` |
 

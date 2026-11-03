@@ -173,6 +173,8 @@ struct Config {
       else if (theme == 11) theme = FACE_MESSAGE;
       faceMask |= 0xf << FACE_DAY0;
     }
+    if (facesv < 5)   // id 6 was retired Flip; now the Day 4 tile, on when Day 3 is
+      faceMask = (faceMask & ~(1 << FACE_DAY4)) | ((faceMask >> FACE_DAY3 & 1) << FACE_DAY4);
     facesApi    = doc[F("facesapi")]    | facesApi;
     haCompat    = doc[F("hacompat")]    | haCompat;
     mqttOn      = doc[F("mqtt")]        | mqttOn;
@@ -199,7 +201,7 @@ struct Config {
     doc[F("celsius")] = celsius;     doc[F("hour12")] = hour12;   doc[F("mile")] = mile;   doc[F("lang")] = lang;
     doc[F("order")] = order;         doc[F("customoff")] = customOff; doc[F("turns")] = turns;
     doc[F("theme")] = theme;         doc[F("themeInterval")] = themeInterval;
-    doc[F("faces")] = faceMask;     doc[F("facesv")] = 4;
+    doc[F("faces")] = faceMask;     doc[F("facesv")] = 5;
     doc[F("brightness")] = brightness; doc[F("orientation")] = orientation * 90;
     doc[F("gamma")] = GAMMAS[gamma]; doc[F("nightgamma")] = nightGamma < 0 ? "" : GAMMAS[nightGamma]; doc[F("nightoff")] = nightOff;
     doc[F("nightmode")] = nightMode; doc[F("nightauto")] = nightAuto; doc[F("nightbrightness")] = nightBrightness; doc[F("nightface")] = nightFace;

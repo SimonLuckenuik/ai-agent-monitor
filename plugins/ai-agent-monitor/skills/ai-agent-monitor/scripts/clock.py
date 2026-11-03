@@ -113,7 +113,7 @@ FIELDS = {
     "msg": "title text icon color bg pct ttl id count",
 }
 DAY = "wday wday3 low high feels rain wind hum rise set icon"
-for d in range(4):
+for d in range(5):
     FIELDS[f"day{d}"] = DAY
 FIELDS = {g: set(f.split()) for g, f in FIELDS.items()}
 IT = {"days": set(DAY.split()), "msgs": FIELDS["msg"] - {"count"}}

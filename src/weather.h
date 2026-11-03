@@ -21,7 +21,8 @@ struct Weather {
   uint32_t version = 0;                // bumped on every successful fetch
 };
 
-constexpr int FORECAST_DAYS = 4;
+constexpr int FORECAST_DAYS = 5;   // today and four more: the Day tiles and day0.* to day4.*
+constexpr int FORECAST_STRIP = 4;  // the Forecast face and a repeat over "days": four columns
 struct ForecastDay {
   int wday = 0;          // 0 = Sunday
   bool today = false;

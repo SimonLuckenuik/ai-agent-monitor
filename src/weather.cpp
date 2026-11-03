@@ -57,7 +57,7 @@ static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter 
   return true;
 }
 
-// ---- Open-Meteo: no key; one request gives current conditions + 4 days ----------
+// ---- Open-Meteo: no key; one request gives current conditions + 5 days ----------
 // WMO weather code -> wording. Written as a switch with F() strings: on the ESP8266 a
 // table of literals would sit in RAM. The icon name comes from weatherIconName().
 void wmoText(int code, bool fr, String& main, String& desc) {
@@ -159,7 +159,7 @@ static bool fetchOpenMeteo() {
                  "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
                  "wind_speed_10m_max,relative_humidity_2m_mean"
                  "&minutely_15=rain,snowfall,precipitation_probability,weather_code&forecast_minutely_15=4"
-                 "&forecast_days=4&timezone=auto&wind_speed_unit=ms");
+                 "&forecast_days=5&timezone=auto&wind_speed_unit=ms");
   if (!httpJson(url, doc)) return false;
 #if SMARTCLOCK_EMULATOR
   }

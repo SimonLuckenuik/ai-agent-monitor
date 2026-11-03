@@ -44,8 +44,9 @@ def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, c
         (61, 15, 9, 13, 80, 9.4, 88, "07:03", "18:29"),
         (0, 19, 6, 18, 0, 3.3, 52, "07:05", "18:27"),
         (71, 4, -3, -1, 60, 7.8, 90, "07:06", "18:25"),
+        (55, 12, 8, 11, 70, 5.0, 85, "07:08", "18:23"),
     ]
-    dates = ["2026-10-0%d" % (5 + i) for i in range(4)]
+    dates = ["2026-10-%02d" % (5 + i) for i in range(len(days))]
     col = lambda i: [d[i] for d in days]
     quarters = quarters or [(0, 0, 0, code)] * 4
     q = lambda i: [x[i] for x in quarters]

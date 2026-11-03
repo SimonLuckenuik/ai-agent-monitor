@@ -102,10 +102,10 @@ static void setWeather(const char* icon, const char* main, const char* desc, flo
 }
 static void setForecast(std::vector<const char*> icons) {
   fc.valid = true; fc.count = (int)icons.size(); fc.version++;
-  const float hi[] = {24, 27, 19, 22}, lo[] = {15, 17, 12, 13};
-  const int pop[] = {60, 0, 20, 80};
-  const float wind[] = {4.2f, 15.5f, 2.0f, 27.8f};   // the last: 100 km/h, the widest fact line
-  const int hum[] = {64, 100, 45, 100}, rise[] = {361, 363, 364, 623}, set[] = {1076, 1074, 1073, 1256};
+  const float hi[] = {24, 27, 19, 22, 3}, lo[] = {15, 17, 12, 13, -4};
+  const int pop[] = {60, 0, 20, 80, 70};
+  const float wind[] = {4.2f, 15.5f, 2.0f, 27.8f, 6.0f};   // the fourth: 100 km/h, the widest fact line
+  const int hum[] = {64, 100, 45, 100, 85}, rise[] = {361, 363, 364, 623, 366}, set[] = {1076, 1074, 1073, 1256, 1070};
   for (int i = 0; i < fc.count; ++i) {
     fc.days[i].wday = (1 + i) % 7; fc.days[i].today = i == 0;
     fc.days[i].hi = hi[i]; fc.days[i].lo = lo[i]; fc.days[i].pop = pop[i]; fc.days[i].icon = icons[i];
@@ -123,19 +123,19 @@ static void fresh(int face, const struct tm& t, const std::string& name) {
 
 int main(int argc, char** argv) {
   outDir = argc > 1 ? argv[1] : ".";
-  const char* names[] = {"classic", "weather", "photo", "date", "simple", "forecast", "", "bigtime", "bigweather", "agents",
+  const char* names[] = {"classic", "weather", "photo", "date", "simple", "forecast", "tomorrow3", "bigtime", "bigweather", "agents",
                          "today", "tomorrow", "tomorrow1", "tomorrow2"};
   setWeather("03d", "Clouds", "scattered clouds", 21.4f);
-  setForecast({"10d", "01d", "04d", "11d"});
+  setForecast({"10d", "01d", "04d", "11d", "13d"});
 
   // 1. Every face at 9:54:26 pm.
   for (int f = 0; f < FACE_COUNT; ++f)
-    if (f != FACE_FLIP) fresh(f, at(21, 54, 26), std::string("face_") + std::to_string(f) + "_" + names[f]);   // 6: retired
+    fresh(f, at(21, 54, 26), std::string("face_") + std::to_string(f) + "_" + names[f]);
 
   // 2. Incremental vs full redraw.
   int failures = 0;
   for (int f = 0; f < FACE_COUNT; ++f) {
-    if (f == FACE_PHOTO || f == FACE_FLIP) continue;   // the photo advances on a timer by design; 6 is retired
+    if (f == FACE_PHOTO) continue;   // the photo advances on a timer by design
     struct tm t = at(21, 58, 50);
     faceInvalidate();
     faceDraw(f, t, true);
