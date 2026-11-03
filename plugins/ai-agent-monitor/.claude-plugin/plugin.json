@@ -1,6 +1,6 @@
 {
   "name": "ai-agent-monitor",
-  "version": "0.6.3",
+  "version": "0.7.0",
   "description": "Lets Claude show messages, progress, status and custom graphics (SVG icons, pixel art, charts, gradients, live values) on an AI Agent Monitor desk clock (AI Agent Monitor firmware), or on its Docker emulator.",
   "author": {
     "name": "Simon Luckenuik",
@@ -9,5 +9,13 @@
   "homepage": "https://github.com/SimonLuckenuik/ai-agent-monitor",
   "repository": "https://github.com/SimonLuckenuik/ai-agent-monitor",
   "license": "GPL-3.0-only",
-  "keywords": ["esp8266", "smart-clock", "notifications", "display", "custom-faces", "svg-icons"]
+  "keywords": ["esp8266", "smart-clock", "notifications", "display", "custom-faces", "svg-icons", "hooks"],
+  "userConfig": {
+    "hooks_clock_url": {
+      "type": "string",
+      "title": "Clock for session status",
+      "description": "The clock's address, e.g. http://192.168.1.50 or http://127.0.0.1:8000 for the emulator. When set, the clock shows when a session waits for you and when it finishes. Empty: off.",
+      "default": ""
+    }
+  }
 }

@@ -1,0 +1,38 @@
+{
+  "description": "Session status on the clock (spec 019): waiting when Claude needs you, done when it finishes, cleared when you answer. Off until the plugin's \"Clock for session status\" option is set.",
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input",
+        "hooks": [
+          {"type": "command", "async": true,
+           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" waiting"}
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {"type": "command", "timeout": 5,
+           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" done"}
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {"type": "command", "async": true,
+           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" clear"}
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {"type": "command", "async": true,
+           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" clear"}
+        ]
+      }
+    ]
+  }
+}

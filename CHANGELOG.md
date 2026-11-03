@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **The plugin shows session status by itself** (spec 019, plugin 0.7.0): with its new
+  *Clock for session status* option set to the clock's address, Claude Code's hooks put
+  "waiting" on the clock when a session asks for a permission or a question, "done" with
+  the start of the reply when it finishes, and clear it when you type. Off until set.
+
 - **More room for updates** (spec 036): the update has about 28 KB of room instead of
   8 KB. The update image and the settings page are compressed by zopfli (standard gzip:
   every clock's bootloader unpacks it, checked on each build with the bootloader's own

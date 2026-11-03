@@ -11,6 +11,7 @@ listed at the end.
 | Safety | the update handler from `src/main.cpp` against a mock updater, and checks on the source, the image and the ELF | Zig, the firmware built (`pio run`) | about a minute | `python tests/run_safety_tests.py` |
 | Face preview | every built-in face drawn on the host, to PNG | Zig, one `pio run` | about a minute | `python tests/face_preview/run_face_preview.py` |
 | Settings page | the page's own code (time zone rules, backups) from `web/index.html`, against the browser's time zone database and a mock clock; the minified page the clock embeds keeps every handler | Node | seconds | `node tests/web/tz_rules.test.js`, `node tests/web/backup.test.js`, `node tests/web/minified_page.test.js` |
+| Plugin hooks | `hooks/session_status.py` against a stand-in clock: each event's request, off without an address, a silent clock (spec 019) | Python | seconds | `python tests/plugin/session_status_test.py` |
 | Local time | `src/tz_rule.h` against glibc: every rule the page gives a time zone, and hand-written ones, every 15 minutes of two years (spec 036) | Linux, g++, Node (CI; locally in the emulator's container) | seconds | `node tests/tz/zone_rules.js > rules.txt`, then `g++ -O2 -std=c++17 -I src tests/tz/tz_rule_tests.cpp -o tz && ./tz rules.txt` |
 | Integration | the whole firmware in the emulator, through its HTTP API, MQTT and mDNS | Docker | 20-25 minutes (building the image included) | `python tests/integration/run_integration_tests.py` |
 

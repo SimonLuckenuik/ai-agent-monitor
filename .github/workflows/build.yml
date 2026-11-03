@@ -103,6 +103,9 @@ jobs:
             plugins/ai-agent-monitor/skills/ai-agent-monitor/examples/*.json \
             $(ls examples/faces/*.json examples/faces/smalltv-pomodoro/*.json | grep -v -e samples.json -e marketplace.json -e faces.json)
 
+      - name: Session status hooks
+        run: python tests/plugin/session_status_test.py
+
       - name: The skill's face format matches the specification
         run: python scripts/gen_face_format.py --check
 

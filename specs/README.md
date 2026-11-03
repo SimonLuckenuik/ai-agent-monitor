@@ -28,7 +28,7 @@ Next free number: **037**.
 | [016 Flicker-free redraws](016-flicker-free-redraws/SPEC.md) | Done in 1.7.0 / 1.8.0 |
 | [017 Example faces gallery](017-example-faces/SPEC.md) | Done, grows with new faces |
 | [018 Check 1.5-1.8 on the real clock](018-first-run-on-the-clock/SPEC.md) | Draft |
-| [019 Claude Code hooks that drive the clock](019-claude-code-hooks/SPEC.md) | Draft |
+| [019 Claude Code hooks that drive the clock](019-claude-code-hooks/SPEC.md) | Done (plugin 0.7.0) |
 | [020 ESP-NOW between clocks](020-esp-now/SPEC.md) | Dropped |
 | [021 Crash records and crash-loop protection](021-crash-report/SPEC.md) | In progress |
 | [022 The emulator runs out of memory where the clock does](022-emulator-device-memory/SPEC.md) | In progress |

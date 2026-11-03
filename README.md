@@ -257,6 +257,15 @@ Without them it uses the emulator at `http://127.0.0.1:8000`. The skill is in
 | `scripts/clock.py` | `message`, `push`, `vars`, `show`, `screenshot`, and `check` (schema and placeholder names) |
 | `examples/` | Status faces for agents: attention, progress, done, error |
 
+**Session status without asking** (plugin 0.7.0): give the plugin's *Clock for session
+status* option the clock's address (asked when the plugin is enabled, or in `/config`;
+`CLOCK_HOOKS_URL` also works) and its hooks keep the clock up to date by themselves: a
+**waiting** message when Claude asks for a permission or a question, **done** with the
+start of its reply when it finishes, cleared as soon as you type. One message per
+session, titled with the project's folder, so the Agents board shows every session at
+once. Empty, the hooks do nothing; they need Python 3, and a clock that is off costs a
+turn at most 2 seconds, then nothing for a minute.
+
 ## Settings page
 
 Everything is set from a web page on the clock: faces and their order, colors,
@@ -393,6 +402,21 @@ The weather icons are generated from the SVGs by `python scripts/gen_weather_ico
   stock firmware analysis.
 - [docs/decisions](docs/decisions/README.md), [docs/issues](docs/issues/README.md) and
   [docs/plans](docs/plans/README.md): design records, known issues and plans.
+
+## Related projects
+
+Two alternative firmwares for GeekMagic's SmallTV (a different board from the SD Pro), and
+what we took from them or might:
+
+- [smalltv-pomodoro](https://github.com/davicorrea0/smalltv-pomodoro) (GPL-3.0): a
+  pomodoro timer with installable faces. Its 41 faces are converted into
+  [examples/faces/smalltv-pomodoro](examples/faces/smalltv-pomodoro/README.md) (spec 026),
+  and it inspired specs 027-033 (mDNS, network guards, fonts, rain, city time zones,
+  backups).
+- [smalltv-mod](https://github.com/giovi321/smalltv-mod) (WTFPL, read at commit
+  `6e65e03`): a ticker, a Claude usage meter, a plane radar, Home Assistant screens over
+  MQTT, theme clocks with a browser editor (SmallTV Studio), and `/api/notify`, built for
+  Claude Code sessions as spec 019 is. The two projects plan a shared theme format.
 
 ## Licence
 

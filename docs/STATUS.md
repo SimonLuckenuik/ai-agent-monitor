@@ -10,7 +10,7 @@ The latest release is **2.1.0** (2026-11-03, tag `v2.1.0`), published on GitHub 
 `SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.1.0.bin.gz`,
 `AIAgentMonitor_v2.1.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
 and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
-`faces-v2` are the same commit. The plugin is 0.6.3.
+`faces-v2` are the same commit. The plugin on `main` is 0.7.0 (spec 019's hooks).
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
 last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,
@@ -70,8 +70,8 @@ Built, to check on the clock with 2.1.0: [026](../specs/026-face-gallery/SPEC.md
 [032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),
 [035](../specs/035-city-search/SPEC.md). Still open from earlier releases: 021, 022, 024,
 025 (released, waiting to be seen at work on the clock). Deferred:
-[034](../specs/034-face-languages/SPEC.md). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md),
-[019](../specs/019-claude-code-hooks/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
+[034](../specs/034-face-languages/SPEC.md). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md). Done on `main`
+(plugin only): [019](../specs/019-claude-code-hooks/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 
 ## Open issues

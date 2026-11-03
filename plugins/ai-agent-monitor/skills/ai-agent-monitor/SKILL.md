@@ -57,6 +57,11 @@ python scripts/clock.py message "my-project" "Waiting for your approval to deplo
 - Every active message also appears on the clock's **Agents** face: one row per id,
   with its icon, title, text and minutes left. Distinct ids are what make that board
   useful when several agents or projects run at once.
+- **The plugin's hooks may already do it.** When the user set the plugin's *Clock for
+  session status* option (or `CLOCK_HOOKS_URL`), Claude Code itself posts `waiting` on a
+  permission prompt or question, `done` when a turn ends, and clears it when the user
+  types, under the id `cc-` + the session id's first 8 characters. Do not repeat those;
+  use your own id for progress or results worth more than "done".
 
 ## Custom faces
 
