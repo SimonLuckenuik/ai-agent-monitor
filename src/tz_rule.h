@@ -1,6 +1,6 @@
 // Local time from a POSIX TZ rule, without the C library's tzset (spec 036).
 //
-// newlib's tzset parses the rule with sscanf, about 5 KB of flash, and its localtime_r calls
+// newlib's tzset parses the rule with formatted input (about 5 KB of flash), and its localtime_r calls
 // tzset on every call, so both stay linked as long as anything converts time through them.
 // This header parses the rule once ("EST5EDT,M3.2.0,M11.1.0", "<+0545>-5:45",
 // "AEST-10AEDT,M10.1.0,M4.1.0/3") and converts UTC to local time with gmtime_r, which

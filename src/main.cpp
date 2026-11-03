@@ -455,7 +455,7 @@ void handleWeatherSync() {
 // ---------------------------- Time ------------------------------------------
 // A POSIX TZ rule applies daylight saving; a bare offset (stock) cannot. The clock keeps
 // time in UTC and converts it with tz_rule.h (spec 036): newlib's tzset, which localtime_r
-// calls every time, would link sscanf (about 5 KB) to parse the rule.
+// calls every time, would link the C library's formatted input (about 5 KB) to parse the rule.
 TzRule clockTz;
 void applyTime() {
   configTime(0, 0, cfg.ntp.c_str());   // SNTP only

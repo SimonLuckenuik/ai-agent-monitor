@@ -367,7 +367,14 @@ def faces_beside_big_faces(emu):
         time.sleep(4)
         shown = emu.stats()["heap"]["free"]
         time.sleep(10)   # Sync now is limited to one request per 10 s
-        reply = emu.post("/api/weather/sync").decode()
+        for attempt in range(6):   # a fetch of the clock's own (a city change, a retry) restarts that wait
+            try:
+                reply = emu.post("/api/weather/sync").decode()
+                break
+            except HttpError as e:
+                if e.code != 429 or attempt == 5:
+                    raise
+                time.sleep(5)
         check(reply == "OK", f"weather sync beside {big}: {reply}")
         failed = []
         for name in names:
@@ -708,6 +715,7 @@ def palettes_and_roles(emu):
 def city_place(emu):
     """Spec 035: the place picked on the page is kept for its city, travels in a backup, and
     goes when the city changes by hand."""
+    before = emu.config()
     emu.set("city", "Saint-Hubert, CA")
     emu.set("place", "45.50008,-73.41583,Saint-Hubert, Quebec, CA")
     c = emu.config()
@@ -721,6 +729,11 @@ def city_place(emu):
     emu.post("/api/settings/import", backup)
     c = emu.config()
     check(c.get("city") == "Saint-Hubert, CA" and c.get("place", "").startswith("45.50008,"), f"restored: {c.get('place')}")
+    # Leave the clock's city as found: a city change starts a weather fetch (and, offline,
+    # geocoding retries) that the next cases' Sync now would meet as 429.
+    emu.set("city", before.get("city", ""))
+    if before.get("place"):
+        emu.set("place", before["place"])
 
 
 @case
