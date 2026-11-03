@@ -7,11 +7,26 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.1.0 - 2026-11-02
+
+### Upgrading
+
+Install `AIAgentMonitor_v2.1.0.bin.gz` from the Firmware update card, as for 2.0.0.
+Settings, faces and photos are kept. Then pick your city again in Time & region →
+Location, so the weather uses its exact place and the time zone follows it.
+
+### New
+
 - **One city search** (spec 035): Time & region → Location lists Open-Meteo's matches
   while typing, from every country ("Saint-Hubert" in Quebec, Belgium, France…) with
   region, population and time zone; a pick sets the weather to that exact place (new
   setting `place`) and the time zone with it. Change time zone… sets another one. The
   Weather card no longer has its own city field.
+- **Every time zone** (spec 033): the 13 built-in zones are gone. The time zone list
+  holds every zone from the browser's own, always current time zone database, loaded
+  only when opened, and sets the clock's rule from it; a custom POSIX rule is still
+  possible. The clock keeps the zone's name (`tzname`). A city typed by hand in another
+  zone than the clock's is pointed out.
 - **Backups keep the custom faces** (spec 032): System → Download backup saves the
   settings, every custom face and the saved (`$persist`) values in one file
   (`ai-agent-monitor-backup`, format 2); Restore puts them back one face at a time and
@@ -19,62 +34,62 @@ versioning. `/version` on the device reports the version it was built as; a
   `GET /api/faces` lists the saved values' names (`persist`).
 - **Digit fonts** (spec 031): `"font": "bebas"` (Bebas Neue) and `"outfit"` (Outfit) for
   large numbers, filled and smooth at any size; `"seg7"` (seven segments) and `"pixel"`
-  (5×7 blocks), with `"off"` for the unlit ones; `"weight"` makes the big font bold. The
-  converted smalltv-pomodoro faces use them as their originals did.
-- **Time zones**: the 13 built-in zones are gone; one field lists every zone (above), with
-  the city's zone and a custom rule. The clock keeps the zone's name (`tzname`).
-- **localhost** is answered again (the emulator, tunnels): spec 029's host check refused it.
-- **Every time zone** (spec 033): Time & region → More time zones… lists every zone from
-  the browser's own, always current time zone database and sets the clock's rule from it;
-  "Use the city's time zone" picks the weather city's zone. The page says so when a new
-  city is in another zone.
-- **Face review**: 8 converted faces that were too close to ours or to each other are gone
-  (33 remain); slogans and task counters are gone from the rest, their bars and rings
-  show the day's progress. The aquarium has gradient water and a clownfish and blue tang;
-  the synthwave sun sets behind the horizon; compass has a seconds hand; gradient's
-  rings are smooth.
+  (5×7 blocks), with `"off"` for the unlit ones; `"weight"` makes the big font bold. Ten
+  of our faces use them: Outfit on power-cell, kpi, commit-streak, night-light, orbit,
+  synthwave, sun-arc and weather-poster; seven segments on retro-lcd and scoreboard.
+- **33 more faces and a face gallery** (spec 026): analog dials, display styles and
+  pixel-art scenes by davicorrea0, converted from smalltv-pomodoro (GPL-3.0) into
+  `examples/faces/smalltv-pomodoro/`, reviewed against ours (8 too close were dropped)
+  and without their pomodoro and task counters. `examples/faces/marketplace.json` lists
+  all 73 example faces with links to their JSON and previews; the settings page browses
+  and installs them (Integrations → Custom faces → Face gallery).
 - **Rain or snow within the hour** (spec 028): from Open-Meteo's 15-minute forecast.
   Weather today's last cell says "RAIN IN 15 MIN" or "SNOW NOW" while one is due (in
   French too); faces get `{now.rain_in}`, `{now.snow_in}`, `{now.rain_mm}`,
   `{now.snow_cm}`; `/status` reports `rainIn` and `snowIn`. A new example face, umbrella,
   appears only while rain or snow is due.
-- **The plugin (0.6.1)**: the skill's face reference and checker know the new
-  placeholders.
 - **Network guards** (spec 029):
   - **Request host:** on the home network the clock answers only requests addressed to
-    it (its IP, its host name, `<host>.local`, or a name listed in the new setting WiFi →
-    Other names for this clock); other names get 403, so a web page cannot reach it by
-    DNS rebinding. The setup network still answers any name.
+    it (its IP, its host name, `<host>.local`, `localhost`, or a name listed in the new
+    setting WiFi → Other names for this clock); other names get 403, so a web page
+    cannot reach it by DNS rebinding. The setup network still answers any name.
   - **WiFi:** if the connection's security weakens (CVE-2020-12638), the clock drops it
     and joins again; `/status` counts it as `wifiDowngrades`.
   - **Clock time:** an SNTP jump of more than 2 minutes waits for the weather server's
     time to confirm it (`timeHeld` in `/status`), so one forged packet cannot move the
     clock.
-- **41 more faces and a face gallery** (spec 026): analog dials, display styles and
-  pixel-art scenes by davicorrea0, converted from smalltv-pomodoro (GPL-3.0) into
-  `examples/faces/smalltv-pomodoro/`. Their pomodoro count became the variables `done`
-  and `goal`. `examples/faces/marketplace.json` lists all 80 example faces with links to
-  their JSON and previews; the settings page browses and installs them (Integrations →
-  Custom faces → Face gallery).
-- **The plugin (0.6.0)**: `clock.py gallery` and `clock.py install <name>` use the
-  gallery.
-- **Faster big text**: the line font that draws the Big tiles, the flip clock and
-  `"font": "big"` in custom faces is drawn in integers from glyphs compiled at build
-  time, instead of parsing path text and computing in floats on every draw (spec 030).
-  On the emulator's model of the chip, Big time draws in about 125 ms instead of
-  650-720 ms; it looks the same.
+
+### Faster and smaller
+
+- **Faster big text** (spec 030): the line font that draws the Big tiles, the flip clock
+  and `"font": "big"` is drawn in integers from glyphs compiled at build time, and sent
+  to the panel a run of pixels at a time; on the emulator's model of the chip, Big time
+  draws in about 125 ms instead of about 700 ms. It looks the same.
 - **mDNS**: our own responder replaces the core's LEAmDNS (spec 027). It answers for
   `<host>.local` and advertises the web service as before, in about 4.5 KB of flash
-  instead of 21 KB, and holds 136 B of heap instead of about 0.5-1 KB. The compressed
-  update image is 11 KB smaller, which leaves room for the features that follow.
+  instead of 21 KB, and holds 136 B of heap instead of about 0.5-1 KB.
+
+### Fixes
+
 - **Face variables**: a new variable when all 40 are in use is refused with a 507
   "No room for variable" instead of being dropped while the API answered OK. Expired
   variables are cleared first to make room.
 - **MQTT**: saving the settings page no longer reconnects once per field; the clock
   connects again only when an MQTT setting actually changes.
-- **The plugin (0.5.5)**: the face format reference gives the 40-variable limit's 507.
-- **The plugin (0.5.4)**: the skill's face format reference gives the 507 "Not enough
-  memory" answer and the new `/status` fields (`weatherHeap`, `mqttHeap`, `mdnsHeap`).
+
+### The plugin (0.5.4 to 0.6.3)
+
+- `clock.py gallery` and `clock.py install <name>` use the face gallery; the face format
+  reference and checker know the new fonts, placeholders, the 40-variable limit's 507,
+  the 507 "Not enough memory" answer, the new `/status` fields (`weatherHeap`,
+  `mqttHeap`, `mdnsHeap`) and the faces list's `persist`.
+
+### For developers
+
+- The integration tests print each case as it starts (`RUN name (n/33)`); the settings
+  page's own code has tests (`node tests/web/*.test.js`, in CI).
+- `scripts/screenshots.py` no longer stops at `marketplace.json`, and its card shots are
+  no longer covered by the page header.
 
 ## 2.0.0 - 2026-10-31
 
