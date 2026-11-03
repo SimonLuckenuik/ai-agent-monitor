@@ -49,3 +49,4 @@
     integer sums that draw them, instead of their value and max.
   - All 32 integration cases pass (lowest heap 5,112 B). Draw-time gains are to measure
     on the clock with the next release.
+- 2026-11-03: confirmed, on the clock (2.1.0, `/status` `drawMs`): Big time 106 ms, 148 ms at worst (0.8 s on 1.8.0); Big date 91/110 ms; the Day tiles 98-132 ms.

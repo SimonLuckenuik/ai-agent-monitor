@@ -28,19 +28,29 @@ the time zone (035). None of it has run on the clock yet: the owner installs it 
 ## The clock
 
 The owner's clock (MAC 8C:8C:29:AD:EC:8A, `agentmonitor-adec8a`; the address moves) runs
-**2.0.0** since 2026-10-31: 25.3 KB free at rest, the weather loading, mDNS on, every
-example face of the time installed and shown without a restart (least free heap 16.3 KB),
-MQTT connected to the owner's broker on the IoT network and driving faces and messages
-(2026-11-01, spec 025). The owner clicked through every custom face with no crash.
+**2.1.0** since 2026-11-03, installed by the owner and working. Read from `/status` and
+`/config` after 7.6 hours up (no sign-in): 23.9 KB free, 22.2 KB at the lowest; Big
+time draws in 106 ms (148 ms at worst; 0.8 s on 1.8.0), the Day tiles in 98-132 ms;
+mDNS on and `agentmonitor-adec8a.local` resolving from the home network; a request
+naming another host refused (403); no Wi-Fi downgrade; the time right in EST after
+the change from daylight saving time; the weather and the next hour's rain matching
+Open-Meteo; the place picked from the city search. **MQTT does not connect** ("cannot
+connect (-2)" to 192.168.66.59:1883: the broker is down, has moved, or is not reachable
+from the clock's network). One crash is recorded (a panic, 4,958 s after a start,
+no face drawing); its details need the signed-in page.
+
+On 2.0.0 (2026-10-31): 25.3 KB free at rest, every example face of the time shown
+without a restart (least free heap 16.3 KB), MQTT driving faces and messages (2026-11-01,
+spec 025).
 
 Earlier device results (1.4.0 to 1.9.1) are in the decision records and the closed
 [issues](issues/README.md): Big date's watchdog reset (1.4.0), animated faces' stack
 overflow (1.9.0), the weather and face uploads within the heap (1.9.1), all fixed and
 confirmed on the clock.
 
-**To check on the clock with 2.1.0:** Big time's draw time (`drawMs`; about 125 ms in the
-emulator, 0.8 s on 1.8.0), mDNS over hours, the host and Wi-Fi guards, the rain and snow
-data, the new fonts, a backup and restore, the city search.
+**Still to see on the clock:** a backup and restore (needs the signed-in page), the
+orientations, gamma curves and screen off and wake (spec 018), the MQTT broker, the
+recorded crash, and rain or snow actually announced.
 
 ## Checks
 
@@ -62,7 +72,7 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 
 ## Specs in flight
 
-Built, to check on the clock with 2.1.0: [026](../specs/026-face-gallery/SPEC.md),
+Done in 2.1.0 and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
 [027](../specs/027-small-mdns/SPEC.md), [029](../specs/029-network-guards/SPEC.md),
 [030](../specs/030-faster-big-text/SPEC.md). Done on `main`, unreleased:
 [036](../specs/036-flash-room/SPEC.md) (flash room). Done in 2.1.0:

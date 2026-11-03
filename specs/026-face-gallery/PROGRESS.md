@@ -17,3 +17,4 @@
     skill's schema check now covers the converted faces.
   - The settings page's gallery card and the skill's `gallery` and `install` read the
     file from `main` on GitHub; they work once it is pushed.
+- 2026-11-03: confirmed, the gallery file is served from `main` (`raw.githubusercontent.com`, CORS `*`), and the owner runs 2.1.0 with the card.

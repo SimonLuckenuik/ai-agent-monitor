@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Weather icons match the forecast**: dense drizzle drew a snowflake, fog drew hail
+  and snow showers a rain-and-snow mix. The icon table read Open-Meteo's weather codes
+  as another WMO table (4680, the original app's); it now follows the codes Open-Meteo
+  gives (WMO 4677). The words were right; only the icons change.
+
 - **The plugin shows session status by itself** (spec 019, plugin 0.7.0): with its new
   *Clock for session status* option set to the clock's address, Claude Code's hooks put
   "waiting" on the clock when a session asks for a permission or a question, "done" with

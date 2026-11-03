@@ -1,6 +1,6 @@
 # 027 A small mDNS responder
 
-Status: In progress (approved 2026-10-31; built, on the emulator; to confirm on the clock)
+Status: Done in 2.1.0 (confirmed on the clock 2026-11-03)
 
 ## Problem
 

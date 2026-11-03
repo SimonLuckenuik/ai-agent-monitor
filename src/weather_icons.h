@@ -12,7 +12,7 @@ const char WI_BASE_NAMES[] PROGMEM = "clear\0cloudy\0fog\0hail\0lightning\0rain\
 // The first icon of each base (day; night follows unless the base is agnostic).
 const uint8_t WI_FIRST[WI_BASES] PROGMEM = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 23, 24, 25};
 // WMO code (0..99) -> base; codes the table leaves out are 'clear'.
-const uint8_t WI_WMO[100] PROGMEM = {0, 0, 1, 1, 2, 2, 0, 0, 0, 0, 2, 2, 4, 0, 0, 0, 0, 0, 11, 0, 2, 6, 6, 5, 7, 3, 10, 12, 12, 12, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 6, 8, 5, 8, 5, 3, 3, 7, 7, 0, 8, 8, 5, 5, 13, 13, 13, 8, 5, 0, 8, 8, 5, 5, 3, 3, 3, 6, 6, 0, 7, 7, 7, 7, 13, 13, 13, 7, 13, 0, 5, 8, 5, 5, 9, 6, 6, 6, 0, 3, 4, 9, 10, 10, 4, 10, 10, 0, 0, 14};
+const uint8_t WI_WMO[100] PROGMEM = {0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 2, 0, 0, 8, 0, 8, 0, 8, 6, 6, 0, 0, 0, 5, 0, 5, 0, 5, 6, 6, 0, 0, 0, 7, 0, 7, 0, 7, 0, 7, 0, 0, 5, 5, 5, 0, 0, 7, 7, 0, 0, 0, 0, 0, 0, 0, 0, 10, 9, 0, 0, 9};
 const uint16_t WI_START[WI_ICONS + 1] PROGMEM = {0, 256, 390, 668, 843, 1147, 1348, 1759, 2063, 2389, 2604, 2964, 3221, 3703, 4070, 4476, 4785, 5141, 5404, 5787, 6077, 6426, 6670, 6786, 7020, 7257, 7557};
 const uint8_t WI_DATA[] PROGMEM = {
   // wi-day-clear

@@ -7,9 +7,12 @@ flattens each glyph's path into polygons and stores the points as bytes: one uni
 1/8 of the icons' 30x30 viewBox, 0xFF ends a ring. faces.cpp fills them with the path
 filler (non-zero rule, anti-aliased) at any size.
 
-The WMO code -> icon name table follows getWeatherIconName() from the app this firmware
-pairs with: "wi-day-<name>" / "wi-night-<name>", or "wi-<name>" for the four icons that
-have no day/night variant. The set has no "wi-day-clear"; it is drawn with wi-day-sunny.
+The WMO code -> icon name table covers the codes Open-Meteo gives (WMO 4677 "ww": 51-55
+drizzle, 56-57 freezing drizzle, 61-65 rain, ...). It used to follow the original app's
+table, which reads the codes as WMO 4680 (55 freezing drizzle, 45 hail), so dense drizzle
+showed a snowflake. Icon names: "wi-day-<name>" / "wi-night-<name>", or "wi-<name>" for
+the four icons that have no day/night variant. The set has no "wi-day-clear"; it is drawn
+with wi-day-sunny. Every base stays in the set, used by a code or not: faces name them.
 
 Weather Icons by Erik Flowers (https://github.com/erikflowers/weather-icons), SIL OFL 1.1.
 """
@@ -26,22 +29,22 @@ FLAT = 0.05   # curve flattening tolerance, viewBox units
 SIMPLIFY = 0.08   # Douglas-Peucker tolerance, viewBox units
 Q = 8   # stored units per viewBox unit (30 * 8 = 240 fits a byte)
 
-# WMO code -> icon name.
+# Open-Meteo's WMO codes -> icon name (the wording is wmoText() in src/weather.cpp).
 WMO = {
-    0: 'clear', 1: 'clear', 2: 'cloudy', 3: 'cloudy', 4: 'fog', 5: 'fog', 10: 'fog', 11: 'fog', 12: 'lightning',
-    18: 'strong-wind', 20: 'fog', 21: 'rain-mix', 22: 'rain-mix', 23: 'rain', 24: 'snow', 25: 'hail', 26: 'thunderstorm',
-    27: 'dust', 28: 'dust', 29: 'dust', 30: 'fog', 31: 'fog', 32: 'fog', 33: 'fog', 34: 'fog', 35: 'fog',
-    40: 'rain-mix', 41: 'sprinkle', 42: 'rain', 43: 'sprinkle', 44: 'rain', 45: 'hail', 46: 'hail', 47: 'snow', 48: 'snow',
-    50: 'sprinkle', 51: 'sprinkle', 52: 'rain', 53: 'rain', 54: 'snowflake-cold', 55: 'snowflake-cold',
-    56: 'snowflake-cold', 57: 'sprinkle', 58: 'rain', 60: 'sprinkle', 61: 'sprinkle', 62: 'rain', 63: 'rain',
-    64: 'hail', 65: 'hail', 66: 'hail', 67: 'rain-mix', 68: 'rain-mix', 70: 'snow', 71: 'snow', 72: 'snow', 73: 'snow',
-    74: 'snowflake-cold', 75: 'snowflake-cold', 76: 'snowflake-cold', 77: 'snow', 78: 'snowflake-cold', 80: 'rain',
-    81: 'sprinkle', 82: 'rain', 83: 'rain', 84: 'storm-showers', 85: 'rain-mix', 86: 'rain-mix', 87: 'rain-mix',
-    89: 'hail', 90: 'lightning', 91: 'storm-showers', 92: 'thunderstorm', 93: 'thunderstorm', 94: 'lightning',
-    95: 'thunderstorm', 96: 'thunderstorm', 99: 'tornado',
+    0: 'clear', 1: 'clear', 2: 'cloudy', 3: 'cloudy',
+    45: 'fog', 48: 'fog',                                   # fog, rime fog
+    51: 'sprinkle', 53: 'sprinkle', 55: 'sprinkle',         # drizzle
+    56: 'rain-mix', 57: 'rain-mix',                         # freezing drizzle
+    61: 'rain', 63: 'rain', 65: 'rain',
+    66: 'rain-mix', 67: 'rain-mix',                         # freezing rain
+    71: 'snow', 73: 'snow', 75: 'snow', 77: 'snow',         # snow, snow grains
+    80: 'rain', 81: 'rain', 82: 'rain',                     # rain showers
+    85: 'snow', 86: 'snow',                                 # snow showers
+    95: 'thunderstorm', 96: 'storm-showers', 99: 'storm-showers',   # with hail
 }
 AGNOSTIC = ['strong-wind', 'dust', 'snowflake-cold', 'tornado']   # one icon, no day/night variant
-BASES = sorted(set(WMO.values()) - set(AGNOSTIC)) + AGNOSTIC
+BASES = ['clear', 'cloudy', 'fog', 'hail', 'lightning', 'rain', 'rain-mix', 'snow', 'sprinkle',
+         'storm-showers', 'thunderstorm'] + AGNOSTIC
 FILE = {'day-clear': 'day-sunny'}
 
 

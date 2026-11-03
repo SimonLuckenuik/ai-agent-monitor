@@ -1,6 +1,6 @@
 # 026 The smalltv-pomodoro faces, and a face gallery
 
-Status: In progress (approved 2026-10-31; built; the settings page's card to check once pushed)
+Status: Done in 2.1.0 (confirmed on the clock 2026-11-03)
 
 ## Problem
 

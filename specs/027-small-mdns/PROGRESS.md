@@ -16,3 +16,4 @@
     while the radio dozes; to watch on the clock (`ping <host>.local` over a few hours).
   - No question echo for legacy (port ≠ 5353) resolvers: they get the answer with their
     id and 10 s TTLs; to check with `dig -p 5353` if one complains.
+- 2026-11-03: confirmed, on the clock (2.1.0, 7.6 hours up): `mdnsState` on, and `agentmonitor-adec8a.local` resolves and answers from the home network, through the gateway's mDNS repeater.

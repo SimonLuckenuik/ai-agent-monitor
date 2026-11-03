@@ -19,3 +19,4 @@
     reply's Date header (`weather.cpp`) confirms it. Without weather, a jump repeated
     by every SNTP reply for 6 hours is taken, so the clock cannot stay wrong for good.
     Chip only: the emulator's host core has no SNTP.
+- 2026-11-03: confirmed, on the clock (2.1.0): a request with `Host: evil.example.com` gets 403, one with its own `.local` name 200; `wifiDowngrades` 0; the time right after the change from daylight saving time.

@@ -35,11 +35,11 @@ Next free number: **038**.
 | [023 Custom faces within the 4 KB stack](023-renderer-stack/SPEC.md) | In progress |
 | [024 Memory headroom: weather and uploads beside big faces](024-memory-headroom/SPEC.md) | In progress (released in 1.9.1) |
 | [025 RAM back, and MQTT and mDNS on again](025-ram-mqtt-mdns/SPEC.md) | In progress (released in 2.0.0) |
-| [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | In progress (built; card to check on main) |
-| [027 A small mDNS responder](027-small-mdns/SPEC.md) | In progress (built; to confirm on the clock) |
+| [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | Done in 2.1.0 |
+| [027 A small mDNS responder](027-small-mdns/SPEC.md) | Done in 2.1.0 |
 | [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Done in 2.1.0 |
-| [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | In progress (built; to check on the clock) |
-| [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | In progress (built; to measure on the clock) |
+| [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | Done in 2.1.0 |
+| [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | Done in 2.1.0 |
 | [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Done in 2.1.0 |
 | [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Done in 2.1.0 |
 | [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done in 2.1.0 |

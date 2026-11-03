@@ -485,8 +485,26 @@ static void testColors() {
   computeColors(t);
 }
 
+// Open-Meteo's weather codes (WMO 4677) and their icons: dense drizzle (55) once drew a
+// snowflake and fog (45) hail, from a table that read the codes as WMO 4680.
+static void testWeatherIcons() {
+  const struct { int code; const char* icon; } want[] = {
+    {0, "wi-day-clear"}, {2, "wi-day-cloudy"}, {3, "wi-day-cloudy"}, {45, "wi-day-fog"}, {48, "wi-day-fog"},
+    {51, "wi-day-sprinkle"}, {53, "wi-day-sprinkle"}, {55, "wi-day-sprinkle"}, {56, "wi-day-rain-mix"},
+    {57, "wi-day-rain-mix"}, {61, "wi-day-rain"}, {63, "wi-day-rain"}, {65, "wi-day-rain"},
+    {66, "wi-day-rain-mix"}, {67, "wi-day-rain-mix"}, {71, "wi-day-snow"}, {73, "wi-day-snow"},
+    {75, "wi-day-snow"}, {77, "wi-day-snow"}, {80, "wi-day-rain"}, {81, "wi-day-rain"}, {82, "wi-day-rain"},
+    {85, "wi-day-snow"}, {86, "wi-day-snow"}, {95, "wi-day-thunderstorm"}, {96, "wi-day-storm-showers"},
+    {99, "wi-day-storm-showers"},
+  };
+  for (const auto& w : want) CHECK_STR(weatherIconName(w.code, true), w.icon);
+  CHECK_STR(weatherIconName(55, false), "wi-night-sprinkle");
+  CHECK_STR(weatherIconName(-1, true), "wi-day-clear");
+}
+
 int main() {
   testNumbers();
+  testWeatherIcons();
   testExpressions();
   testFields();
   testColours();
