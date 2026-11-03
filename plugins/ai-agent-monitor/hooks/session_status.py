@@ -53,7 +53,8 @@ def message_for(event, data):
     """The request for this event: (method, path, body), or None."""
     sid = re.sub(r"[^A-Za-z0-9]", "", str(data.get("session_id", "")))[:8] or "session"
     mid = "cc-" + sid
-    title = plain(os.path.basename(str(data.get("cwd", "")).rstrip("/\\")) or "Claude Code", 40)
+    folder = re.split(r"[/\\]", str(data.get("cwd", "")).rstrip("/\\"))[-1]   # either separator
+    title = plain(folder, 40) or "Claude Code"
     if event == "waiting":
         text = plain(str(data.get("message") or "Claude needs you"), 160)
         return "POST", "/api/message", {"id": mid, "title": title, "text": text, "icon": "waiting",
