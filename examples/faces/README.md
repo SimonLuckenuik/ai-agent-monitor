@@ -14,7 +14,7 @@ curl -X POST "http://<clock>/api/faces?name=pixel-pet&show=1&key=<api key>" --da
 curl -X POST "http://<clock>/api/faces/vars?key=<api key>" -d '{"pet": "Bit", "mood": "hungry", "food": 20}'
 ```
 
-**41 more** are in [smalltv-pomodoro/](smalltv-pomodoro/README.md): analog dials, display
+**33 more** are in [smalltv-pomodoro/](smalltv-pomodoro/README.md): analog dials, display
 styles and pixel-art scenes by davicorrea0, converted from the smalltv-pomodoro project.
 
 **The gallery.** [marketplace.json](marketplace.json) lists every face here with its

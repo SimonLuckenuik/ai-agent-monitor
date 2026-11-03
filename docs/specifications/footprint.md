@@ -8,6 +8,9 @@ the clock's `/status` and the emulator (`EMU_HEAP`, spec 022). Scripts:
 
 ## The budgets
 
+Since then: for 2.1.0 (2026-11-02, after specs 026-035) `firmware.bin` is 597,120 B and
+`firmware.bin.gz` 433,251 B, the update budget **99%** used. The table below is 1.9.1's.
+
 | Budget | Size | Used | Left |
 |---|---|---|---|
 | Update image, compressed (`.bin.gz`; the limit is 1 MB minus image minus gz) | 614,400 B | 425,570 B (97%) | about 19 KB of compressed room, about 2 plain bytes per compressed byte saved |

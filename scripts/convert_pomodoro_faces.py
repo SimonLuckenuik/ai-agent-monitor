@@ -8,14 +8,16 @@ layers drawn by its smalltv-pomodoro/facepack.cpp; this script maps each layer t
 items (the table is in specs/026-face-gallery/RESEARCH.md):
 
   text     their pixel font -> "big" at the same height (fonts 2 and 4 for lower case);
-           their digit fonts -> "big", fitted to their width
+           Bebas, Outfit, DSEG7 and their dm digits -> ours (spec 031), with unlit segments;
+           their other digit fonts -> "big", fitted to their width
   rect, circle, line, bar -> the same; arc -> ring; hand -> a line by sin/cos;
   ticks -> a repeat of lines; weather -> icon {now.icon}; sprite -> sprite, animated
   mascot -> their tomato sprite, bouncing; plant -> a small plant sprite
   when     -> show conditions on our placeholders
 
-No pomodoro here: their focus count and daily goal become the variables done and goal
-(tasks done today), labelled TASKS. Faces over 4 KB or 32 items are made smaller: a
+No pomodoro here: their focus counts, goals and slogans are left out (keep_text), and
+their progress bars and rings show the day's progress. Faces too close to ours are
+skipped (SKIP). Faces over 4 KB or 32 items are made smaller: a
 repeated sprite becomes a repeat, long animations keep every other frame, and a few
 scenes are reworked by hand (TWEAKS). Writes examples/faces/smalltv-pomodoro/<name>.json
 and its index, faces.json.

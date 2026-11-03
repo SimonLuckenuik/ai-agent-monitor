@@ -1,36 +1,35 @@
 # Roadmap
 
-Updated: 2026-10-31. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-11-02. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
-## In progress
+## Next
 
-1. [025 RAM back, and MQTT and mDNS on again](../../specs/025-ram-mqtt-mdns/SPEC.md).
-2. [024 Weather and face uploads within the heap](../../specs/024-memory-headroom/SPEC.md):
-   1.9.1, the weather stopped loading on 1.9.0.
-3. [022 The emulator with the clock's memory](../../specs/022-emulator-device-memory/SPEC.md):
-   heap, stack, crash traces, live device statistics.
-4. [021 Crash records and crash-loop protection](../../specs/021-crash-report/SPEC.md).
+1. **Release 2.1.0** and check it on the clock: specs 026-033 and 035 (see
+   [STATUS](../STATUS.md#the-clock) for what to look at). Close 026, 027, 029 and 030
+   on what the clock shows.
+2. [019 Claude Code hooks that drive the clock](../../specs/019-claude-code-hooks/SPEC.md):
+   proposed, waiting for approval.
 
-## Next (proposed, waiting for approval)
+## Waiting
 
-1. [018 Check 1.5-1.8 on the real clock](../../specs/018-first-run-on-the-clock/SPEC.md):
-   nothing after 1.4.0 has run on the clock.
-2. [019 Claude Code hooks that drive the clock](../../specs/019-claude-code-hooks/SPEC.md).
+- [034 Custom faces in the clock's language](../../specs/034-face-languages/SPEC.md):
+  deferred by the owner (2026-11-02).
+- [018 Check 1.5-1.8 on the real clock](../../specs/018-first-run-on-the-clock/SPEC.md):
+  overtaken; the 2.1.0 check covers what is still unseen.
+- 021, 022, 024, 025: released, to close once seen at work on the clock.
 
 ## Ideas (no spec yet)
 
-- An error, or eviction of expired values, when the variable table is full
-  ([issue](../issues/2026-10-29-new-variable-dropped-when-table-full.md)).
-- [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
+- Flash savings before anything big: the update image is at 99%. Candidates in the
+  [footprint](../specifications/footprint.md): string literals, the update buffer, code
+  that can move from the clock to the settings page.
 - Hardware scrolling and the panel's idle (8-colour) mode (spec 014 research).
 - A way back to stock over WiFi (upstream idea).
-- Flash and RAM savings ([footprint](../specifications/footprint.md), 2026-10-31): the update
-  buffer held in RAM (4.1 KB), string literals in RAM (about 7 KB), mDNS that never starts
-  (21 KB of flash), MQTT gated at 16 KB of free heap. The update image is at 97%.
+- [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
 
 ## Done
 
-Specs 001-017, released from 1.4.0 to 1.8.0: see [specs/README.md](../../specs/README.md)
-and `CHANGELOG.md`.
+Specs 001-017, released from 1.4.0 to 1.8.0; 023 in 1.9.0; 028, 031, 032, 033 and 035 on
+`main` for 2.1.0. See [specs/README.md](../../specs/README.md) and `CHANGELOG.md`.

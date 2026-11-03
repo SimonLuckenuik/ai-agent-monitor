@@ -1,75 +1,76 @@
 # Current status and next work
 
-Updated: 2026-10-30. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-02. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **1.9.0** (2026-10-31, tag `v1.9.0`), published on GitHub as
-`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v1.9.0.bin.gz`,
-`AIAgentMonitor_v1.9.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
+The latest release is **2.0.0** (2026-10-31, tag `v2.0.0`), published on GitHub as
+`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.0.0.bin.gz`,
+`AIAgentMonitor_v2.0.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
 and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
-`faces-v2` are the same commit. The plugin is 0.5.3.
+`faces-v2` are the same commit. The plugin is 0.6.3.
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
 last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,
 display features, emulator scenarios), 1.7.0 and 1.8.0 (flicker-free redraws, flip
-clocks), all 2026-10-29/30; 1.9.0 (2026-10-31: faces within the stack, crash records,
-crash-loop protection).
+clocks), all 2026-10-29/30; 1.9.0 (faces within the stack, crash records, crash-loop
+protection), 1.9.1 (weather and face uploads within the heap) and 2.0.0 (RAM back, MQTT
+and mDNS on again), all 2026-10-31.
+
+**Unreleased on `main`, for 2.1.0:** the face gallery and the converted smalltv-pomodoro
+faces (026), a small mDNS responder (027), rain or snow within the hour (028), network
+guards (029), faster big text (030), four digit fonts and a stroke weight (031), backups
+with the custom faces (032), every time zone (033), one city search for the weather and
+the time zone (035). None of it has run on the clock yet.
 
 ## The clock
 
-The owner's clock (MAC 8C:8C:29:AD:EC:8A, `agentmonitor-adec8a`; address moves, last
-seen at 192.168.66.229) runs **1.8.0** (build bed88cb, installed by the owner by
-2026-10-31). With face 7 shown: free heap about 15.7 KB, Big time draws in 0.8 s.
-Retro-runner, flip-clock-wide and night-lake restart it: a stack overflow in the
-expression parser while repainting, reproduced in the emulator
-([issue](issues/2026-10-31-animated-faces-restart-the-clock.md)); they were deleted from
-the clock. Fixed in 1.9.0 (spec 023), with crash records and crash-loop protection
-(spec 021). The clock runs **2.0.0** since 2026-10-31: 25.3 KB free at rest, the weather
-loading, mDNS on, all 39 example faces installed and each shown without a restart, least free heap 16.3 KB, MQTT connected to a test broker (`mqttHeap` 672 B) (spec 025). Before that, on **1.9.0**: the three faces
-ran without a restart, least free stack 1,040 B. Sending a face after a big one was
-shown fails for lack of heap ([issue](issues/2026-10-31-face-upload-needs-the-loaded-face-memory.md)). The weather
-never loads on 1.9.0 (16 KB fetch threshold). Both fixed in 1.9.1 (spec 024). Shown there in the 1.4.0 work:
+The owner's clock (MAC 8C:8C:29:AD:EC:8A, `agentmonitor-adec8a`; the address moves) runs
+**2.0.0** since 2026-10-31: 25.3 KB free at rest, the weather loading, mDNS on, every
+example face of the time installed and shown without a restart (least free heap 16.3 KB),
+MQTT connected to the owner's broker on the IoT network and driving faces and messages
+(2026-11-01, spec 025). The owner clicked through every custom face with no crash.
 
-| Feature | Device result |
-|---|---|
-| Install over SmartClock-OSS, then updates | The owner installed both 1.4.0 images (`_nomqtt.bin`, then `.bin.gz`) |
-| Line font and Big tiles | Drew glyph by glyph at 80 MHz; Big date tripped the watchdog; fixed by faster strokes and 160 MHz, re-measured with `drawMs` |
-| Agent messages | Each icon sent in parallel and shown; solid backgrounds chosen on the panel |
-| Night color | Dark grey at night, chosen on the panel |
-| French | Shown |
-| Setup network after a reboot | Once showed the old name in recovery ([issue](issues/2026-10-25-setup-network-kept-old-name-after-reboot.md)) |
+Earlier device results (1.4.0 to 1.9.1) are in the decision records and the closed
+[issues](issues/README.md): Big date's watchdog reset (1.4.0), animated faces' stack
+overflow (1.9.0), the weather and face uploads within the heap (1.9.1), all fixed and
+confirmed on the clock.
 
-**Not checked on the clock yet:** everything from 1.5.0 on (face model, palettes and roles,
-orientation, gamma, screen off, off-screen repaints, flip clocks), mDNS, MQTT with a
-broker. That check is [spec 018](../specs/018-first-run-on-the-clock/SPEC.md).
+**To check on the clock with 2.1.0:** Big time's draw time (`drawMs`; about 125 ms in the
+emulator, 0.8 s on 1.8.0), mDNS over hours, the host and Wi-Fi guards, the rain and snow
+data, the new fonts, a backup and restore, the city search.
 
 ## Checks
 
-Before each commit of firmware: `pio run` (size guard), unit tests (286 checks), safety
-tests, face preview, and for visible changes the integration tests (26 cases, Docker)
-and `scripts/screenshots.py`. CI (`.github/workflows/build.yml`) runs the build, unit, safety, face preview and integration tests on every push.
+Before each commit of firmware: `pio run` (size guard), unit tests (405 checks, plus 123
+mDNS and 23 guard checks), safety tests, face preview, the settings page's own tests
+(`node tests/web/*.test.js`: time zone rules, backups), and for visible changes the
+integration tests (33 cases, Docker) and `scripts/screenshots.py`. CI
+(`.github/workflows/build.yml`) runs all of them on every push.
 
 ## Flash budget
 
-1.9.0: `firmware.bin` 594,240 B; `firmware.bin.gz` 422,897 B; compressed update
-limit 614,400 B (it shrinks as the image grows), **97% used** (about 18 KB left). Crash
-records and protection cost about 3 KB compressed; 1.8.0 was 419,030 B.
+After 035: `firmware.bin` 597,120 B, `firmware.bin.gz` 433,251 B, the update budget **99%
+used**. The fonts took about 8 KB; the backups and city search about 2 KB. A libc float
+parser costs about 9 KB: parse numbers with the face code's own (`readNumber`). Savings
+to find are listed in the [footprint](specifications/footprint.md) and the
+[roadmap](plans/roadmap.md).
 
 ## Specs in flight
 
-Done: [023](../specs/023-renderer-stack/SPEC.md) (faces within the 4 KB stack, confirmed
-on the clock). In 1.9.0 on the clock, not yet seen at work there (no crash since):
-[021](../specs/021-crash-report/SPEC.md) (crash records, crash-loop protection, safe mode),
-[022](../specs/022-emulator-device-memory/SPEC.md) (the emulator with the clock's memory;
-the clock's 3,050 B against the emulator's 2,752 B leaves `EMU_STACK` at 4096). In 1.9.1, not yet on the clock: [024](../specs/024-memory-headroom/SPEC.md) (the weather
-and face uploads within the heap); in 2.0.0, not yet on the clock: [025](../specs/025-ram-mqtt-mdns/SPEC.md)
-(about 12 KB of RAM back, MQTT and mDNS on again). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md), [019](../specs/019-claude-code-hooks/SPEC.md).
-Dropped: [020](../specs/020-esp-now/SPEC.md). Order: [roadmap](plans/roadmap.md).
+Built, to check on the clock with 2.1.0: [026](../specs/026-face-gallery/SPEC.md),
+[027](../specs/027-small-mdns/SPEC.md), [029](../specs/029-network-guards/SPEC.md),
+[030](../specs/030-faster-big-text/SPEC.md). Done on `main`, unreleased:
+[028](../specs/028-rain-snow-soon/SPEC.md), [031](../specs/031-more-fonts/SPEC.md),
+[032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),
+[035](../specs/035-city-search/SPEC.md). Still open from earlier releases: 021, 022, 024,
+025 (released, waiting to be seen at work on the clock). Deferred:
+[034](../specs/034-face-languages/SPEC.md). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md),
+[019](../specs/019-claude-code-hooks/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
+Order: [roadmap](plans/roadmap.md).
 
 ## Open issues
 
-See [issues](issues/README.md): animated custom faces restart the clock, the old setup network name after a reboot, and a new
-variable dropped when the table is full.
+See [issues](issues/README.md): the old setup network name after a reboot.

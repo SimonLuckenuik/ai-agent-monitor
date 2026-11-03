@@ -10,6 +10,7 @@ listed at the end.
 | Unit | `src/faces.cpp` and its helpers, compiled for the host | Zig (`.pio-tools`), one `pio run` for the libraries | under a minute | `python tests/unit/run_unit_tests.py` |
 | Safety | the update handler from `src/main.cpp` against a mock updater, and checks on the source, the image and the ELF | Zig, the firmware built (`pio run`) | about a minute | `python tests/run_safety_tests.py` |
 | Face preview | every built-in face drawn on the host, to PNG | Zig, one `pio run` | about a minute | `python tests/face_preview/run_face_preview.py` |
+| Settings page | the page's own code (time zone rules, backups) from `web/index.html`, against the browser's time zone database and a mock clock | Node | seconds | `node tests/web/tz_rules.test.js`, `node tests/web/backup.test.js` |
 | Integration | the whole firmware in the emulator, through its HTTP API, MQTT and mDNS | Docker | 20-25 minutes (building the image included) | `python tests/integration/run_integration_tests.py` |
 
 Setup, once:
@@ -40,7 +41,7 @@ builds and tests again before it publishes.
 ## Unit tests
 
 `tests/unit/unit_tests.cpp` includes `src/faces.cpp` itself, so its internal functions are
-reachable, and builds against the mocks in `tests/face_preview/mock/`. 286 checks:
+reachable, and builds against the mocks in `tests/face_preview/mock/`. 405 checks:
 
 | Group | Checks |
 |---|---|
@@ -153,6 +154,9 @@ python tests/integration/run_integration_tests.py --reuse      # use an emulator
 | `scenarios` | the emulator's Scenarios panel: a running mocked clock, MQTT-style pushes, presets |
 | `agent_faces` | the Claude Code skill's example faces with the variables an agent pushes |
 | `face_validation` | face limits and errors: 32 items, 4 KB, bad JSON, bad names, unknown faces, a placeholder's fallback |
+| `rain_snow_soon` | rain or snow within the hour from the 15-minute forecast: `/status`, the placeholders, Weather today's last cell (spec 028) |
+| `request_host` | on the home network only requests addressed to the clock are answered (DNS rebinding, spec 029) |
+| `city_place` | the place picked on the settings page: kept for its city, refused when malformed, carried by a backup, dropped by a city typed by hand (spec 035) |
 | `restart_keeps_settings` | after a restart: settings, faces and the fixed time kept; messages gone; no recovery |
 
 ### Writing a case

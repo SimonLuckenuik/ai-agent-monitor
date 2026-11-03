@@ -132,7 +132,8 @@ tests (`python -m pip install ziglang==0.13.0 --target .pio-tools`).
 
 ```bash
 python -m platformio run                        # firmware + size guard
-python tests/unit/run_unit_tests.py             # 286 checks
+python tests/unit/run_unit_tests.py             # 405 checks, plus the mDNS and guard checks
+node tests/web/tz_rules.test.js                 # the settings page's code (also backup.test.js)
 python tests/run_safety_tests.py                # needs the firmware.bin from pio run
 python tests/face_preview/run_face_preview.py   # .pio/face-preview/*.png, sheet.png
 claude plugin validate .                        # plugin and marketplace manifests

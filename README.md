@@ -23,9 +23,12 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
 - **Custom faces.** Agents (or you) design whole screens as JSON: text, shapes with
   borders, SVG paths (Lucide or Material icons as they are), gradients, gauges, pixel
   art, charts, lists, live values (time, weather, forecast, sun, moon, network, your
-  own variables), expressions, palettes, large text in the Big tiles' font and
-  animation. They are saved on the clock and join the rotation, or appear only when
-  they have something to show. A JSON Schema checks them. [37 examples](examples/faces).
+  own variables), expressions, palettes, large numbers in five fonts (the Big tiles'
+  line font, Bebas Neue, Outfit, seven segments and pixel digits) and animation. They
+  are saved on the clock and join the rotation, or appear only when they have something
+  to show. A JSON Schema checks them. [40 examples, and 33 more converted from
+  smalltv-pomodoro](examples/faces), installed in one tap from the settings page's face
+  gallery.
 - **A Claude Code plugin** that teaches Claude the API, with examples. See
   [Claude Code plugin](#claude-code-plugin).
 - **Clock faces:** Classic, Simple, Weather, Forecast, Photo, and the **Big tiles**:
@@ -42,7 +45,9 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   faces can use the same colours, so everything matches.
 - **Weather and a 4-day forecast with no API key**, from
   [Open-Meteo](https://open-meteo.com/), drawn with
-  [Weather Icons](https://erikflowers.github.io/weather-icons/) (day and night).
+  [Weather Icons](https://erikflowers.github.io/weather-icons/) (day and night), and
+  rain or snow coming within the hour. One city search on the settings page picks the
+  exact place (Saint-Hubert in Quebec, not in Belgium) and sets the time zone with it.
 - **Night mode:** dim the screen, draw everything in one dark color (dark gray by
   default) or in a night palette so it lights the room less, show a single face all
   night (Big time, or one of your own), or turn the panel off altogether (warnings and
@@ -52,15 +57,16 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   by inverting the panel's colours. The display does all three, so they cost no
   drawing time.
 - **English or French** on the faces (days, months, weather, labels).
-- **Correct local time all year:** time zones include daylight-saving rules.
+- **Correct local time all year:** every time zone, from your browser's own, up-to-date
+  time zone database, with its daylight-saving rule (or a POSIX rule of your own).
 - **Your photos:** the settings page crops and resizes them to 240×240 in your browser
   before uploading.
 - **Home Assistant:** MQTT with discovery (backlight, face, weather sensors, messages),
   and the stock clock's API for
   [geekmagic-hacs](https://github.com/adrienbrault/geekmagic-hacs) dashboards. Both are
   off until you turn them on.
-- **A settings page** for everything above, plus WiFi, password, backup and firmware
-  updates. It works on phones, follows light or dark mode, and needs no internet on
+- **A settings page** for everything above, plus WiFi, password, backups (the settings
+  with your custom faces and their saved values) and firmware updates. It works on phones, follows light or dark mode, and needs no internet on
   the clock's setup network.
 - **Hard to brick:** updates are checked before anything is written, the setup network
   is always on, and there is a recovery mode reached by power cycling. See
@@ -125,7 +131,8 @@ compressed image, and its name keeps it from being tried there.
 6. Open that address. In **Firmware update**, install
    **`AIAgentMonitor_v<version>.bin.gz`** from the
    [latest release](../../releases/latest): everything since 1.4.0, MQTT and mDNS.
-7. Set your city and time zone, and choose your faces.
+7. In **Time & region**, type your city and pick it from the list (it sets the weather
+   and the time zone), and choose your faces.
 
 ### From SmartClock-OSS
 
@@ -191,7 +198,9 @@ added up (`$add`) or kept as a history for charts (`$history`). Number and colou
 take expressions, and so does text in braces; **maps** turn values into colours or
 labels, and **palettes** recolour a whole face (day and night, or by state); `@time`,
 `@bg`, `@warn` … are the clock's own colours, so a face can match the built-in ones.
-`"font": "big"` draws the Big tiles' line font at any size, with `° ↑ ↓ ✓ ✗ ♥ ⚡`. A
+`"font": "big"` draws the Big tiles' line font at any size, with `° ↑ ↓ ✓ ✗ ♥ ⚡`, bolder
+with `"weight"`; `"bebas"`, `"outfit"`, `"seg7"` (with `"off"` for the unlit segments)
+and `"pixel"` draw large numbers in those fonts. A
 face joins the rotation, or only `when` a condition holds, for as long as its
 `duration`.
 
