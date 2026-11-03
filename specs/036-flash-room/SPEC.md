@@ -1,6 +1,6 @@
 # 036 Flash room: zopfli, our own time zone parser, a minified page
 
-Status: Approved (2026-11-03; the owner agreed to goals 2 and 3, and asked whether goal 1
+Status: Done in 2.1.1 (2026-11-03)
 is backward compatible: it is, see RESEARCH)
 
 ## Problem

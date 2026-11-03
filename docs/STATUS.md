@@ -6,9 +6,9 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **2.1.0** (2026-11-03, tag `v2.1.0`), published on GitHub as
-`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.1.0.bin.gz`,
-`AIAgentMonitor_v2.1.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
+The latest release is **2.1.1** (2026-11-03, tag `v2.1.1`), published on GitHub as
+`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.1.1.bin.gz`,
+`AIAgentMonitor_v2.1.1.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
 and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
 `faces-v2` are the same commit. The plugin on `main` is 0.7.0 (spec 019's hooks).
 
@@ -74,9 +74,9 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 
 Done in 2.1.0 and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
 [027](../specs/027-small-mdns/SPEC.md), [029](../specs/029-network-guards/SPEC.md),
-[030](../specs/030-faster-big-text/SPEC.md). Done on `main`, unreleased:
-[036](../specs/036-flash-room/SPEC.md) (flash room), [038](../specs/038-fifth-forecast-day/SPEC.md)
-(a fifth forecast day), and the weather icons fixed for Open-Meteo's codes. Done in 2.1.0:
+[030](../specs/030-faster-big-text/SPEC.md). Done in 2.1.1: [036](../specs/036-flash-room/SPEC.md) (flash room),
+[038](../specs/038-fifth-forecast-day/SPEC.md) (a fifth forecast day), and the weather
+icons fixed for Open-Meteo's codes. Done in 2.1.0:
 [028](../specs/028-rain-snow-soon/SPEC.md), [031](../specs/031-more-fonts/SPEC.md),
 [032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),
 [035](../specs/035-city-search/SPEC.md). Still open from earlier releases: 021, 022, 024,

@@ -7,21 +7,20 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.1.1 - 2026-11-03
+
+### Upgrading
+
+Install `AIAgentMonitor_v2.1.1.bin.gz` from the Firmware update card, as for 2.1.0.
+Settings, faces and photos are kept; the new Day 4 tile joins the rotation after Day 3
+when Day 3 is on.
+
+### New
+
 - **A fifth forecast day** (spec 038): the weather now covers today and four more days.
   A new tile, Weather forecast - Day 4, follows Day 3 in the rotation (on when Day 3
   is), and custom faces get `day4.*`. The Forecast face and a `repeat` over `"days"`
   keep their four columns.
-
-- **Weather icons match the forecast**: dense drizzle drew a snowflake, fog drew hail
-  and snow showers a rain-and-snow mix. The icon table read Open-Meteo's weather codes
-  as another WMO table (4680, the original app's); it now follows the codes Open-Meteo
-  gives (WMO 4677). The words were right; only the icons change.
-
-- **The plugin shows session status by itself** (spec 019, plugin 0.7.0): with its new
-  *Clock for session status* option set to the clock's address, Claude Code's hooks put
-  "waiting" on the clock when a session asks for a permission or a question, "done" with
-  the start of the reply when it finishes, and clear it when you type. Off until set.
-
 - **More room for updates** (spec 036): the update has about 28 KB of room instead of
   8 KB. The update image and the settings page are compressed by zopfli (standard gzip:
   every clock's bootloader unpacks it, checked on each build with the bootloader's own
@@ -29,7 +28,23 @@ versioning. `/version` on the device reports the version it was built as; a
   own POSIX rule code instead of the C library's, whose rule parser linked `sscanf`.
 - **Time zone rules** are checked when set: a rule the clock cannot read is refused
   ("Not a POSIX TZ rule") instead of falling back to UTC.
-- **Building** needs Node (terser) and the `zopfli` Python package; see CLAUDE.md.
+- **The plugin shows session status by itself** (spec 019, plugin 0.7.1): with its new
+  *Clock for session status* option set to the clock's address, Claude Code's hooks put
+  "waiting" on the clock when a session asks for a permission or a question, "done" with
+  the start of the reply when it finishes, and clear it when you type. Off until set.
+  The skill's face check accepts `day4.*`.
+
+### Fixed
+
+- **Weather icons match the forecast**: dense drizzle drew a snowflake, fog and heavy
+  rain drew hail, snow showers a rain-and-snow mix, a thunderstorm with hail a tornado.
+  The icon table read Open-Meteo's weather codes as another WMO table (4680, the
+  original app's); it now follows the codes Open-Meteo gives (WMO 4677). The words were
+  right; only the icons change.
+
+### Building
+
+- Needs Node (terser) and the `zopfli` Python package; see CLAUDE.md.
 
 ## 2.1.0 - 2026-11-02
 

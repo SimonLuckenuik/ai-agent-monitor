@@ -1,6 +1,6 @@
 # 038 A fifth forecast day, and its tile
 
-Status: Done (unreleased; asked for by the owner 2026-11-03)
+Status: Done in 2.1.1 (2026-11-03)
 
 ## Problem
 
