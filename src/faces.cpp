@@ -2156,7 +2156,7 @@ bool faceTurn(const String& name, uint32_t* seconds, bool* hasWhen = nullptr) {
   file.close();
   if (!ok) return true;
   time_t now = time(nullptr);
-  struct tm t; localtime_r(&now, &t);
+  struct tm t; clockLocal(now, &t);
   if (seconds) *seconds = std::max(0, std::min(3600, (int)lroundf(num(doc.as<JsonObjectConst>(), "duration", 0, t))));
   if (hasWhen) { *hasWhen = !doc["when"].isNull(); return true; }
   return visibleField(doc["when"], t);

@@ -90,7 +90,7 @@ version PlatformIO uses (3.1.2) and the library versions `platformio.ini` resolv
 
 | File | Does |
 |---|---|
-| `fw_main.cpp` | Includes `src/main.cpp` with `setup()`/`loop()` renamed, and reroutes what the host core lacks: `configTime()` (the core's is a stub that ignores the zone), `EEPROM.end()`'s return value, the backlight PWM |
+| `fw_main.cpp` | Includes `src/main.cpp` with `setup()`/`loop()` renamed, and reroutes what the host core lacks: `configTime()` (the core's is a stub that ignores the zone; the host's `TZ` follows the rule the firmware parses with `src/tz_rule.h`, for the emulator's own time controls), `EEPROM.end()`'s return value, the backlight PWM |
 | `memory.cpp` | The clock's heap and stack (below): the allocator, the stack depth hook, the panic and its crash record |
 | `emulator.cpp` | Wraps `setup()`/`loop()`, serves the screen on port 8080, and provides the RTC user memory, reset reason, hardware RNG and button interrupt |
 | `run.sh` | The power supply: restarts the firmware when it reboots, with the matching reset reason |

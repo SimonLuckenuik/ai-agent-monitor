@@ -34,4 +34,6 @@ bool nightActive();               // main.cpp: inside the night hours (night pal
 // The night tint: colour c as the panel shows it with tint t (RGB565, 0 = none).
 uint16_t tintColor(uint32_t c, uint16_t t);
 uint16_t panelTint();             // main.cpp: the tint the panel adds as it draws
-float readNumber(const char*& s, bool* ok);   // faces.cpp: a number, without libc's float parser
+float readNumber(const char*& s, bool* ok);
+// main.cpp: local time by the clock's time zone rule (tz_rule.h; never localtime_r, spec 036)
+struct tm* clockLocal(time_t t, struct tm* out, const char** abbr = nullptr);   // faces.cpp: a number, without libc's float parser

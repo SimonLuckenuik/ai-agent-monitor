@@ -34,6 +34,7 @@
 #include "faces.h"
 #include "integrations.h"
 #include "crash.h"
+#include "tz_rule.h"
 
 
 #define FW_VERSION "2.1.0"   // see CHANGELOG.md
@@ -452,11 +453,15 @@ void handleWeatherSync() {
 }
 
 // ---------------------------- Time ------------------------------------------
-// A POSIX TZ rule lets libc apply daylight saving; a bare offset (stock) cannot.
+// A POSIX TZ rule applies daylight saving; a bare offset (stock) cannot. The clock keeps
+// time in UTC and converts it with tz_rule.h (spec 036): newlib's tzset, which localtime_r
+// calls every time, would link sscanf (about 5 KB) to parse the rule.
+TzRule clockTz;
 void applyTime() {
-  if (!cfg.tz.isEmpty()) configTime(cfg.tz.c_str(), cfg.ntp.c_str());
-  else configTime(cfg.timezoneMin * 60, 0, cfg.ntp.c_str());
+  configTime(0, 0, cfg.ntp.c_str());   // SNTP only
+  if (cfg.tz.isEmpty() || !tzParse(cfg.tz.c_str(), clockTz)) tzFixed(clockTz, cfg.timezoneMin * 60L);
 }
+struct tm* clockLocal(time_t t, struct tm* out, const char** abbr) { return tzLocal(clockTz, t, out, abbr); }
 
 // ---------------------------- Sign-in ---------------------------------------
 // A session is a random token in a cookie (HttpOnly, SameSite=Strict), kept in RAM:
@@ -688,7 +693,9 @@ String applySetting(const String& key, const String& val) {
   // Stock clients send a minute offset; honour it as a fixed offset (no DST rule).
   else if (key == F("timezone"))   { cfg.timezoneMin = val.toInt(); cfg.tz = ""; timeChanged = true; }
   else if (key == F("tz")) {
+    TzRule rule;
     if (val.length() > 63) return F("TZ rule too long");
+    if (val.length() && !tzParse(val.c_str(), rule)) return F("Not a POSIX TZ rule");
     cfg.tz = val; cfg.tzname = ""; timeChanged = true;   // the page sets the zone's name after
   }
   else if (key == F("theme"))      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); faceTurnSec = 0; }
@@ -1365,8 +1372,10 @@ String deviceValue(const String& key) {
   if (key == F("theme.night")) return nightNow ? "1" : "0";
   if (key == F("time.zone")) {
     time_t now = time(nullptr);
-    struct tm t; localtime_r(&now, &t);
-    return _tzname[t.tm_isdst > 0 ? 1 : 0];
+    struct tm t;
+    const char* abbr;
+    clockLocal(now, &t, &abbr);
+    return abbr;
   }
   return "";
 }
@@ -1400,12 +1409,13 @@ void handleStatus() {
   }
   time_t now = time(nullptr);
   if (now > 1600000000) {            // only once NTP has set the clock
-    struct tm t; localtime_r(&now, &t);
-    // Not strftime(): it links 3.3 KB for this one string. _tzname holds the zone
-    // abbreviations of the POSIX TZ rule set by configTime().
+    struct tm t;
+    const char* abbr;
+    clockLocal(now, &t, &abbr);
+    // Not strftime(): it links 3.3 KB for this one string.
     char buf[40];
     snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d %s", t.tm_year + 1900, t.tm_mon + 1,
-             t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, _tzname[t.tm_isdst > 0 ? 1 : 0]);
+             t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, abbr);
     doc[F("time")] = buf;
     if (timeGuard.held()) doc[F("timeHeld")] = true;   // an SNTP jump not confirmed yet
   }
@@ -1589,7 +1599,7 @@ void loop() {
     integrationsLoop();
     time_t now = time(nullptr);
     bool timeValid = now > 1600000000;
-    struct tm t; localtime_r(&now, &t);
+    struct tm t; clockLocal(now, &t);
 
     static int lastBrightMin = -1;     // apply night dimming once per minute
     if (timeValid && (t.tm_min != lastBrightMin || brightnessDirty)) {

@@ -127,13 +127,16 @@ product as it is, and change with the code; specs describe a piece of work.
 
 ## Build and test
 
-Requires PlatformIO (`python -m pip install --user platformio`) and Zig for the host
-tests (`python -m pip install ziglang==0.13.0 --target .pio-tools`).
+Requires PlatformIO (`python -m pip install --user platformio`), zopfli in the Python that
+runs it (`python -m pip install zopfli==0.4.3`) and Node (`npx` fetches terser 5.36.0): the
+build minifies the settings page and compresses the update with zopfli
+(`scripts/minify_page.py`, spec 036), and stops without them. Zig for the host tests
+(`python -m pip install ziglang==0.13.0 --target .pio-tools`).
 
 ```bash
 python -m platformio run                        # firmware + size guard
 python tests/unit/run_unit_tests.py             # 405 checks, plus the mDNS and guard checks
-node tests/web/tz_rules.test.js                 # the settings page's code (also backup.test.js)
+node tests/web/tz_rules.test.js                 # the settings page's code (also backup, minified_page)
 python tests/run_safety_tests.py                # needs the firmware.bin from pio run
 python tests/face_preview/run_face_preview.py   # .pio/face-preview/*.png, sheet.png
 claude plugin validate .                        # plugin and marketplace manifests

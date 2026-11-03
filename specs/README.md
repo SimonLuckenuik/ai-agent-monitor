@@ -45,7 +45,7 @@ Next free number: **037**.
 | [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done in 2.1.0 |
 | [034 Custom faces in the clock's language](034-face-languages/SPEC.md) | Deferred |
 | [035 One city search, for the weather and the time zone](035-city-search/SPEC.md) | Done in 2.1.0 |
-| [036 Flash room: zopfli, our own time zone parser, a minified page](036-flash-room/SPEC.md) | Approved |
+| [036 Flash room: zopfli, our own time zone parser, a minified page](036-flash-room/SPEC.md) | Done (unreleased) |
 
 ## Templates
 

@@ -8,8 +8,12 @@
 # ---- Dependencies: the same core and library versions as platformio.ini resolves.
 FROM debian:bookworm-slim AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential g++-multilib git python3 ca-certificates \
+      build-essential g++-multilib git python3 python3-pip nodejs npm ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+# The settings page is minified (terser) and gzipped (zopfli) as the firmware build does it
+# (scripts/minify_page.py, spec 036): the same versions.
+RUN npm install --global --no-audit --no-fund terser@5.36.0 \
+    && pip3 install --no-cache-dir --break-system-packages zopfli==0.4.3
 ARG CORE_VERSION=3.1.2
 RUN git clone --quiet --depth 1 --branch ${CORE_VERSION} https://github.com/esp8266/Arduino /esp8266 \
     && cd /esp8266 && git submodule update --quiet --init --depth 1 \
@@ -25,6 +29,7 @@ FROM deps AS build
 COPY src /app/src
 COPY include /app/include
 COPY web /app/web
+COPY scripts/minify_page.py /app/scripts/minify_page.py
 # The panel config and F_CPU (emu_build_flags.h, from gen_headers.py).
 COPY platformio.ini /app/platformio.ini
 COPY emulator /app/emulator

@@ -10,15 +10,16 @@ listed at the end.
 | Unit | `src/faces.cpp` and its helpers, compiled for the host | Zig (`.pio-tools`), one `pio run` for the libraries | under a minute | `python tests/unit/run_unit_tests.py` |
 | Safety | the update handler from `src/main.cpp` against a mock updater, and checks on the source, the image and the ELF | Zig, the firmware built (`pio run`) | about a minute | `python tests/run_safety_tests.py` |
 | Face preview | every built-in face drawn on the host, to PNG | Zig, one `pio run` | about a minute | `python tests/face_preview/run_face_preview.py` |
-| Settings page | the page's own code (time zone rules, backups) from `web/index.html`, against the browser's time zone database and a mock clock | Node | seconds | `node tests/web/tz_rules.test.js`, `node tests/web/backup.test.js` |
+| Settings page | the page's own code (time zone rules, backups) from `web/index.html`, against the browser's time zone database and a mock clock; the minified page the clock embeds keeps every handler | Node | seconds | `node tests/web/tz_rules.test.js`, `node tests/web/backup.test.js`, `node tests/web/minified_page.test.js` |
+| Local time | `src/tz_rule.h` against glibc: every rule the page gives a time zone, and hand-written ones, every 15 minutes of two years (spec 036) | Linux, g++, Node (CI; locally in the emulator's container) | seconds | `node tests/tz/zone_rules.js > rules.txt`, then `g++ -O2 -std=c++17 -I src tests/tz/tz_rule_tests.cpp -o tz && ./tz rules.txt` |
 | Integration | the whole firmware in the emulator, through its HTTP API, MQTT and mDNS | Docker | 20-25 minutes (building the image included) | `python tests/integration/run_integration_tests.py` |
 
 Setup, once:
 
 ```bash
-python -m pip install --user platformio
+python -m pip install --user platformio zopfli==0.4.3
 python -m pip install ziglang==0.13.0 --target .pio-tools
-python -m platformio run
+python -m platformio run    # also needs Node: npx fetches terser for the settings page
 ```
 
 Before committing a firmware change, run the build and the first three suites. Before a

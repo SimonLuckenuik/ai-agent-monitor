@@ -149,7 +149,8 @@ steps and the default is used).
 - **Time & region: Time zone** shows the zone in use; **Change time zone…** opens the list
   for another zone than the location's (until the next pick). It lists every zone the browser knows (its own time zone
   database, kept current by its updates; no network needed) the first time the field is
-  used, and turns the chosen one into the POSIX rule the clock takes (`tz`), checked
+  used, and turns the chosen one into the POSIX rule the clock takes (`tz`; the clock refuses
+  a rule it cannot read, and applies it with its own code, `src/tz_rule.h`), checked
   against the browser for every 3 hours of the next two years; zones with no fixed yearly
   rule (Morocco, Israel) are refused, for a rule typed under "Custom POSIX rule…". The
   clock keeps the zone's name (`tzname`, up to 40 characters; setting `tz` clears it) to

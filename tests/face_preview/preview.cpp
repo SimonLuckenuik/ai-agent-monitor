@@ -38,6 +38,7 @@ int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {
   return n;
 }
 bool nightActive() { return false; }
+struct tm* clockLocal(time_t t, struct tm* out, const char**) { *out = *gmtime(&t); return out; }   // main.cpp's, in UTC
 String deviceValue(const String& key) {
   if (key == "net.ip") return String("192.168.1.50");
   if (key == "net.host") return String("agentmonitor-1a2b3c");

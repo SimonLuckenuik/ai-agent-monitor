@@ -27,8 +27,12 @@ jobs:
             .pio/libdeps
           key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
 
-      - name: Install PlatformIO, Zig and Pillow
-        run: pip install platformio==6.2.0 ziglang==0.13.0 pillow
+      - name: Install PlatformIO, Zig, Pillow and zopfli
+        run: pip install platformio==6.2.0 ziglang==0.13.0 pillow zopfli==0.4.3
+
+      - uses: actions/setup-node@v4   # the settings page is minified by terser (spec 036)
+        with:
+          node-version: "20"
 
       - name: Put Zig on PATH
         run: python -c "import os, ziglang; print(os.path.dirname(ziglang.__file__))" >> "$GITHUB_PATH"
@@ -113,3 +117,12 @@ jobs:
 
       - name: The settings page's backups with the custom faces (spec 032)
         run: node tests/web/backup.test.js
+
+      - name: The minified settings page keeps every handler (spec 036)
+        run: node tests/web/minified_page.test.js
+
+      - name: Local time without newlib's tzset, against glibc (spec 036)
+        run: |
+          node tests/tz/zone_rules.js > tz_rules.txt
+          g++ -O2 -std=c++17 -Wall -I src tests/tz/tz_rule_tests.cpp -o tz_rule_tests
+          ./tz_rule_tests tz_rules.txt

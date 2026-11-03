@@ -41,9 +41,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PlatformIO, Zig and Pillow
+      - name: Install PlatformIO, Zig, Pillow and zopfli
         if: steps.version.outputs.new == 'true'
-        run: pip install platformio==6.2.0 ziglang==0.13.0 pillow
+        run: pip install platformio==6.2.0 ziglang==0.13.0 pillow zopfli==0.4.3
+
+      - uses: actions/setup-node@v4   # the settings page is minified by terser (spec 036)
+        if: steps.version.outputs.new == 'true'
+        with:
+          node-version: "20"
 
       - name: Put Zig on PATH
         if: steps.version.outputs.new == 'true'

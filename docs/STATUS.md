@@ -52,9 +52,10 @@ integration tests (33 cases, Docker) and `scripts/screenshots.py`. CI
 
 ## Flash budget
 
-2.1.0: `firmware.bin` 597,104 B, `firmware.bin.gz` 433,260 B, **8,192 B of room** (the
-plain and compressed images together must fit 1 MB less two sectors).
-[Spec 036](../specs/036-flash-room/SPEC.md) wins about 24 KB back. The fonts took about 8 KB; the backups and city search about 2 KB. A libc float
+2.1.0 had 8,192 B of room (the plain and compressed images together must fit 1 MB less
+two sectors). After [spec 036](../specs/036-flash-room/SPEC.md) on `main`: `firmware.bin`
+589,344 B, `firmware.bin.gz` 418,987 B, **28,672 B of room**. New code costs about 1.7
+times its size in room; data that does not compress, twice. The fonts took about 8 KB; the backups and city search about 2 KB. A libc float
 parser costs about 9 KB: parse numbers with the face code's own (`readNumber`). Savings
 to find are listed in the [footprint](specifications/footprint.md) and the
 [roadmap](plans/roadmap.md).
@@ -63,7 +64,7 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 
 Built, to check on the clock with 2.1.0: [026](../specs/026-face-gallery/SPEC.md),
 [027](../specs/027-small-mdns/SPEC.md), [029](../specs/029-network-guards/SPEC.md),
-[030](../specs/030-faster-big-text/SPEC.md). Approved, in progress:
+[030](../specs/030-faster-big-text/SPEC.md). Done on `main`, unreleased:
 [036](../specs/036-flash-room/SPEC.md) (flash room). Done in 2.1.0:
 [028](../specs/028-rain-snow-soon/SPEC.md), [031](../specs/031-more-fonts/SPEC.md),
 [032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),

@@ -37,6 +37,23 @@ inline void emuConfigTime(long offsetSec, int, const char*) {
 }
 #define configTime emuConfigTime
 
+// The firmware converts local time itself (src/tz_rule.h, spec 036) and calls configTime
+// with offset 0. The emulator's own time controls and screen page use the host's
+// localtime/mktime, so the host's TZ follows the rule the firmware parses (glibc reads POSIX
+// rules as tz_rule.h does: tests/tz).
+#include "tz_rule.h"
+inline bool emuTzParse(const char* rule, TzRule& r) {
+  bool ok = tzParse(rule, r);
+  if (ok) emuConfigTime(rule, nullptr);
+  return ok;
+}
+inline void emuTzFixed(TzRule& r, long eastSecs) {
+  tzFixed(r, eastSecs);
+  emuConfigTime(eastSecs, 0, nullptr);
+}
+#define tzParse emuTzParse
+#define tzFixed emuTzFixed
+
 #define setup fw_setup
 #define loop fw_loop
 #define analogWriteRange emuAnalogWriteRange

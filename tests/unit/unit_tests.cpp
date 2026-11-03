@@ -28,6 +28,7 @@ static std::map<std::string, std::string> device;   // net.*, sys.*, ...
 String deviceValue(const String& key) { auto it = device.find(key.c_str()); return it == device.end() ? String() : String(it->second); }
 static bool night = false;   // night palette
 bool nightActive() { return night; }
+struct tm* clockLocal(time_t t, struct tm* out, const char**) { *out = *gmtime(&t); return out; }   // main.cpp's, in UTC
 long faceVarAge(const String& key) { return vars.count(key.c_str()) ? 30 : -1; }
 static std::vector<float> history;   // the "load" variable's
 int faceHistory(const String& key, float* out, int max, uint32_t* pushes) {

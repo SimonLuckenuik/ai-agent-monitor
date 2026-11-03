@@ -7,6 +7,15 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **More room for updates** (spec 036): the update has about 28 KB of room instead of
+  8 KB. The update image and the settings page are compressed by zopfli (standard gzip:
+  every clock's bootloader unpacks it, checked on each build with the bootloader's own
+  decoder); the page is minified at build time; the clock converts local time with its
+  own POSIX rule code instead of the C library's, whose rule parser linked `sscanf`.
+- **Time zone rules** are checked when set: a rule the clock cannot read is refused
+  ("Not a POSIX TZ rule") instead of falling back to UTC.
+- **Building** needs Node (terser) and the `zopfli` Python package; see CLAUDE.md.
+
 ## 2.1.0 - 2026-11-02
 
 ### Upgrading

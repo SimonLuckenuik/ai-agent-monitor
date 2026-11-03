@@ -11,7 +11,6 @@ signs in, takes the password out of the address bar and reloads. The screen page
 firmware build (scripts/build_options.py) never includes this.
 """
 import datetime
-import gzip
 import os
 import re
 import sys
@@ -25,12 +24,15 @@ fetch("/api/auth/login",{method:"POST",body:new URLSearchParams({password:decode
 .then(r=>{if(r.ok)location.reload()})})()</script>
 """
 
+sys.path.insert(0, os.path.join(root, "scripts"))
+import minify_page   # noqa: E402 - the firmware build's own minifier (spec 036)
+
 with open(os.path.join(root, "web", "index.html"), "rb") as f:
-    html = f.read()
+    html = minify_page.minify(f.read().decode("utf-8")).encode("utf-8")
 if b"</head>" not in html:
     sys.exit("gen_headers: web/index.html has no </head> for the emulator's sign-in script")
 html = html.replace(b"</head>", AUTO_SIGN_IN + b"</head>", 1)
-packed = gzip.compress(html, compresslevel=9, mtime=0)
+packed = minify_page.gzip_page(html)
 rows = [", ".join("0x%02x" % b for b in packed[i:i + 20]) for i in range(0, len(packed), 20)]
 with open(os.path.join(out, "web_index.h"), "w", newline="\n") as f:
     f.write("\n".join([

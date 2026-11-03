@@ -50,6 +50,23 @@ if result.returncode:
 subprocess.run([str(out / "ota.exe"), str(root / ".pio/build/esp12e/firmware.bin"),
                 str(root / ".pio/build/esp12e/firmware.bin.gz")], check=True)
 
+# The update as the bootloader unpacks it (spec 036): uzlib from the core, driven as eboot
+# does, must give back firmware.bin byte for byte from the zopfli-compressed .bin.gz.
+uzlib = Path(os.path.expanduser("~/.platformio/packages/framework-arduinoespressif8266/tools/sdk/uzlib/src"))
+sources = [str(root / "tests/eboot_inflate.c")] + [str(uzlib / n) for n in ("tinflate.c", "tinfgzip.c", "crc32.c", "adler32.c")]
+if Path(zig).is_file():
+    command = [str(zig), "cc", "-Os", "-DRUNTIME_BITS_TABLES", f"-I{uzlib}", *sources, "-o", str(out / "eboot_inflate.exe")]
+else:
+    command = [compiler, "/nologo", "/O1", "/DRUNTIME_BITS_TABLES", f"/I{uzlib}", *sources,
+               f"/Fe:{out / 'eboot_inflate.exe'}", f"/Fo:{out}\\"]
+with (out / "eboot.log").open("w", encoding="utf-8") as log:
+    result = subprocess.run(command, cwd=out, env=env, stdout=log, stderr=subprocess.STDOUT)
+if result.returncode:
+    print((out / "eboot.log").read_text(encoding="utf-8", errors="replace")[-6000:])
+    raise SystemExit(result.returncode)
+subprocess.run([str(out / "eboot_inflate.exe"), str(root / ".pio/build/esp12e/firmware.bin.gz"),
+                str(root / ".pio/build/esp12e/firmware.bin")], check=True)
+
 # Storage and recovery invariants that do not require flash hardware.
 import re
 setup = source[source.index("void setup()"):source.index("void loop()")]
@@ -125,4 +142,4 @@ assert "requireAuth()" in function(integ, "void handleIntegrations()"), "the API
 subprocess.run(["python", str(root / "scripts/ram_report.py"), str(image.with_suffix(".elf")), "--max-ours", "4864"],
                check=True, stdout=subprocess.DEVNULL)
 print("PASS: stock-matching 4m3m layout, OTA size budget, no float printf, sign-in and integration guards,")
-print("      strings in flash, non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, persistent AP")
+print("      the update unpacked as the bootloader does, strings in flash, non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, persistent AP")

@@ -8,8 +8,13 @@ the clock's `/status` and the emulator (`EMU_HEAP`, spec 022). Scripts:
 
 ## The budgets
 
-Since then: for 2.1.0 (2026-11-02, after specs 026-035) `firmware.bin` is 597,120 B and
-`firmware.bin.gz` 433,251 B, the update budget **99%** used. The table below is 1.9.1's.
+Since then: 2.1.0 (2026-11-03) had `firmware.bin` 597,104 B and `firmware.bin.gz` 433,260 B:
+8,192 B of room (the plain and compressed images together must fit 1 MB less two
+sectors). Spec 036 brought it to 589,344 B and 418,987 B, **28,672 B of room**: zopfli
+for the update and the page, the page minified (23.9 KB gzipped instead of 27.5 KB, and
+it counts twice: it does not compress), and local time without newlib's `tzset` (its
+`sscanf` was about 4 KB). The breakdown is in specs/036-flash-room/RESEARCH.md. The table
+below is 1.9.1's.
 
 | Budget | Size | Used | Left |
 |---|---|---|---|
