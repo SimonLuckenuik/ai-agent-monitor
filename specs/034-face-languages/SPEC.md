@@ -1,6 +1,6 @@
 # 034 Custom faces in the clock's language
 
-Status: Proposed (2026-11-01)
+Status: Deferred (2026-11-02; not for now, the owner's call)
 
 ## Problem
 

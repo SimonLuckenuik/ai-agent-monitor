@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **035**.
+Next free number: **036**.
 
 | Spec | Status |
 |---|---|
@@ -43,7 +43,8 @@ Next free number: **035**.
 | [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Approved |
 | [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Approved |
 | [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done (settings page; unreleased) |
-| [034 Custom faces in the clock's language](034-face-languages/SPEC.md) | Proposed |
+| [034 Custom faces in the clock's language](034-face-languages/SPEC.md) | Deferred |
+| [035 One city search, for the weather and the time zone](035-city-search/SPEC.md) | Approved |
 
 ## Templates
 
