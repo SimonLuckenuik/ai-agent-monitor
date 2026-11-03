@@ -242,29 +242,12 @@ a{color:var(--accent)}
 
   <section class="card settings">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Time &amp; region</h2>
-    <div class="field" style="margin-top:0"><label for="tz">Timezone</label>
-      <select id="tz" data-key="tz">
-        <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">Sydney · Melbourne · Canberra · Hobart</option>
-        <option value="AEST-10">Brisbane</option>
-        <option value="ACST-9:30ACDT,M10.1.0,M4.1.0/3">Adelaide</option>
-        <option value="ACST-9:30">Darwin</option>
-        <option value="AWST-8">Perth</option>
-        <option value="NZST-12NZDT,M9.5.0,M4.1.0/3">Auckland</option>
-        <option value="JST-9">Tokyo</option>
-        <option value="SGT-8">Singapore</option>
-        <option value="GMT0BST,M3.5.0/1,M10.5.0">London</option>
-        <option value="CET-1CEST,M3.5.0,M10.5.0/3">Paris · Berlin</option>
-        <option value="EST5EDT,M3.2.0,M11.1.0">New York</option>
-        <option value="PST8PDT,M3.2.0,M11.1.0">Los Angeles</option>
-        <option value="UTC0">UTC</option>
-        <option value="more">More time zones…</option>
-        <option value="custom">Custom POSIX rule…</option>
-      </select></div>
-    <div class="field" id="tzMoreBox" hidden><label for="tzZone">Time zone</label>
+    <div class="field" style="margin-top:0"><label for="tzZone">Time zone</label>
       <input type="text" id="tzZone" list="tzZones" placeholder="Type a place: America/Toronto, Europe/Lisbon…" spellcheck="false">
       <datalist id="tzZones"></datalist>
-      <div class="btns"><button class="btn" onclick="tzFromCity()">Use the city's time zone</button></div>
-      <span class="hint" id="tzNote" style="font-size:12.5px;color:var(--muted)">From your browser's time zone database: every zone, kept up to date by its updates.</span></div>
+      <div class="btns"><button class="btn" onclick="tzFromCity()">Use the city's time zone</button>
+        <button class="btn" onclick="tzCustomShow()">Custom POSIX rule…</button></div>
+      <span class="hint" id="tzNote" style="font-size:12.5px;color:var(--muted)">Every zone from your browser's own time zone database, kept up to date by its updates.</span></div>
     <div class="field" id="tzCustomBox" hidden><label for="tzCustom">POSIX TZ rule</label>
       <input type="text" id="tzCustom" placeholder="e.g. AEST-10AEDT,M10.1.0,M4.1.0/3" spellcheck="false"></div>
     <div class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><span class="lbl">Clock format</span>
@@ -498,15 +481,14 @@ function bindInputs(){
     const key=el.dataset.key;
     if(el.classList.contains('seg')){
       el.querySelectorAll('button').forEach(b=>b.onclick=async()=>{if(await set(key,b.dataset.v)){paintSeg(el,b.dataset.v);if(key==='nightauto')nightRows(b.dataset.v);if(key==='city')setTimeout(poll,300)}});return}
-    if(el.id==='tz'){el.onchange=()=>{const c=el.value==='custom',m=el.value==='more';$('tzCustomBox').hidden=!c;$('tzMoreBox').hidden=!m;
-      if(m){tzList();$('tzZone').focus()}else if(!c)set('tz',el.value);else $('tzCustom').focus()};return}
     if(el.type==='range'){const out=el.nextElementSibling,show=()=>out.textContent=el.value+'%';
       el.addEventListener('input',()=>{show();if(el.dataset.live){clearTimeout(el.h);el.h=setTimeout(()=>set(key,el.value),250)}});
       el.addEventListener('change',()=>{clearTimeout(el.h);set(key,el.value)});el.show=show;return}
     el.onchange=async()=>{await set(key,el.type==='checkbox'?(el.checked?1:0):el.dataset.rgb565!==undefined?to565(el.value):el.value);
       if(key==='city'){setTimeout(poll,4000);tzCityCheck()}};
   });
-  $('tzCustom').onchange=e=>{const v=e.target.value.trim();if(v)set('tz',v)};
+  $('tzCustom').onchange=async e=>{const v=e.target.value.trim();if(v&&await set('tz',v)){await set('tzname','');$('tzZone').value='';$('tzNote').textContent='Custom rule: '+v}};
+  $('tzZone').addEventListener('focus',tzList);   // the list only when wanted
   $('tzZone').onchange=e=>tzUse(e.target.value.trim());
   $('themeInterval').addEventListener('change',()=>{cfg.themeInterval=$('themeInterval').value;$('rotBox').hidden=!(+cfg.themeInterval>0)});
 }
@@ -547,12 +529,14 @@ function posixRule(zone,from=Date.now()){
 // The list, on demand: every zone the browser knows.
 function tzList(){const l=$('tzZones');if(l.children.length)return;
   for(const z of Intl.supportedValuesOf('timeZone')){const o=document.createElement('option');o.value=z;l.appendChild(o)}}
-function tzRuleNow(){const z=$('tz');return z.value==='custom'||z.value==='more'?$('tzCustom').value.trim():z.value}
+let tzSaved='';   // the clock's rule, as /config last said
+function tzRuleNow(){return tzSaved}
+function tzCustomShow(){$('tzCustomBox').hidden=false;$('tzCustom').value=tzSaved;$('tzCustom').focus()}
 async function tzUse(zone){const note=$('tzNote');
   if(!Intl.supportedValuesOf('timeZone').includes(zone)){note.textContent='Not a time zone: pick one from the list.';return false}
   const r=posixRule(zone);
   if(!r){note.textContent=zone+' changes its clocks on no fixed yearly rule (Morocco, Israel): type its rule under Custom.';return false}
-  if(await set('tz',r)){$('tzZone').value=zone;$('tzCustom').value=r;note.textContent=zone+': '+r;toast('Time zone: '+zone);return true}
+  if(await set('tz',r)&&await set('tzname',zone)){tzSaved=r;$('tzZone').value=zone;$('tzCustom').value=r;note.textContent=zone+': '+r;toast('Time zone: '+zone);return true}
   return false}
 // The city's zone, from Open-Meteo's geocoding (as the clock finds its weather).
 // The same request the clock makes (weather.cpp geocode()): "Saint-Hubert, CA" is the name and
@@ -680,10 +664,8 @@ function fillConfig(c){
   paintSeg(document.querySelector('[data-key=celsius]'),c.celsius?1:0);
   paintSeg(document.querySelector('[data-key=mile]'),c.mile?1:0);
   paintSeg(document.querySelector('[data-key=nightauto]'),c.nightauto?1:0);nightRows(c.nightauto);
-  const z=$('tz');
-  if(!c.tz){const o=new Option('Fixed offset '+(c.timezone>=0?'+':'')+(c.timezone/60)+' h (no daylight saving)','');z.add(o,0);z.value=''}
-  else if([...z.options].some(o=>o.value===c.tz))z.value=c.tz;
-  else{z.value='custom';$('tzCustomBox').hidden=false;$('tzCustom').value=c.tz}
+  tzSaved=c.tz||'';$('tzZone').value=c.tzname||'';
+  $('tzNote').textContent=c.tzname?c.tzname+': '+c.tz:c.tz?'Custom rule: '+c.tz:'A fixed offset of '+(c.timezone>=0?'+':'')+(c.timezone/60)+' h, no daylight saving: pick your zone.';
 }
 
 const bars=r=>{const n=r>-55?4:r>-65?3:r>-75?2:1;return '<span class="sig">'+[5,8,11,14].map((h,i)=>`<b style="height:${h}px" class="${i<n?'on':''}"></b>`).join('')+'</span>'};

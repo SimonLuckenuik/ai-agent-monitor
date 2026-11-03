@@ -129,13 +129,16 @@ steps and the default is used).
 
 ## Settings page
 
-- **Time & region: More time zones…** lists every zone the browser knows (its own time
-  zone database, kept current by its updates) and turns the chosen one into the POSIX rule
-  the clock takes (`tz`), checked against the browser for every 3 hours of the next two
-  years; zones with no fixed yearly rule (Morocco, Israel) are refused, for a rule typed
-  under Custom. "Use the city's time zone" finds the weather city's zone with Open-Meteo's
-  geocoding. Nothing is loaded until the owner opens it; when the city changes to one in
-  another zone, the page says so (spec 033).
+- **Time & region: Time zone** lists every zone the browser knows (its own time zone
+  database, kept current by its updates; no network needed) the first time the field is
+  used, and turns the chosen one into the POSIX rule the clock takes (`tz`), checked
+  against the browser for every 3 hours of the next two years; zones with no fixed yearly
+  rule (Morocco, Israel) are refused, for a rule typed under "Custom POSIX rule…". The
+  clock keeps the zone's name (`tzname`, up to 40 characters; setting `tz` clears it) to
+  show it. "Use the city's time zone" finds the weather city's zone with Open-Meteo's
+  geocoding, the clock's own request. When the city changes to one in another zone, the
+  page says so (spec 033).
+- **Host names:** `localhost` is always answered, as the IP address is (spec 029).
 - **WiFi: Other names for this clock** (`hostnames`, a comma list, at most 200
   characters). On the home network the clock answers only requests addressed to it:
   its IP address, its host name, `<host>.local`, or a name listed here (a name the

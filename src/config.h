@@ -71,6 +71,7 @@ struct Config {
   bool   mqttOn   = false;           // MQTT with Home Assistant discovery
   String mqttHost, mqttUser, mqttPass, mqttBase;   // mqttBase "" = the hostname
   String hostnames;                  // other names the clock answers to: comma list (spec 029)
+  String tzname;                     // the zone tz came from, to show ("America/Toronto"); "" custom
   int    mqttPort = 1883;
   String apiKey;                     // for scripts calling the faces API; never exported
 
@@ -181,6 +182,7 @@ struct Config {
     mqttPass    = doc[F("mqttpass")]    | mqttPass;
     mqttBase    = doc[F("mqttbase")]    | mqttBase;
     hostnames   = doc[F("hostnames")]   | hostnames;
+    tzname      = doc[F("tzname")]      | tzname;
     apiKey      = doc[F("apikey")]      | apiKey;
     return true;
   }
@@ -209,7 +211,7 @@ struct Config {
     doc[F("facesapi")] = facesApi;   doc[F("hacompat")] = haCompat; doc[F("mqtt")] = mqttOn;
     doc[F("mqtthost")] = mqttHost;   doc[F("mqttport")] = mqttPort; doc[F("mqttuser")] = mqttUser;
     doc[F("mqttpass")] = mqttPass;   doc[F("mqttbase")] = mqttBase; doc[F("apikey")] = apiKey;
-    doc[F("hostnames")] = hostnames;
+    doc[F("hostnames")] = hostnames; doc[F("tzname")] = tzname;
     File f = LittleFS.open("/config.json", "w");
     if (!f) return false;
     serializeJson(doc, f);

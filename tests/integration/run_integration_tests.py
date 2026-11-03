@@ -481,6 +481,7 @@ def request_host(emu):
     name = emu.status()["host"]
     check(get(f"{u.hostname}:{u.port}") == 200, "by IP address")
     check(get(f"{name}.local") == 200, "by its .local name")
+    check(get("localhost:80") == 200, "by localhost (the emulator, a tunnel)")
     check(get(name.upper()) == 200, "by its host name, in capitals")
     check(get("clock.example") == 403, f"by an unknown name: {get('clock.example')}")
     check(get("clock.example", "/no-such-page") == 403, "an unknown page by an unknown name")

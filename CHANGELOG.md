@@ -7,6 +7,13 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Digit fonts** (spec 031): `"font": "bebas"` (Bebas Neue) and `"outfit"` (Outfit) for
+  large numbers, filled and smooth at any size; `"seg7"` (seven segments) and `"pixel"`
+  (5×7 blocks), with `"off"` for the unlit ones; `"weight"` makes the big font bold. The
+  converted smalltv-pomodoro faces use them as their originals did.
+- **Time zones**: the 13 built-in zones are gone; one field lists every zone (above), with
+  the city's zone and a custom rule. The clock keeps the zone's name (`tzname`).
+- **localhost** is answered again (the emulator, tunnels): spec 029's host check refused it.
 - **Every time zone** (spec 033): Time & region → More time zones… lists every zone from
   the browser's own, always current time zone database and sets the clock's rule from it;
   "Use the city's time zone" picks the weather city's zone. The page says so when a new

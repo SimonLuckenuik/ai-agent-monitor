@@ -588,7 +588,7 @@ String configJson() {
   doc[F("facesapi")] = cfg.facesApi; doc[F("hacompat")] = cfg.haCompat; doc[F("mqtt")] = cfg.mqttOn;
   doc[F("mqtthost")] = cfg.mqttHost; doc[F("mqttport")] = cfg.mqttPort; doc[F("mqttuser")] = cfg.mqttUser;
   doc[F("mqttbase")] = cfg.mqttBase;   // the MQTT password and API key are never sent back
-  doc[F("hostnames")] = cfg.hostnames;
+  doc[F("hostnames")] = cfg.hostnames; doc[F("tzname")] = cfg.tzname;
   doc[F("type")] = "smartclock-oss-settings"; doc[F("version")] = FW_VERSION;
   doc[F("palettes")] = serialized(cfg.palettes); doc[F("roles")] = serialized(cfg.roles);
   doc[F("palette")] = cfg.palette; doc[F("nightpalette")] = cfg.nightPalette;
@@ -681,7 +681,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == F("timezone"))   { cfg.timezoneMin = val.toInt(); cfg.tz = ""; timeChanged = true; }
   else if (key == F("tz")) {
     if (val.length() > 63) return F("TZ rule too long");
-    cfg.tz = val; timeChanged = true;
+    cfg.tz = val; cfg.tzname = ""; timeChanged = true;   // the page sets the zone's name after
   }
   else if (key == F("theme"))      { cfg.theme = constrain(val.toInt(), 0, FACE_COUNT - 1); faceSince = millis(); faceTurnSec = 0; }
   else if (key == F("customface")) {
@@ -751,6 +751,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == F("mqttpass"))   changed(cfg.mqttPass, val);
   else if (key == F("mqttbase"))   changed(cfg.mqttBase, val);
   else if (key == F("hostnames"))  { if (val.length() > 200) return F("Too long"); cfg.hostnames = val; }
+  else if (key == F("tzname"))     { if (val.length() > 40) return F("Too long"); cfg.tzname = val; }
   else return F("Unknown Key");
   return "";
 }
@@ -1146,6 +1147,8 @@ bool hostAllowed() {
   if (h.endsWith(".")) h.remove(h.length() - 1);
   IPAddress ip;
   if (ip.fromString(h)) return true;
+  // "localhost": the emulator, or a tunnel. A rebinding page comes under its own name.
+  if (h == F("localhost")) return true;
   String host = deviceHost();
   host.toLowerCase();
   if (h == host || h == host + F(".local")) return true;
