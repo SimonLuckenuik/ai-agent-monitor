@@ -83,7 +83,7 @@ def clock_images(emu):
     samples = json.loads((EXAMPLES / "samples.json").read_text(encoding="utf-8"))
     (IMAGES / "faces").mkdir(exist_ok=True)
     for path in sorted(EXAMPLES.glob("*.json")):
-        if path.name == "samples.json":
+        if path.name in ("samples.json", "marketplace.json"):   # not faces
             continue
         emu.clear_vars()
         emu.clear_messages()
@@ -166,6 +166,7 @@ def web_images(emu):
         page.screenshot(path=str(IMAGES / "settings-overview.png"),
                         clip={"x": 0, "y": 0, "width": 960, "height": night["y"] + night["height"] + 16},
                         full_page=True)
+        page.add_style_tag(content="header{position:static}")   # not over the cards shot alone
         integrations = card(page, "Integrations")
         integrations.scroll_into_view_if_needed()
         integrations.screenshot(path=str(IMAGES / "settings-integrations.png"))
@@ -173,6 +174,7 @@ def web_images(emu):
         del top
 
         page = open_page(480, 900, "light")
+        page.add_style_tag(content="header{position:static}")
         system = card(page, "System")
         system.scroll_into_view_if_needed()
         system.screenshot(path=str(IMAGES / "settings-system.png"))
@@ -185,7 +187,7 @@ def web_images(emu):
         # The emulator's own page: the screen, its controls and the Scenarios panel.
         page = browser.new_page(viewport={"width": 1100, "height": 1000}, color_scheme="dark")
         page.goto(emu.screen + "/")
-        page.wait_for_load_state("networkidle")
+        page.wait_for_selector("section.scenarios")   # it streams the screen: never network-idle
         emu.show(10)   # redraw the face for the page that just connected
         time.sleep(2)
         box = page.locator("section.scenarios").bounding_box()
@@ -218,6 +220,9 @@ def main():
             emu.clear_messages()
             agents(emu)
             emu.show(10)
+            # The page shows the place the fixed weather is for, picked as on the page (spec 035).
+            emu.settings(city="Montreal, CA", place="45.50884,-73.58781,Montreal, Quebec, CA",
+                         tzname="America/Toronto")
             web_images(emu)
     finally:
         if not args.keep and not args.reuse:

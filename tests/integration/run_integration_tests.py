@@ -451,7 +451,7 @@ def mqtt_and_mdns(emu):
     # Saving the settings page sends every MQTT field: unchanged ones must not reconnect.
     # Each connection publishes "online" to <host>/status (retained: one arrives at once).
     sub = subprocess.Popen(broker + ["mosquitto_sub", "-t", f"{host}/status", "-W", "8"],
-                           stdout=subprocess.PIPE, text=True)
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)   # its "Timed out" is expected
     time.sleep(1)
     for key, value in [("mqtthost", "broker"), ("mqttport", 1883), ("mqttuser", ""), ("mqttbase", ""), ("mqtt", 1)]:
         emu.set(key, value)
@@ -897,17 +897,17 @@ def main():
         emu.wait_ready()
         emu.sign_in()
         emu.set("tz", TZ)
-        for fn in cases:
-            if args.k not in fn.__name__:
-                continue
+        chosen = [fn for fn in cases if args.k in fn.__name__]
+        for i, fn in enumerate(chosen, 1):
+            print(f"RUN  {fn.__name__} ({i}/{len(chosen)})", flush=True)   # the long ones take minutes
             baseline(emu)
             t0 = time.time()
             try:
                 fn(emu)
-                print(f"PASS {fn.__name__} ({time.time() - t0:.1f} s)")
+                print(f"PASS {fn.__name__} ({time.time() - t0:.1f} s)", flush=True)
             except Exception as e:   # noqa: BLE001 - every failure is reported, the run goes on
                 failed.append(fn.__name__)
-                print(f"FAIL {fn.__name__}: {e}")
+                print(f"FAIL {fn.__name__}: {e}", flush=True)
                 if not isinstance(e, Failure):
                     traceback.print_exc()
     finally:
