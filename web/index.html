@@ -119,6 +119,9 @@ a.btn{text-decoration:none}
 .btn.danger{color:var(--bad)}
 .btn[disabled]{opacity:.5;cursor:default}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pick{position:relative}.picks{position:absolute;z-index:5;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);max-height:320px;overflow:auto}
+.picks button{display:block;width:100%;text-align:left;padding:8px 12px;background:none;border:0;color:var(--text);font:inherit;cursor:pointer}
+.picks button:hover,.picks button.on{background:var(--surface2)}.picks small{display:block;color:var(--muted);font-size:12px}
 .nets{list-style:none;margin:10px 0 0;padding:0;border:1px solid var(--line);border-radius:12px;max-height:260px;overflow:auto}
 .nets li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line);cursor:pointer}
 .nets li:first-child{border-top:0}
@@ -242,14 +245,21 @@ a{color:var(--accent)}
 
   <section class="card settings">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Time &amp; region</h2>
-    <div class="field" style="margin-top:0"><label for="tzZone">Time zone</label>
+    <div class="field" style="margin-top:0"><label for="city">Location</label>
+      <div class="pick"><input type="text" id="city" data-key="city" placeholder="Type a city: Sydney, Saint-Hubert…" autocomplete="off" spellcheck="false">
+        <div class="picks" id="cityPicks" role="listbox" hidden></div></div>
+      <span class="hint" id="wxLoc" style="font-size:12.5px;color:var(--muted)">Type a city and pick it from the list: it sets the weather and the time zone.</span></div>
+    <div class="row"><span class="lbl">Time zone<span class="hint" id="tzNow">—</span></span>
+      <button class="btn" onclick="$('tzBox').hidden=!$('tzBox').hidden">Change time zone…</button></div>
+    <div id="tzBox" hidden>
+    <div class="field"><label for="tzZone">Another time zone than the location's</label>
       <input type="text" id="tzZone" list="tzZones" placeholder="Type a place: America/Toronto, Europe/Lisbon…" spellcheck="false">
       <datalist id="tzZones"></datalist>
-      <div class="btns"><button class="btn" onclick="tzFromCity()">Use the city's time zone</button>
-        <button class="btn" onclick="tzCustomShow()">Custom POSIX rule…</button></div>
-      <span class="hint" id="tzNote" style="font-size:12.5px;color:var(--muted)">Every zone from your browser's own time zone database, kept up to date by its updates.</span></div>
+      <div class="btns"><button class="btn" onclick="tzCustomShow()">Custom POSIX rule…</button></div>
+      <span class="hint" id="tzNote" style="font-size:12.5px;color:var(--muted)">Every zone from your browser's own time zone database, kept up to date by its updates. The next location you pick sets its own zone again.</span></div>
     <div class="field" id="tzCustomBox" hidden><label for="tzCustom">POSIX TZ rule</label>
       <input type="text" id="tzCustom" placeholder="e.g. AEST-10AEDT,M10.1.0,M4.1.0/3" spellcheck="false"></div>
+    </div>
     <div class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><span class="lbl">Clock format</span>
       <div class="seg" data-key="hour12"><button data-v="1">12 h</button><button data-v="0">24 h</button></div></div>
     <div class="row"><span class="lbl">Clock language</span>
@@ -263,12 +273,10 @@ a{color:var(--accent)}
 
   <section class="card settings">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19 10a4 4 0 0 1-1 8z"/></svg>Weather</h2>
-    <div class="field" style="margin-top:0"><label for="city">City</label><input type="text" id="city" data-key="city" placeholder="Sydney, AU">
-      <span class="hint" id="wxLoc" style="font-size:12.5px;color:var(--muted)">A city name, optionally with a country code: “Sydney, AU”.</span></div>
-    <div class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
+    <div class="row" style="margin-top:0">
       <span class="lbl">Last update<span class="hint" id="wxAge">—</span></span>
       <button class="btn" id="wxSyncBtn" onclick="syncWeather()">Sync now</button></div>
-    <p class="note">Weather from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, no key needed. Current conditions and the 4-day forecast update every 15 minutes.</p>
+    <p class="note">Weather from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, no key needed. Current conditions and the 4-day forecast update every 15 minutes, for the location in Time &amp; region.</p>
   </section>
 
   <section class="card settings">
@@ -532,8 +540,9 @@ function bindInputs(){
       el.addEventListener('change',()=>{clearTimeout(el.h);set(key,el.value)});el.show=show;return}
     el.onchange=async()=>{await set(key,el.type==='checkbox'?(el.checked?1:0):el.dataset.rgb565!==undefined?to565(el.value):el.value);
       if(key==='city'){setTimeout(poll,4000);tzCityCheck()}};
+  cityBind();
   });
-  $('tzCustom').onchange=async e=>{const v=e.target.value.trim();if(v&&await set('tz',v)){await set('tzname','');$('tzZone').value='';$('tzNote').textContent='Custom rule: '+v}};
+  $('tzCustom').onchange=async e=>{const v=e.target.value.trim();if(v&&await set('tz',v)){await set('tzname','');$('tzZone').value='';$('tzNote').textContent='Custom rule: '+v;$('tzNow').textContent='Custom rule'}};
   $('tzZone').addEventListener('focus',tzList);   // the list only when wanted
   $('tzZone').onchange=e=>tzUse(e.target.value.trim());
   $('themeInterval').addEventListener('change',()=>{cfg.themeInterval=$('themeInterval').value;$('rotBox').hidden=!(+cfg.themeInterval>0)});
@@ -582,8 +591,35 @@ async function tzUse(zone){const note=$('tzNote');
   if(!Intl.supportedValuesOf('timeZone').includes(zone)){note.textContent='Not a time zone: pick one from the list.';return false}
   const r=posixRule(zone);
   if(!r){note.textContent=zone+' changes its clocks on no fixed yearly rule (Morocco, Israel): type its rule under Custom.';return false}
-  if(await set('tz',r)&&await set('tzname',zone)){tzSaved=r;$('tzZone').value=zone;$('tzCustom').value=r;note.textContent=zone+': '+r;toast('Time zone: '+zone);return true}
+  if(await set('tz',r)&&await set('tzname',zone)){tzSaved=r;$('tzZone').value=zone;$('tzCustom').value=r;note.textContent=zone+': '+r;$('tzNow').textContent=zone;toast('Time zone: '+zone);return true}
   return false}
+// ---- One city search, for the weather and the time zone (spec 035)
+// Open-Meteo's matches while typing, from every country ("Saint-Hubert" is in Quebec and in
+// Belgium); ", CA" narrows to one. A pick sends the city, its exact place, and its zone.
+let picks=[],pickOn=-1;
+function cityBind(){const i=$('city'),box=$('cityPicks');
+  const show=()=>{box.hidden=!picks.length;box.innerHTML=picks.map((r,n)=>`<button type="button" role="option" class="${n===pickOn?'on':''}" data-n="${n}"><b>${esc(r.name)}</b>`+
+    `<small>${esc([r.admin1,r.country].filter(Boolean).join(', '))}${r.population?' · '+r.population.toLocaleString()+' people':''}${r.timezone?' · '+esc(r.timezone):''}</small></button>`).join('');
+    // pointerdown, not click: the field keeps its focus, so no hand-typed change is sent first
+    box.querySelectorAll('button').forEach(b=>b.onpointerdown=e=>{e.preventDefault();cityPick(picks[+b.dataset.n])})};
+  i.addEventListener('input',()=>{clearTimeout(i.h);const v=i.value.trim();if(v.length<3){picks=[];show();return}
+    i.h=setTimeout(async()=>{const comma=v.lastIndexOf(','),name=comma>0?v.slice(0,comma).trim():v,cc=comma>0?v.slice(comma+1).trim().toUpperCase():'';
+      try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language='+(cfg.lang||'en')+'&name='+encodeURIComponent(name)+(cc.length===2?'&countryCode='+cc:''));
+        const g=await r.json();if(i.value.trim()!==v)return;picks=g.results||[];pickOn=-1;show()}catch(e){}},300)});
+  i.addEventListener('keydown',e=>{if(box.hidden)return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();pickOn=(pickOn+(e.key==='ArrowDown'?1:picks.length-1))%picks.length;show()}
+    else if(e.key==='Enter'&&pickOn>=0){e.preventDefault();cityPick(picks[pickOn])}
+    else if(e.key==='Escape'){picks=[];show()}});
+  i.addEventListener('blur',()=>setTimeout(()=>{picks=[];show()},150))}
+const esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+async function cityPick(r){const i=$('city');picks=[];$('cityPicks').hidden=true;
+  const city=r.name+(r.country_code?', '+r.country_code:''),label=r.name+(r.admin1&&r.admin1!==r.name?', '+r.admin1:'')+(r.country_code?', '+r.country_code:'');
+  i.value=city;clearTimeout(i.h);
+  if(!(await set('city',city)&&await set('place',r.latitude.toFixed(5)+','+r.longitude.toFixed(5)+','+label.slice(0,60))))return;
+  $('wxLoc').textContent='Weather: '+label;
+  if(r.timezone){tzList();await tzUse(r.timezone)}
+  setTimeout(poll,4000)}
+// ---- end of the city search
 // The city's zone, from Open-Meteo's geocoding (as the clock finds its weather).
 // The same request the clock makes (weather.cpp geocode()): "Saint-Hubert, CA" is the name and
 // a country code, so it finds the clock's city (there is a Saint-Hubert in Belgium too).
@@ -591,12 +627,9 @@ async function cityZone(){const city=$('city').value.trim();if(!city)return null
   const comma=city.lastIndexOf(','),name=comma>0?city.slice(0,comma).trim():city,cc=comma>0?city.slice(comma+1).trim().toUpperCase():'';
   const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(name)+(cc.length===2?'&countryCode='+cc:''));
   if(!r.ok)return null;const g=await r.json();return g.results&&g.results[0]?g.results[0].timezone:null}
-async function tzFromCity(){const note=$('tzNote');note.textContent='Looking up the city…';
-  try{const z=await cityZone();if(!z){note.textContent='No time zone found for that city.';return}tzList();await tzUse(z)}
-  catch(e){note.textContent='Could not reach the geocoding service: '+e.message}}
 // After the city changes: say so when its zone's rule differs from the clock's.
 async function tzCityCheck(){try{const z=await cityZone(),r=z&&posixRule(z);
-  if(r&&r!==tzRuleNow())toast('The city is in '+z+'; the clock uses another time zone. Time & region → More time zones → Use the city\u2019s time zone.')}catch(e){}}
+  if(r&&r!==tzRuleNow())toast('The city is in '+z+'; the clock uses another time zone. Pick the city from the list to set both.')}catch(e){}}
 function nightRows(auto){auto=['1','true'].includes(String(auto));all('.hoursRow').forEach(r=>r.hidden=auto);$('sunRow').hidden=!auto}
 function paintSeg(el,v){el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(v)))}
 
@@ -710,7 +743,7 @@ function fillConfig(c){
   paintSeg(document.querySelector('[data-key=celsius]'),c.celsius?1:0);
   paintSeg(document.querySelector('[data-key=mile]'),c.mile?1:0);
   paintSeg(document.querySelector('[data-key=nightauto]'),c.nightauto?1:0);nightRows(c.nightauto);
-  tzSaved=c.tz||'';$('tzZone').value=c.tzname||'';
+  tzSaved=c.tz||'';$('tzZone').value=c.tzname||'';$('tzNow').textContent=c.tzname||(c.tz?'Custom rule':'A fixed offset');
   $('tzNote').textContent=c.tzname?c.tzname+': '+c.tz:c.tz?'Custom rule: '+c.tz:'A fixed offset of '+(c.timezone>=0?'+':'')+(c.timezone/60)+' h, no daylight saving: pick your zone.';
 }
 
@@ -735,10 +768,10 @@ function fillStatus(s){
     $('tWxS').textContent=(s.weather.city||'')+' · '+s.weather.desc+' · '+s.weather.humidity+'%'}
   else{$('tWx').textContent=s.weatherError?'Unavailable':'Waiting…';
     $('tWxS').textContent=s.weatherError||'First update on its way'}
-  $('sunTimes').textContent=s.sunset?'Dims at sunset '+s.sunset+', brightens at sunrise '+s.sunrise:'Needs weather for your city (see Weather)';
+  $('sunTimes').textContent=s.sunset?'Dims at sunset '+s.sunset+', brightens at sunrise '+s.sunrise:'Needs weather for your location (see Time & region)';
   const ago=s.weatherAge;
   $('wxAge').textContent=ago===undefined?(s.weatherError?'Not yet: '+s.weatherError:'Not yet'):ago<60?'Just now':ago<3600?Math.floor(ago/60)+' min ago':Math.floor(ago/3600)+' h ago';
-  $('wxLoc').textContent=s.weatherError&&!s.weather?'⚠ '+s.weatherError:s.location?'Found: '+s.location:'A city name, optionally with a country code: “Sydney, AU”.';
+  $('wxLoc').textContent=s.weatherError&&!s.weather?'⚠ '+s.weatherError:s.location?'Weather: '+s.location:'Type a city and pick it from the list: it sets the weather and the time zone.';
   $('tUp').textContent='Up '+up(s.uptime);$('tDev').textContent=(s.heap/1024).toFixed(1)+' KB free';
   $('sIp').textContent=s.ip||'—';$('sHost').innerHTML=s.mdns?`<a href="http://${s.mdns}/">${s.mdns}</a>`:(s.host||'—');$('sAp').textContent=(s.apSsid||'AI Agent Monitor')+' · '+s.apIp;if(s.apSsid)all('.apName').forEach(e=>e.textContent=s.apSsid);
   $('sFs').textContent=s.storageReady?'Mounted':s.storageMountFailed?'Could not mount':'Not started';

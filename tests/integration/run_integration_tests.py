@@ -705,6 +705,25 @@ def palettes_and_roles(emu):
 
 
 @case
+def city_place(emu):
+    """Spec 035: the place picked on the page is kept for its city, travels in a backup, and
+    goes when the city changes by hand."""
+    emu.set("city", "Saint-Hubert, CA")
+    emu.set("place", "45.50008,-73.41583,Saint-Hubert, Quebec, CA")
+    c = emu.config()
+    check(c.get("place") == "45.50008,-73.41583,Saint-Hubert, Quebec, CA", f"place kept: {c.get('place')}")
+    check(c.get("location") == "Saint-Hubert, Quebec, CA", f"location: {c.get('location')}")
+    for bad in ("91,0,x", "1,2", "abc", "10,200,x"):
+        expect_error(400, "place:", emu.set, "place", bad)
+    backup = emu.get("/api/settings/export")
+    emu.set("city", "Lisbon")
+    check("place" not in emu.config(), "a city typed by hand drops the place")
+    emu.post("/api/settings/import", backup)
+    c = emu.config()
+    check(c.get("city") == "Saint-Hubert, CA" and c.get("place", "").startswith("45.50008,"), f"restored: {c.get('place')}")
+
+
+@case
 def orientation(emu):
     """The screen turned by the display controller: the same picture, rotated."""
     emu.show(4)   # Simple: nothing on it moves at the fixed time

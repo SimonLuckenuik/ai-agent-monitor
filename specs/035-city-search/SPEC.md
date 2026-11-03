@@ -16,21 +16,25 @@ second lookup of the same name.
    geocoding's matches (https://open-meteo.com/en/docs/geocoding-api, `count=10`, in
    the clock's language): name, region (`admin1`), country, and population for telling
    them apart. Looked up only while typing (after 3 letters, debounced), from the browser.
+   The list shows every country's matches (no country filter), so "Saint-Hubert" lists
+   the ones in Quebec and in Belgium, and the owner picks one; ", CA" after the name
+   narrows it to one country.
 2. **One choice sets both:** picking a match sets the weather place (its name with the
    country code, and its exact coordinates) and the time zone (its `timezone`, through
-   spec 033's rule builder), in one step. "Weather only" leaves the time zone as it is.
-3. **The clock uses the chosen place:** new settings `lat`, `lon` and `geoname`; when set
-   for the current city, the clock skips its own geocoding (`geoFor` already marks
-   which city the coordinates belong to). A city typed by hand, with no pick, still
-   geocodes on the clock as today.
+   spec 033's rule builder), in one step.
+3. **The clock uses the chosen place:** one new setting, `place` = `lat,lon,label`
+   ("45.50008,-73.41639,Saint-Hubert, Quebec, CA"), for the city just set: the clock
+   keeps those coordinates and skips its own geocoding (`geoFor` already marks which
+   city they belong to). `GET /config` and the backup carry it, so a restore keeps the
+   exact place. A city typed by hand, with no pick, still geocodes on the clock as today.
 4. **Shown:** the page shows the chosen place ("Saint-Hubert, Quebec, CA · America/Toronto").
 5. **One place, set once:** the city and the time zone stop being two fields in two cards.
    "Time & region" opens with a **Location** field (the search of goal 1); under it, one
-   line says what it set: "Weather: Saint-Hubert, Quebec, CA · Time: America/Toronto
-   (EST/EDT)". The time zone follows the location by default; **Change time zone…**
-   opens today's zone list and custom POSIX rule, for a clock that should show another
-   place's time than its weather (and "Follow the location" goes back). The Weather card
-   keeps only its last update and Sync now; "Use the city's time zone" goes away.
+   line says what it set: "Weather: Saint-Hubert, Quebec, CA", and the time zone line
+   under it "America/Toronto". Each pick sets both; **Change time zone…** opens today's
+   zone list and custom POSIX rule, for a clock that should show another place's time
+   than its weather (until the next pick). The Weather card keeps only its last update
+   and Sync now; "Use the city's time zone" goes away.
 
 ## Non-goals
 

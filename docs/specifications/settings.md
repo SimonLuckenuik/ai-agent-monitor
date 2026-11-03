@@ -138,15 +138,22 @@ steps and the default is used).
 
 ## Settings page
 
-- **Time & region: Time zone** lists every zone the browser knows (its own time zone
+- **Time & region: Location** (spec 035) searches Open-Meteo's geocoding from the browser
+  while typing (3 letters on, 10 matches from every country, ", CA" narrows to one), each
+  with its region, country, population and time zone. A pick sets `city` ("Saint-Hubert,
+  CA"), then `place` = `lat,lon,label` ("45.50008,-73.41583,Saint-Hubert, Quebec, CA";
+  latitude and longitude in range, a label of 60 characters at most), so the clock skips
+  its own geocoding, then the time zone below. `place` belongs to the city set just
+  before it: setting `city` again drops it. `GET /config` and the backup carry it, after
+  `city`. A city typed by hand, not picked, is geocoded by the clock (first match).
+- **Time & region: Time zone** shows the zone in use; **Change time zone…** opens the list
+  for another zone than the location's (until the next pick). It lists every zone the browser knows (its own time zone
   database, kept current by its updates; no network needed) the first time the field is
   used, and turns the chosen one into the POSIX rule the clock takes (`tz`), checked
   against the browser for every 3 hours of the next two years; zones with no fixed yearly
   rule (Morocco, Israel) are refused, for a rule typed under "Custom POSIX rule…". The
   clock keeps the zone's name (`tzname`, up to 40 characters; setting `tz` clears it) to
-  show it. "Use the city's time zone" finds the weather city's zone with Open-Meteo's
-  geocoding, the clock's own request. When the city changes to one in another zone, the
-  page says so (spec 033).
+  show it. When a city typed by hand is in another zone, the page says so (spec 033).
 - **Host names:** `localhost` is always answered, as the IP address is (spec 029).
 - **WiFi: Other names for this clock** (`hostnames`, a comma list, at most 200
   characters). On the home network the clock answers only requests addressed to it:

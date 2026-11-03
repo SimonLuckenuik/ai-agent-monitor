@@ -2915,6 +2915,9 @@ void agents(const struct tm& t, bool force) {
 
 }  // namespace
 
+// For settings (the place, spec 035): the expressions' parser, not libc's (~9 KB).
+float readNumber(const char*& s, bool* ok) { return parseNum(s, ok); }
+
 String weatherIconName(int wmo, bool day) {
   int base = pgm_read_byte(&WI_WMO[wmo >= 0 && wmo < 100 ? wmo : 0]);
   return String(base >= WI_BASES - WI_AGNOSTIC ? "wi-" : day ? "wi-day-" : "wi-night-") + wiBase(base);

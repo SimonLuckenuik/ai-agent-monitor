@@ -562,6 +562,7 @@ String configJson() {
   doc[F("gamma")] = Config::GAMMAS[cfg.gamma]; doc[F("nightgamma")] = cfg.nightGamma < 0 ? "" : Config::GAMMAS[cfg.nightGamma];
   doc[F("nightoff")] = cfg.nightOff;
   doc[F("location")] = cfg.geoFor == cfg.city ? cfg.geoName : "";
+  if (cfg.geoFor == cfg.city && !isnan(cfg.lat)) doc[F("place")] = String(cfg.lat, 5) + ',' + String(cfg.lon, 5) + ',' + cfg.geoName;
   doc[F("nightmode")] = cfg.nightMode; doc[F("starttime")] = cfg.startHour; doc[F("stoptime")] = cfg.stopHour;
   doc[F("nightbrightness")] = cfg.nightBrightness; doc[F("nightface")] = cfg.nightFace; doc[F("ntp")] = cfg.ntp;
   doc[F("nighttint")] = cfg.nightTint; doc[F("nightcolor")] = cfg.nightColor;
@@ -676,6 +677,13 @@ template <typename T> void changed(T& setting, const T& value) {
 bool timeChanged = false;
 String applySetting(const String& key, const String& val) {
   if      (key == F("city"))       { if (val != cfg.city) { cfg.city = val; cfg.geoFor = ""; wxRefresh = true; } }   // re-geocode
+  else if (key == F("place")) {   // "lat,lon,label" for the city just set (spec 035): no geocoding
+    const char* p = val.c_str();
+    bool ok1, ok2 = false;
+    float la = readNumber(p, &ok1), lo = ok1 && *p++ == ',' ? readNumber(p, &ok2) : 0;
+    if (!ok2 || *p++ != ',' || fabsf(la) > 90 || fabsf(lo) > 180 || strlen(p) > 60) return F("place: lat,lon,label");
+    cfg.lat = la; cfg.lon = lo; cfg.geoName = p; cfg.geoFor = cfg.city; wxRefresh = true;
+  }
   else if (key == F("ntp"))        { cfg.ntp = val; timeChanged = true; }
   // Stock clients send a minute offset; honour it as a fixed offset (no DST rule).
   else if (key == F("timezone"))   { cfg.timezoneMin = val.toInt(); cfg.tz = ""; timeChanged = true; }

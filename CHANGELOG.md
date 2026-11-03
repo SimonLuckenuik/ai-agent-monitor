@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **One city search** (spec 035): Time & region → Location lists Open-Meteo's matches
+  while typing, from every country ("Saint-Hubert" in Quebec, Belgium, France…) with
+  region, population and time zone; a pick sets the weather to that exact place (new
+  setting `place`) and the time zone with it. Change time zone… sets another one. The
+  Weather card no longer has its own city field.
 - **Backups keep the custom faces** (spec 032): System → Download backup saves the
   settings, every custom face and the saved (`$persist`) values in one file
   (`ai-agent-monitor-backup`, format 2); Restore puts them back one face at a time and
