@@ -388,10 +388,11 @@ a{color:var(--accent)}
       <button class="btn" id="crashClear" onclick="crashAct('clear')" hidden>Clear</button></div>
 
     <div class="sub">Backup</div>
-    <p class="note" style="margin-top:0">Settings only; WiFi details, the password and photos are not included.</p>
-    <div class="btns"><a class="btn" href="/api/settings/export" download="smartclock-settings.json">Download backup</a>
+    <p class="note" style="margin-top:0">Settings, custom faces and their saved values. WiFi details, passwords, the API key and photos are not included.</p>
+    <div class="btns"><button class="btn" id="backupBtn" onclick="backupDownload()">Download backup</button>
       <button class="btn" onclick="$('restoreFile').click()">Restore backup…</button>
       <input type="file" id="restoreFile" accept=".json,application/json" hidden></div>
+    <div class="msg" id="backupMsg"></div>
 
     <div class="sub">Reset</div>
     <div class="btns"><button class="btn danger" onclick="forgetWifi()">Forget WiFi</button>
@@ -444,10 +445,55 @@ async function changePassword(){const p=$('newPass').value;
   if(!/^[\x21-\x7e]{8,31}$/.test(p)){toast('Use 8 to 31 characters, no spaces',1);return}
   if(!confirm('Change the password? Devices on the setup network will need the new one.'))return;
   try{await req('/api/auth/password',form({password:p}));$('newPass').value='';toast('Password changed')}catch(e){toast(e.message,1)}}
-// ---- Backup and reset
-$('restoreFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{const t=await req('/api/settings/import',{method:'POST',headers:{'Content-Type':'application/json'},body:await f.text()});
-    toast(t);fillConfig(await(await fetch('/config')).json())}catch(err){toast(err.message,1)}};
+// ---- Backups with the custom faces (spec 032)
+// call(path, opt) answers {ok, status, text}: fetch here, a mock in tests/web/backup.test.js.
+// One face at a time: the clock never holds more than one (they can total 160 KB).
+async function backupBuild(call){
+  const get=async p=>{const r=await call(p);if(!r.ok)throw new Error(r.text||('HTTP '+r.status));return r.text};
+  const settings=JSON.parse(await get('/api/settings/export'));
+  const b={type:'ai-agent-monitor-backup',format:2,version:settings.version,date:new Date().toISOString(),settings,faces:{},vars:{}};
+  const l=await call('/api/faces');
+  if(!l.ok){b.faces=null;return b}   // custom faces are off: settings only
+  const j=JSON.parse(l.text);
+  for(const n of j.faces||[]){const t=await get('/api/faces/get?name='+encodeURIComponent(n));
+    try{b.faces[n]=JSON.parse(t)}catch(e){b.faces[n]=t}}
+  for(const n of j.persist||[])if(j.vars&&n in j.vars)b.vars[n]=j.vars[n];
+  return b}
+// Returns the report's lines; throws when nothing could be restored.
+async function backupRestore(call,text){
+  let d;try{d=JSON.parse(text)}catch(e){d=null}
+  const post=(p,body)=>call(p,{method:'POST',headers:{'Content-Type':'application/json'},body});
+  const settings=async s=>{const r=await post('/api/settings/import',s);if(!r.ok)throw new Error(r.text||('HTTP '+r.status));return r.text};
+  if(d&&d.type==='smartclock-oss-settings')return [await settings(text)];   // a settings-only backup
+  if(!d||d.type!=='ai-agent-monitor-backup'||!d.settings)throw new Error('Not an AI Agent Monitor backup');
+  if(d.format>2)throw new Error('This backup is from a newer firmware; update the clock first');
+  const s=JSON.stringify(d.settings),lines=[];
+  await settings(s);   // first: it may turn custom faces on
+  const faces=Object.entries(d.faces||{}),refused=[];let done=0;
+  for(const [n,f] of faces){const r=await post('/api/faces?name='+encodeURIComponent(n),typeof f==='string'?f:JSON.stringify(f));
+    if(r.status===401)throw new Error(r.text||'Sign in again');
+    if(r.status===404){refused.push(faces.length-done-refused.length+' faces: '+(r.text||'custom faces are off'));break}
+    if(r.ok)done++;else refused.push(n+': '+(r.text||('HTTP '+r.status)))}
+  const vars=Object.keys(d.vars||{});let vmsg='';
+  if(vars.length&&!refused.some(x=>/faces are/.test(x))){const r=await post('/api/faces/vars',JSON.stringify(Object.assign({},d.vars,{$persist:true})));
+    vmsg=r.ok?vars.length+' saved value'+(vars.length>1?'s':'')+' restored':'Saved values not restored: '+(r.text||('HTTP '+r.status))}
+  lines.push(await settings(s));   // again, now that the faces the settings name exist
+  if(faces.length)lines.push(done+' custom face'+(done===1?'':'s')+' restored');
+  for(const x of refused)lines.push('Not restored: '+x);
+  if(vmsg)lines.push(vmsg);
+  return lines}
+// ---- end of the backups
+const pageCall=async(p,o)=>{const r=await fetch(p,o);const text=await r.text();if(r.status===401)showLogin();return {ok:r.ok,status:r.status,text}};
+async function backupDownload(){const m=$('backupMsg'),btn=$('backupBtn');m.className='msg';m.textContent='Reading the clock…';btn.disabled=true;
+  try{const b=await backupBuild(pageCall),n=b.faces?Object.keys(b.faces).length:0;
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(b,null,1)],{type:'application/json'}));
+    a.download='ai-agent-monitor-backup-'+b.date.slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    m.className='msg ok';m.textContent=b.faces?'Saved: the settings, '+n+' custom face'+(n===1?'':'s')+' and '+Object.keys(b.vars).length+' saved values.'
+      :'Saved: the settings only (custom faces are off).'}
+  catch(e){m.className='msg bad';m.textContent=e.message}btn.disabled=false}
+$('restoreFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const m=$('backupMsg');m.className='msg';m.textContent='Restoring…';
+  try{const lines=await backupRestore(pageCall,await f.text());m.className='msg'+(lines.some(x=>/^Not restored|not restored/.test(x))?' bad':' ok');
+    m.textContent=lines.join('. ')+'.';fillConfig(await(await fetch('/config')).json())}catch(err){m.className='msg bad';m.textContent=err.message}};
 async function forgetWifi(){if(!confirm('Forget the saved WiFi network? The clock restarts and waits on its setup network.'))return;
   try{await req('/api/wifi/forget',{method:'POST'});waitForReboot('Restarting','Join the '+(st.apSsid||'AI Agent Monitor')+' network to set up WiFi again.')}catch(e){toast(e.message,1)}}
 async function resetSettings(){if(!confirm('Reset all settings, including WiFi? Photos and the password are kept.'))return;

@@ -78,7 +78,7 @@ Send the key as the header `X-Api-Key: <key>`, or as `?key=<key>`.
 | Method and path | Body | Does |
 |---|---|---|
 | `POST /api/faces?name=<name>` | face JSON | Saves the face; `&show=1`, or `"show": true` in the JSON, shows it now. An empty body deletes it. 400 for a face that is not valid, 507 when the clock is short of memory (try again) |
-| `GET /api/faces` | | `{"faces":[...], "showing":"<name>", "vars":{...}}` |
+| `GET /api/faces` | | `{"faces":[...], "showing":"<name>", "vars":{...}, "persist":[...]}`: `persist` names the variables kept across restarts |
 | `GET /api/faces/get?name=<name>` | | The face's JSON |
 | `POST /api/faces/show?name=<name>` | | Shows the face now |
 | `POST /api/faces/delete?name=<name>` | | Deletes the face |

@@ -41,7 +41,7 @@ Next free number: **036**.
 | [029 Network guards: Wi-Fi downgrade, request host, clock time](029-network-guards/SPEC.md) | In progress (built; to check on the clock) |
 | [030 Faster big text, in less flash](030-faster-big-text/SPEC.md) | In progress (built; to measure on the clock) |
 | [031 More fonts: Bebas, Outfit, seven segments, pixel digits, and a stroke weight](031-more-fonts/SPEC.md) | Approved |
-| [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Approved |
+| [032 Backups that keep the custom faces](032-backup-with-faces/SPEC.md) | Done |
 | [033 Every time zone, and the city's own](033-time-zone-from-city/SPEC.md) | Done (settings page; unreleased) |
 | [034 Custom faces in the clock's language](034-face-languages/SPEC.md) | Deferred |
 | [035 One city search, for the weather and the time zone](035-city-search/SPEC.md) | Approved |

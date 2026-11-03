@@ -4,6 +4,15 @@ The settings page writes these through `POST /api/set` (`key`, `value`), signed 
 They are saved in `/config.json`, appear in `GET /config`, and travel in a settings
 backup. Values that are lists or objects are sent as text: a comma list, or JSON.
 
+The settings page's backup (spec 032) is one JSON file, `{"type":
+"ai-agent-monitor-backup", "format": 2, "version", "date", "settings": {...},
+"faces": {name: face}, "vars": {name: value}}`: the settings as `GET
+/api/settings/export` gives them, every custom face (`null` when custom faces were off)
+and the values pushed with `$persist`. Restoring imports the settings, posts each face,
+sets the values with `$persist`, then imports the settings again so the custom face
+shown, the night face and the rotation find their faces. No WiFi details, passwords or
+API key are in it. A settings-only file (`smartclock-oss-settings`) restores as before.
+
 ## Faces: built-in and custom, in one list
 
 A **face entry** names one face: `#<id>` for a built-in face (`#0` Classic, `#7` Big

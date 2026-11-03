@@ -39,7 +39,7 @@ otherwise these endpoints answer 404 `Custom faces are turned off`.
 | Method and path | Body | Does |
 |---|---|---|
 | `POST /api/faces?name=<name>` | face JSON | Saves the face; `&show=1` (or `"show": true` in the JSON) shows it now. An empty body deletes it |
-| `GET /api/faces` | | `{"faces":[...], "showing":"<name>", "vars":{...}}` |
+| `GET /api/faces` | | `{"faces":[...], "showing":"<name>", "vars":{...}, "persist":[...]}`: `persist` names the variables kept across restarts |
 | `GET /api/faces/get?name=<name>` | | The face's JSON |
 | `POST /api/faces/show?name=<name>` | | Shows the face now; the rotation carries on from it |
 | `POST /api/faces/delete?name=<name>` | | Deletes the face |

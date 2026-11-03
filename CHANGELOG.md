@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Backups keep the custom faces** (spec 032): System → Download backup saves the
+  settings, every custom face and the saved (`$persist`) values in one file
+  (`ai-agent-monitor-backup`, format 2); Restore puts them back one face at a time and
+  says what it restored and what the clock refused. Settings-only backups still restore.
+  `GET /api/faces` lists the saved values' names (`persist`).
 - **Digit fonts** (spec 031): `"font": "bebas"` (Bebas Neue) and `"outfit"` (Outfit) for
   large numbers, filled and smooth at any size; `"seg7"` (seven segments) and `"pixel"`
   (5×7 blocks), with `"off"` for the unlit ones; `"weight"` makes the big font bold. The

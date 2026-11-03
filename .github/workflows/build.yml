@@ -110,3 +110,6 @@ jobs:
 
       - name: The settings page's time zone rules (spec 033)
         run: node tests/web/tz_rules.test.js
+
+      - name: The settings page's backups with the custom faces (spec 032)
+        run: node tests/web/backup.test.js

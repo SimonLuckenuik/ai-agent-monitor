@@ -350,7 +350,11 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
   for (int i = 0, n = customFaceCount(); i < n; ++i) list.add(customFaceAt(i));
   if (cfg.theme == FACE_CUSTOM) doc[F("showing")] = cfg.customFace;
   JsonObject v = doc[F("vars")].to<JsonObject>();
-  for (const Var& var : vars) if (var.key.length() && findVar(var.key)) v[var.key] = var.value;
+  JsonArray keep = doc[F("persist")].to<JsonArray>();   // for backups (spec 032)
+  for (const Var& var : vars) if (var.key.length() && findVar(var.key)) {
+    v[var.key] = var.value;
+    if (var.keep) keep.add(var.key);
+  }
   String out; serializeJson(doc, out);
   server.send(200, "application/json", out);
 }
