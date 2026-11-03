@@ -18,3 +18,9 @@
     about 14 KB). The update budget is at 98%: about 12 KB of plain image left.
   - The converter maps their bebas, outfit, dseg and dm to ours. A text mixing a task
     count with other values ("{TEMP}° {FOCOS}/{META}") keeps the rest.
+- 2026-11-02: goal 5 for our faces. The owner kept Big time and Big date in the big
+  font at weight 1 (weights 2 and 3, and Bebas, were drawn side by side; 3 closes the
+  digits' holes) and left the rest to us: Outfit on power-cell, kpi, commit-streak,
+  night-light, orbit, synthwave, sun-arc and weather-poster at their old size (48);
+  seven segments on retro-lcd (38, to fit the LCD) and scoreboard (36, within its
+  boxes), with their unlit segments. terminal keeps its font. Previews regenerated.

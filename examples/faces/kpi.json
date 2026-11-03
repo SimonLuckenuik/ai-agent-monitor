@@ -2,7 +2,7 @@
   "bg": "#0b132b",
   "items": [
     {"type": "text", "x": 16, "y": 22, "text": "{label:u:20|REVENUE}", "font": 2, "align": "ml", "color": "#8d99ae"},
-    {"type": "text", "x": 16, "y": 74, "text": "{value|0}", "font": 6, "align": "ml", "color": "#ffffff", "bg": "#0b132b", "pad": 30},
+    {"type": "text", "x": 16, "y": 74, "text": "{value|0}", "font": "outfit", "size": 48, "align": "ml", "color": "#ffffff", "bg": "#0b132b", "pad": 30},
     {"type": "text", "x": 226, "y": 74, "text": "{unit|}", "font": 4, "align": "mr", "color": "#8d99ae"},
     {"type": "path", "x": 26, "y": 124, "size": 20, "align": "mc", "fill": "#30d158", "d": "M12 4l9 14H3z", "show": "{delta|0}>=0"},
     {"type": "path", "x": 26, "y": 124, "size": 20, "align": "mc", "fill": "#ff453a", "d": "M12 20L3 6h18z", "show": "{delta|0}<0"},
