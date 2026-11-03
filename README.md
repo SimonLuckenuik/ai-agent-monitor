@@ -263,8 +263,8 @@ status* option the clock's address (asked when the plugin is enabled, or in `/co
 **waiting** message when Claude asks for a permission or a question, **done** with the
 start of its reply when it finishes, cleared as soon as you type. One message per
 session, titled with the project's folder, so the Agents board shows every session at
-once. Empty, the hooks do nothing; they need Python 3, and a clock that is off costs a
-turn at most 2 seconds, then nothing for a minute.
+once. Empty, the hooks do nothing (not even start Python); set, they need Python 3,
+and they run in the background, so a turn never waits for the clock.
 
 ## Settings page
 

@@ -12,3 +12,8 @@
     Stop's request never arrived, so Stop runs in the foreground.
   - Not seen in a live interactive session yet: the Notification hook (covered by the
     test and the emulator run).
+- 2026-11-03: on the real clock (2.1.1): the commands from hooks.json posted "waiting", then "done"
+  with the reply, and the prompt cleared it. Stop in the foreground cost a turn about 1.5 s,
+  so every hook now runs in the background and the command starts no Python while the
+  option is empty (plugin 0.7.2). A `claude -p` run: the prompt and the end cleared; the
+  background "done" in between is lost there, as SessionEnd would clear it anyway.

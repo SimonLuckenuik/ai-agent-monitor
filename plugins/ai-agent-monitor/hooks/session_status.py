@@ -11,9 +11,9 @@ Off unless the plugin's "Clock for session status" option (CLAUDE_PLUGIN_OPTION_
 or CLOCK_HOOKS_URL names the clock, e.g. http://192.168.1.50. One message per session
 (id "cc-" and the session id's first 8 characters), titled with the project's folder.
 Never fails and never waits more than about 2 seconds; after a clock that did not answer,
-the hooks leave it alone for a minute, so a clock that is off or has moved costs almost
-nothing. Stop runs in the foreground (a background hook is lost when `claude -p` exits),
-the others in the background. Standard library only.
+the hooks leave it alone for a minute. Every hook runs in the background, so a turn never
+waits for the clock, and hooks.json starts no Python at all while the option is empty.
+Standard library only.
 """
 import json
 import os

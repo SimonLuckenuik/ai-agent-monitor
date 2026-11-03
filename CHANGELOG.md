@@ -7,6 +7,10 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+- **Plugin 0.7.2**: the session status hooks all run in the background, so a turn never
+  waits for the clock (Stop cost about 1.5 s on Windows), and start no Python while the
+  *Clock for session status* option is empty.
+
 ## 2.1.1 - 2026-11-03
 
 ### Upgrading

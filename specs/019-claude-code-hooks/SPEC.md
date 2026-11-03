@@ -20,8 +20,9 @@ when the owner answers.
    `CLOCK_HOOKS_URL`. Without it the hooks send nothing.
 3. One message per session: id `cc-` and the session id's first 8 characters, titled with
    the project's folder, so the Agents board has one row per session.
-4. Never in the way: every hook exits 0 and prints nothing; a request gives up after
-   2 seconds, and after a clock that did not answer the hooks leave it alone for a minute.
+4. Never in the way: every hook runs in the background, exits 0 and prints nothing; with
+   the option empty the command starts no Python. A request gives up after 2 seconds, and
+   after a clock that did not answer the hooks leave it alone for a minute.
 
 ## Decisions (the draft's open questions)
 

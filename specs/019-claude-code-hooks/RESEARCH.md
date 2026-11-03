@@ -12,15 +12,20 @@
   exit 0 always is safe. SessionEnd hooks share a budget of 1.5 seconds.
 - `"async": true` runs a command hook in the background. Measured with `claude -p`: a
   background Stop hook is lost when the session ends right after it (no request reached
-  the server), while UserPromptSubmit and SessionEnd ones arrived. Stop therefore runs
-  in the foreground with `"timeout": 5`.
+  the server), while UserPromptSubmit and SessionEnd ones arrived. Stop first ran in the
+  foreground for that; on the real clock it then cost every turn about 1.5 s on Windows
+  (the `python3` probe 0.65 s, Python and its HTTP modules 0.7 s, the clock 0.4 s). In
+  `claude -p` SessionEnd clears the message a second later anyway, so Stop runs in the
+  background too (plugin 0.7.2).
 - `userConfig` in plugin.json asks the user for values when the plugin is enabled (and
   shows them in `/config`); hooks get them as `CLAUDE_PLUGIN_OPTION_<KEY>`.
 
 ## Python on Windows
 
 `python3` may be the Microsoft Store alias, which exits 49 and swallows the hook's stdin.
-The command probes `python3 -c ""` with stdin from /dev/null and falls back to `python`.
+The command takes `python` when `command -v python3` is empty or under `WindowsApps`,
+without starting either (a probe cost 0.65 s). It first checks the address, so with the
+option empty no Python starts (0.03-0.08 s).
 
 ## Prior art: smalltv-mod (giovi321, WTFPL, commit 6e65e03)
 

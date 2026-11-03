@@ -10,6 +10,7 @@ import http.server
 import json
 import os
 import pathlib
+import shutil
 import socket
 import subprocess
 import sys
@@ -118,10 +119,32 @@ check(p.returncode == 0 and not p.stderr, f"nothing at that address: exit 0 afte
 
 hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
 check(set(hooks) == {"Notification", "Stop", "UserPromptSubmit", "SessionEnd"}
-      and all(bool(h.get("async")) == (event != "Stop") for event, e in hooks.items() for m in e for h in m["hooks"])
-      and hooks["Stop"][0]["hooks"][0]["timeout"] <= 5
+      and all(h.get("async") is True for e in hooks.values() for m in e for h in m["hooks"])
       and "idle_prompt" not in hooks["Notification"][0]["matcher"],
-      "hooks.json: the four events, Stop in the foreground (5 s at most); an idle prompt does not replace done")
+      "hooks.json: the four events, all in the background; an idle prompt does not replace done")
+
+# The commands themselves, through bash as Claude Code runs them (Git Bash on Windows).
+bash = shutil.which("bash")
+if bash:
+    stop = hooks["Stop"][0]["hooks"][0]["command"]
+
+    def shell(url):
+        env = {k: v for k, v in os.environ.items() if k not in ("CLOCK_HOOKS_URL", "CLAUDE_PLUGIN_OPTION_HOOKS_CLOCK_URL")}
+        env.update(TMPDIR=TMP, TEMP=TMP, TMP=TMP, CLAUDE_PLUGIN_ROOT=str(HOOK.parents[1]).replace("\\", "/"))
+        if url:
+            env["CLAUDE_PLUGIN_OPTION_HOOKS_CLOCK_URL"] = url
+        seen.clear()
+        start = time.monotonic()
+        p = subprocess.run([bash, "-c", stop], input=json.dumps(base), capture_output=True, text=True, env=env, timeout=20)
+        return p, time.monotonic() - start
+
+    p, took = shell(None)
+    check(p.returncode == 0 and not seen and not p.stdout, f"Stop's command, off: no Python, no request ({took:.2f} s)")
+    p, _ = shell(URL)
+    check(p.returncode == 0 and len(seen) == 1 and seen[0][2]["icon"] == "done",
+          f"Stop's command, on: python3 or python found, done posted ({p.stderr.strip()[:80]})")
+else:
+    print("SKIP the commands through bash: no bash on PATH", flush=True)
 
 print(("FAIL" if failures else "PASS") + f": session status hooks, {failures} failure(s)")
 sys.exit(1 if failures else 0)

@@ -1,20 +1,20 @@
 {
-  "description": "Session status on the clock (spec 019): waiting when Claude needs you, done when it finishes, cleared when you answer. Off until the plugin's \"Clock for session status\" option is set.",
+  "description": "Session status on the clock (spec 019): waiting when Claude needs you, done when it finishes, cleared when you answer. Off, without starting Python, until the plugin's \"Clock for session status\" option is set.",
   "hooks": {
     "Notification": [
       {
         "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input",
         "hooks": [
           {"type": "command", "async": true,
-           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" waiting"}
+           "command": "[ -n \"$CLOCK_HOOKS_URL$CLAUDE_PLUGIN_OPTION_HOOKS_CLOCK_URL\" ] || exit 0; P=python3; case \"$(command -v python3)\" in ''|*WindowsApps*) P=python;; esac; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" waiting"}
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          {"type": "command", "timeout": 5,
-           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" done"}
+          {"type": "command", "async": true,
+           "command": "[ -n \"$CLOCK_HOOKS_URL$CLAUDE_PLUGIN_OPTION_HOOKS_CLOCK_URL\" ] || exit 0; P=python3; case \"$(command -v python3)\" in ''|*WindowsApps*) P=python;; esac; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" done"}
         ]
       }
     ],
@@ -22,7 +22,7 @@
       {
         "hooks": [
           {"type": "command", "async": true,
-           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" clear"}
+           "command": "[ -n \"$CLOCK_HOOKS_URL$CLAUDE_PLUGIN_OPTION_HOOKS_CLOCK_URL\" ] || exit 0; P=python3; case \"$(command -v python3)\" in ''|*WindowsApps*) P=python;; esac; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" clear"}
         ]
       }
     ],
@@ -30,7 +30,7 @@
       {
         "hooks": [
           {"type": "command", "async": true,
-           "command": "P=python3; $P -c \"\" </dev/null >/dev/null 2>&1 || P=python; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" clear"}
+           "command": "[ -n \"$CLOCK_HOOKS_URL$CLAUDE_PLUGIN_OPTION_HOOKS_CLOCK_URL\" ] || exit 0; P=python3; case \"$(command -v python3)\" in ''|*WindowsApps*) P=python;; esac; $P \"${CLAUDE_PLUGIN_ROOT}/hooks/session_status.py\" clear"}
         ]
       }
     ]
