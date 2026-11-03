@@ -1,6 +1,6 @@
 # 018 Check 1.5-1.8 on the real clock
 
-Status: Draft (proposed 2026-10-30, not approved)
+Status: Done (the owner's checks on 2.1.0 and 2.1.1, 2026-11-03)
 
 ## Problem
 

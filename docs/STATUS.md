@@ -50,9 +50,8 @@ Earlier device results (1.4.0 to 1.9.1) are in the decision records and the clos
 overflow (1.9.0), the weather and face uploads within the heap (1.9.1), all fixed and
 confirmed on the clock.
 
-**Still to see on the clock:** a backup and restore (needs the signed-in page), the
-orientations, gamma curves and screen off and wake (spec 018), the MQTT broker, the
-recorded crash, and rain or snow actually announced.
+**Still to see on the clock:** a backup and restore (needs the signed-in page), and rain
+or snow actually announced. The crash recorded before 2.1.1 is cleared by the owner.
 
 ## Checks
 
@@ -74,18 +73,22 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 
 ## Specs in flight
 
-Done in 2.1.0 and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
-[027](../specs/027-small-mdns/SPEC.md), [029](../specs/029-network-guards/SPEC.md),
-[030](../specs/030-faster-big-text/SPEC.md). Done in 2.1.1: [036](../specs/036-flash-room/SPEC.md) (flash room),
-[038](../specs/038-fifth-forecast-day/SPEC.md) (a fifth forecast day), and the weather
-icons fixed for Open-Meteo's codes. Done in 2.1.0:
-[028](../specs/028-rain-snow-soon/SPEC.md), [031](../specs/031-more-fonts/SPEC.md),
-[032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),
-[035](../specs/035-city-search/SPEC.md). Still open from earlier releases: 021, 022, 024,
-025 (released, waiting to be seen at work on the clock). Deferred:
-[034](../specs/034-face-languages/SPEC.md). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md),
-[037](../specs/037-claude-usage-face/SPEC.md). Done on `main`
-(plugin only): [019](../specs/019-claude-code-hooks/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
+None in progress: every approved spec is done. Done in 2.1.1:
+[036](../specs/036-flash-room/SPEC.md) (flash room), [038](../specs/038-fifth-forecast-day/SPEC.md)
+(a fifth forecast day), and the weather icons fixed for Open-Meteo's codes. Done in 2.1.0
+and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
+[027](../specs/027-small-mdns/SPEC.md), [028](../specs/028-rain-snow-soon/SPEC.md),
+[029](../specs/029-network-guards/SPEC.md), [030](../specs/030-faster-big-text/SPEC.md),
+[031](../specs/031-more-fonts/SPEC.md), [032](../specs/032-backup-with-faces/SPEC.md),
+[033](../specs/033-time-zone-from-city/SPEC.md), [035](../specs/035-city-search/SPEC.md).
+Closed 2026-11-03 after the checks on the clock: [018](../specs/018-first-run-on-the-clock/SPEC.md),
+[021](../specs/021-crash-report/SPEC.md), [022](../specs/022-emulator-device-memory/SPEC.md),
+[024](../specs/024-memory-headroom/SPEC.md), [025](../specs/025-ram-mqtt-mdns/SPEC.md).
+Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
+hooks, plugin 0.7.2, seen on the real clock). Proposed:
+[037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
+[039](../specs/039-animated-messages/SPEC.md) (animated waiting and done screens).
+Deferred: [034](../specs/034-face-languages/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 
 ## Open issues

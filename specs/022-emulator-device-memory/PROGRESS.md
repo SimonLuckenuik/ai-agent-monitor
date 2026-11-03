@@ -23,3 +23,6 @@
   frames for the deepest face. `EMU_STACK` stays 4096 (about 300 B of headroom against the
   clock is the error). Heap: the emulator at rest 12.7 KB free, the clock 14.1 KB; after
   flip-clock-wide both run out on the next upload (10.0 / 10.5 KB), so the arena matches.
+- 2026-11-03: closed. The arena and stack match the clock (calibration above), every example face
+  runs in the integration case, and the clock has since run every release without a
+  memory crash.

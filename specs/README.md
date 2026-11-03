@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **039**.
+Next free number: **040**.
 
 | Spec | Status |
 |---|---|
@@ -27,14 +27,14 @@ Next free number: **039**.
 | [015 Emulator scenarios](015-emulator-scenarios/SPEC.md) | Done in 1.6.0 |
 | [016 Flicker-free redraws](016-flicker-free-redraws/SPEC.md) | Done in 1.7.0 / 1.8.0 |
 | [017 Example faces gallery](017-example-faces/SPEC.md) | Done, grows with new faces |
-| [018 Check 1.5-1.8 on the real clock](018-first-run-on-the-clock/SPEC.md) | Draft |
+| [018 Check 1.5-1.8 on the real clock](018-first-run-on-the-clock/SPEC.md) | Done |
 | [019 Claude Code hooks that drive the clock](019-claude-code-hooks/SPEC.md) | Done (plugin 0.7.0) |
 | [020 ESP-NOW between clocks](020-esp-now/SPEC.md) | Dropped |
-| [021 Crash records and crash-loop protection](021-crash-report/SPEC.md) | In progress |
-| [022 The emulator runs out of memory where the clock does](022-emulator-device-memory/SPEC.md) | In progress |
-| [023 Custom faces within the 4 KB stack](023-renderer-stack/SPEC.md) | In progress |
-| [024 Memory headroom: weather and uploads beside big faces](024-memory-headroom/SPEC.md) | In progress (released in 1.9.1) |
-| [025 RAM back, and MQTT and mDNS on again](025-ram-mqtt-mdns/SPEC.md) | In progress (released in 2.0.0) |
+| [021 Crash records and crash-loop protection](021-crash-report/SPEC.md) | Done in 1.9.0 |
+| [022 The emulator runs out of memory where the clock does](022-emulator-device-memory/SPEC.md) | Done |
+| [023 Custom faces within the 4 KB stack](023-renderer-stack/SPEC.md) | Done in 1.9.0 |
+| [024 Memory headroom: weather and uploads beside big faces](024-memory-headroom/SPEC.md) | Done in 1.9.1 |
+| [025 RAM back, and MQTT and mDNS on again](025-ram-mqtt-mdns/SPEC.md) | Done in 2.0.0 |
 | [026 The smalltv-pomodoro faces, and a face gallery](026-face-gallery/SPEC.md) | Done in 2.1.0 |
 | [027 A small mDNS responder](027-small-mdns/SPEC.md) | Done in 2.1.0 |
 | [028 Rain or snow within the hour](028-rain-snow-soon/SPEC.md) | Done in 2.1.0 |
@@ -48,6 +48,7 @@ Next free number: **039**.
 | [036 Flash room: zopfli, our own time zone parser, a minified page](036-flash-room/SPEC.md) | Done in 2.1.1 |
 | [037 A Claude usage face, fed by Claude Code](037-claude-usage-face/SPEC.md) | Draft |
 | [038 A fifth forecast day, and its tile](038-fifth-forecast-day/SPEC.md) | Done in 2.1.1 |
+| [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Draft |
 
 ## Templates
 

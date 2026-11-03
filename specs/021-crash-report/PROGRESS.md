@@ -12,3 +12,6 @@
   Not yet run on the clock.
 - 2026-10-31: on the clock with 1.9.0: `/api/crashes` answers 204 with the key, no crash
   so far; the record path has not run on the chip yet.
+- 2026-11-03: closed. The record path has now run on the chip: the clock logged a panic (no face
+  drawing) before 2.1.1, shown in `/status` `lastCrash`; the owner clears it from the
+  settings page. Crash-loop protection was seen in the emulator only (no loop on the clock).

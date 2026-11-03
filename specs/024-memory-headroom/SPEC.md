@@ -1,7 +1,6 @@
 # 024 Weather, sun times and face uploads within the clock's heap
 
-Status: In progress (approved 2026-10-31; goal 3, sun times without the weather, dropped
-the same day by the owner: the weather is usually there)
+Status: Done in 1.9.1 (goal 3 dropped by the owner)
 
 ## Problem
 

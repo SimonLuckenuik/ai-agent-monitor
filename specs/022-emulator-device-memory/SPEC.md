@@ -1,6 +1,6 @@
 # 022 The emulator runs out of memory where the clock does
 
-Status: In progress (approved 2026-10-31)
+Status: Done (calibrated against the clock 2026-10-31)
 
 ## Problem
 

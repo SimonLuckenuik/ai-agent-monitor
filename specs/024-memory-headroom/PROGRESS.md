@@ -10,3 +10,5 @@
   times (NOAA, ~0.8 KB of flash, unit-checked within 3 min of Open-Meteo) were written
   and then taken out at the owner's request. Emulator: a fetch took 6,096 B; every
   example face uploads beside each big face. Compressed image 425,569 B (97%).
+- 2026-11-03: closed. On the clock since 2.0.0 the weather loads at rest and beside every example
+  face, and faces upload beside the big ones (spec 025's run, 2026-10-31).

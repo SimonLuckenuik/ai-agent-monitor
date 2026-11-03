@@ -1,7 +1,6 @@
 # 021 Crash records and crash-loop protection
 
-Status: In progress (approved 2026-10-31; scope widened the same day at the owner's
-request: a crash log, crash-loop protection, safe mode)
+Status: Done (released in 1.9.0; a crash recorded on the clock 2026-11-03)
 
 ## Problem
 

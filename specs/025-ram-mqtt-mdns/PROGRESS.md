@@ -45,3 +45,5 @@
   state, backlight and face too; `face/set` "Big time" switched the face. Saving the
   settings page reconnected seven times in 45 s (each MQTT key it sets restarts the
   connection), then the connection stayed up. No restart.
+- 2026-11-03: closed. On 2.1.1: MQTT connected to the owner's broker, mDNS on and resolving after
+  hours (spec 027), 21-25 KB free; the RAM won back holds.

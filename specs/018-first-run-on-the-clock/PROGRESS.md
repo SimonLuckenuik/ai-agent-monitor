@@ -11,3 +11,5 @@
   on 2.1.0: the broker at 192.168.66.59 to check); French labels (the clock runs in French); issue
   records (spec 021). Left, for the owner: orientations 90/180/270, gamma curves, screen
   off and wake, and Classic's draw time.
+- 2026-11-03: closed. The owner checked the orientations, gamma curves and screen off and wake on
+  2.1.1 ("spec 18 works"); the rest was read from `/status` (see the entry above).
