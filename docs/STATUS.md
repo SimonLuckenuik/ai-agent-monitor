@@ -70,7 +70,8 @@ Built, to check on the clock with 2.1.0: [026](../specs/026-face-gallery/SPEC.md
 [032](../specs/032-backup-with-faces/SPEC.md), [033](../specs/033-time-zone-from-city/SPEC.md),
 [035](../specs/035-city-search/SPEC.md). Still open from earlier releases: 021, 022, 024,
 025 (released, waiting to be seen at work on the clock). Deferred:
-[034](../specs/034-face-languages/SPEC.md). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md). Done on `main`
+[034](../specs/034-face-languages/SPEC.md). Proposed: [018](../specs/018-first-run-on-the-clock/SPEC.md),
+[037](../specs/037-claude-usage-face/SPEC.md). Done on `main`
 (plugin only): [019](../specs/019-claude-code-hooks/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 

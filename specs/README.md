@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **037**.
+Next free number: **038**.
 
 | Spec | Status |
 |---|---|
@@ -46,6 +46,7 @@ Next free number: **037**.
 | [034 Custom faces in the clock's language](034-face-languages/SPEC.md) | Deferred |
 | [035 One city search, for the weather and the time zone](035-city-search/SPEC.md) | Done in 2.1.0 |
 | [036 Flash room: zopfli, our own time zone parser, a minified page](036-flash-room/SPEC.md) | Done (unreleased) |
+| [037 A Claude usage face, fed by Claude Code](037-claude-usage-face/SPEC.md) | Draft |
 
 ## Templates
 
