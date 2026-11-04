@@ -259,6 +259,44 @@ def message_layouts(emu):
 
 
 @case
+def message_animation(emu):
+    """Spec 039: a figure waves while a session waits and hops when it is done, an error
+    flashes for its first seconds; with "Animated messages" off the icon stays still."""
+    def frames(n=6, gap=0.25):
+        out = []
+        for _ in range(n):
+            out.append(emu.framebuffer()[0])
+            time.sleep(gap)
+        return out
+    check(json.loads(emu.get("/config")).get("msganim") is True, "msganim on by default")
+    emu.set_time(local="2026-10-05T10:09:00", speed=1)
+    emu.message(id="wave", title="ai-agent-monitor", text="Waiting for your approval.", icon="waiting", show=True)
+    time.sleep(0.5)
+    check(len(set(frames())) >= 2, "waiting: the figure does not move")
+    emu.clear_messages()
+    emu.message(id="hop", title="Release", text="Published.", icon="done", show=True)
+    time.sleep(0.5)
+    check(len(set(frames())) >= 2, "done: the figure does not hop")
+    time.sleep(6)
+    check(len(set(frames(4))) == 1, "done: the figure does not settle after 6 s")
+    emu.clear_messages()
+    emu.message(id="err", title="Build failed", text="See the log.", icon="error", show=True)
+    time.sleep(0.3)
+    check(len(set(frames())) >= 2, "error: no flash")
+    time.sleep(4.5)
+    check(len(set(frames(4))) == 1, "error: still flashing after 4 s")
+    emu.clear_messages()
+    emu.set("msganim", 0)
+    check(json.loads(emu.get("/config")).get("msganim") is False, "msganim off")
+    emu.message(id="still", title="ai-agent-monitor", text="Waiting for your approval.", icon="waiting", show=True)
+    time.sleep(0.5)
+    check(len(set(frames())) == 1, "off: the waiting screen still moves")
+    shot(emu, "message_still")
+    emu.set("msganim", 1)
+    emu.clear_messages()
+    emu.fix_time(FIXED_TIME)
+
+@case
 def agents_board(emu):
     emu.clear_messages()
     emu.show(9)
@@ -380,8 +418,9 @@ def faces_beside_big_faces(emu):
         for name in names:
             if name == big:
                 continue
-            try:
+            try:   # one at a time: the examples outnumber the clock's 40 faces
                 emu.push_face(name, json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8")))
+                emu.delete_face(name)
             except HttpError as e:
                 failed.append(f"{name}: {e}")
         check(not failed, f"uploads beside {big} failed: {failed}")

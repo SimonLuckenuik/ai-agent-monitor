@@ -1,6 +1,6 @@
 # Example custom faces
 
-40 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
+41 faces to use as they are, adapt, or learn the format from. Each is a JSON file to
 push to the clock (`POST /api/faces`, or `python clock.py push <name> <file>` from the
 Claude Code skill); the format is in
 [docs/specifications/integrations-api.md](../../docs/specifications/integrations-api.md#custom-faces).
@@ -71,6 +71,7 @@ integration run: `python scripts/gen_marketplace.py --previews .pio/integration`
 | ![](../../docs/images/faces/countdown.png) | **countdown**: days to an event | Days and hours from a Unix time; confetti on the day. Push `event`, `at` (Unix time) |
 | ![](../../docs/images/faces/commit-streak.png) | **commit-streak**: today's commits | `$add` counters; a flickering flame `sprite`; a `spark`. Push `commits` (with `$add`), `streak`, `repo`; `daily` with `$history` |
 | ![](../../docs/images/faces/kpi.png) | **kpi**: one number and its trend | `{delta:+}`; colour and arrow by sign; a filled `spark`. Push `label`, `unit`, `delta`; `value` with `$history` |
+| ![](../../docs/images/faces/ticker.png) | **ticker**: four symbols, their prices and trends | A row per symbol, hidden by `show` until its symbol is pushed; a `spark` per row (the 4 histories the clock keeps); `{c1:.2:+}` for a signed change; colour by sign. Push `s1`-`s4` (symbols), `n1`-`n4` (names), `c1`-`c4` (change in %), `title`; `p1`-`p4` (prices) with `$history` |
 | ![](../../docs/images/faces/homelab.png) | **homelab**: servers and CPU | Blinking LED sprites; `{net.ip}`, `{net.host}`, `{sys.uptime}`; a `spark`. Push `cpu` with `$history` |
 | ![](../../docs/images/faces/power-cell.png) | **power-cell**: a battery | A width from a value; colour by level; a bolt shown while charging. Push `batt`, `charging` (1 or 0), `eta`, `device` |
 | ![](../../docs/images/faces/pixel-pet.png) | **pixel-pet**: a pet that needs feeding | A blinking `sprite` coloured by mood through a map; a food bar. Push `pet`, `mood` (`happy`, `hungry`, `sleepy`), `food` (0-100) |

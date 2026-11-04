@@ -254,7 +254,7 @@ static void testMessageFace() {
   }
   JsonDocument face;
   CHECK(!deserializeJson(face, pgmString(MESSAGE_FACE).c_str()));
-  CHECK(face["items"].size() == 5);
+  CHECK(face["items"].size() == 10);   // the icon, the robot in 5 parts (spec 039), title, text, bar, time
 }
 
 // The Big tiles' font: every glyph inside its slot, digits the full cap height, so

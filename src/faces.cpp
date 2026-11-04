@@ -780,7 +780,10 @@ String pgmString(const char* p) {
 }
 
 // A message field for the Message face's template: the icon's path and colours come
-// from the icon set, the rest from the message.
+// from the icon set, the rest from the message. For the figure and flashes (spec 039):
+// kind (the icon's name), shown (seconds since the message came on screen) and anim
+// (1 unless turned off or in the night hours).
+uint32_t messageShownAt = 0;
 String messageValueAt(int slot, const String& key) {
   String icon = messageField(slot, "icon");
   const MessageIcon* def = &MESSAGE_ICON_SET[0];
@@ -788,6 +791,9 @@ String messageValueAt(int slot, const String& key) {
   String color = messageField(slot, "color");
   if (color.isEmpty()) color = hex565Text(R[def->role]);
   if (key == "icon") return pgmString(def->path);
+  if (key == F("kind")) return def->name;
+  if (key == F("shown")) return String((millis() - messageShownAt) / 1000);
+  if (key == F("anim")) return String(cfg.msgAnim && !nightActive() ? 1 : 0);   // no literal: RAM
   if (key == "color") return color;
   if (key == "bg") return hex565Text(hex565(color.c_str(), WHITE), 4);   // a solid background in its hue
   return messageField(slot, key);
@@ -2164,12 +2170,19 @@ bool faceTurn(const String& name, uint32_t* seconds, bool* hasWhen = nullptr) {
 
 // ---- The Message face: the message messageShowing() points at, drawn from this
 // template by the custom-face renderer ({msg.*} placeholders, see messageValue).
-const char MESSAGE_FACE[] PROGMEM = R"({"bg":"{msg.bg}","items":[
-{"type":"path","x":120,"y":56,"size":76,"align":"mc","stroke":"{msg.color}","sw":2,"d":"{msg.icon}"},
+const char MESSAGE_FACE[] PROGMEM = R"MF({"bg":"{msg.bg}",
+"invert":"{msg.anim}&&{msg.shown}<4&&{msg.kind:flash}&&{time.ms}>=500",
+"maps":{"dy":{"error":3,"*":0},"fig":{"waiting":1,"done":1,"error":1,"*":0},"flash":{"warning":1,"error":1,"*":0}},"items":[
+{"type":"path","x":120,"y":56,"size":76,"align":"mc","stroke":"{msg.color}","sw":2,"d":"{msg.icon}","show":"!({msg.anim}&&{msg.kind:fig})"},
+{"type":"sprite","x":89,"y":"56-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","rows":[".......kggggk","....kkkkkkkkkkkk","kbbkkwswwwwwswskkbbk","....kwkkkkkkkwsk","....kwkeaaeekwsk","....kwkeaaeekwsk","....kwkkkkkkkwsk","....kwwbwawbwwsk","....kggggggggggk","....kkkkkkkkkkkk",".....kbbk..kbbk",".....kgsk..kgsk","....kwwsk..kwwsk","....kkkkk..kkkkk"]},
+{"type":"sprite","x":80,"y":"35-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","frame":"{msg.kind}==done","frames":[["","","","","","","","","","...kbbk","...kgsk","...kgsk","...kgsk","...kgsk","...kgsk","...kgsk","...kssk","...kbbk","....kk"],[".kk","kbbk","kssk","kgsk","kgsk","kgsk","kgsk","kgsk","kbbk","...kbbk","","","","","","","","",""]]},
+{"type":"sprite","x":137,"y":"35-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","frame":"{msg.kind}==done?1:({msg.shown}<30||{time.sec}%10<3)&&{msg.kind}==waiting?1+({time.ms}>=500):0","frames":[["","","","","","","","","","kbbk","kgsk","kgsk","kgsk","kgsk","kgsk","kgsk","kssk","kbbk",".kk"],["....kk","...kbbk","...kssk","...kgsk","...kgsk","...kgsk","...kgsk","...kgsk","...kbbk","kbbk","","","","","","","","",""],[".....kk","....kbbk","....kssk","....kgsk","....kgsk","....kgsk","...kgsk","...kgsk","...kbbk","kbbk","","","","","","","","",""]]},
+{"type":"sprite","x":86,"y":"14+{msg.kind:dy}-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","rows":["..........aa","..........aa","..........gg","...kkkkkkkkkkkkkkkk","..kwwwwwwwwwwwwwwssk","..kwkkkkkkkkkkkkkksk","..kwkhheeeeeeeeeeksk","kbkwkheeeeeeeeeeekskbk","kbkwkeeeeeeeeeeeekskbk","kbkwkeeeeeeeeeeeekskbk","..kwkeeeeeeeeeeeeksk","..kwkkkkkkkkkkkkkksk","..kssssssssssssssssk","...kkkkkkkkkkkkkkkk"]},
+{"type":"sprite","x":101,"y":"32+{msg.kind:dy}-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","bg":"#0f2a40","frame":"{msg.kind}==done?1:{msg.kind}==error?2:{time.sec}%5==0&&{time.ms}<300?3:0","frames":[["hheeeeeeeeee","heaaeeeeaaee","eeaaeeeeaaee","eeeeeeeeeeee","eeeeeaaeeeee"],["hheaeeeeaeee","heaeaeeaeaee","eeeeeeeeeeee","eeaeeeeeeaee","eeeaaaaaaeee"],["eaeaeeeeaeae","eeaeeeeeeaee","eaeaeeeeaeae","eeeeeeeeeeee","eeeeaaaaeeee"],["hheeeeeeeeee","heeeeeeeeeee","eeaaeeeeaaee","eeeeeeeeeeee","eeeeaaaaeeee"]]},
 {"type":"text","x":120,"y":108,"w":228,"lines":1,"text":"{msg.title}","font":4,"align":"tc","color":"{msg.color}"},
 {"type":"text","x":120,"y":142,"w":220,"lines":"{msg.pct}>=0?3:4","text":"{msg.text}","font":2,"align":"tc","color":"#f2f2f7"},
 {"type":"bar","x":40,"y":204,"w":160,"h":8,"value":"{msg.pct}","color":"{msg.color}","track":"#2c2c2e","show":"{msg.pct}>=0"},
-{"type":"text","x":120,"y":228,"text":"{time.hm}","font":2,"align":"mc","color":"#8e8e93"}]})";
+{"type":"text","x":120,"y":228,"text":"{time.hm}","font":2,"align":"mc","color":"#8e8e93"}]})MF";
 const char* const MESSAGE_DOC = "\x01message";   // customName while customDoc holds the template
 
 void message(const struct tm& t, bool force) {
@@ -2187,6 +2200,7 @@ void message(const struct tm& t, bool force) {
     seenSlot = messageShowing();
     force = true;
   }
+  if (force) messageShownAt = millis();   // the figure's bounce and the flashes start again
   if (customLoaded) renderItems(t, force);
 }
 

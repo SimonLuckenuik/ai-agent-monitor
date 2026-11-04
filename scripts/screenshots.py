@@ -108,7 +108,7 @@ def clock_images(emu):
             ("success", "Tests passed", "179 checks, 0 failures.", None)):
         extra = {"pct": pct} if pct is not None else {}
         emu.message(id=icon, title=title, text=text, icon=icon, ttl=7200, show=True, **extra)
-        time.sleep(0.3)
+        time.sleep(4.5 if icon in ("warning", "error") else 0.3)   # past the flash (spec 039)
         take(f"message: {icon}" + (" + pct" if pct else ""))
     emu.clear_messages()
     agents(emu)

@@ -1,5 +1,7 @@
 # AI Agent Monitor
 
+<p align="center"><img src="docs/images/robot.gif" alt="Moni, the project's robot, waving" width="260"><br><sub><b>Moni</b>, the robot that waves on the clock when an agent needs you</sub></p>
+
 Turn a cheap ESP8266 desk clock into a small screen your AI agents and scripts can use
 to get your attention. Claude Code (or anything that can send an HTTP request or an
 MQTT message) puts messages, progress, status and its own graphics on the clock, and

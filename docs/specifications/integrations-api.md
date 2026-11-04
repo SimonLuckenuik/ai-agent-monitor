@@ -20,6 +20,17 @@ thing any agent or script may do is put a message on the clock. A message is dra
 by the built-in **Message** face: an icon, a title, wrapped text, an optional progress
 bar and the time, in the icon's colour.
 
+The Message face moves (spec 039), unless *Animated messages* is off (Display card,
+`msganim`) or the night hours have begun:
+
+- `waiting`: Moni, the project's robot, in place of the icon, waves for its first 30 seconds
+  on screen, then for 3 seconds every 10; it blinks now and then.
+- `done`: Moni cheers, hopping for 6 seconds, then stays with its arms up.
+- `error`: Moni slumps, its eyes crossed out, and the screen flashes (inverted
+  colours) for 4 seconds.
+- `warning`: the icon stays; the screen flashes for 4 seconds.
+- Each time the message comes back on screen, it starts again.
+
 ```bash
 curl -X POST http://<clock>/api/message -d '{"id":"tooling","title":"tooling","text":"Waiting for your approval to deploy.","icon":"waiting","show":true}'
 ```
@@ -232,7 +243,7 @@ clock's own; a name without a dot is a [variable](#variables).
 | `units.` | `temp` (`C` or `F`), `wind` (`km/h` or `mph`) |
 | `loc.` | `city` (`Montreal`) |
 | `theme.` | A [role](#palettes)'s colour as `#rrggbb` (`{theme.time}`, `{theme.bg}`); `color1`, `color2`, `color3` (the `time`, `highlight` and `weather` roles); `palette` (the clock palette in use); `night` (`1` during night hours) |
-| `msg.` | The agent message on screen (the Message face): `title`, `text`, `icon` (path data), `color`, `bg` (its colour at a quarter strength), `pct`, `ttl`, `id`; and `count` (active messages) |
+| `msg.` | The agent message on screen (the Message face): `title`, `text`, `icon` (path data), `color`, `bg` (its colour at a quarter strength), `pct`, `ttl`, `id`; `kind` (the icon's name), `shown` (seconds since it came on screen), `anim` (`1` while it may move); and `count` (active messages) |
 | `net.` | `ip`, `host` (`agentmonitor-1a2b3c`), `ssid`, `rssi` (dBm), `mqtt` (`1` when connected) |
 | `sys.` | `version`, `uptime` (seconds), `heap` (free bytes), `lang` (`en` or `fr`) |
 | `age.` | `age.<variable>`: seconds since it was pushed |

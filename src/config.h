@@ -63,6 +63,7 @@ struct Config {
   // Photos: seconds per photo, and names left out of the slideshow ("|a.jpg|b.jpg|").
   int    photoInterval = 60;
   bool   photoClock = true;          // the time pill on the Photo face
+  bool   msgAnim  = true;            // the Message face's figure and flashes (spec 039)
   String photoOff;
   String customFace;                 // the custom face shown when theme is FACE_CUSTOM
   // Integrations, all off by default (settings page, Integrations card).
@@ -156,6 +157,7 @@ struct Config {
     colorsRev++;
     photoInterval = doc[F("photointerval")] | photoInterval;
     photoClock  = doc[F("photoclock")]  | photoClock;
+    msgAnim     = doc[F("msganim")]     | msgAnim;
     photoOff    = doc[F("photooff")]    | photoOff;
     customFace  = doc[F("customface")]  | customFace;
     // Face ids moved: 1.3.x had custom faces at 7 (facesv 1); 1.4 development builds
@@ -209,7 +211,7 @@ struct Config {
     doc[F("starttime")] = startHour; doc[F("stoptime")] = stopHour;
     doc[F("palettes")] = serialized(palettes); doc[F("roles")] = serialized(roles);
     doc[F("palette")] = palette;     doc[F("nightpalette")] = nightPalette;
-    doc[F("photointerval")] = photoInterval; doc[F("photoclock")] = photoClock; doc[F("photooff")] = photoOff; doc[F("customface")] = customFace;
+    doc[F("photointerval")] = photoInterval; doc[F("photoclock")] = photoClock; doc[F("msganim")] = msgAnim; doc[F("photooff")] = photoOff; doc[F("customface")] = customFace;
     doc[F("facesapi")] = facesApi;   doc[F("hacompat")] = haCompat; doc[F("mqtt")] = mqttOn;
     doc[F("mqtthost")] = mqttHost;   doc[F("mqttport")] = mqttPort; doc[F("mqttuser")] = mqttUser;
     doc[F("mqttpass")] = mqttPass;   doc[F("mqttbase")] = mqttBase; doc[F("apikey")] = apiKey;

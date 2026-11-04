@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **040**.
+Next free number: **041**.
 
 | Spec | Status |
 |---|---|
@@ -48,7 +48,8 @@ Next free number: **040**.
 | [036 Flash room: zopfli, our own time zone parser, a minified page](036-flash-room/SPEC.md) | Done in 2.1.1 |
 | [037 A Claude usage face, fed by Claude Code](037-claude-usage-face/SPEC.md) | Draft |
 | [038 A fifth forecast day, and its tile](038-fifth-forecast-day/SPEC.md) | Done in 2.1.1 |
-| [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Draft |
+| [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Done in 2.2.0 |
+| [040 Scrolling text](040-scrolling-text/SPEC.md) | Draft |
 
 ## Templates
 

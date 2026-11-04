@@ -7,6 +7,34 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.2.0 - 2026-11-04
+
+### Upgrading
+
+Install `AIAgentMonitor_v2.2.0.bin.gz` from the Firmware update card, as for 2.1.1.
+Settings, faces and photos are kept. Messages move from now on; *Animated messages* on
+the Display card keeps them still.
+
+### New
+
+- **Animated messages** (spec 039): on the Message face **Moni**, the project's new
+  robot, its head a little screen, waves while a session waits, cheers and hops when it
+  is done, and slumps with crossed-out eyes on an error; warnings and errors flash the
+  screen for a few seconds. Moni is in the message's colour (antenna, face, chest
+  light). *Animated messages* on the Display card turns it off; it is always still at
+  night. Faces get `{msg.kind}`, `{msg.shown}` and `{msg.anim}`.
+- **Moni is the project's logo**, waving at the top of the README
+  (`scripts/gen_robot.py` draws it).
+- **Gallery: ticker**, four symbols with their prices, change and a sparkline each
+  (examples/faces/ticker.json; the samples are ETFs).
+
+### Building
+
+- The integration case `faces_beside_big_faces` uploads the example faces one at a
+  time: there are 41, over the clock's 40.
+
+### Plugin
+
 - **Plugin 0.7.2**: the session status hooks all run in the background, so a turn never
   waits for the clock (Stop cost about 1.5 s on Windows), and start no Python while the
   *Clock for session status* option is empty.

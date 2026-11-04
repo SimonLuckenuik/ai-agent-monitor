@@ -37,7 +37,7 @@
 #include "tz_rule.h"
 
 
-#define FW_VERSION "2.1.1"   // see CHANGELOG.md
+#define FW_VERSION "2.2.0"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -597,7 +597,7 @@ String configJson() {
     doc[F("order")] = order;
   }
   doc[F("customoff")] = cfg.customOff; doc[F("turns")] = cfg.turns; doc[F("customface")] = cfg.customFace;
-  doc[F("photointerval")] = cfg.photoInterval; doc[F("photoclock")] = cfg.photoClock;
+  doc[F("photointerval")] = cfg.photoInterval; doc[F("photoclock")] = cfg.photoClock; doc[F("msganim")] = cfg.msgAnim;
   doc[F("facesapi")] = cfg.facesApi; doc[F("hacompat")] = cfg.haCompat; doc[F("mqtt")] = cfg.mqttOn;
   doc[F("mqtthost")] = cfg.mqttHost; doc[F("mqttport")] = cfg.mqttPort; doc[F("mqttuser")] = cfg.mqttUser;
   doc[F("mqttbase")] = cfg.mqttBase;   // the MQTT password and API key are never sent back
@@ -764,6 +764,7 @@ String applySetting(const String& key, const String& val) {
   else if (key == F("lcd_brightness")) cfg.brightness = constrain(val.toInt(), 0, 100);   // stock key
   else if (key == F("photointerval")) cfg.photoInterval = constrain(val.toInt(), 1, 3600);
   else if (key == F("photoclock")) cfg.photoClock = (val == "1" || val == "true");
+  else if (key == F("msganim"))    cfg.msgAnim = (val == "1" || val == "true");
   else if (key == F("facesapi"))   changed(cfg.facesApi, val == "1" || val == "true");
   else if (key == F("hacompat"))   cfg.haCompat = (val == "1" || val == "true");
   else if (key == F("mqtt"))       changed(cfg.mqttOn, val == "1" || val == "true");

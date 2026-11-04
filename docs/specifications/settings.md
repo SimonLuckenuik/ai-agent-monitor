@@ -50,6 +50,7 @@ The display controller (ST7789) does these itself, so they cost no drawing time.
 | `gamma` | `2.2`, `1.8`, `2.5` or `1.0` | The panel's contrast curve (GAMSET): `2.2` standard, `1.8` lighter mid-tones, `2.5` deeper, `1.0` flat |
 | `nightgamma` | as `gamma`, or empty | The curve during night mode; empty keeps the day's |
 | `nightoff` | `1` or `0` | During night mode the panel is turned off (DISPOFF and sleep), not only its backlight. A warning or error message wakes it while it is on screen |
+| `msganim` | `1` (default) or `0` | *Animated messages*: the Message face's robot (waiting, done, error) and its flashes (warning, error). Still during the night hours whatever this says |
 
 A custom face's `invert` (see the integrations API) flips the panel's colours the same
 way, for flashing.

@@ -1,16 +1,16 @@
 # Current status and next work
 
-Updated: 2026-11-03. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-04. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **2.1.1** (2026-11-03, tag `v2.1.1`), published on GitHub as
-`SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.1.1.bin.gz`,
-`AIAgentMonitor_v2.1.1.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
+The latest release is **2.2.0** (2026-11-04, tag `v2.2.0`: Moni and animated messages),
+published on GitHub as `SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.2.0.bin.gz`,
+`AIAgentMonitor_v2.2.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
 and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
-`faces-v2` are the same commit. The plugin on `main` is 0.7.0 (spec 019's hooks).
+`faces-v2` are the same commit. The plugin on `main` is 0.7.2 (spec 019's hooks).
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
 last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,
@@ -73,7 +73,8 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 
 ## Specs in flight
 
-None in progress: every approved spec is done. Done in 2.1.1:
+Done in 2.2.0, not yet seen on the clock: [039](../specs/039-animated-messages/SPEC.md)
+(Moni and animated messages). Done in 2.1.1:
 [036](../specs/036-flash-room/SPEC.md) (flash room), [038](../specs/038-fifth-forecast-day/SPEC.md)
 (a fifth forecast day), and the weather icons fixed for Open-Meteo's codes. Done in 2.1.0
 and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
@@ -87,7 +88,7 @@ Closed 2026-11-03 after the checks on the clock: [018](../specs/018-first-run-on
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
-[039](../specs/039-animated-messages/SPEC.md) (animated waiting and done screens).
+[040](../specs/040-scrolling-text/SPEC.md) (scrolling text).
 Deferred: [034](../specs/034-face-languages/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 

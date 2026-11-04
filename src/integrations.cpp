@@ -395,7 +395,7 @@ void handleFaceVars() {   // POST {"name":value,...,"$ttl":s,...}: merged; null 
   }
   String full;
   String bad = applyVars(doc.as<JsonObject>(), &full);
-  if (bad.length()) { server.send(400, "text/plain", "Bad variable name \"" + bad + "\": 1-15 of A-Z a-z 0-9 _"); return; }
+  if (bad.length()) { server.send(400, "text/plain", String(F("Bad variable name \"")) + bad + F("\": 1-15 of A-Z a-z 0-9 _")); return; }
   if (full.length()) {
     String msg = F("No room for variable \"");
     msg += full;

@@ -6,3 +6,6 @@
 - 1.6.0: big-time, big-date, big-weather, scoreboard, alarm (37).
 - 1.8.0: flip-clock, flip-clock-wide (39); aquarium swims, mascot "z Z Z", night-lake
   through the day, orbit ring, sun-arc, seaside fixes.
+- 2026-11-04: ticker (41): four symbols with their prices, change and a
+  sparkline each, after smalltv-mod's stock ticker; the samples are Canadian ETFs
+  (XEQT, VEQT, VGRO, XBAL). Rows hide until their symbol is pushed. No firmware change.
