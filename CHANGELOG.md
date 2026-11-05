@@ -7,6 +7,13 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Added
+
+- `integrations/openclaw/`: a prototype bridge that pairs each clock with an OpenClaw
+  Gateway as a node, so OpenClaw's agents can show messages, set Moni's mood, switch
+  faces and push face variables (screen output and read-only status only; spec 041,
+  draft). No firmware change.
+
 ## 2.2.0 - 2026-11-04
 
 ### Upgrading
