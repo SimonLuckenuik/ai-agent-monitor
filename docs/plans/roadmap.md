@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-11-04. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-11-05. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
@@ -10,6 +10,9 @@ approved.
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
 2. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
+3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): proposed,
+   output only (owner, 2026-11-05); a prototype bridge on branch `openclaw-node`, tested
+   against a fake gateway and the emulator. Waiting for approval and a real gateway.
 
 ## Waiting
 
