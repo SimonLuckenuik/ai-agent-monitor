@@ -172,3 +172,39 @@ they clear the mood message.
   draft.
 - **TLS:** BearSSL with a certificate check needs well over 20 KB of heap for its buffers,
   and its code is not linked: `wss://` is out.
+
+## Where room could come from (inventory, 2026-11-05, 2.2.0)
+
+From `scripts/footprint_files.py` and `nm -S` on the 2.2.0 ELF (symbols grouped by name,
+so the figures are close, not exact). Room is what the update gains: about 1.7 B per byte
+of code removed (the plain image plus its compressed copy), about 2 B per byte of data that
+is already compressed (the settings page).
+
+**Without losing a feature**
+
+| Change | Plain bytes | Room, about | Notes |
+|---|---|---|---|
+| ArduinoJson: one reader type fewer. It is instantiated for `String`, `const String`, `fs::File`, `const char*` and `WiFiClient` (11.7 KB together); `String` and `const String` are the same parser twice | 2,000-4,000 | 3.5-7 KB | Pass the same type everywhere; maybe read files through a `String` |
+| Weather fetch without `HTTPClient` (4.3 KB): a plain `WiFiClient` GET with HTTP/1.0 (no chunked replies), about 1 KB | about 3,000 | about 5 KB | Open-Meteo is plain HTTP; redirects and errors to handle by hand |
+| Link-time optimisation (`-flto`) | unknown, 0-15,000 | 0-25 KB | An experiment: untried with this core; the IRAM placement and weak symbols may object |
+| `printf` family (nano-vfprintf, `_printf_i`, stdio: about 6 KB) replaced by small formatters at the 48 `snprintf` calls | 4,000-5,000 | 7-8 KB | Much work and risk for its size |
+
+**Dropping or moving a feature**
+
+| Change | Plain bytes | Room, about | What is lost |
+|---|---|---|---|
+| The settings page served from storage instead of the firmware (`INDEX_HTML_GZ`, 23,981 B, already compressed) | about 21,000 net (a small built-in fallback page stays) | about 42 KB | Nothing on screen, but every update becomes two files (firmware, then the page), with a fallback page for WiFi setup and the upload when storage is empty: a MAJOR release by the project's rules |
+| Photos: the Photo face, the JPEG decoder, uploads (7.3 KB), with the Home Assistant dashboards endpoints that need them (2.3 KB) | about 9,600 | about 16 KB | The Photo face and geekmagic-hacs dashboards |
+| The weather icons (`WI_DATA` 7.6 KB) | about 7,500 | about 13 KB | The current icon set; simpler drawn icons instead |
+| MQTT (PubSubClient, our MQTT code, Home Assistant discovery) | about 6,300 | about 11 KB | Faces, variables and messages over MQTT; Home Assistant discovery |
+| mDNS (our responder, UDP) | about 5,400 | about 9 KB | `agentmonitor-xxxxxx.local`: the clocks are reached by IP only |
+| A second release image (the node in, MQTT out) | | as MQTT, in that image only | Two files to choose from at each release |
+
+**Not worth it or not possible:** the C++ unwinder (3.3 KB, comes with the toolchain's
+startup), float range reduction for `sinf`/`cosf` (2.6 KB, TFT_eSPI's arcs need it), the
+captive-portal DNS server (1.9 KB, first-time WiFi setup needs it), Moni's sprites (3.9 KB,
+just added), the fonts (part of the face format).
+
+**Reading:** the first two lines (JSON readers, the weather fetch) come to about 9-12 KB
+of room with nothing lost, which is about what the node needs on top of today's 24.6 KB.
+LTO could add more and is worth one try. The feature cuts are for if those fall short.

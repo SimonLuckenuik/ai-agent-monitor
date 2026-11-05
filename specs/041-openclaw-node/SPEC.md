@@ -140,14 +140,14 @@ and the signing workspace, about 3 KB, one after the other).
 
 ## Open questions
 
-1. **Where the room comes from** (about 10 KB of room, so 6 KB of code or more):
-   - drop MQTT (about 7 KB of code, about 11 KB of room; the clock at .229 shows MQTT
-     "cannot connect (-2)", the one at .57 has it off), or
-   - drop mDNS (about 4.5 KB of code, about 7 KB of room; the clocks are then reached by
-     IP only), or
-   - a build option: images with the node and without MQTT, beside the usual one (two
-     release files), or
-   - something else you would rather lose.
+1. **Where the room comes from** (about 10 KB of room; the full inventory is in
+   [RESEARCH.md](RESEARCH.md#where-room-could-come-from-inventory-2026-11-05-220)).
+   Recommended: first the changes that lose nothing (one ArduinoJson reader type fewer,
+   3.5-7 KB of room; the weather fetch without `HTTPClient`, about 5 KB; one try at LTO),
+   measured, as their own spec. If that falls short: drop MQTT (about 11 KB; .229 shows
+   "cannot connect (-2)", .57 has it off), mDNS (about 9 KB), photos with the Home
+   Assistant dashboards (about 16 KB), the weather icons (about 13 KB), or serve the
+   settings page from storage (about 42 KB, but two files per update).
 2. Do you run an OpenClaw Gateway today, and where? It has to be reachable from the IoT
    VLAN (192.168.66.x) over `ws://` (`gateway.bind lan`, a firewall rule), and a real one is
    needed to finish.
