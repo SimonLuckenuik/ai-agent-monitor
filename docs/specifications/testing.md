@@ -7,13 +7,13 @@ listed at the end.
 
 | Suite | Runs | Needs | Time | Command |
 |---|---|---|---|---|
-| Unit | `src/faces.cpp` and its helpers, compiled for the host | Zig (`.pio-tools`), one `pio run` for the libraries | under a minute | `python tests/unit/run_unit_tests.py` |
+| Unit | `src/faces.cpp` and its helpers, the mDNS packets, the time guard and the OpenClaw node's signing (`openclaw_tests.cpp`: RFC 8032 and SHA-256 vectors, base64url, WebSocket headers), compiled for the host | Zig (`.pio-tools`), one `pio run` for the libraries | under a minute | `python tests/unit/run_unit_tests.py` |
 | Safety | the update handler from `src/main.cpp` against a mock updater, and checks on the source, the image and the ELF | Zig, the firmware built (`pio run`) | about a minute | `python tests/run_safety_tests.py` |
 | Face preview | every built-in face drawn on the host, to PNG | Zig, one `pio run` | about a minute | `python tests/face_preview/run_face_preview.py` |
 | Settings page | the page's own code (time zone rules, backups) from `web/index.html`, against the browser's time zone database and a mock clock; the minified page the clock embeds keeps every handler | Node | seconds | `node tests/web/tz_rules.test.js`, `node tests/web/backup.test.js`, `node tests/web/minified_page.test.js` |
 | Plugin hooks | `hooks/session_status.py` against a stand-in clock: each event's request, off without an address, a silent clock (spec 019) | Python | seconds | `python tests/plugin/session_status_test.py` |
 | Local time | `src/tz_rule.h` against glibc: every rule the page gives a time zone, and hand-written ones, every 15 minutes of two years (spec 036) | Linux, g++, Node (CI; locally in the emulator's container) | seconds | `node tests/tz/zone_rules.js > rules.txt`, then `g++ -O2 -std=c++17 -I src tests/tz/tz_rule_tests.cpp -o tz && ./tz rules.txt` |
-| Integration | the whole firmware in the emulator, through its HTTP API, MQTT and mDNS | Docker | 20-25 minutes (building the image included) | `python tests/integration/run_integration_tests.py` |
+| Integration | the whole firmware in the emulator, through its HTTP API, MQTT, mDNS and an OpenClaw stand-in gateway (`fake_gateway.py`, which verifies the node's signatures itself) | Docker | 20-25 minutes (building the image included) | `python tests/integration/run_integration_tests.py` |
 
 Setup, once:
 
@@ -39,6 +39,7 @@ builds and tests again before it publishes.
 | Memory: anything allocated, any new string | Safety (the strings check), integration `example_faces_memory`, `faces_beside_big_faces`, `mqtt_and_mdns`; the emulator's Device panel and heap map |
 | MQTT, mDNS, the weather fetch | Unit (`mdns_tests`), integration `mqtt_and_mdns`, `faces_beside_big_faces`, `status_and_fixed_time` |
 | Crash handling | Integration `crash_loop_protection` |
+| The OpenClaw node: signing, the protocol, its commands | Unit (`openclaw_tests`), integration `openclaw_node`; the bridge's own tests (`node --test integrations/openclaw/test/bridge.test.mjs`) |
 
 ## Unit tests
 

@@ -9,11 +9,17 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ### Added
 
-- `integrations/openclaw/`: a prototype bridge that pairs each clock with an OpenClaw
+- **OpenClaw node** (spec 041): the clock pairs with an [OpenClaw](https://docs.openclaw.ai)
   Gateway as a node, so OpenClaw's agents can show messages, set Moni's mood, switch
-  faces and push face variables (screen output and read-only status only; spec 041,
-  draft). No firmware change. Spec 041 now plans the node in the firmware itself; the
-  bridge is its fallback and test tool.
+  faces, set the brightness and push face variables, and read the clock's status
+  (screen output only: no input, no events). Integrations -> OpenClaw node: paste the
+  gateway's setup code, approve the clock on the gateway and allow its commands. Plain
+  `ws://` only (no TLS on this chip). The clock signs with its own Ed25519 key, made on
+  the clock. `/status` reports `openclaw`, `openclawId`, `openclawHeap` and `openclawSignMs`.
+- `integrations/openclaw/`: the bridge prototyped first (a program beside the gateway
+  that pairs each clock as a node over its HTTP API), kept as a fallback and test tool.
+  Its built-in face names now match the firmware's (`day-1`/`tomorrow` 11, `day-2` 12,
+  `day-3` 13, `day-4` 6).
 
 ### Changed
 
@@ -21,6 +27,8 @@ versioning. `/version` on the device reports the version it was built as; a
   parser per kind of input instead of nine copies, and the weather is fetched without
   the HTTPClient library. The image is 14.3 KB smaller and leaves 45 KB of update room
   (24.6 KB before), room kept for the OpenClaw node (spec 041).
+- The weather code no longer carries its own inlined copy of the settings writer
+  (about 1.5 KB of flash back).
 
 ## 2.2.0 - 2026-11-04
 

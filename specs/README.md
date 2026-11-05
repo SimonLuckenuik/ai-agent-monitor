@@ -50,8 +50,8 @@ Next free number: **043**.
 | [038 A fifth forecast day, and its tile](038-fifth-forecast-day/SPEC.md) | Done in 2.1.1 |
 | [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Done in 2.2.0 |
 | [040 Scrolling text](040-scrolling-text/SPEC.md) | Draft |
-| [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | In progress (native node, branch `openclaw-native`) |
-| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Approved 2026-11-05 (built, not released) |
+| [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | In progress (built on branch `openclaw-native`, not released) |
+| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Approved 2026-11-05 (on `faces-v2`, not released) |
 
 ## Templates
 

@@ -32,6 +32,7 @@
 #include "weather.h"
 #include "faces.h"
 #include "integrations.h"
+#include "openclaw.h"
 #include "crash.h"
 #include "tz_rule.h"
 
@@ -600,6 +601,7 @@ String configJson() {
   doc[F("facesapi")] = cfg.facesApi; doc[F("hacompat")] = cfg.haCompat; doc[F("mqtt")] = cfg.mqttOn;
   doc[F("mqtthost")] = cfg.mqttHost; doc[F("mqttport")] = cfg.mqttPort; doc[F("mqttuser")] = cfg.mqttUser;
   doc[F("mqttbase")] = cfg.mqttBase;   // the MQTT password and API key are never sent back
+  doc[F("ocon")] = cfg.ocOn; doc[F("ocurl")] = cfg.ocUrl; doc[F("ocname")] = cfg.ocName;   // OpenClaw's secrets neither
   doc[F("hostnames")] = cfg.hostnames; doc[F("tzname")] = cfg.tzname;
   doc[F("type")] = "smartclock-oss-settings"; doc[F("version")] = FW_VERSION;
   doc[F("palettes")] = serialized(cfg.palettes); doc[F("roles")] = serialized(cfg.roles);
@@ -772,6 +774,11 @@ String applySetting(const String& key, const String& val) {
   else if (key == F("mqttuser"))   changed(cfg.mqttUser, val);
   else if (key == F("mqttpass"))   changed(cfg.mqttPass, val);
   else if (key == F("mqttbase"))   changed(cfg.mqttBase, val);
+  else if (key == F("ocon"))       changed(cfg.ocOn, val == "1" || val == "true");
+  else if (key == F("ocurl"))      { if (val.length() && (!val.startsWith(F("ws://")) || val.length() > 120)) return F("ocurl: ws://host:port (plain ws://, no wss://)"); changed(cfg.ocUrl, val); }
+  else if (key == F("ocname"))     { if (val.length() > 40) return F("Too long"); changed(cfg.ocName, asciiFold(val)); }
+  else if (key == F("ocpair"))     { if (val.length()) return openclawPair(val); }   // write only: never stored as given
+  else if (key == F("ocforget"))   { if (val == "1" || val == "true") openclawForget(); }
   else if (key == F("hostnames"))  { if (val.length() > 200) return F("Too long"); cfg.hostnames = val; }
   else if (key == F("tzname"))     { if (val.length() > 40) return F("Too long"); cfg.tzname = val; }
   else return F("Unknown Key");
@@ -785,6 +792,10 @@ void settingsApplied() {
   if (mode != MODE_RUN) setBacklight(cfg.brightness);
   faceInvalidate();
 }
+
+// Saves the settings when storage allows. Out of line: Config::save(), defined in the header,
+// is otherwise inlined (about 1.5 KB) into each other file that calls it once.
+bool configSave() { return storageReady && !recoveryMode && cfg.save(); }
 
 bool settingsWritable() {
   if (storageReady && !recoveryMode) return true;
@@ -1445,6 +1456,7 @@ void handleStatus() {
   doc[F("mqtt")] = mqttStatus();
   extern uint32_t mqttHeap;
   if (mqttHeap) doc[F("mqttHeap")] = mqttHeap;
+  openclawStatus(doc);
   if (cfg.theme == FACE_CUSTOM) doc[F("customFace")] = cfg.customFace;
   doc[F("nightAuto")] = cfg.nightAuto;
   if (wx.sunrise >= 0 && wx.sunset >= 0) {
@@ -1604,6 +1616,7 @@ void loop() {
   if (mode == MODE_RUN) {
     serviceWeather();
     integrationsLoop();
+    openclawLoop();
     time_t now = time(nullptr);
     bool timeValid = now > 1600000000;
     struct tm t; clockLocal(now, &t);

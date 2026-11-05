@@ -55,4 +55,9 @@ subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "mdns_tests
 # The time guard (spec 029): plain C++ too.
 guard = build / "guard_tests.exe"
 subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "guard_tests.cpp"), "-o", str(guard)], check=True, env=env)
-sys.exit(faces or subprocess.run([str(mdns)]).returncode or subprocess.run([str(guard)]).returncode)
+# The OpenClaw node's signing and byte helpers (spec 041): plain C++ too.
+openclaw = build / "openclaw_tests.exe"
+subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "openclaw_tests.cpp"), str(root / "src" / "ed25519.cpp"),
+                str(root / "src" / "openclaw_proto.cpp"), "-o", str(openclaw)], check=True, env=env)
+sys.exit(faces or subprocess.run([str(mdns)]).returncode or subprocess.run([str(guard)]).returncode
+         or subprocess.run([str(openclaw)]).returncode)

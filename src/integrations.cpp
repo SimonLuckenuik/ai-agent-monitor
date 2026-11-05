@@ -14,6 +14,8 @@
 #include "faces.h"
 #include "weather.h"
 #include "routes.h"
+#include "crash.h"
+#include "openclaw.h"
 
 // ---- From main.cpp
 extern ESP8266WebServer server;
@@ -589,6 +591,236 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
 
 }  // namespace
 
+// ---------------------------------------------------------------- OpenClaw node (spec 041)
+// The node's commands, run on the clock itself (src/openclaw.cpp carries them). Screen
+// output and read-only status only. Parameters and results are the bridge's
+// (integrations/openclaw/lib/commands.mjs), so agents can use either. Results are
+// written as JSON text (jsonAdd): smaller here than building documents.
+namespace {
+
+const char OC_ICONS[] PROGMEM = ",info,success,warning,error,waiting,running,bell,done,";
+// Built-in faces by name, in id order (face ids are an API); "tomorrow" is day-1.
+const char OC_FACES[] PROGMEM = ",classic,weather,photo,big-date,simple,forecast,day-4,big-time,big-weather,agents,today,day-1,day-2,day-3,";
+
+// Where a name sits in a ",a,b,c," list (in flash): its index, or -1.
+int listIndex(const char* listP, const String& name) {
+  String list = FPSTR(listP);
+  int at = name.length() ? list.indexOf("," + name + ",") : -1;
+  if (at < 0) return -1;
+  int n = 0;
+  for (int i = 1; i <= at; ++i) if (list[i] == ',') n++;
+  return n;
+}
+
+// Reads and checks a command's parameters; the first problem is kept.
+struct OcParams {
+  JsonObject p;
+  String err;
+  void fail(const __FlashStringHelper* key, const __FlashStringHelper* why) {
+    if (err.isEmpty()) err = String(F("INVALID_PARAMS ")) + key + why;
+  }
+  void only(const char* keysP) {   // ",a,b,": nothing else is taken
+    for (JsonPair kv : p)
+      if (listIndex(keysP, kv.key().c_str()) < 0 && err.isEmpty()) err = String(F("INVALID_PARAMS unknown parameter ")) + kv.key().c_str();
+  }
+  JsonVariant get(const __FlashStringHelper* k) { return jsonAt(p, k); }
+  bool has(const __FlashStringHelper* k) { return !get(k).isNull(); }
+  String str(const __FlashStringHelper* k, unsigned max, const char* def = "") {
+    JsonVariant v = get(k);
+    if (v.isNull()) return def;
+    if (!v.is<const char*>() || strlen(v.as<const char*>()) > max) { fail(k, F(": text too long or not text")); return def; }
+    return v.as<const char*>();
+  }
+  long num(const __FlashStringHelper* k, long lo, long hi, long def) {
+    JsonVariant v = get(k);
+    if (v.isNull()) return def;
+    if (!v.is<long>() || v.as<long>() < lo || v.as<long>() > hi) { fail(k, F(": whole number out of range")); return def; }
+    return v.as<long>();
+  }
+  bool flag(const __FlashStringHelper* k, bool def) {
+    JsonVariant v = get(k);
+    if (v.isNull()) return def;
+    if (!v.is<bool>()) { fail(k, F(": true or false")); return def; }
+    return v.as<bool>();
+  }
+};
+
+String clip(const String& s, unsigned n) { return s.length() > n ? s.substring(0, n - 1) + "~" : s; }
+
+String ocFaceLabel() {
+  if (cfg.theme == FACE_CUSTOM) return cfg.customFace;
+  if (cfg.theme == FACE_MESSAGE) return F("message");
+  return FACE_NAMES[cfg.theme >= 0 && cfg.theme < FACE_COUNT ? cfg.theme : 0];
+}
+
+const char* jbool(bool b) { return b ? "true" : "false"; }
+
+}  // namespace
+
+// The commands a node declares, as JSON strings (the connect frame lists them as they are).
+extern const char OPENCLAW_COMMANDS[] PROGMEM;
+const char OPENCLAW_COMMANDS[] PROGMEM =
+    "\"display.show\",\"display.clear\",\"display.status\",\"display.brightness\",\"face.set\",\"device.info\","
+    "\"device.status\",\"clock.face.show\",\"clock.faces.list\",\"clock.vars.set\"";
+
+// params: the request's object (changed in place); r: the result, "{" so far, the
+// caller closes it. Returns "" or "<CODE> <message>".
+String openclawCommand(const String& cmd, JsonObject params, String& r) {
+  OcParams P{params, ""};
+  // The command's place in OPENCLAW_COMMANDS: 0 display.show, 1 display.clear, 2 display.status,
+  // 3 display.brightness, 4 face.set, 5 device.info, 6 device.status, 7 clock.face.show,
+  // 8 clock.faces.list, 9 clock.vars.set.
+  String all = FPSTR(OPENCLAW_COMMANDS);
+  int c = cmd.length() ? all.indexOf("\"" + cmd + "\"") : -1;
+  if (c > 0) { int n = 0; for (int i = 0; i < c; ++i) n += all[i] == ','; c = n; }
+  all = "";
+  if (c == 0 || c == 4) {
+    bool mood = c == 4;
+    String title, text = P.str(F("text"), 512), icon, color, id;
+    bool show = true;
+    int k = 0;
+    if (mood) {
+      // Moni, the Message face's robot, has three poses (spec 039): hops for done, waves
+      // while waiting, slumps for an error. neutral and sleepy take the mood away.
+      P.only(PSTR(",mood,text,"));
+      k = listIndex(PSTR(",happy,excited,thinking,sad,neutral,sleepy,"), title = P.str(F("mood"), 16));
+      if (k < 0) P.fail(F("mood"), F(": neutral happy excited thinking sad sleepy"));
+      jsonAdd(r, F("mood"), title);
+      id = F("mood");
+      title = k < 2 ? F("Done") : k == 2 ? F("Waiting") : F("Problem");
+      icon = k < 2 ? F("done") : k == 2 ? F("waiting") : F("error");
+    } else {
+      P.only(PSTR(",heading,text,icon,color,pct,ttl,id,show,"));
+      title = P.has(F("heading")) ? P.str(F("heading"), 64) : String(F("OpenClaw"));
+      if (!P.has(F("text"))) P.fail(F("text"), F(" is required"));
+      icon = P.str(F("icon"), 16); color = P.str(F("color"), 7); id = P.has(F("id")) ? P.str(F("id"), 15) : String(F("openclaw"));
+      if (icon.length() && listIndex(OC_ICONS, icon) < 0) P.fail(F("icon"), F(": info success warning error waiting running bell done"));
+      if (color.length() && !isHexColor(color)) P.fail(F("color"), F(": #rgb or #rrggbb"));
+      for (unsigned i = 0; i < id.length(); ++i)
+        if (!isalnum((unsigned char)id[i]) && id[i] != '_' && id[i] != '.' && id[i] != '-') P.fail(F("id"), F(": letters, digits, _ . -"));
+      P.num(F("pct"), 0, 100, 0); P.num(F("ttl"), 5, 86400, 0);
+      show = P.flag(F("show"), true);
+    }
+    if (P.err.length()) return P.err;
+    if (mood) {
+      jsonAddRaw(r, F("moni"), jbool(k < 4));
+      if (k >= 4) { clearMessages(id); return ""; }
+    } else {
+      jsonAdd(r, F("id"), id);
+      jsonAddRaw(r, F("shown"), jbool(show));
+      jsonAddRaw(r, F("clipped"), jbool(title.length() > 40 || text.length() > 160));
+    }
+    // The message is the request's own object, the fields storeMessage() reads set over it
+    // (heading and mood stay: it ignores them).
+    String fields[4] = {id, clip(title, 40), clip(text, 160), icon};
+    const __FlashStringHelper* names[4] = {F("id"), F("title"), F("text"), F("icon")};
+    for (int i = 0; i < 4; ++i) params[String(names[i])] = fields[i];
+    params[String(F("show"))] = show;
+    storeMessage(params);
+  } else if (c == 1) {
+    P.only(PSTR(",id,all,"));
+    String id = P.str(F("id"), 15);
+    bool all = P.flag(F("all"), false);
+    if (P.err.length()) return P.err;
+    if (all) id = "";
+    clearMessages(id.length() || all ? id : String(F("openclaw")));
+    if (!all && id.isEmpty()) clearMessages(F("mood"));
+    jsonAddRaw(r, F("cleared"), all ? String(F("\"all\"")) : id.length() ? "[" + jsonQuote(id) + "]" : String(F("[\"openclaw\",\"mood\"]")));
+  } else if (c == 2) {
+    P.only(PSTR(",,"));
+    if (P.err.length()) return P.err;
+    jsonAdd(r, F("face"), ocFaceLabel());
+    String list = "[";
+    for (int i = 0; i < MESSAGE_MAX; ++i) {
+      if (!messageActive(i)) continue;
+      String o = "{";
+      jsonAdd(o, F("id"), messages[i].id); jsonAdd(o, F("title"), messages[i].title);
+      jsonAdd(o, F("text"), messages[i].text); jsonAdd(o, F("icon"), messages[i].icon);
+      jsonAddRaw(o, F("ttl"), String((messages[i].until - millis()) / 1000));
+      jsonAddRaw(o, F("showing"), jbool(cfg.theme == FACE_MESSAGE && messageSlot == i));
+      if (list.length() > 1) list += ',';
+      list += o + '}';
+    }
+    jsonAddRaw(r, F("messages"), list + ']');
+  } else if (c == 3) {
+    P.only(PSTR(",percent,"));
+    if (!P.has(F("percent"))) P.fail(F("percent"), F(" is required"));
+    long pc = P.num(F("percent"), 0, 100, 0);
+    if (P.err.length()) return P.err;
+    cfg.brightness = pc; backlightOff = false; brightnessDirty = true;
+    saveConfig();
+    jsonAddRaw(r, F("percent"), String(pc));
+  } else if (c == 5 || c == 6) {
+    P.only(PSTR(",,"));
+    if (P.err.length()) return P.err;
+    if (c == 5) {
+      jsonAdd(r, F("model"), F("SD PRO")); jsonAdd(r, F("platform"), F("esp8266"));
+      jsonAdd(r, F("firmware"), firmwareVersion()); jsonAdd(r, F("host"), deviceHost());
+      return "";
+    }
+    extern uint32_t heapLow;
+    jsonAddRaw(r, F("uptimeS"), String(millis() / 1000)); jsonAddRaw(r, F("heap"), String(ESP.getFreeHeap()));
+    jsonAddRaw(r, F("heapLow"), String(heapLow)); jsonAdd(r, F("ip"), WiFi.localIP().toString());
+    jsonAddRaw(r, F("rssi"), String(WiFi.RSSI()));
+    JsonDocument c;
+    crashStatus(c);   // crashes, crashLoop, safeMode, lastCrash
+    String s;
+    serializeJson(c, s);
+    if (s[0] == '{' && s.length() > 2) r += ',' + s.substring(1, s.length() - 1);   // "null" without crashes
+  } else if (c == 7) {
+    P.only(PSTR(",name,builtin,"));
+    String name = faceName(P.str(F("name"), 20));
+    JsonVariant b = P.get(F("builtin"));
+    int id = b.is<int>() ? b.as<int>() : !b.is<const char*>() ? -1
+           : strcmp_P(b.as<const char*>(), PSTR("tomorrow")) ? listIndex(OC_FACES, b.as<const char*>()) : 11;
+    if (P.has(F("name")) == !b.isNull()) P.fail(F("name"), F(" or builtin: one of them"));
+    else if (P.has(F("name")) && !customFaceExists(name)) P.fail(F("name"), F(": no such custom face"));
+    else if (!b.isNull() && (id < 0 || id >= FACE_COUNT)) P.fail(F("builtin"), F(": unknown face"));
+    if (P.err.length()) return P.err;
+    if (name.length()) { showFace(name); jsonAdd(r, F("face"), name); }
+    else { cfg.theme = id; faceSince = millis(); faceTurnSec = 0; faceInvalidate(); jsonAddRaw(r, F("face"), String(id)); }
+    saveConfig();
+  } else if (c == 8) {
+    P.only(PSTR(",,"));
+    if (P.err.length()) return P.err;
+    String list = "[";
+    for (int i = 0, n = customFaceCount(); i < n; ++i) { if (i) list += ','; list += jsonQuote(customFaceAt(i)); }
+    jsonAddRaw(r, F("faces"), list + ']');
+    jsonAdd(r, F("showing"), ocFaceLabel());
+    list = "{";
+    for (const Var& e : vars) {
+      if (e.key.isEmpty() || !findVar(e.key)) continue;
+      if (list.length() > 1) list += ',';
+      list += jsonQuote(e.key) + ':' + jsonQuote(e.value);
+    }
+    jsonAddRaw(r, F("vars"), list + '}');
+  } else if (c == 9) {
+    P.only(PSTR(",vars,ttl,history,add,persist,"));
+    JsonObject in = P.get(F("vars"));
+    if (in.isNull() || !in.size()) P.fail(F("vars"), F(": an object of name: value"));
+    long ttl = P.num(F("ttl"), 1, 86400, 0);
+    String set = "[";
+    for (JsonPair kv : in) {
+      JsonVariant val = kv.value();
+      if (!varName(kv.key().c_str()) || (!val.isNull() && !val.is<float>() && !(val.is<const char*>() && strlen(val.as<const char*>()) <= VAR_VALUE_MAX)))
+        P.fail(F("vars"), F(": bad name or value"));
+      if (set.length() > 1) set += ',';
+      set += jsonQuote(kv.key().c_str());
+    }
+    if (ttl) in[String(F("$ttl"))] = ttl;
+    for (const __FlashStringHelper* o : {F("history"), F("add"), F("persist")})
+      if (P.flag(o, false)) in["$" + String(o)] = true;
+    if (P.err.length()) return P.err;
+    String full;
+    applyVars(in, &full);
+    if (full.length()) return String(F("UNAVAILABLE no room for ")) + full + F(" (40 variables at most)");
+    jsonAddRaw(r, F("set"), set + ']');
+  } else {
+    return String(F("UNKNOWN_COMMAND ")) + cmd;
+  }
+  return "";
+}
+
 // The API key alone (the crash log's API accepts it as well as a signed-in session).
 bool integrationKeyOk() { return apiKeyOk(); }
 
@@ -684,6 +916,7 @@ String mqttStatus() {
 }
 
 void integrationsSettingsChanged() {
+  openclawSettingsChanged();   // its settings go through changed() too
 #if SMARTCLOCK_MQTT
   mqttReconnect = true;
 #endif

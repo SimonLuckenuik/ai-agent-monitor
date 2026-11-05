@@ -53,8 +53,52 @@
   exists; OpenClaw's `@openclaw/gateway-protocol` (MIT) has the validators to build one.
   Proposed: a test gateway service and an OpenClaw panel on the emulator page.
 
+- 2026-11-05: **approved** ("start building"), the open questions taken with the
+  recommended answers (SPEC). Built on branch `openclaw-native` (from `faces-v2` with spec
+  042, `openclaw-node` merged in):
+  - `src/ed25519.cpp`: Ed25519 signing (TweetNaCl's arithmetic, written here, workspace on
+    the heap), SHA-512, SHA-256. Host tests (`tests/unit/openclaw_tests.cpp`, 21 checks):
+    RFC 8032 vectors 1-3, FIPS SHA-256 vectors, base64url, WebSocket headers. All pass.
+  - `src/openclaw_proto.cpp`: base64url and WebSocket frame headers.
+  - `src/openclaw.cpp`: the node (WebSocket client, challenge, signed connect, `hello-ok`
+    read through a filter, invoke, reconnect with back-off, pairing pending every 30 s,
+    refusal stops, ping after 20 s of quiet, gone after 45 s), pairing from a setup code or
+    `token:`/`password:`, `/status` fields.
+  - `openclawCommand()` in `integrations.cpp`: the 10 commands on the clock's own code.
+  - Settings `ocon`, `ocurl`, `ocname`, `ocpair`, `ocforget`; secrets `ocseed`, `ocpub`,
+    `ocid`, `octoken`, `ocauth` stored, never in `/config` or backups. The settings page's
+    card (Integrations -> OpenClaw node).
+  - `tests/integration/fake_gateway.py`: a stand-in gateway (standard library; its own
+    Ed25519 verifier, checked against RFC 8032), a compose service; the case `openclaw_node`.
+- 2026-11-05: flash. The first build was +32.6 KB and did not fit (45,056 B of room).
+  ArduinoJson's code at each `doc[F("key")]` and the strings were most of it; writing
+  frames and results as text, one path helper for reads, dispatch by index, shorter
+  messages, and `configSave()` (the header's `Config::save()` was inlined, 1.5 KB, into
+  each file calling it once: the weather had its own copy too) brought it to +22.7 KB:
+  `firmware.bin` 601,664 B, `.bin.gz` 426,724 B, 8,192 B of room left (SPEC table).
+  [Decision record](../../docs/decisions/2026-11-05-openclaw-node-flash.md).
+- 2026-11-05: the integration case passes in the emulator (112 s): pairing pending until
+  approved, then connected; the gateway verified the v3 signature; the connect frame
+  (client, platform, family, version, no caps or scopes, the 10 commands); the device
+  token kept and the credential dropped, the operator hand-off token not stored, no
+  secret in `/config`; every command (screens: Moni waving, hopping, slumping; a custom
+  face with `clock.vars.set` values; built-in faces 7 and 6), refused parameters
+  (`INVALID_PARAMS`), an unknown command (`UNKNOWN_COMMAND`); the gateway dropped: back
+  with the device token; *Forget* and a bootstrap setup code: a new identity; the token
+  revoked: refused, and no retries. Signing in the emulator: 4-8 ms (the host's speed,
+  not modelled); `openclawHeap` 1,352 B.
+- Found on the way: the emulator's sockets do not report a peer's close (`connected()`
+  stays true), so the clock notices a dropped gateway only by its ping (45 s at most);
+  on the chip lwIP reports it at once. The bridge's built-in face names were wrong for
+  the Day tiles (`day-4` was 13; it is 6): fixed in the bridge and its test.
+- Left: the full integration suite, unit, safety and face preview on the final build
+  (below); a real gateway and the real clock (PLAN step 8); the release.
+
 ## Not verified
 
+- The signing time on the clock (estimated 0.4 s; the emulator does not model it), the
+  heap during the handshake there, and a pairing with a real OpenClaw Gateway (whether
+  the owner runs one is open).
 - No real OpenClaw Gateway: whether the owner runs one is open. The fake gateway follows
   the docs and schemas; real error codes for a pending pairing, the first-surface approval
   after a setup code, and tick handling are to check (PLAN step 6).

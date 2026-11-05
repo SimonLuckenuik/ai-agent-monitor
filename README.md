@@ -67,6 +67,10 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   and the stock clock's API for
   [geekmagic-hacs](https://github.com/adrienbrault/geekmagic-hacs) dashboards. Both are
   off until you turn them on.
+- **OpenClaw:** the clock can be a node of an [OpenClaw](https://docs.openclaw.ai) Gateway,
+  so OpenClaw's agents show messages, Moni's moods and faces on it (screen only; plain
+  `ws://` on your network). Off until you pair it
+  ([how](docs/specifications/integrations-api.md#openclaw-node)).
 - **A settings page** for everything above, plus WiFi, password, backups (the settings
   with your custom faces and their saved values) and firmware updates. It works on phones, follows light or dark mode, and needs no internet on
   the clock's setup network.

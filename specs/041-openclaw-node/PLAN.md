@@ -1,8 +1,13 @@
 # Plan
 
-A native node in the firmware (the owner's choice, 2026-11-05). Nothing below is built
-before the spec is approved and open question 1 (where the room comes from) is answered.
-Lands in a MINOR release (2.3.0): a new feature, installed as the usual `.bin.gz`.
+A native node in the firmware (the owner's choice, 2026-11-05). Approved 2026-11-05; the
+room came from spec 042. Lands in a MINOR release (2.3.0): a new feature, installed as the
+usual `.bin.gz`.
+
+State (2026-11-05, branch `openclaw-native`): steps 1-7 done (step 1 is spec 042; step 6's
+gateway is `tests/integration/fake_gateway.py`, run as a compose service rather than
+inside the emulator); step 8 waits for a real gateway; step 9's docs done, the release
+not.
 
 ## Steps
 

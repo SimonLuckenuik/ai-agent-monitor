@@ -1,6 +1,6 @@
 # Integrations API
 
-[Agent messages](#agent-messages) are always on. Three optional integrations are
+[Agent messages](#agent-messages) are always on. Four optional integrations are
 each **off by default**; turn them on in the settings page under **Integrations**:
 
 | Integration | What it is for | Who may call it |
@@ -9,6 +9,7 @@ each **off by default**; turn them on in the settings page under **Integrations*
 | [Custom faces](#custom-faces) | Your own faces as JSON, with live values | Signed-in page, or the API key |
 | [Home Assistant dashboards](#home-assistant-dashboards-geekmagic-hacs) | The `geekmagic-hacs` integration pushes rendered dashboards | **Anyone on the network** (it cannot sign in) |
 | [MQTT](#mqtt) | Home Assistant discovery; faces and variables over MQTT | Your MQTT broker |
+| [OpenClaw node](#openclaw-node) | OpenClaw's agents show messages, moods and faces | Your OpenClaw Gateway, once you approve the clock |
 
 The clock is at `http://<clock>/`, where `<clock>` is its IP address (or
 `agentmonitor-XXXXXX.local` on a build with mDNS).
@@ -479,7 +480,7 @@ and the slowest draw, in ms), the network, the weather (`weatherAge` in seconds,
 fetch has taken since boot), the face shown, MQTT (`mqtt`: `connected`, `off`, `no broker
 set`, `waiting for memory` or why it cannot connect; `mqttHeap`: what connecting took)
 and mDNS (`mdns`: the `.local` name; `mdnsState`: `on`, `starting` or `waiting for
-memory`; `mdnsHeap`: what starting took). `wifiDowngrades` counts the times since boot
+memory`; `mdnsHeap`: what starting took), the [OpenClaw node](#openclaw-node) (`openclaw`, `openclawId`, `openclawHeap`, `openclawSignMs`). `wifiDowngrades` counts the times since boot
 that the WiFi connection's security weakened and the clock joined again; `timeHeld`
 appears while an SNTP time jump waits for the weather server's time to confirm it
 (spec 029). After a crash it also has:
@@ -580,3 +581,75 @@ data:
   topic: agentmonitor-XXXXXX/vars
   payload: '{"solar": "{{ states(''sensor.solar_power'') }}", "pct": {{ states(''sensor.battery'') | int }}}'
 ```
+
+## OpenClaw node
+
+The clock can be a **node** of an [OpenClaw](https://docs.openclaw.ai) Gateway (spec 041):
+it keeps one WebSocket to the gateway, and OpenClaw's agents (in a chat, a scheduled
+job or a heartbeat) call its commands through the gateway's `nodes` tool, or an
+operator through `openclaw nodes invoke`. Screen output and read-only status only:
+the node declares no capabilities and sends no events.
+
+**Setting it up.** On the gateway's machine, `openclaw qr --setup-code-only` prints a
+setup code. In the settings page (Integrations → OpenClaw node) paste it and press
+*Pair & connect*; or set the gateway's address (`ws://host:18789`) and pair with the
+gateway's shared token (`token:<token>` in the setup code field). Then, on the gateway:
+
+```bash
+openclaw devices approve <request>    # the clock as a device (a bootstrap setup code does this)
+openclaw nodes pending                # the clock's command surface
+openclaw nodes approve <request>
+```
+
+and allow the clock's commands, which OpenClaw does not know for the `esp8266`
+platform, in the gateway's configuration:
+
+```json
+{"gateway": {"nodes": {"commands": {"allow": ["display.show", "display.clear", "display.status",
+  "display.brightness", "face.set", "device.info", "device.status", "clock.face.show",
+  "clock.faces.list", "clock.vars.set"]}}}}
+```
+
+The gateway must be reachable from the clock over plain `ws://` (`gateway.bind lan`):
+the clock has no room for TLS, so `wss://` addresses are refused. The clock keeps
+only the device token the gateway gives it; the setup code's token, and the operator
+token a setup code also hands over, are dropped. Its Ed25519 key is made on the clock
+from the hardware random generator and never leaves it; *Forget* drops it, and the
+clock pairs again as a new device.
+
+The settings behind the page (`/api/set`, signed in):
+
+| Key | |
+|---|---|
+| `ocon` | On or off (off by default) |
+| `ocurl` | The gateway, `ws://host[:port][/path]` (port 18789 by default) |
+| `ocname` | The name the gateway shows (the clock's host name when empty) |
+| `ocpair` | Write only: a setup code, `token:<gateway token>` or `password:<gateway password>`. Turns the node on |
+| `ocforget` | Write only: `1` drops the key and the device token |
+
+| Command | Parameters | Result |
+|---|---|---|
+| `display.show` | `text` (required); `heading` (default `OpenClaw`), `icon` (as messages), `color`, `pct`, `ttl`, `id` (default `openclaw`), `show` (default true) | An [agent message](#agent-messages). `{id, shown, clipped}` (title 40, text 160 characters) |
+| `display.clear` | `id`, or `all: true` | Without either: the `openclaw` message and the mood. `{cleared}` |
+| `display.status` | | `{face, messages: [{id, title, text, icon, ttl, showing}]}` |
+| `display.brightness` | `percent` 0-100 | The backlight, saved. `{percent}` |
+| `face.set` | `mood`: `happy`, `excited` (Moni hops), `thinking` (waves), `sad` (slumps), `neutral`, `sleepy` (clears); `text` | A message with the id `mood`. `{mood, moni}` |
+| `device.info` | | `{model, platform, firmware, host}` |
+| `device.status` | | `{uptimeS, heap, heapLow, ip, rssi}`, and after a crash `crashes`, `crashLoop`, `safeMode`, `lastCrash` |
+| `clock.face.show` | `name` (a custom face) or `builtin`: `classic weather photo big-date simple forecast big-time big-weather agents today day-1` (or `tomorrow`) `day-2 day-3 day-4`, or a face id | `{face}` |
+| `clock.faces.list` | | `{faces, showing, vars}` |
+| `clock.vars.set` | `vars` `{name: text, number or null}`; `ttl`, `history`, `add`, `persist` (as [variables](#variables)) | `{set}` |
+
+Unknown parameters, wrong types and values out of range are refused with
+`INVALID_PARAMS`; a full variable table with `UNAVAILABLE`. Saving faces stays on HTTP
+and MQTT (a 4 KB face inside a frame needs more memory than the node keeps free); the
+bridge in `integrations/openclaw/` (a program beside the gateway) takes the same
+commands plus `clock.face.save`.
+
+`/status` reports `openclaw`: `off`, `not paired`, `waiting for memory` (it connects with
+12 KB free), `connecting`, `pairing pending: approve the clock on the gateway`,
+`connected`, `refused: <code> <message>` (no more tries until a setting changes),
+`cannot reach the gateway`, `connection lost` and the like (it tries again after 5 s,
+then longer, up to 5 minutes); `openclawId` (the device id, as `openclaw devices list`
+shows it), `openclawHeap` (what connecting took) and `openclawSignMs` (the signature's
+time).

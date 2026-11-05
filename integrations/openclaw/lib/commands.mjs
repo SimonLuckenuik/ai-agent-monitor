@@ -11,7 +11,7 @@ const ICONS = ["info", "success", "warning", "error", "waiting", "running", "bel
 // Built-in faces by name (face ids are an API: CLAUDE.md, "Face ids are an API").
 export const BUILTIN_FACES = {
   classic: 0, weather: 1, photo: 2, "big-date": 3, simple: 4, forecast: 5,
-  "big-time": 7, "big-weather": 8, agents: 9, today: 10, tomorrow: 11, "day-3": 12, "day-4": 13,
+  "big-time": 7, "big-weather": 8, agents: 9, today: 10, "day-1": 11, tomorrow: 11, "day-2": 12, "day-3": 13, "day-4": 6,
 };
 
 // OpenClaw's moods (the ESP32 dial's face.set) on the clock: Moni, the Message

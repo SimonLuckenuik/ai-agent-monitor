@@ -25,7 +25,7 @@ agent -> OpenClaw Gateway --WebSocket (node protocol)--> bridge --HTTP--> clock
 | `face.set` | `mood`, optional `text` | Moni: `happy`/`excited` hops, `thinking` waves, `sad` slumps; `neutral`/`sleepy` clear it |
 | `device.info` | | Model, firmware, build, host name |
 | `device.status` | | Uptime, heap, WiFi signal, IP, crashes, safe mode |
-| `clock.face.show` | `name` (custom face) or `builtin` | Switches face. Built-in names: `classic weather photo big-date simple forecast big-time big-weather agents today tomorrow day-3 day-4` (needs *Home Assistant dashboards*) |
+| `clock.face.show` | `name` (custom face) or `builtin` | Switches face. Built-in names: `classic weather photo big-date simple forecast big-time big-weather agents today day-1 (tomorrow) day-2 day-3 day-4` (as the firmware node; needs *Home Assistant dashboards*) |
 | `clock.face.save` | `name`, `face` (face JSON), optional `show` | Saves a custom face (the [face format](../../docs/specifications/integrations-api.md#face-json)) |
 | `clock.faces.list` | | Custom faces, the one showing, the variables |
 | `clock.vars.set` | `vars` {name: value}, optional `ttl`, `history`, `add`, `persist` | Face variables (`POST /api/faces/vars`) |

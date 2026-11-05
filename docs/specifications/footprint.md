@@ -19,6 +19,11 @@ and 410,558 B, 45,056 B of room**: ArduinoJson's parser compiled once per kind o
 (`const char*` and `Stream`, through `parseJson()` in `src/json_parse.cpp`: 4.6 KB instead
 of 13.1 KB for nine copies) and the weather fetched over a plain `WiFiClient` without
 HTTPClient (4.3 KB). LTO was tried and grows the image (specs/042-flash-room-no-loss/RESEARCH.md).
+The OpenClaw node (spec 041) adds 22.7 KB (crypto 4.6 KB, protocol 8 KB, commands 5.2 KB,
+settings and library code 4 KB, less 1.5 KB of a duplicated `Config::save()` taken out of
+the weather): 601,664 B and 426,724 B, **8,192 B of room**
+(docs/decisions/2026-11-05-openclaw-node-flash.md). ArduinoJson member access with `F()`
+keys costs 30-60 B where it is written: write many fields as text, or through a helper.
 The table below is 1.9.1's.
 
 | Budget | Size | Used | Left |

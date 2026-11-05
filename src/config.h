@@ -76,6 +76,11 @@ struct Config {
   String tzname;                     // the zone tz came from, to show ("America/Toronto"); "" custom
   int    mqttPort = 1883;
   String apiKey;                     // for scripts calling the faces API; never exported
+  // OpenClaw node (spec 041). The seed, device token and pairing credential are secrets:
+  // never exported nor shown. ocAuth is "bootstrapToken:...", "token:..." or "password:...",
+  // kept only until the gateway gives a device token.
+  bool   ocOn = false;
+  String ocUrl, ocName, ocSeed, ocPub, ocId, ocToken, ocAuth;
 
   // The panel's four gamma curves, as the settings name them; -1 for anything else.
   static constexpr const char* GAMMAS[4] = {"2.2", "1.8", "2.5", "1.0"};
@@ -189,6 +194,14 @@ struct Config {
     hostnames   = doc[F("hostnames")]   | hostnames;
     tzname      = doc[F("tzname")]      | tzname;
     apiKey      = doc[F("apikey")]      | apiKey;
+    ocOn        = doc[F("ocon")]        | ocOn;
+    ocUrl       = doc[F("ocurl")]       | ocUrl;
+    ocName      = doc[F("ocname")]      | ocName;
+    ocSeed      = doc[F("ocseed")]      | ocSeed;
+    ocPub       = doc[F("ocpub")]       | ocPub;
+    ocId        = doc[F("ocid")]        | ocId;
+    ocToken     = doc[F("octoken")]     | ocToken;
+    ocAuth      = doc[F("ocauth")]      | ocAuth;
     return true;
   }
 
@@ -217,6 +230,9 @@ struct Config {
     doc[F("mqtthost")] = mqttHost;   doc[F("mqttport")] = mqttPort; doc[F("mqttuser")] = mqttUser;
     doc[F("mqttpass")] = mqttPass;   doc[F("mqttbase")] = mqttBase; doc[F("apikey")] = apiKey;
     doc[F("hostnames")] = hostnames; doc[F("tzname")] = tzname;
+    doc[F("ocon")] = ocOn;           doc[F("ocurl")] = ocUrl;   doc[F("ocname")] = ocName;
+    doc[F("ocseed")] = ocSeed;       doc[F("ocpub")] = ocPub;   doc[F("ocid")] = ocId;
+    doc[F("octoken")] = ocToken;     doc[F("ocauth")] = ocAuth;
     File f = LittleFS.open("/config.json", "w");
     if (!f) return false;
     serializeJson(doc, f);

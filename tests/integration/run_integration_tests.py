@@ -15,11 +15,13 @@ screens.json records a digest per screen: a later run lists the screens that cha
 Needs Docker and Pillow.
 """
 import argparse
+import base64
 import json
 import re
 import sys
 import time
 import traceback
+import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -927,6 +929,156 @@ def restart_keeps_settings(emu):
     check(emu.messages() == [], "messages live in RAM")
     check("keep" in json.dumps(emu.faces()), "custom face kept in storage")
     emu.delete_face("keep")
+
+
+class FakeGateway:
+    """The stand-in OpenClaw Gateway (tests/integration/fake_gateway.py, compose service
+    "gateway"): its control API on 18790."""
+
+    def __init__(self, url="http://127.0.0.1:18790"):
+        self.url = url
+
+    def call(self, path, body=None):
+        req = urllib.request.Request(self.url + path, data=None if body is None else json.dumps(body).encode(),
+                                     method="GET" if body is None else "POST",
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read())
+
+    def state(self):
+        return self.call("/state")
+
+    def invoke(self, command, params=None, raw=None):
+        return self.call("/invoke", {"command": command, "params": params or {}, **({"raw": raw} if raw else {})})
+
+
+def wait_openclaw(emu, want, timeout=40):
+    end, s = time.time() + timeout, {}
+    while time.time() < end:
+        s = emu.status()
+        if s.get("openclaw", "").startswith(want):
+            return s
+        time.sleep(0.5)
+    raise Failure(f"OpenClaw node: wanted {want!r}, got {s.get('openclaw')!r}")
+
+
+@case
+def openclaw_node(emu):
+    """Spec 041: the firmware as an OpenClaw node. Pairs with the stand-in gateway (which
+    checks the v3 signature with its own Ed25519), waits for approval, connects, takes
+    every command, reconnects with its device token, pairs from a setup code with a new
+    identity, and stops on a refused token."""
+    gw = FakeGateway()
+    stored = lambda: json.loads(emu.request("GET", emu.screen + "/fs/file?path=/config.json")[1])
+    gw.call("/reset", {"requirePairing": True, "token": "gw-shared", "bootstrapToken": "boot-once"})
+    check(emu.status().get("openclaw") == "off", f"off by default: {emu.status().get('openclaw')}")
+    expect_error(400, "ws://", emu.set, "ocurl", "wss://gateway:18789")
+    emu.set("ocurl", "ws://gateway:18789")
+    emu.set("ocpair", "token:gw-shared")
+    s = wait_openclaw(emu, "pairing pending")
+    dev = s["openclawId"]
+    check(re.fullmatch(r"[0-9a-f]{64}", dev), f"device id {dev}")
+    gw.call("/approve", {"id": dev})
+    emu.set("ocname", "Desk clock")   # a settings change reconnects at once
+    s = wait_openclaw(emu, "connected")
+    st = gw.state()
+    check(not [r for r in st["refusals"] if r["detail"] == "DEVICE_AUTH_INVALID"], f"signature refused: {st['refusals']}")
+    p = st["connects"][-1]
+    check(p["client"]["displayName"] == "Desk clock" and p["client"]["platform"] == "esp8266"
+          and p["client"]["deviceFamily"] == "AI Agent Monitor" and p["client"]["version"] == s["version"],
+          f"client {p['client']}")
+    check(p["caps"] == [] and p["scopes"] == [] and list(p["auth"]) == ["token"], f"caps, scopes, auth {p['caps']} {p['auth']}")
+    check(p["commands"] == ["display.show", "display.clear", "display.status", "display.brightness", "face.set",
+                            "device.info", "device.status", "clock.face.show", "clock.faces.list", "clock.vars.set"],
+          f"commands {p['commands']}")
+    cfg = stored()
+    check(cfg.get("octoken") == st["deviceToken"] and not cfg.get("ocauth"), "device token kept, the pairing credential dropped")
+    check("operator-handoff" not in json.dumps(cfg), "the operator hand-off token is not stored")
+    check("ocseed" not in json.dumps(emu.config()) and "octoken" not in json.dumps(emu.config()), "secrets not in /config")
+    print(f"  signing {s.get('openclawSignMs')} ms, connecting took {s.get('openclawHeap')} B of heap")
+
+    def ok(command, params=None, **want):
+        r = gw.invoke(command, params)
+        check(r.get("ok") and r.get("id") and r.get("nodeId") == dev, f"{command}: {r}")
+        for k, v in want.items():
+            check(r["payload"].get(k) == v, f"{command}: {k} = {r['payload'].get(k)!r}, wanted {v!r}")
+        return r["payload"]
+
+    def refused(command, params, code, raw=None):
+        r = gw.invoke(command, params, raw)
+        check(r.get("ok") is False and r.get("error", {}).get("code") == code, f"{command} {params}: {r}")
+
+    ok("display.show", {"heading": "OpenClaw", "text": "Waiting for your answer", "icon": "waiting"}, id="openclaw", shown=True)
+    shot(emu, "openclaw-display-show")
+    ok("face.set", {"mood": "happy", "text": "Deployed"}, moni=True)
+    shot(emu, "openclaw-face-happy")
+    ok("face.set", {"mood": "sad", "text": "Tests failed"}, moni=True)
+    shot(emu, "openclaw-face-sad")
+    st = ok("display.status")
+    check({m["id"] for m in st["messages"]} == {"openclaw", "mood"} and st["face"] == "message", f"display.status {st}")
+    ok("face.set", {"mood": "neutral"}, moni=False)
+    check([m["id"] for m in emu.messages()] == ["openclaw"], f"neutral clears the mood: {emu.messages()}")
+    ok("display.clear", cleared=["openclaw", "mood"])
+    check(emu.messages() == [], "display.clear")
+    ok("display.brightness", {"percent": 40}, percent=40)
+    check(emu.config()["brightness"] == 40, "brightness saved")
+    emu.set("brightness", 100)
+    info = ok("device.info", model="SD PRO", platform="esp8266")
+    check(info["firmware"] == s["version"], f"device.info {info}")
+    health = ok("device.status")
+    check(health["heap"] > 0 and health["uptimeS"] > 0 and health["ip"], f"device.status {health}")   # crashes: only when there were some
+    ok("clock.face.show", {"builtin": "big-time"}, face=7)
+    check(emu.status()["face"] == 7, "built-in face shown")
+    ok("clock.face.show", {"builtin": "day-4"}, face=6)
+    emu.set("facesapi", 1)
+    emu.push_face("oc-test", {"items": [{"type": "text", "text": "{who} x{n}", "x": 120, "y": 120, "align": "mc", "font": 4, "color": "#ffa826"}]})
+    ok("clock.vars.set", {"vars": {"who": "OPENCLAW", "n": 3}, "ttl": 600}, set=["who", "n"])
+    ok("clock.face.show", {"name": "oc-test"}, face="oc-test")
+    shot(emu, "openclaw-custom-face")
+    lst = ok("clock.faces.list", showing="oc-test")
+    check("oc-test" in lst["faces"] and lst["vars"].get("who") == "OPENCLAW", f"clock.faces.list {lst}")
+    refused("display.show", {"text": "x", "colour": "#fff"}, "INVALID_PARAMS")
+    refused("display.show", {"heading": "no text"}, "INVALID_PARAMS")
+    refused("face.set", {"mood": "angry"}, "INVALID_PARAMS")
+    refused("display.brightness", {"percent": 101}, "INVALID_PARAMS")
+    refused("clock.face.show", {"name": "nope"}, "INVALID_PARAMS")
+    refused("clock.vars.set", {"vars": {"bad-name": 1}}, "INVALID_PARAMS")
+    refused("display.show", None, "INVALID_PARAMS", raw="[1,2]")
+    refused("camera.snap", {}, "UNKNOWN_COMMAND")
+    emu.delete_face("oc-test")
+
+    # The gateway goes away: the clock comes back on its own, with the device token.
+    before = len(gw.state()["connects"])
+    gw.call("/drop", {})
+    end = time.time() + 60   # the emulator's sockets do not report the close: the clock finds out by its ping
+    while time.time() < end and (len(gw.state()["nodes"]) == 0 or len(gw.state()["connects"]) == before):
+        time.sleep(0.5)
+    wait_openclaw(emu, "connected", timeout=10)
+    st = gw.state()
+    check(len(st["connects"]) > before and list(st["connects"][-1]["auth"]) == ["deviceToken"],
+          f"reconnect with the device token: {st['connects'][-1]['auth'] if st['connects'] else None}")
+
+    # A new identity from a setup code (bootstrap token, used once).
+    emu.set("ocforget", 1)
+    code = base64.urlsafe_b64encode(json.dumps({"url": "ws://gateway:18789", "bootstrapToken": "boot-once"}).encode()).decode().rstrip("=")
+    expect_error(400, "setup code", emu.set, "ocpair", "not-a-code")
+    emu.set("ocpair", code)
+    s = wait_openclaw(emu, "connected")
+    check(s["openclawId"] != dev, "a new identity after ocforget")
+    check(list(gw.state()["connects"][-1]["auth"]) == ["bootstrapToken"], "paired with the bootstrap token")
+    check(not stored().get("ocauth"), "the bootstrap token is not kept")
+
+    # The device token revoked: refused, and no more tries until the settings change.
+    gw.call("/revoke", {})
+    gw.call("/drop", {})
+    s = wait_openclaw(emu, "refused", timeout=70)
+    check("AUTH_TOKEN_MISMATCH" in s["openclaw"], f"refusal reason: {s['openclaw']}")
+    n = len(gw.state()["connects"])
+    time.sleep(12)
+    check(len(gw.state()["connects"]) == n, "no retries after a refusal")
+    emu.set("ocon", 0)
+    check(emu.status()["openclaw"] == "off" or wait_openclaw(emu, "off", timeout=5), "turned off")
+    emu.set("ocforget", 1)
 
 
 # ---------------------------------------------------------------- runner

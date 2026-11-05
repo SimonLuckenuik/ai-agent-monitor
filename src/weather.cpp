@@ -22,6 +22,7 @@ static String urlEncode(const String& s) {
 }
 
 void timeGuardDate(uint32_t t);   // main.cpp: the Date header confirms a held SNTP jump
+bool configSave();               // main.cpp: saves the settings when storage allows
 
 // GET a JSON document over plain HTTP/1.0 (un-chunked, so ArduinoJson parses the raw
 // stream), on a bare WiFiClient: HTTPClient cost 4.3 KB for one request (spec 042). The
@@ -126,7 +127,7 @@ static bool geocode() {
   if (*country) label += String(", ") + country;
   cfg.geoName = label;
   cfg.geoFor = cfg.city;
-  cfg.save();   // once per city change, not per fetch
+  configSave();   // once per city change, not per fetch
   return !isnan(cfg.lat) && !isnan(cfg.lon);
 }
 

@@ -353,6 +353,19 @@ a{color:var(--accent)}
         <p class="note" id="mqttStatus">—</p>
       </div>
     </div>
+
+    <div class="integ">
+      <div class="row"><label for="ocon">OpenClaw node<span class="hint">OpenClaw's agents show messages, Moni's moods and faces here (screen only)</span></label>
+        <label class="switch"><input type="checkbox" id="ocon" data-key="ocon"><span></span></label></div>
+      <div id="ocBox" hidden>
+        <div class="field"><label for="ocpair">Setup code</label><input type="text" id="ocpair" placeholder="openclaw qr --setup-code-only" autocomplete="off" spellcheck="false"></div>
+        <div class="grid2"><div class="field"><label for="ocurl">Gateway</label><input type="text" id="ocurl" placeholder="ws://192.168.1.10:18789" spellcheck="false"></div>
+          <div class="field"><label for="ocname">Name</label><input type="text" id="ocname" spellcheck="false"></div></div>
+        <div class="btns"><button class="btn primary" onclick="saveOc()">Pair &amp; connect</button><button class="btn" onclick="forgetOc()">Forget</button></div>
+        <p class="note">Plain ws:// only. On the gateway: approve the device and the node, and allow its commands (gateway.nodes.commands.allow).</p>
+        <p class="note" id="ocStatus">—</p>
+      </div>
+    </div>
   </section>
 
   <section class="card">
@@ -739,8 +752,8 @@ function fillConfig(c){
   for(const k of ['themeInterval','brightness','orientation','gamma','nightgamma','nightbrightness','starttime','stoptime','ntp','city','photointerval']){const el=$(k);if(el&&c[k]!==undefined){el.value=c[k];el.show&&el.show()}}
   if(![...$('themeInterval').options].some(o=>o.value==String(c.themeInterval))){const o=new Option(c.themeInterval+' s',c.themeInterval);$('themeInterval').add(o);$('themeInterval').value=c.themeInterval}
   $('nightmode').checked=!!c.nightmode;$('nightoff').checked=!!c.nightoff;$('nighttint').checked=c.nighttint!==false;$('photoclock').checked=c.photoclock!==false;$('msganim').checked=c.msganim!==false;
-  ['facesapi','hacompat','mqtt'].forEach(k=>$(k).checked=!!c[k]);
-  ['mqtthost','mqttuser','mqttbase'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
+  ['facesapi','hacompat','mqtt','ocon'].forEach(k=>$(k).checked=!!c[k]);
+  ['mqtthost','mqttuser','mqttbase','ocurl','ocname'].forEach(k=>$(k).value=c[k]||'');$('mqttport').value=c.mqttport||1883;
   $('nightcolor').value=hex565(c.nightcolor||0);
   paintSeg(document.querySelector('[data-key=hour12]'),c.hour12?1:0);paintSeg(document.querySelector('[data-key=lang]'),c.lang||'en');
   paintSeg(document.querySelector('[data-key=celsius]'),c.celsius?1:0);
@@ -875,11 +888,12 @@ drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragle
 drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');pickFw(e.dataTransfer.files[0])};
 
 // ---- Integrations
-function integRows(){$('facesBox').hidden=!$('facesapi').checked;$('haNote').hidden=!$('hacompat').checked;$('mqttBox').hidden=!$('mqtt').checked}
+function integRows(){$('facesBox').hidden=!$('facesapi').checked;$('haNote').hidden=!$('hacompat').checked;$('mqttBox').hidden=!$('mqtt').checked;$('ocBox').hidden=!$('ocon').checked}
 async function loadInteg(){integRows();
   try{const d=JSON.parse(await req('/api/integrations'));$('apiKey').textContent=d.apiKey||'No key yet; press New key';
     $('mqttStatus').textContent='Status: '+d.mqttStatus;$('mqttbase').placeholder=d.mqttTopic;$('mqttpass').placeholder=d.mqttPassSet?'Saved; type to replace':'';
-    if($('facesapi').checked)loadFaces()}catch(e){}}
+    if($('facesapi').checked)loadFaces();
+    const s=JSON.parse(await req('/status'));$('ocStatus').textContent='Status: '+s.openclaw+(s.openclawId?'. Device '+s.openclawId.slice(0,16)+'…':'')}catch(e){}}
 async function newKey(){if($('apiKey').textContent.length>20&&!confirm('Replace the API key? Scripts using the old one stop working.'))return;
   try{await req('/api/integrations',form({action:'newkey'}));loadInteg();toast('New API key')}catch(e){toast(e.message,1)}}
 async function loadFaces(){try{const d=JSON.parse(await req('/api/faces')),box=$('faceList');box.innerHTML='';
@@ -920,7 +934,10 @@ async function saveMqtt(){const keys=['mqtthost','mqttport','mqttuser','mqttbase
   for(const k of keys)if(!await set(k,$(k).value.trim()))return;
   if($('mqttpass').value&&!await set('mqttpass',$('mqttpass').value))return;$('mqttpass').value='';
   setTimeout(loadInteg,3000)}
-['facesapi','hacompat','mqtt'].forEach(id=>$(id).addEventListener('change',()=>setTimeout(loadInteg,300)));
+async function saveOc(){for(const k of ['ocurl','ocname'])if(!await set(k,$(k).value.trim()))return;
+  const code=$('ocpair').value.trim();if(code&&!await set('ocpair',code))return;$('ocpair').value='';setTimeout(loadInteg,3000)}
+async function forgetOc(){if(confirm('Forget the clock\u2019s OpenClaw key? It pairs again from scratch.')&&await set('ocforget','1'))loadInteg()}
+['facesapi','hacompat','mqtt','ocon'].forEach(id=>$(id).addEventListener('change',()=>setTimeout(loadInteg,300)));
 
 // ---- Photos: crop to 240x240 and encode as a baseline JPEG in the browser
 async function loadPhotos(){

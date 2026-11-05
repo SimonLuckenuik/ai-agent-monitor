@@ -1,7 +1,7 @@
 # 041 The clock as an OpenClaw node
 
-Status: Approved 2026-11-05 (the owner: "start building"; native node, output only; the
-open questions taken with the recommended answers, below)
+Status: In progress (approved 2026-11-05: the owner said "start building"; built on branch
+`openclaw-native`, tested in the emulator against a stand-in gateway; not released)
 
 ## Problem
 
@@ -69,8 +69,8 @@ the clock's commands are in OpenClaw's platform defaults).
    skipped.
 5. Reconnect with back-off (5 s to 5 min); retry a pending pairing every 30 s so an
    approval is picked up; stop after a refused credential until the settings change.
-6. Connect only with at least 12 KB free heap and the largest block at least 6 KB
-   (measured and tuned in the emulator and on the clock); signing runs at the top of
+6. Connect only with at least 12 KB free heap (the largest block is not checked: asking
+   for it links 1.6 KB of heap statistics); signing runs at the top of
    `loop()` with its working memory on the heap (about 3 KB, freed after), never on the
    4 KB stack.
 7. Answer every `node.invoke.request` with `node.invoke.result`; unknown commands and bad
@@ -114,20 +114,31 @@ two are interchangeable for agents.
 
 ## Flash and RAM budget
 
-| | Code (plain) | Notes |
-|---|---|---|
-| Ed25519 sign + SHA-512 (TweetNaCl, working memory moved to the heap) | 5.9 KB | measured for the lx106 |
-| SHA-256 (device id, at pairing) | about 1.2 KB | not linked today |
-| WebSocket client (handshake, masked text frames, ping/pong, close) | about 2 KB | `base64::encode` already linked |
-| Handshake, `hello-ok` stream filter, invoke dispatch, results, reconnect | about 3.5 KB | the filtered `deserializeJson` on a `WiFiClient` is already linked (weather) |
-| Settings, `/status`, pairing | about 1.5 KB | |
-| Settings page card | about 0.5 KB gzipped | counts twice |
-| **Total** | **about 14-15 KB** | **23-26 KB of update room; 24.6 KB is left** |
+Measured 2026-11-05 on `openclaw-native` against `faces-v2` with spec 042 (579,008 B,
+45,056 B of update room):
 
-Spec 042 (approved, on `faces-v2`) brought the room to 45,056 B, so the node fits with
-about 20 KB to spare. RAM: about 200 B of static data; heap while connected about 1.5-2 KB (the
-socket and its buffers), about 5 KB during the handshake (the connect frame, about 1 KB,
-and the signing workspace, about 3 KB, one after the other).
+| | Plain bytes | Notes |
+|---|---|---|
+| Ed25519 sign, SHA-512, SHA-256 (`src/ed25519.cpp`; constants in flash, SHA-256 sharing SHA-512's) | about 4.6 KB | estimated 7.1 KB |
+| The node (`src/openclaw.cpp`: WebSocket, handshake, `hello-ok` filter, invoke, reconnect, pairing, JSON written as text) | about 8 KB | |
+| The commands (`openclawCommand` in `integrations.cpp`, its messages) | about 5.2 KB | |
+| Settings (`Config`, `applySetting`, `/status`), the page's card, ArduinoJson code the node adds | about 4 KB | |
+| The weather's own inlined copy of `Config::save()`, removed (`configSave()`) | -1.5 KB | found on the way |
+| **Total** | **+22.7 KB** | `firmware.bin` 601,664 B, `.bin.gz` 426,724 B: **8,192 B of room left** |
+
+The estimate was 14-15 KB: what it missed is ArduinoJson's code at every member read
+or write (a `doc[F("key")]` costs 30-60 B where it is written) and the strings. The
+first build was +32.6 KB and did not fit; outgoing frames and results written as text
+(`jsonAdd`), reads through one path helper (`jsonAt`), dispatch by the command's place
+in the declared list, shorter messages and the shared `configSave()` brought it to
++22.7 KB.
+
+RAM: 99 B of static data and 32 B of strings. Heap: the signing workspace is 3.2 KB,
+taken and given back around each signature; the connect frame is about 1 KB; `/status`
+`openclawHeap` (what the socket and handshake took around it, sampled) was 1,352 B in
+the emulator. Stack (`-fstack-usage`): `readFrame` 576 B (the handshake, the reading and
+the invoke inlined into it), `openclawCommand` 272 B, the signing chain under it about
+700 B at most (`M` 320 B, `pack25519` 272 B); it all runs from `loop()`.
 
 ## Non-goals
 

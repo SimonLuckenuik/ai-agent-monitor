@@ -20,6 +20,7 @@ it belongs to ([specs](../../specs/README.md)).
 - [2026-10-31 The emulator models the clock's heap and stack](2026-10-31-emulator-memory-model.md)
 - [2026-10-31 The crash log is a binary file the API serves as it is](2026-10-31-crash-log-as-a-binary-file.md)
 - [2026-11-05 The clocks become native OpenClaw nodes, not bridged ones](2026-11-05-openclaw-native-node.md)
+- [2026-11-05 The OpenClaw node takes 22.7 KB of flash, leaving 8 KB of update room](2026-11-05-openclaw-node-flash.md)
 
 ## SmartClock-OSS (upstream, before the fork)
 

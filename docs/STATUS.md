@@ -71,9 +71,11 @@ parser costs about 9 KB: parse numbers with the face code's own (`readNumber`). 
 to find are listed in the [footprint](specifications/footprint.md) and the
 [roadmap](plans/roadmap.md).
 
-On branch `flash-room-042`, not merged yet: [spec 042](../specs/042-flash-room-no-loss/SPEC.md)
-(approved 2026-11-05, nothing lost): `firmware.bin` 579,008 B, `firmware.bin.gz` 410,558 B,
-**45,056 B of room**, kept for the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md)).
+On `faces-v2`, not released: [spec 042](../specs/042-flash-room-no-loss/SPEC.md) (nothing
+lost): `firmware.bin` 579,008 B, `firmware.bin.gz` 410,558 B, 45,056 B of room. On branch
+`openclaw-native`, with the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md)):
+601,664 B and 426,724 B, **8,192 B of room**
+([decision](decisions/2026-11-05-openclaw-node-flash.md)).
 
 ## Specs in flight
 
@@ -89,15 +91,14 @@ and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
 Closed 2026-11-03 after the checks on the clock: [018](../specs/018-first-run-on-the-clock/SPEC.md),
 [021](../specs/021-crash-report/SPEC.md), [022](../specs/022-emulator-device-memory/SPEC.md),
 [024](../specs/024-memory-headroom/SPEC.md), [025](../specs/025-ram-mqtt-mdns/SPEC.md).
-Approved, built on `flash-room-042`: [042](../specs/042-flash-room-no-loss/SPEC.md) (flash
-room, nothing lost). Draft: [041](../specs/041-openclaw-node/SPEC.md) (the clock as an
-OpenClaw node, on branch `openclaw-node`).
+On `faces-v2`, not released: [042](../specs/042-flash-room-no-loss/SPEC.md) (flash room,
+nothing lost). In progress on branch `openclaw-native`: [041](../specs/041-openclaw-node/SPEC.md)
+(the clock as an OpenClaw node: built, tested in the emulator against a stand-in gateway;
+not yet with a real gateway or on the clock).
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
-[040](../specs/040-scrolling-text/SPEC.md) (scrolling text),
-[041](../specs/041-openclaw-node/SPEC.md) (the clocks as native OpenClaw nodes, output
-only; needs about 10 KB of room won back; a bridge prototype on branch `openclaw-node`).
+[040](../specs/040-scrolling-text/SPEC.md) (scrolling text).
 Deferred: [034](../specs/034-face-languages/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 

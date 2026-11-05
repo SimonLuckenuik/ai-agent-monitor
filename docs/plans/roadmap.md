@@ -9,16 +9,12 @@ approved.
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
 2. [042 Flash room, nothing lost](../../specs/042-flash-room-no-loss/SPEC.md): approved
-   2026-11-05, built on `flash-room-042`; merge into `faces-v2`, release with the next
-   version.
-3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): draft
-   (native node chosen), needs 042's room; waiting for approval.
+   2026-11-05, on `faces-v2`; released with the next version.
+3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): approved
+   2026-11-05, built on branch `openclaw-native` and tested in the emulator (8 KB of update
+   room left after it); next: merge, a real OpenClaw Gateway and the clock, release 2.3.0.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
-3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): proposed,
-   output only, **a native node in the firmware** (owner, 2026-11-05). Needs about 10 KB
-   of update room won back first (MQTT, mDNS or a separate image: the owner's choice).
-   A tested bridge prototype on branch `openclaw-node` is the fallback.
 
 ## Waiting
 

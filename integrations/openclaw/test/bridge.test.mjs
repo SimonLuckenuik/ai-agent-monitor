@@ -174,7 +174,9 @@ test("brightness and built-in faces need the Home Assistant integration; custom 
   assert.equal(r.fc.brightness, 30);
   assert.equal((await r.gw.invoke(identity.deviceId, "clock.face.show", { builtin: "big-time" })).ok, true);
   assert.equal(r.fc.face, 7);
-  assert.equal((await r.gw.invoke(identity.deviceId, "clock.face.show", { builtin: 6 })).error.code, "INVALID_PARAMS");   // retired Flip
+  assert.equal((await r.gw.invoke(identity.deviceId, "clock.face.show", { builtin: "day-4" })).ok, true);   // id 6, the Day 4 tile
+  assert.equal(r.fc.face, 6);
+  assert.equal((await r.gw.invoke(identity.deviceId, "clock.face.show", { builtin: 14 })).error.code, "INVALID_PARAMS");   // custom, not built in
   const face = { bg: "#000", items: [{ type: "text", x: 10, y: 10, text: "{build}" }] };
   const saved = await r.gw.invoke(identity.deviceId, "clock.face.save", { name: "build", face, show: true });
   assert.equal(saved.ok, true, JSON.stringify(saved.error));
