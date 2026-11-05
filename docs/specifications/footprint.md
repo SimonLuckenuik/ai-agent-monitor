@@ -13,8 +13,13 @@ Since then: 2.1.0 (2026-11-03) had `firmware.bin` 597,104 B and `firmware.bin.gz
 sectors). Spec 036 brought it to 589,344 B and 418,987 B, **28,672 B of room**: zopfli
 for the update and the page, the page minified (23.9 KB gzipped instead of 27.5 KB, and
 it counts twice: it does not compress), and local time without newlib's `tzset` (its
-`sscanf` was about 4 KB). The breakdown is in specs/036-flash-room/RESEARCH.md. The table
-below is 1.9.1's.
+`sscanf` was about 4 KB). The breakdown is in specs/036-flash-room/RESEARCH.md. 2.2.0 had 593,328 B and
+420,307 B, 24,576 B of room; spec 042 (2026-11-05, nothing lost) brought it to **579,008 B
+and 410,558 B, 45,056 B of room**: ArduinoJson's parser compiled once per kind of input
+(`const char*` and `Stream`, through `parseJson()` in `src/json_parse.cpp`: 4.6 KB instead
+of 13.1 KB for nine copies) and the weather fetched over a plain `WiFiClient` without
+HTTPClient (4.3 KB). LTO was tried and grows the image (specs/042-flash-room-no-loss/RESEARCH.md).
+The table below is 1.9.1's.
 
 | Budget | Size | Used | Left |
 |---|---|---|---|
@@ -30,13 +35,13 @@ below is 1.9.1's.
 |---|---|---|
 | ESP8266 SDK, WiFi, lwIP, core, newlib | about 200 KB | precompiled SDK blobs about 138 KB; lwIP (tcp, dhcp, dns, etharp, pbuf) about 25 KB; core about 27 KB; `printf` 4.2 KB and `scanf` 3.4 KB; C++ exception unwinding 3.3 KB; `sinf`/`cosf` argument reduction 2.6 KB |
 | Custom faces engine | about 32 KB | items and text 11.2 KB, paths 7.4 KB, expressions 4.6 KB, the face loader 3.2 KB, paint 2.0 KB, colours 1.8 KB, `resolve` (placeholders) 3.9 KB, the faces API 1.8 KB |
-| ArduinoJson (shared: settings, faces, weather, API) | about 33 KB | each new kind of input (a String, a File, a filter) instantiates the parser again: about 2 KB each |
+| ArduinoJson (shared: settings, faces, weather, API) | about 33 KB | each new kind of input (a String, a File, a filter) instantiated the parser again, about 2 KB each; since spec 042 every read goes through `parseJson()` (`const char*` or `Stream`, always filtered): add no direct `deserializeJson` call |
 | Display (TFT_eSPI) | about 35 KB | driver 17.3 KB, sprites 6.3 KB, fonts 2, 4 and 6 7.7 KB |
 | Settings page | about 25 KB | `INDEX_HTML_GZ` 22.2 KB (72 KB of HTML), its handlers in `main.cpp` |
 | LittleFS | about 25 KB | `lfs.c` 17 KB, the Arduino wrapper 7.5 KB |
 | mDNS | about 4.5 KB | Our responder (`src/mdns.cpp`, `mdns_packet.cpp`, spec 027) with `WiFiUDP` and `UdpContext`. LEAmDNS took about 21 KB until 2.0.0: the compressed image fell by 11.3 KB, the plain one by 17.6 KB |
 | Web server | about 16 KB | ESP8266WebServer 9.5 KB, `std::function` handlers 4.5 KB, DNS server (setup portal) 1.9 KB |
-| Weather | about 19 KB | Open-Meteo fetch and parse 3.7 KB, HTTPClient 3.6 KB, weather icons `WI_DATA` 7.5 KB and their code 1.2 KB, Weather/Forecast/Day tiles faces 3.1 KB |
+| Weather | about 19 KB | Open-Meteo fetch and parse 3.7 KB, HTTPClient 3.6 KB (gone since spec 042: plain HTTP/1.0 on a `WiFiClient`), weather icons `WI_DATA` 7.5 KB and their code 1.2 KB, Weather/Forecast/Day tiles faces 3.1 KB |
 | Built-in faces | about 10 KB | Big tiles 2.3 KB, Day tiles 1.8 KB, Message face and icons 2.3 KB, Photo 1.2 KB, Agents 1.0 KB, Weather 0.8 KB, Classic 0.6 KB, Forecast 0.6 KB, HH:MM digits 0.6 KB |
 | Settings and palettes (`main.cpp`, `config.h`) | about 12 KB | palettes and roles 3.7 KB, config load and save 3.2 KB plus 1.7 KB of JSON, backup and restore 1.5 KB, sign-in 1.2 KB |
 | WiFi management (`main.cpp`) | 3.6 KB | |

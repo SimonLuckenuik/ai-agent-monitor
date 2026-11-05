@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-11-04. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-11-05. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
@@ -8,7 +8,12 @@ approved.
 
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
-2. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
+2. [042 Flash room, nothing lost](../../specs/042-flash-room-no-loss/SPEC.md): approved
+   2026-11-05, built on `flash-room-042`; merge into `faces-v2`, release with the next
+   version.
+3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): draft
+   (native node chosen), needs 042's room; waiting for approval.
+4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
 
 ## Waiting

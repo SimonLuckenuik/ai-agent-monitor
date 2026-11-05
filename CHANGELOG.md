@@ -7,6 +7,13 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Changed
+
+- **Smaller firmware, nothing lost** (spec 042): every JSON read goes through one
+  parser per kind of input instead of nine copies, and the weather is fetched without
+  the HTTPClient library. The image is 14.3 KB smaller and leaves 45 KB of update room
+  (24.6 KB before), room kept for the OpenClaw node (spec 041).
+
 ## 2.2.0 - 2026-11-04
 
 ### Upgrading

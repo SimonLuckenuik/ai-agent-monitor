@@ -1,6 +1,6 @@
 # 042 Flash room without losing a feature: one JSON parser, no HTTPClient
 
-Status: Draft (prototyped and measured 2026-11-05; waiting for approval)
+Status: Approved 2026-11-05 (prototyped and measured before approval)
 
 ## Problem
 

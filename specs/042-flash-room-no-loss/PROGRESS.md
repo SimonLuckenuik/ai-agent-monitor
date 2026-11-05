@@ -11,6 +11,8 @@
   modelled, so the clock's number is to confirm); an unknown city gives "City not found".
   `nm`: the parser is in the ELF for `const char*` and `Stream` only (4,573 B, from
   13,104 B). Integration suite: 34 cases pass.
-- Left: the footprint document and CHANGELOG once approved; on the clock after release,
+- 2026-11-05: approved by the owner. Footprint document, CHANGELOG (Unreleased),
+  STATUS, roadmap and the specs index updated; tests run again before the commit.
+- Left: merging into `faces-v2` (on the owner's go) and the release; on the clock after release,
   the weather, a city search and `weatherHeap`. The unreachable (-1) and no reply (-11)
   paths were not exercised.

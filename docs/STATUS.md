@@ -1,6 +1,6 @@
 # Current status and next work
 
-Updated: 2026-11-04. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-05. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
@@ -71,6 +71,10 @@ parser costs about 9 KB: parse numbers with the face code's own (`readNumber`). 
 to find are listed in the [footprint](specifications/footprint.md) and the
 [roadmap](plans/roadmap.md).
 
+On branch `flash-room-042`, not merged yet: [spec 042](../specs/042-flash-room-no-loss/SPEC.md)
+(approved 2026-11-05, nothing lost): `firmware.bin` 579,008 B, `firmware.bin.gz` 410,558 B,
+**45,056 B of room**, kept for the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md)).
+
 ## Specs in flight
 
 Done in 2.2.0, not yet seen on the clock: [039](../specs/039-animated-messages/SPEC.md)
@@ -85,6 +89,9 @@ and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
 Closed 2026-11-03 after the checks on the clock: [018](../specs/018-first-run-on-the-clock/SPEC.md),
 [021](../specs/021-crash-report/SPEC.md), [022](../specs/022-emulator-device-memory/SPEC.md),
 [024](../specs/024-memory-headroom/SPEC.md), [025](../specs/025-ram-mqtt-mdns/SPEC.md).
+Approved, built on `flash-room-042`: [042](../specs/042-flash-room-no-loss/SPEC.md) (flash
+room, nothing lost). Draft: [041](../specs/041-openclaw-node/SPEC.md) (the clock as an
+OpenClaw node, on branch `openclaw-node`).
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),

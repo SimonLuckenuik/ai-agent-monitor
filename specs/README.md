@@ -51,7 +51,7 @@ Next free number: **043**.
 | [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Done in 2.2.0 |
 | [040 Scrolling text](040-scrolling-text/SPEC.md) | Draft |
 | [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | Draft |
-| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Draft (prototyped) |
+| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Approved 2026-11-05 (built, not released) |
 
 ## Templates
 
