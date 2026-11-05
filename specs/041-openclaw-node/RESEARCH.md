@@ -208,3 +208,36 @@ just added), the fonts (part of the face format).
 **Reading:** the first two lines (JSON readers, the weather fetch) come to about 9-12 KB
 of room with nothing lost, which is about what the node needs on top of today's 24.6 KB.
 LTO could add more and is worth one try. The feature cuts are for if those fall short.
+
+## Testing a node without a real OpenClaw (2026-11-05)
+
+Asked: is there a library that plays the gateway, so the emulator page can call the clock
+as OpenClaw would and check it answers by the protocol?
+
+- **No ready-made node tester or conformance suite** exists. esp-openclaw-node's tests are
+  host unit tests of its C code; openclaw/openclaw's `scripts/dev/ios-node-e2e.ts` is an
+  operator-side script that needs a real gateway and a paired iOS device; its "live node
+  sweep" (per-command `node.invoke` checks) runs against a real Android phone.
+- **OpenClaw publishes the pieces to build one:**
+  - `@openclaw/gateway-protocol` (npm, MIT, one dependency: `typebox`): the protocol's
+    schemas with ready validators, among them `validateConnectParams`,
+    `validateRequestFrame`, `validateNodeInvokeResultParams`, `validateNodeEventParams`,
+    `validateNodePluginToolsUpdateParams`. A test gateway that runs the node's frames
+    through these checks them against OpenClaw's own definitions, not ours.
+  - `@openclaw/gateway-client` (npm, MIT): `buildDeviceAuthPayloadV3`, the exact bytes the
+    gateway verifies the signature over.
+  - The real gateway as a container: `ghcr.io/openclaw/openclaw:latest` (and the repository's
+    `docker-compose.yml`). Closest to the truth (pairing, approvals, the allow list,
+    `openclaw nodes invoke`), but heavy, and not yet tried headless (without a model
+    provider).
+- **Our own:** `integrations/openclaw/test/fake-gateway.mjs` already plays the gateway
+  (challenge, signature check with OpenClaw's payload builder, hello-ok, invoke round
+  trips), with no packages.
+
+Proposed for the emulator: a **test gateway** service beside the emulator (Node, the fake
+gateway plus `@openclaw/gateway-protocol`'s validators), and an **OpenClaw panel** on the
+emulator's screen page: the gateway URL to give the clock, the pairing state, a checklist
+of what the node sent (each frame valid by OpenClaw's schema, signature, protocol range,
+commands declared, no capabilities), a button per command with its parameters, the result,
+and the raw frames. The integration tests use the same service. The real gateway container
+stays an occasional manual check before a release.

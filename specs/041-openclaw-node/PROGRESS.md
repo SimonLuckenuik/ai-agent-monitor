@@ -46,6 +46,13 @@
   (blocked in this session as code from outside); planned in PLAN step 2 once it is
   vendored into `src/`.
 
+- 2026-11-05: the room: spec 042 (branch `flash-room-042`, prototyped) frees 20,480 B
+  with nothing lost (one JSON parser per input kind, the weather without HTTPClient): 45,056
+  B of room, enough for the node with about 20 KB to spare. LTO tried: +14.9 KB, dropped.
+- 2026-11-05: testing without a real OpenClaw (RESEARCH): no ready-made node tester
+  exists; OpenClaw's `@openclaw/gateway-protocol` (MIT) has the validators to build one.
+  Proposed: a test gateway service and an OpenClaw panel on the emulator page.
+
 ## Not verified
 
 - No real OpenClaw Gateway: whether the owner runs one is open. The fake gateway follows
