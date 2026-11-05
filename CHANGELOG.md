@@ -12,7 +12,8 @@ versioning. `/version` on the device reports the version it was built as; a
 - `integrations/openclaw/`: a prototype bridge that pairs each clock with an OpenClaw
   Gateway as a node, so OpenClaw's agents can show messages, set Moni's mood, switch
   faces and push face variables (screen output and read-only status only; spec 041,
-  draft). No firmware change.
+  draft). No firmware change. Spec 041 now plans the node in the firmware itself; the
+  bridge is its fallback and test tool.
 
 ## 2.2.0 - 2026-11-04
 

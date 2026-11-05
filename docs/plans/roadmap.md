@@ -11,8 +11,9 @@ approved.
 2. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
 3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): proposed,
-   output only (owner, 2026-11-05); a prototype bridge on branch `openclaw-node`, tested
-   against a fake gateway and the emulator. Waiting for approval and a real gateway.
+   output only, **a native node in the firmware** (owner, 2026-11-05). Needs about 10 KB
+   of update room won back first (MQTT, mDNS or a separate image: the owner's choice).
+   A tested bridge prototype on branch `openclaw-node` is the fallback.
 
 ## Waiting
 

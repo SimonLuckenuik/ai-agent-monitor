@@ -34,6 +34,18 @@
   container's 23:40, in night hours: dimmed, and Moni not drawn (by design at night). The
   test now turns night mode off.
 
+- 2026-11-05: the owner wants **a native node** ("an actual node, not just using a
+  bridge"). [Decision record](../../docs/decisions/2026-11-05-openclaw-native-node.md).
+  Measured: 24,576 B of update room on 2.2.0; TweetNaCl's Ed25519 + SHA-512 is 5,898 B on
+  the lx106 (Monocypher 20,576 B); signing about 0.4 s (estimated from the source); 24-27 KB
+  of heap free at rest on both clocks. The whole node comes to about 14-15 KB of code, 23-26
+  KB of room: about 10 KB of room must be won back first. SPEC and PLAN rewritten for the
+  native node; the bridge stays as a fallback and test tool. Still Draft: waiting for the
+  owner's choice of where the room comes from, and approval.
+- Not done: compiling or running the downloaded TweetNaCl to measure its stack and time
+  (blocked in this session as code from outside); planned in PLAN step 2 once it is
+  vendored into `src/`.
+
 ## Not verified
 
 - No real OpenClaw Gateway: whether the owner runs one is open. The fake gateway follows

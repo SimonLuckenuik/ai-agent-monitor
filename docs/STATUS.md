@@ -89,8 +89,8 @@ Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session s
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
 [040](../specs/040-scrolling-text/SPEC.md) (scrolling text),
-[041](../specs/041-openclaw-node/SPEC.md) (the clocks as OpenClaw nodes, output only: a
-prototype bridge on branch `openclaw-node`, no firmware change).
+[041](../specs/041-openclaw-node/SPEC.md) (the clocks as native OpenClaw nodes, output
+only; needs about 10 KB of room won back; a bridge prototype on branch `openclaw-node`).
 Deferred: [034](../specs/034-face-languages/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 

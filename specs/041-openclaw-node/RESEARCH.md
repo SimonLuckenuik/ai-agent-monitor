@@ -108,7 +108,7 @@ Moni (spec 039) is drawn for the icons `waiting` (waves), `done` (hops) and `err
 the M5Stack Dial example) map to those three; `neutral` and `sleepy` have no Moni pose, so
 they clear the mood message.
 
-## A native node (option A), measured against the room left
+## A native node (option A), first estimate (superseded by the measurements below)
 
 - Code it needs: Ed25519 sign + SHA-512 (no Ed25519 in the core's BearSSL; a compact C
   implementation such as Monocypher's or orlp/ed25519 is about 8-12 KB of code), a
@@ -132,3 +132,43 @@ they clear the mood message.
 | Bridge in Python | Needs two packages; Python is not guaranteed on the gateway's machine |
 | One node for both clocks | A command would need a `clock` parameter, and the gateway's per-node approval, naming and status would not tell the clocks apart. One node per clock fits `nodes status` and `--node "Desk clock"` |
 | MCP server or OpenClaw plugin instead of a node | Possible (the Claude Code plugin already does this for Claude), but not what spec 041 asked: the node model gives per-device pairing, approval and status in OpenClaw's own UI |
+
+## The native node, measured (2026-11-05, after the owner chose it)
+
+- **Room on 2.2.0 (fc657da):** `firmware.bin` 593,328 B, `firmware.bin.gz` 420,307 B; the
+  size guard's room for the image is 618,496 B, so 24,576 B are left (the image rounded to
+  4 KB sectors).
+- **Ed25519 candidates**, each built with the clock's compiler (xtensa-lx106 gcc 10.3,
+  `-Os -mlongcalls -ffunction-sections -fdata-sections`, `--gc-sections`, entry a function
+  that derives a key pair from a seed and signs), counting all linked symbols except
+  `memcpy`, `memset` and `__umulsidi3` (already in the firmware):
+  - TweetNaCl 20140427 (public domain): **5,898 B** (largest: SHA-512 blocks 966 B, its
+    constants 640 B, `crypto_sign` 562 B, `modL` 541 B).
+  - Monocypher 4 with its optional SHA-512 Ed25519: 20,576 B (`fe_mul` 6 KB, `fe_sq`
+    3.7 KB, comb tables 1.9 KB). Too big.
+  - c25519 (Daniel Beer): the download link is gone (404); not measured.
+- **Signing time** (TweetNaCl, from its source: running the downloaded code on the PC was
+  not allowed in this session, so not measured): one signature is one 256-step scalar
+  multiplication with two point additions of 10 field multiplications each (5,120), plus a
+  square-and-multiply inversion (506): about 5,630 field multiplications. Each is 256
+  64-bit multiply-adds, done in software on the lx106 (it has no 32x32->64 multiply: libgcc
+  builds one from 16-bit products), about 40 cycles each, plus carries: about 11,000
+  cycles. In all about 62 million cycles, **about 0.4 s at 160 MHz** (0.3-0.8 s with the
+  uncertainty). For scale, rweather's Ed25519 signs in 195 ms on an 84 MHz Cortex-M3,
+  which has the 64-bit multiply.
+- **Stack:** TweetNaCl keeps its numbers on the stack: `crypto_sign` about 1.2 KB
+  (`x[64]` of 64-bit, `p[4]`), `scalarbase` 0.5 KB, `add` 9 field elements (1.15 KB),
+  `M` 248 B: about 3.2 KB at the deepest. The clock's 4 KB stack has 800-1,040 B to spare
+  at its deepest today, so the temporaries move to a heap workspace (about 3 KB, during
+  signing only).
+- **Already linked, reusable:** ArduinoJson's filtered parser reading from a
+  `WiFiClient` (`JsonDeserializer<Reader<WiFiClient>>::parse*<Filter>`, used by the
+  weather), so `hello-ok` and invoke requests can be read straight off the socket, keeping
+  only the fields needed; `base64::encode` (the WebSocket key; base64url by swapping two
+  characters). Not linked: SHA-256, SHA-1 (the client can check the 101 reply without
+  checking `Sec-WebSocket-Accept`).
+- **Heap on the clocks** (`/status`, 2026-11-05, 2.2.0, up 12.5 h): .57 `heap` 26,920 B,
+  `heapLow` 18,912 B; .229 23,960 B, 16,464 B. More than the 10 KB assumed in the first
+  draft.
+- **TLS:** BearSSL with a certificate check needs well over 20 KB of heap for its buffers,
+  and its code is not linked: `wss://` is out.

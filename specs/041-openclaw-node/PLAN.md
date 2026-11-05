@@ -1,48 +1,61 @@
 # Plan
 
-Option B, a bridge in `integrations/openclaw/`. No firmware change, so no release of the
-firmware; the bridge ships with the repository (and the CHANGELOG) once approved.
+A native node in the firmware (the owner's choice, 2026-11-05). Nothing below is built
+before the spec is approved and open question 1 (where the room comes from) is answered.
+Lands in a MINOR release (2.3.0): a new feature, installed as the usual `.bin.gz`.
 
 ## Steps
 
-1. **Protocol** (`lib/protocol.mjs`): Ed25519 identity from a stored seed, device id,
-   v3 payload and signature, the `connect` request, setup-code decoding, and
-   `NodeConnection` (challenge, hello-ok, device token, invoke loop, timeouts,
-   reconnect back-off). *Check:* unit tests, including the RFC 8032 vector and OpenClaw's
-   own payload builder. **Done (prototype).**
-2. **Clock client** (`lib/clock.mjs`): the clock's HTTP API with errors turned into
-   `INVALID_PARAMS`, `NOT_CONFIGURED`, `UNAVAILABLE`, `CLOCK_ERROR`. **Done (prototype).**
-3. **Commands** (`lib/commands.mjs`): the table in SPEC, parameter checks, clipping, the
-   mood map. *Check:* round trips through the fake gateway and fake clock. **Done
-   (prototype).**
-4. **CLI and state** (`bridge.mjs`): config (`clocks.json`, `env:` secrets), one
-   connection per clock, `pair <clock> <code>`, `info` (device ids, the allow-list block),
-   state files written atomically with mode 600. **Done (prototype).**
-5. **Tests** (`test/`): `bridge.test.mjs` (fake gateway: a small RFC 6455 server that
-   checks the signature; fake clock with the firmware's auth rules) and
-   `emulator.test.mjs` (the firmware in Docker, screenshots). **Done (prototype).**
-6. **With a real gateway** (needs the owner's gateway): pair both clocks, approve the
-   surface, add the allow list, invoke each command from `openclaw nodes invoke` and from
-   an agent and a scheduled job; note anything the fake gateway got wrong (error codes on
-   a pending pairing, `hello-ok` size, tick handling). **Not done.**
-7. **Docs on approval:** README (written), `docs/specifications/integrations-api.md` (a
-   short "OpenClaw" section pointing at the bridge), CHANGELOG `## Unreleased`, roadmap,
-   STATUS, specs/README. The Claude Code skill is not affected (no API change).
-8. **Later, if wanted:** agent-visible plugin tools (`node.pluginTools.update`) or a node
-   skill describing the clock's face format; a firmware change letting `/api/set` take the
-   faces API key for `theme` and `lcd_brightness`.
+1. **Win the room back** as decided (open question 1), alone, in its own commit: measure
+   with `pio run` (the room must reach about 35 KB), update the footprint document, the
+   settings page and docs for what goes away. *Check:* unit, safety, the integration suite.
+2. **Signing** (`src/ed25519.c`, `src/ed25519.h`): TweetNaCl's sign and SHA-512 only
+   (public domain), its temporaries moved from the stack to one heap workspace, a `yield()`
+   in the 256-step loop; SHA-256 for the device id. *Check:* host unit tests with RFC 8032
+   vectors 1-3 and a v3 payload signed here and verified by Node's `crypto` (the bridge's
+   tests); `-fstack-usage` for the frame sizes; size with `pio run`.
+3. **WebSocket client** (`src/ws.cpp`): connect, `Upgrade` handshake (random key; the
+   reply checked for 101), masked text frames out, frames in (text, ping -> pong, close),
+   a frame header reader that hands the payload to the caller as the `WiFiClient` stream.
+   *Check:* host tests on frame encoding and decoding; the emulator against the fake gateway.
+4. **The node** (`src/openclaw.cpp`): state machine (off, waiting for memory, connecting,
+   challenge, connect sent, connected, pending, refused), the connect frame (ArduinoJson
+   to a `String`), `hello-ok` through the existing filtered `deserializeJson` on the
+   stream, the device token saved, `node.invoke.request` parsed with a filter, the command
+   table calling the existing message, variable, face and brightness code, results sent,
+   reconnect back-off, the heap guard, `/status` fields.
+   *Check:* the integration case below.
+5. **Settings and page:** `ocon`, `ocurl`, `ocname`, `ocpair`, `ocforget` in
+   `applySetting()`, `configJson()`, `Config` (secrets not exported), a card under
+   Integrations with the device id, the state and the allow-list block to copy.
+   *Check:* `tests/web`, the settings reference, the page screenshot.
+6. **Emulator and tests:** a fake gateway for the integration tests (Python, standard
+   library, the same checks as `integrations/openclaw/test/fake-gateway.mjs`), a case
+   `openclaw_node`: pair with a setup code, reconnect with the device token, every
+   command, a refused token, a gateway that disappears; screenshots of Moni's moods via
+   `face.set`. New sources in `emulator/build.sh` and the host test copy lists.
+7. **Measure:** flash (`pio run`, link map), heap during the handshake and while connected
+   (`/status`, the emulator's Device panel), the stack (`-fstack-usage`), the signing time
+   in the emulator's log (modelled) and, on the owner's go, on a clock.
+8. **With a real gateway** (the owner's): pair both clocks, approve, allow, invoke from
+   `openclaw nodes invoke`, an agent and a scheduled job.
+9. **Docs and release:** `docs/specifications/integrations-api.md` (an OpenClaw section),
+   `settings.md`, README, CHANGELOG, STATUS, roadmap; the Claude Code skill only if its
+   API reference mentions the new `/status` fields. Release 2.3.0 by the usual steps; the
+   owner installs it.
 
 ## How each is checked
 
 | What | How |
 |---|---|
-| Handshake and signature | `node --test test/bridge.test.mjs` (fake gateway rebuilds the payload with OpenClaw's builder and verifies) |
-| Commands | Same file, against the fake clock; `test/emulator.test.mjs` against the firmware |
-| Screens | Emulator screenshots after each step (`AAM_SHOTS`) |
-| Real gateway | Step 6, with the owner |
-| The clocks | Not touched by the tests; on the owner's go, `display.show` to one clock |
+| Signing | RFC 8032 vectors in `tests/unit`; a signature checked by Node's Ed25519 |
+| Frames and handshake | Host tests; the emulator against the fake gateway |
+| Commands | The integration case `openclaw_node`, screenshots |
+| Flash, heap, stack | `pio run` and the size guard; `/status`; `-fstack-usage` |
+| Real gateway, real clock | Step 8 and the clock check after release, with the owner |
 
-## Lands in
+## Kept from the bridge
 
-The repository only (no firmware version). The bridge's own version is in its
-`package.json` (0.1.0 for the prototype).
+`integrations/openclaw/` stays on the branch: its fake gateway checks the firmware node's
+signatures in step 2, and it remains a fallback if the room cannot be found. Whether it
+ships with the release is decided at step 9.

@@ -1,145 +1,158 @@
 # 041 The clock as an OpenClaw node
 
-Status: Draft (proposed 2026-11-05; output only decided 2026-11-05; goals not yet approved;
-a prototype bridge exists on branch `openclaw-node`)
+Status: Draft (proposed 2026-11-05; output only decided 2026-11-05; native node chosen by
+the owner 2026-11-05; goals and the source of the flash room not yet approved)
 
 ## Problem
 
 [esp-openclaw-node](https://github.com/openclaw/esp-openclaw-node) (Apache-2.0, commit
 38c5ab2) runs ESP32 boards as OpenClaw *nodes*: the board keeps a WebSocket to an
 OpenClaw Gateway, says which commands it offers, and the gateway's agents call them
-(`display.show`, `face.set`, `device.status`...). The owner would like the clocks to be
-nodes too, so OpenClaw's agents (in a chat, a scheduled job or a heartbeat) can put
-things on them.
+(`display.show`, `face.set`, `device.status`...). The owner wants the clocks to be nodes
+too, so OpenClaw's agents (in a chat, a scheduled job or a heartbeat) can put things on
+them.
 
-It cannot run as is: it is ESP-IDF 5.x for the ESP32-S3/P4 (libsodium, cJSON, FreeRTOS
-tasks, PSRAM on every listed board), and the clock is an ESP8266 on the Arduino core
-with about 10 KB of heap free at rest and about 25 KB of update room left after 2.2.0
-(each KB of code costs about 1.7 KB of room: [footprint](../../docs/specifications/footprint.md)).
+Their code cannot run as is: it is ESP-IDF 5.x for the ESP32-S3/P4 (libsodium, cJSON,
+FreeRTOS tasks, PSRAM), and the clock is an ESP8266 on the Arduino core.
 
-## Decision: output only (owner, 2026-11-05)
+## Decisions so far
 
-Only things shown on the screen, plus read-only status where it helps. No input of any
-kind: no buttons, no touch, no sensors sent to the gateway, no `node.event`, no files
-read from the clock, no settings changed beyond what changes the picture (brightness,
-which face).
+- **Output only** (owner, 2026-11-05): things shown on the screen, plus read-only status.
+  No input of any kind: no buttons, touch or sensors sent to the gateway, no `node.event`,
+  no files read from the clock, no settings changed beyond what changes the picture
+  (brightness, which face).
+- **A native node, in the firmware** (owner, 2026-11-05; [decision
+  record](../../docs/decisions/2026-11-05-openclaw-native-node.md)): the clock speaks the
+  gateway protocol itself, with no program beside the gateway. The bridge prototyped first
+  (`integrations/openclaw/`) stays as a fallback and a test tool.
 
 ## What a node is
 
-Details and sources in [RESEARCH.md](RESEARCH.md). In short: an Ed25519 identity; a
-WebSocket to the gateway; `connect.challenge` answered by a signed `connect` (protocol
-3-4, client `node-host`, role `node`, the commands offered); a device token from
-`hello-ok`; then `node.invoke.request` events answered by `node.invoke.result`. The
-gateway runs a command only when the node declares it, the owner approved the node's
-command surface (`openclaw nodes approve`), and the command is on the gateway's allow
-list: commands outside OpenClaw's platform defaults, which includes every clock
-command, must be added to `gateway.nodes.commands.allow`.
+Details and sources in [RESEARCH.md](RESEARCH.md). An Ed25519 identity; one WebSocket to
+the gateway; `connect.challenge` {nonce, ts} answered by a signed `connect` (protocol 3-4,
+client `node-host`, role `node`, the commands offered); a device token from `hello-ok`;
+then `node.invoke.request` events answered by `node.invoke.result`. The gateway runs a
+command only when the node declares it, the owner approved the node's command surface
+(`openclaw nodes approve`), and the command is in `gateway.nodes.commands.allow` (none of
+the clock's commands are in OpenClaw's platform defaults).
 
 ## Goals (to agree)
 
-1. **A bridge, not firmware** (option B below): `integrations/openclaw/`, a program
-   that runs beside the gateway (Node 22+, no packages), pairs each configured clock as
-   an OpenClaw node of its own, and turns each command into the clock's HTTP API.
-   Works with 2.2.0 as installed, on both clocks.
-2. **The commands** in the table below, with OpenClaw's own names and parameters where
-   they exist, and errors an agent can act on.
-3. **Pairing both ways** OpenClaw offers: the gateway token with `openclaw devices
-   approve` + `openclaw nodes approve`, or a setup code (`openclaw qr`). Keys and the
-   device token are kept on the bridge's machine, one file per clock; a setup code's
-   bootstrap token is used once and dropped; the operator token a setup code hands off
-   is never kept.
-4. **Tests:** unit and round-trip tests against a fake gateway (it checks the signature
-   with OpenClaw's own payload builder) and a fake clock; the same commands against the
-   firmware in the emulator.
-5. **Docs:** the bridge's README (gateway steps, the allow list, clock settings);
-   option A recorded with its measurements, not built.
+1. **The firmware is the node:** each clock connects to the configured gateway over
+   `ws://`, pairs once, reconnects on its own, and answers the commands below by calling
+   its own code (messages, faces, variables, brightness): no HTTP round trip, and no
+   *Home Assistant dashboards* needed for brightness or built-in faces.
+2. **Pairing from the settings page:** Integrations -> OpenClaw: the gateway's address,
+   then a setup code pasted from `openclaw qr --setup-code-only` (or the gateway token);
+   the page shows the device id and the state (off, connecting, waiting for approval,
+   connected, refused and why).
+3. **Fits the flash** with room won back first (open question 1), and **the heap**: it
+   waits for enough free heap before connecting, as MQTT does, and holds one socket.
+4. **Tests:** host unit tests for signing (RFC 8032 vectors) and the frame and handshake
+   code; an integration case where the emulator's firmware pairs with a fake gateway and
+   takes every command; screenshots.
+5. **Docs:** integrations API reference, settings reference, README, the gateway steps.
 
 ## Requirements
 
-1. One node per clock, each with its own Ed25519 key, shown under its `displayName` in
-   `openclaw nodes status`.
+1. Identity: an Ed25519 seed made on the clock (`ESP.random()`, the hardware RNG) when
+   pairing starts; the public key and device id (SHA-256 of the key, hex) computed once and
+   stored with it in `/config.json`. Secrets (seed, device token, gateway token) are never
+   exported in backups and never shown again, like the faces API key.
 2. Connect as the gateway expects: protocol 3-4, client id `node-host`, mode and role
-   `node`, no scopes, v3 signature over the challenge's nonce and `ts`.
-3. Save the device token from `hello-ok` and reconnect with it; reconnect with back-off
-   (1 s to 30 s); keep retrying a refused or pending pairing every 30 s so an approval is
-   picked up without a restart.
-4. Never store a bootstrap token after use, nor any operator token.
-5. Answer every `node.invoke.request` with `node.invoke.result`, within the request's
-   `timeoutMs` (20 s at most); unknown commands and bad parameters are coded errors, not
-   silence.
-6. Commands validate their parameters (unknown fields refused, so typos surface) and
-   respect the clock's limits (title 40, text 160 characters: longer text is shortened and
-   reported as `clipped`).
-7. No call the clock does not already take; no sign-in with the clock's password.
-8. Read-only commands make GET requests only.
+   `node`, no scopes, platform `esp8266`, device family `AI Agent Monitor`, model `SD PRO`,
+   the v3 signature over the challenge's nonce and `ts`.
+3. Keep only the node device token from `hello-ok`; never store the setup code's bootstrap
+   token after use, nor the operator token a setup code hands off.
+4. Read `hello-ok` (which carries a large snapshot) as a stream, keeping only the fields
+   used: never the whole frame in memory. Frames over 8 KB other than `hello-ok` are
+   skipped.
+5. Reconnect with back-off (5 s to 5 min); retry a pending pairing every 30 s so an
+   approval is picked up; stop after a refused credential until the settings change.
+6. Connect only with at least 12 KB free heap and the largest block at least 6 KB
+   (measured and tuned in the emulator and on the clock); signing runs at the top of
+   `loop()` with its working memory on the heap (about 3 KB, freed after), never on the
+   4 KB stack.
+7. Answer every `node.invoke.request` with `node.invoke.result`; unknown commands and bad
+   parameters are coded errors (`INVALID_PARAMS`, `UNKNOWN_COMMAND`, `UNAVAILABLE`).
+8. A gateway that is gone costs nothing but the reconnect attempts: faces, the web server
+   and MQTT go on as before. Off by default.
+9. No input: the node declares no capability (`caps` empty) and sends no `node.event`.
 
 ## The commands
 
-| Command | Params | Clock API |
+| Command | Params | On the clock |
 |---|---|---|
-| `display.show` | `text`; optional `heading` (title), `icon`, `color`, `pct`, `ttl`, `id`, `show` (true) | `POST /api/message` |
-| `display.clear` | optional `id`, `all` | `DELETE /api/message` (the bridge's own message and mood unless told otherwise) |
-| `display.status` | | `GET /status`, `GET /api/message` |
-| `display.brightness` | `percent` 0-100 | `GET /api/set?key=lcd_brightness` (needs *Home Assistant dashboards* on) |
-| `face.set` | `mood` (`neutral happy excited thinking sleepy sad`), optional `text` | A message with id `mood`: happy/excited -> `done` (Moni hops), thinking -> `waiting` (waves), sad -> `error` (slumps); neutral/sleepy delete it |
-| `device.info` | | `GET /status`: model, firmware, build, host |
-| `device.status` | | `GET /status`: uptime, heap, RSSI, IP, crashes, safe mode |
-| `clock.face.show` | `name` (custom) or `builtin` (name or id) | `POST /api/faces/show` (key) or `GET /api/set?key=theme` (*Home Assistant dashboards*) |
-| `clock.face.save` | `name`, `face`, optional `show` | `POST /api/faces` (key) |
-| `clock.faces.list` | | `GET /api/faces` (key) |
-| `clock.vars.set` | `vars`, optional `ttl`, `history`, `add`, `persist` | `POST /api/faces/vars` (key) |
-| Not offered | input, talk, buzzer, camera, Canvas, GPIO, files, settings, firmware | Output only; no hardware for most |
+| `display.show` | `text`; optional `heading`, `icon`, `color`, `pct`, `ttl`, `id`, `show` (true) | An agent message (as `POST /api/message`) |
+| `display.clear` | optional `id`, `all` | Removes the node's message and mood, or that one, or all |
+| `display.status` | | The face shown, the messages waiting |
+| `display.brightness` | `percent` 0-100 | The backlight (the setting, saved) |
+| `face.set` | `mood` (`neutral happy excited thinking sleepy sad`), optional `text` | Moni: happy/excited -> `done` (hops), thinking -> `waiting` (waves), sad -> `error` (slumps); neutral/sleepy remove the mood message |
+| `device.info` | | Model, firmware, build, host name |
+| `device.status` | | Uptime, heap, RSSI, IP, crashes, safe mode |
+| `clock.face.show` | `name` (custom) or `builtin` (name or id) | Shows that face |
+| `clock.vars.set` | `vars`, optional `ttl`, `history`, `add`, `persist` | Face variables |
+| `clock.faces.list` | | Custom face names, the one showing |
+| Left out of the node | `clock.face.save` | A 4 KB face as an escaped string inside a frame is about 6 KB of heap at once; faces are saved over HTTP or MQTT (the bridge keeps it). Open question 4 |
 
-`display.show`, `display.brightness` and `face.set` take the ESP32 nodes' parameters
-(`heading`/`text`, `percent`, `mood`), so agents that know those nodes know these.
+Parameters and results are the bridge's (see `integrations/openclaw/README.md`), so the
+two are interchangeable for agents.
 
-## Two ways to build it
+## Settings
 
-### A. In the firmware (a native node): not built
-
-Needs Ed25519 with SHA-512, a WebSocket client, the handshake with a reader that skips
-`hello-ok`'s snapshot, dispatch, and a pairing page: about 18-22 KB of code, so 30-37 KB
-of update room, **more than the 25 KB left**, and a second long-lived socket in about
-10 KB of free heap (`ws://` only: no room for TLS). Recorded, not built, unless about
-10 KB of code is won back first ([RESEARCH.md](RESEARCH.md)).
-
-### B. A bridge beside the gateway: recommended, prototyped
-
-- **Cost on the clock:** none. Firmware 2.2.0 as installed.
-- **Where:** on the gateway's machine (or any machine that reaches both). If it stops,
-  the clocks stop answering OpenClaw, as with the Claude Code plugin.
-- **Secrets:** the clock holds none. The bridge holds one Ed25519 seed and device token
-  per clock, and the faces API keys, in its config and `state/` folder.
-
-## Clock settings the commands need (no firmware change)
-
-| Commands | Needs |
+| Key | Meaning |
 |---|---|
-| Messages, moods, status | Nothing (open on the network, as today) |
-| Custom faces, variables | Integrations -> Custom faces on, its API key in the bridge's config |
-| Brightness, built-in faces | Integrations -> Home Assistant dashboards on, which also opens photos and the face choice to the network |
+| `ocon` | OpenClaw node on/off (off) |
+| `ocurl` | The gateway, `ws://host:port` (`ws://` only; port 18789 by default) |
+| `ocname` | The name shown in `openclaw nodes status` (the host name) |
+| `ocpair` (write only) | A setup code, or `token:<gateway token>`: starts pairing |
+| `ocforget` (write only) | Forgets the key and token: the node pairs again from scratch |
+| Stored, never exported | `ocseed`, `ocpub`, `ocid`, `octoken` |
+
+`/status` gains `openclaw`: `off`, `waiting for memory`, `connecting`, `pairing pending`,
+`connected`, `refused: <reason>`; and `openclawHeap`, what connecting took.
 
 ## Flash and RAM budget
 
-None: no firmware change. The bridge is about 600 lines of JavaScript on the gateway's
-machine.
+| | Code (plain) | Notes |
+|---|---|---|
+| Ed25519 sign + SHA-512 (TweetNaCl, working memory moved to the heap) | 5.9 KB | measured for the lx106 |
+| SHA-256 (device id, at pairing) | about 1.2 KB | not linked today |
+| WebSocket client (handshake, masked text frames, ping/pong, close) | about 2 KB | `base64::encode` already linked |
+| Handshake, `hello-ok` stream filter, invoke dispatch, results, reconnect | about 3.5 KB | the filtered `deserializeJson` on a `WiFiClient` is already linked (weather) |
+| Settings, `/status`, pairing | about 1.5 KB | |
+| Settings page card | about 0.5 KB gzipped | counts twice |
+| **Total** | **about 14-15 KB** | **23-26 KB of update room; 24.6 KB is left** |
+
+It does not fit with any margin: about 10 KB of room must be won back first (open
+question 1). RAM: about 200 B of static data; heap while connected about 1.5-2 KB (the
+socket and its buffers), about 5 KB during the handshake (the connect frame, about 1 KB,
+and the signing workspace, about 3 KB, one after the other).
 
 ## Non-goals
 
-- Running their ESP-IDF code on the ESP8266; a native node (option A) for now.
-- Any input from the clock; audio, camera, Canvas, touch.
-- Publishing the commands as agent-visible plugin tools (`node.pluginTools.update`) or a
-  node skill (`node.skills.update`): possible later, after the plain node works with a
-  real gateway.
+- TLS (`wss://`): neither the flash nor the heap allows it. The gateway must be reachable
+  over plain `ws://` from the clocks' network.
+- Input of any kind; audio, camera, Canvas, touch.
+- Agent-visible plugin tools or a node skill (`node.pluginTools.update`,
+  `node.skills.update`): possible later.
+- Running their ESP-IDF code.
 
 ## Open questions
 
-- Do you run an OpenClaw Gateway today, and where (this PC, a server, the NAS)? The
-  prototype is tested against a fake gateway only; a real one is needed to finish.
-- Brightness and built-in faces need *Home Assistant dashboards* on (no API key for
-  `/api/set`). Accept that, leave those two commands out, or a small firmware change
-  later so `/api/set`'s `theme` and `lcd_brightness` take the faces API key (a few
-  hundred bytes)?
-- `face.set`'s `neutral` and `sleepy` clear Moni (it has no pose for them). Fine, or
-  should one of them show a calm Moni (a firmware change: a new icon)?
-- Pair with the gateway token or with setup codes by default (the README offers both)?
+1. **Where the room comes from** (about 10 KB of room, so 6 KB of code or more):
+   - drop MQTT (about 7 KB of code, about 11 KB of room; the clock at .229 shows MQTT
+     "cannot connect (-2)", the one at .57 has it off), or
+   - drop mDNS (about 4.5 KB of code, about 7 KB of room; the clocks are then reached by
+     IP only), or
+   - a build option: images with the node and without MQTT, beside the usual one (two
+     release files), or
+   - something else you would rather lose.
+2. Do you run an OpenClaw Gateway today, and where? It has to be reachable from the IoT
+   VLAN (192.168.66.x) over `ws://` (`gateway.bind lan`, a firewall rule), and a real one is
+   needed to finish.
+3. Signing takes about 0.4 s once per connection (estimated; measured on the clock once
+   built): the screen pauses that long. Acceptable?
+4. `clock.face.save` left out of the native node (heap): fine?
+5. `face.set`'s `neutral` and `sleepy` clear Moni (no pose for them): fine, or a calm Moni
+   (a new icon, about 300 B)?
