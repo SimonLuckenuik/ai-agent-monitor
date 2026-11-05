@@ -34,7 +34,7 @@ config = re.sub(r"\n  bool load\(\) \{.*?\n  \}\n", "\n", config, flags=re.S)
 config = re.sub(r"\n  bool save\(\) \{.*?\n  \}\n", "\n", config, flags=re.S)
 config = config.replace("#include <ArduinoJson.h>\n", "").replace("#include <LittleFS.h>\n", "")
 (build / "config.h").write_text(config, encoding="utf-8")
-for name in ("faces.cpp", "faces.h", "mono_glyphs.h", "outline_glyphs.h", "weather.h", "weather_icons.h", "integrations.h", "ascii.h", "ascii.cpp"):
+for name in ("faces.cpp", "faces.h", "mono_glyphs.h", "outline_glyphs.h", "weather.h", "weather_icons.h", "integrations.h", "ascii.h", "ascii.cpp", "json_parse.h", "json_parse.cpp"):
     shutil.copy(root / "src" / name, build / name)
 # tjpgd.h hand-rolls stdint types under _WIN32; Zig's headers already define them.
 header = (tjpg / "tjpgd.h").read_text(encoding="utf-8").replace("#if defined(_WIN32)", "#if 0")
@@ -59,7 +59,7 @@ inc = [f"-I{build}", f"-I{here / 'mock'}", f"-I{tft}", f"-I{tjpg}", f"-I{libs / 
 obj = build / "tjpgd.o"
 subprocess.run([zig, "cc", "-c", "-O2", f"-I{tjpg}", str(tjpg / "tjpgd.c"), "-o", str(obj)], check=True, env=env)
 exe = build / "preview.exe"
-subprocess.run([zig, "c++", "-std=c++17", "-O2", "-Wall", "-Wno-nullability-completeness", *inc, str(here / "preview.cpp"), str(build / "faces.cpp"), str(build / "ascii.cpp"),
+subprocess.run([zig, "c++", "-std=c++17", "-O2", "-Wall", "-Wno-nullability-completeness", *inc, str(here / "preview.cpp"), str(build / "faces.cpp"), str(build / "ascii.cpp"), str(build / "json_parse.cpp"),
                 str(here / "mock" / "TFT_eSPI.cpp"), str(obj), "-o", str(exe)], check=True, env=env)
 # FACE_PREVIEW_PHOTOS=<dir> renders your own JPEGs (e.g. ones the settings page produced).
 photo_dir = os.environ.get("FACE_PREVIEW_PHOTOS") or str(photos)

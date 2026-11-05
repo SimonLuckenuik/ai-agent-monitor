@@ -6,15 +6,15 @@
 
 enum SeekMode { SeekSet = 0, SeekCur = 1, SeekEnd = 2 };
 
-class File {
+class File : public Stream {
   FILE* f = nullptr;
  public:
   File() = default;
   explicit File(FILE* h) : f(h) {}
   explicit operator bool() const { return f != nullptr; }
   size_t read(uint8_t* buf, size_t n) { return f ? fread(buf, 1, n, f) : 0; }
-  int read() { int c = f ? fgetc(f) : EOF; return c == EOF ? -1 : c; }   // ArduinoJson reader
-  size_t readBytes(char* buf, size_t n) { return f ? fread(buf, 1, n, f) : 0; }
+  int read() override { int c = f ? fgetc(f) : EOF; return c == EOF ? -1 : c; }   // ArduinoJson reader
+  size_t readBytes(char* buf, size_t n) override { return f ? fread(buf, 1, n, f) : 0; }
   bool seek(long n, SeekMode m) { return f && fseek(f, n, m == SeekSet ? SEEK_SET : m == SeekCur ? SEEK_CUR : SEEK_END) == 0; }
   void close() { if (f) fclose(f); f = nullptr; }
 };

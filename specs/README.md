@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **042**.
+Next free number: **043**.
 
 | Spec | Status |
 |---|---|
@@ -51,6 +51,7 @@ Next free number: **042**.
 | [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Done in 2.2.0 |
 | [040 Scrolling text](040-scrolling-text/SPEC.md) | Draft |
 | [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | Draft |
+| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Draft (prototyped) |
 
 ## Templates
 

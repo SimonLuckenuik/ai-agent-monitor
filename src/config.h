@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include "json_parse.h"
 #include <LittleFS.h>
 #include "faces.h"
 
@@ -105,7 +106,7 @@ struct Config {
     File f = LittleFS.open("/config.json", "r");
     if (!f) return false;
     JsonDocument doc;
-    if (deserializeJson(doc, f)) { f.close(); return false; }
+    if (parseJson(doc, f)) { f.close(); return false; }
     f.close();
     ssid        = doc[F("ssid")]        | ssid;
     password    = doc[F("password")]    | password;

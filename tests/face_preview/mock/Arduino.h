@@ -16,6 +16,13 @@
 #define FPSTR(p) (p)
 #define PI 3.1415926535897932384626433832795
 #define DEG_TO_RAD 0.017453292519943295769236907684886
+// What src/json_parse.h reads files through (the core's Stream, reduced to ArduinoJson's needs).
+class Stream {
+ public:
+  virtual ~Stream() = default;
+  virtual int read() = 0;
+  virtual size_t readBytes(char* buf, size_t n) = 0;
+};
 inline uint8_t pgm_read_byte(const void* p) { return *static_cast<const uint8_t*>(p); }
 inline uint16_t pgm_read_word(const void* p) { return *static_cast<const uint16_t*>(p); }
 

@@ -14,6 +14,7 @@
 #include "integrations.h"
 #include "ascii.h"
 #include <ArduinoJson.h>
+#include "json_parse.h"
 
 TFT_eSPI& clockDisplay();   // main.cpp
 TFT_eSPI* drawTarget = nullptr;   // an off-screen band while part of a custom face repaints
@@ -148,8 +149,8 @@ uint16_t roleColor(int i, const struct tm& t, int depth) {
 bool computeColors(const struct tm& t) {
   if (parsedRev != cfg.colorsRev) {
     parsedRev = cfg.colorsRev;
-    palDoc.clear(); deserializeJson(palDoc, cfg.palettes.c_str());
-    roleDoc.clear(); deserializeJson(roleDoc, cfg.roles.c_str());
+    palDoc.clear(); parseJson(palDoc, cfg.palettes.c_str());
+    roleDoc.clear(); parseJson(roleDoc, cfg.roles.c_str());
   }
   activePal = nightActive() && cfg.nightPalette.length() ? cfg.nightPalette : cfg.palette;
   uint16_t before[ROLE_COUNT];
@@ -2032,7 +2033,7 @@ void custom(const struct tm& t, bool force) {
     customVer = customFacesVersion();
     customDoc.clear();
     File f = LittleFS.open("/faces/" + customName + ".json", "r");
-    customLoaded = f && !deserializeJson(customDoc, f) && customDoc["items"].is<JsonArray>();
+    customLoaded = f && !parseJson(customDoc, f) && customDoc["items"].is<JsonArray>();
     if (f) f.close();
     force = true;
   }
@@ -2158,7 +2159,7 @@ bool faceTurn(const String& name, uint32_t* seconds, bool* hasWhen = nullptr) {
   if (!file) return false;
   JsonDocument filter, doc;
   filter["when"] = true; filter["duration"] = true;
-  bool ok = !deserializeJson(doc, file, DeserializationOption::Filter(filter));
+  bool ok = !parseJson(doc, file, filter);
   file.close();
   if (!ok) return true;
   time_t now = time(nullptr);
@@ -2191,7 +2192,7 @@ void message(const struct tm& t, bool force) {
   if (customName != MESSAGE_DOC) {
     customDoc.clear();
     String json = pgmString(MESSAGE_FACE);
-    customLoaded = !deserializeJson(customDoc, json.c_str());   // copied into the document
+    customLoaded = !parseJson(customDoc, json.c_str());   // copied into the document
     customName = MESSAGE_DOC;   // custom() reloads its own face when it is next shown
     force = true;
   }

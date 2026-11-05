@@ -1,8 +1,8 @@
 #include "weather.h"
 #include <algorithm>
 #include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
+#include "json_parse.h"
 #include "config.h"
 #include "time_guard.h"   // parseHttpDate
 
@@ -23,34 +23,43 @@ static String urlEncode(const String& s) {
 
 void timeGuardDate(uint32_t t);   // main.cpp: the Date header confirms a held SNTP jump
 
-// GET a JSON document over plain HTTP. HTTP/1.0 keeps the body un-chunked so
-// ArduinoJson can parse the raw stream; the filter keeps only the fields we use.
-static bool httpJson(const String& url, JsonDocument& doc, JsonDocument* filter = nullptr) {
+// GET a JSON document over plain HTTP/1.0 (un-chunked, so ArduinoJson parses the raw
+// stream), on a bare WiFiClient: HTTPClient cost 4.3 KB for one request (spec 042). The
+// filter keeps only the fields we use. Error codes as HTTPClient's: -1 no connection,
+// -11 no reply.
+static bool httpJson(const char* host, const String& path, JsonDocument& doc, JsonDocument* filter = nullptr) {
   if (WiFi.status() != WL_CONNECTED) { wx.error = F("Not connected"); return false; }
   // What a fetch takes from the heap (sampled after the headers and after the parse),
   // reported in /status as weatherHeap: the measure behind WEATHER_MIN_HEAP.
   uint32_t before = ESP.getFreeHeap(), low = before;
   auto sample = [&] { low = std::min(low, ESP.getFreeHeap()); };
-  WiFiClient client; HTTPClient http;
-  http.useHTTP10(true);
-  http.setTimeout(10000);   // api.open-meteo.com takes ~1.2 s from Australia
-  if (!http.begin(client, url)) { wx.error = F("Bad request"); return false; }
-  const char* keys[] = {"Date"};
-  http.collectHeaders(keys, 1);
-  int code = http.GET();
-  if (code == 200) timeGuardDate(parseHttpDate(http.header("Date").c_str()));
+  WiFiClient client;
+  client.setTimeout(10000);   // api.open-meteo.com takes ~1.2 s from Australia
+  int code = -1;
+  if (client.connect(host, 80)) {
+    client.print(String(F("GET ")) + path + F(" HTTP/1.0\r\nHost: ") + host +
+                 F("\r\nUser-Agent: AIAgentMonitor\r\nConnection: close\r\n\r\n"));
+    String line = client.readStringUntil('\n');   // "HTTP/1.1 200 OK"
+    int sp = line.indexOf(' ');
+    code = line.startsWith(F("HTTP/")) && sp > 0 ? line.substring(sp + 1).toInt() : -11;
+    while (code > 0) {   // headers, up to the empty line
+      line = client.readStringUntil('\n');
+      if (line.length() <= 1) break;
+      if (code == 200 && line.length() > 5 && strncasecmp_P(line.c_str(), PSTR("date:"), 5) == 0)
+        timeGuardDate(parseHttpDate(line.c_str() + 5));
+    }
+  }
   sample();
   if (code != 200) {
-    http.end();
+    client.stop();
     if (code == 404) wx.error = F("City not found");
     else if (code < 0) wx.error = String(F("Weather service unreachable (")) + code + ")";
     else wx.error = String(F("Weather service error ")) + code;
     return false;
   }
-  DeserializationError e = filter ? deserializeJson(doc, http.getStream(), DeserializationOption::Filter(*filter))
-                                  : deserializeJson(doc, http.getStream());
+  DeserializationError e = filter ? parseJson(doc, client, *filter) : parseJson(doc, client);
   sample();
-  http.end();
+  client.stop();
   wxHeapUse = std::max(wxHeapUse, before - low);
   if (e == DeserializationError::NoMemory) { wx.error = F("Not enough memory"); return false; }
   if (e) { wx.error = F("Unreadable weather data"); return false; }
@@ -99,13 +108,13 @@ static bool geocode() {
   int comma = name.lastIndexOf(',');
   if (comma > 0) { cc = name.substring(comma + 1); cc.trim(); cc.toUpperCase(); name = name.substring(0, comma); name.trim(); }
   if (name.length() < 2) { wx.error = F("Set a city"); return false; }
-  String url = String(F("http://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name=")) + urlEncode(name);
+  String url = String(F("/v1/search?count=1&language=en&format=json&name=")) + urlEncode(name);
   if (cc.length() == 2) { url += F("&countryCode="); url += cc; }
   JsonDocument filter;   // results also carry long postcode lists
   JsonObject r = filter[F("results")].add<JsonObject>();
   r[F("name")] = true; r[F("latitude")] = true; r[F("longitude")] = true; r[F("country_code")] = true; r[F("admin1")] = true;
   JsonDocument doc;
-  if (!httpJson(url, doc, &filter)) return false;
+  if (!httpJson("geocoding-api.open-meteo.com", url, doc, &filter)) return false;
   JsonObject hit = doc[F("results")][0];
   if (hit.isNull()) { wx.error = F("City not found"); return false; }
   cfg.lat = hit[F("latitude")] | NAN;
@@ -147,20 +156,20 @@ static bool fetchOpenMeteo() {
   JsonDocument doc;   // ~1 KB response
 #if SMARTCLOCK_EMULATOR
   String fixedJson = emuWeather();   // tests: the same weather every run, no network
-  bool fixed = fixedJson.length() && !deserializeJson(doc, fixedJson);
+  bool fixed = fixedJson.length() && !parseJson(doc, fixedJson);
   if (!fixed) {
 #endif
   if (cfg.geoFor != cfg.city || isnan(cfg.lat) || isnan(cfg.lon)) {
     if (!geocode()) return false;
   }
-  String url = String(F("http://api.open-meteo.com/v1/forecast?latitude=")) + coord(cfg.lat) +
+  String url = String(F("/v1/forecast?latitude=")) + coord(cfg.lat) +
                F("&longitude=") + coord(cfg.lon) +
                F("&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day,pressure_msl,cloud_cover"
                  "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,apparent_temperature_max,sunrise,sunset,"
                  "wind_speed_10m_max,relative_humidity_2m_mean"
                  "&minutely_15=rain,snowfall,precipitation_probability,weather_code&forecast_minutely_15=4"
                  "&forecast_days=5&timezone=auto&wind_speed_unit=ms");
-  if (!httpJson(url, doc)) return false;
+  if (!httpJson("api.open-meteo.com", url, doc)) return false;
 #if SMARTCLOCK_EMULATOR
   }
 #endif

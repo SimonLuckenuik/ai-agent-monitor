@@ -61,7 +61,7 @@ fi
 make -j"$(nproc)" FORCE32=$force32 OPTZ=-O1 R=noexec USERLDFLAGS=-no-pie \
   ULIBDIRS=/libs/ArduinoJson:/libs/PubSubClient \
   USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/emulator/panel.cpp $root/emulator/memory.cpp \
-                  $root/src/faces.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp \
+                  $root/src/faces.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/json_parse.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp \
                   $work/TFT_eSPI/TFT_eSPI.cpp" \
   USERCSOURCES=/libs/TJpg_Decoder/src/tjpgd.c \
   USERCFLAGS="-g -finstrument-functions -finstrument-functions-exclude-file-list=/emulator/,/esp8266/,/usr/ -UF_CPU -DF_CPU=$fcpu -DSMARTCLOCK_EMULATOR=1 -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \

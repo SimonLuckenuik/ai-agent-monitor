@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
+#include "json_parse.h"
 #include <LittleFS.h>
 #ifndef SMARTCLOCK_MQTT
 #define SMARTCLOCK_MQTT 1   // 0: a build without MQTT
@@ -183,7 +184,7 @@ void loadVars() {
   File file = storageReady ? LittleFS.open("/vars.json", "r") : File();
   if (!file) return;
   JsonDocument doc;
-  bool ok = !deserializeJson(doc, file);
+  bool ok = !parseJson(doc, file);
   file.close();
   if (!ok) return;
   for (JsonPair kv : doc.as<JsonObject>()) {
@@ -256,7 +257,7 @@ void handleMessage() {   // POST: store; GET: list; DELETE ?id=: clear (all with
   if (server.method() == HTTP_DELETE) { clearMessages(server.arg("id")); server.send(200, PSTR("text/plain"), PSTR("OK")); return; }
   if (server.method() == HTTP_POST) {
     JsonDocument doc;
-    if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
+    if (parseJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
       server.send(400, PSTR("text/plain"), PSTR("Expected a JSON object"));
       return;
     }
@@ -303,7 +304,7 @@ String storeFace(const String& name, const String& body) {
   JsonDocument filter, doc;
   filter[F("items")][0]["type"] = true;
   filter[F("show")] = true;
-  DeserializationError e = deserializeJson(doc, body, DeserializationOption::Filter(filter));
+  DeserializationError e = parseJson(doc, body, filter);
   if (e == DeserializationError::NoMemory) return F(NO_MEMORY);
   if (e || !doc[F("items")].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
   if (doc[F("items")].size() > 32) return F("At most 32 items");
@@ -389,7 +390,7 @@ void handleFaceShow() {
 void handleFaceVars() {   // POST {"name":value,...,"$ttl":s,...}: merged; null deletes
   if (!facesAllowed()) return;
   JsonDocument doc;
-  if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
+  if (parseJson(doc, server.arg("plain")) || !doc.is<JsonObject>()) {
     server.send(400, PSTR("text/plain"), PSTR("Expected a JSON object"));
     return;
   }
@@ -559,7 +560,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
   for (unsigned i = 0; i < len; ++i) body += (char)payload[i];
   if (topic == b + "/backlight/set") {
     JsonDocument d;
-    if (deserializeJson(d, body)) return;
+    if (parseJson(d, body)) return;
     if (d[F("state")].is<const char*>()) backlightOff = d[F("state")] == "OFF";
     if (d[F("brightness")].is<int>()) { cfg.brightness = constrain(d[F("brightness")].as<int>(), 0, 100); backlightOff = false; saveConfig(); }
     brightnessDirty = true;
@@ -571,7 +572,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     syncWeather();
   } else if (topic == b + "/message") {
     JsonDocument d;
-    if (!deserializeJson(d, body) && d.is<JsonObject>()) storeMessage(d.as<JsonObjectConst>());
+    if (!parseJson(d, body) && d.is<JsonObject>()) storeMessage(d.as<JsonObjectConst>());
   } else if (topic == b + "/message/clear") {
     clearMessages(body);
   } else if (cfg.facesApi && topic.startsWith(b + "/custom/")) {
@@ -579,7 +580,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     if (name.length()) storeFace(name, body);
   } else if (cfg.facesApi && topic == b + "/vars") {
     JsonDocument d;
-    if (!deserializeJson(d, body) && d.is<JsonObject>()) applyVars(d.as<JsonObject>());
+    if (!parseJson(d, body) && d.is<JsonObject>()) applyVars(d.as<JsonObject>());
   }
   publishState();
 }

@@ -8,7 +8,6 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266HTTPClient.h>
 #ifndef SMARTCLOCK_MDNS
 #define SMARTCLOCK_MDNS 0   // see serviceMdns()
 #endif
@@ -614,7 +613,7 @@ String configJson() {
 // ---- Palettes and roles (docs/specifications/settings.md)
 bool Config::setColor(const char* pal, const char* name, uint16_t c) {
   JsonDocument doc;
-  if (deserializeJson(doc, palettes)) return false;
+  if (parseJson(doc, palettes)) return false;
   char hex[8];
   snprintf(hex, sizeof(hex), "#%02x%02x%02x", (c >> 11) * 255 / 31, ((c >> 5) & 63) * 255 / 63, (c & 31) * 255 / 31);
   doc[pal][name] = hex;
@@ -633,13 +632,13 @@ bool colorName(const char* s) {   // 1-15 of A-Z a-z 0-9 _
 
 bool paletteExists(const String& name) {
   JsonDocument doc;
-  return !deserializeJson(doc, cfg.palettes) && doc[name].is<JsonObject>();
+  return !parseJson(doc, cfg.palettes) && doc[name].is<JsonObject>();
 }
 
 // Every palette at once: {"day": {"accent1": "#ffa826", ...}, ...}.
 String setPalettes(const String& val) {
   JsonDocument doc;
-  if (val.length() > 2048 || deserializeJson(doc, val) || !doc.is<JsonObject>()) return F("Expected a JSON object of palettes");
+  if (val.length() > 2048 || parseJson(doc, val) || !doc.is<JsonObject>()) return F("Expected a JSON object of palettes");
   JsonObject all = doc.as<JsonObject>();
   if (!all["day"].is<JsonObject>()) return F("The day palette is missing");
   if (all.size() > 8) return F("At most 8 palettes");
@@ -664,7 +663,7 @@ String setPalettes(const String& val) {
 // The roles' bindings that differ from the defaults: {"time": "accent1", ...}.
 String setRoles(const String& val) {
   JsonDocument doc;
-  if (val.length() > 1200 || deserializeJson(doc, val) || !doc.is<JsonObject>()) return F("Expected a JSON object of roles");
+  if (val.length() > 1200 || parseJson(doc, val) || !doc.is<JsonObject>()) return F("Expected a JSON object of roles");
   for (JsonPair r : doc.as<JsonObject>()) {
     const char* v = r.value();
     if (!roleKnown(r.key().c_str())) return "Unknown role \"" + String(r.key().c_str()) + "\"";
@@ -816,7 +815,7 @@ void handleSettingsExport() {
 void handleSettingsImport() {
   if (!requireAuth() || !settingsWritable()) return;
   JsonDocument doc;
-  if (deserializeJson(doc, server.arg("plain")) || !doc.is<JsonObject>() || doc[F("type")] != "smartclock-oss-settings") {
+  if (parseJson(doc, server.arg("plain")) || !doc.is<JsonObject>() || doc[F("type")] != "smartclock-oss-settings") {
     server.send(400, PSTR("text/plain"), PSTR("Not a SmartClock-OSS settings file"));
     return;
   }
