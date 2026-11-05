@@ -1,0 +1,14 @@
+{
+  "name": "aam-openclaw-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pairs AI Agent Monitor clocks with an OpenClaw Gateway as nodes (screen output only)",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "bin": { "aam-openclaw-bridge": "bridge.mjs" },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node bridge.mjs",
+    "test": "node --test test/bridge.test.mjs"
+  }
+}

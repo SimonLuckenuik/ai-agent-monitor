@@ -15,6 +15,10 @@ approved.
    (native node chosen), needs 042's room; waiting for approval.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
+3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): proposed,
+   output only, **a native node in the firmware** (owner, 2026-11-05). Needs about 10 KB
+   of update room won back first (MQTT, mDNS or a separate image: the owner's choice).
+   A tested bridge prototype on branch `openclaw-node` is the fallback.
 
 ## Waiting
 

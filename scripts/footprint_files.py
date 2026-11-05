@@ -40,9 +40,10 @@ for line in out.splitlines():
         continue
     addr, size, file = int(m[1], 16), int(m[2], 16), m[5] or "(no file)"
     file = file.replace("\\", "/")
-    for key, rx in [("src/", r".*/ai-agent-monitor/(src/.*)"), ("lib", r".*/libdeps/esp12e/([^/]+)/.*"),
+    for key, rx in [("lib", r".*/libdeps/esp12e/([^/]+)/.*"),
                     ("core", r".*/framework-arduinoespressif8266/(cores/esp8266|libraries/[^/]+)/.*"),
-                    ("sdk", r".*/(tools/sdk|toolchain).*")]:
+                    ("sdk", r".*/(tools/sdk|toolchain).*"),
+                    ("src/", r".*/((?:src|include)/[^/]+)$")]:   # any checkout, worktrees too
         mm = re.match(rx, file)
         if mm:
             file = mm[1] if key != "sdk" else "sdk/toolchain"

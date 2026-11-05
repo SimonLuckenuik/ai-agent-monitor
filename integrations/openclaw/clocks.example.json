@@ -1,0 +1,21 @@
+{
+  "gateway": {
+    "url": "ws://127.0.0.1:18789",
+    "token": "env:OPENCLAW_GATEWAY_TOKEN"
+  },
+  "stateDir": "state",
+  "clocks": [
+    {
+      "name": "desk",
+      "displayName": "Desk clock",
+      "url": "http://192.168.66.57",
+      "apiKey": "env:AAM_DESK_API_KEY"
+    },
+    {
+      "name": "office",
+      "displayName": "Office clock",
+      "url": "http://192.168.66.229",
+      "apiKey": "env:AAM_OFFICE_API_KEY"
+    }
+  ]
+}
