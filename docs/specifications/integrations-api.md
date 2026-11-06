@@ -596,13 +596,15 @@ setup code. In the settings page (Integrations → OpenClaw node) paste it and p
 gateway's shared token (`token:<token>` in the setup code field). Then, on the gateway:
 
 ```bash
-openclaw devices approve <request>    # the clock as a device (a bootstrap setup code does this)
+openclaw devices approve <request>    # the clock as a device (also with a ws:// setup code)
 openclaw nodes pending                # the clock's command surface
 openclaw nodes approve <request>
 ```
 
-and allow the clock's commands, which OpenClaw does not know for the `esp8266`
-platform, in the gateway's configuration:
+**Before** approving the node, allow the clock's commands, which OpenClaw does not know
+for the `esp8266` platform (`openclaw config set gateway.nodes.commands.allow '[...]'`);
+otherwise the node is approved with no commands and asks again once they are allowed.
+In the gateway's configuration:
 
 ```json
 {"gateway": {"nodes": {"commands": {"allow": ["display.show", "display.clear", "display.status",
@@ -648,7 +650,9 @@ commands plus `clock.face.save`.
 
 `/status` reports `openclaw`: `off`, `not paired`, `waiting for memory` (it connects with
 12 KB free), `connecting`, `pairing pending: approve the clock on the gateway`,
-`connected`, `refused: <code> <message>` (no more tries until a setting changes),
+`connected`, `refused: <code> <message>` (a credential or signature refused: no more
+tries until a setting changes), `gateway: <code> <message>` (anything else, such as
+`UNAVAILABLE gateway starting`: tried again),
 `cannot reach the gateway`, `connection lost` and the like (it tries again after 5 s,
 then longer, up to 5 minutes); `openclawId` (the device id, as `openclaw devices list`
 shows it), `openclawHeap` (what connecting took) and `openclawSignMs` (the signature's

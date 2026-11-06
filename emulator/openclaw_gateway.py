@@ -15,7 +15,8 @@ hello-ok, and the pairing approval when required.
 Control API (HTTP, JSON, CORS for the screen page):
     GET  /state             nodes (client, commands, credential, since), connects, the last
                             connect's checklist, devices awaiting approval, refusals, frames log
-    POST /reset {options}   token, bootstrapToken, deviceToken, requirePairing; forgets everything
+    POST /reset {options}   token, bootstrapToken, deviceToken, requirePairing, unavailable (that many
+                            connects refused as "gateway starting"); forgets everything
     POST /config            {"requirePairing": bool}
     POST /setup             a single-use setup code {"code", "url"}
     POST /approve {"id"}    approves a device
@@ -282,6 +283,12 @@ class Gateway:
         with self.lock:
             self.connects.append(p)
             del self.connects[:-20]
+        with self.lock:
+            starting = self.o.get("unavailable", 0) > 0   # a gateway still starting, as the real one answers then
+            if starting:
+                self.o["unavailable"] -= 1
+        if starting:
+            return self.refuse(c, rid, "UNAVAILABLE", "gateway starting; retry shortly", "UNAVAILABLE")
         bad = self.check(c, p)
         if bad:
             return self.refuse(c, rid, "INVALID_REQUEST", "device auth failed: " + bad, "DEVICE_AUTH_INVALID")

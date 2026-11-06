@@ -261,8 +261,13 @@ void onHello(Payload& in) {
     retryAt = millis() + PENDING_RETRY;
     return;
   }
-  refused = true;   // until the settings change
-  state = String(F("refused: ")) + code + ' ' + String(jsonText(v, F("error.message"))).substring(0, 80);
+  String why = code + ' ' + String(jsonText(v, F("error.message"))).substring(0, 80);
+  if (code.indexOf(F("AUTH")) < 0 && code != F("INVALID_REQUEST")) {   // "UNAVAILABLE gateway starting", ...: later
+    fail(String(F("gateway: ")) + why);
+    return;
+  }
+  refused = true;   // a credential or the signature refused: until the settings change
+  state = String(F("refused: ")) + why;
 }
 
 void invoke(JsonVariant p) {

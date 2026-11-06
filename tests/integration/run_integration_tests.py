@@ -970,11 +970,12 @@ def openclaw_node(emu):
     identity, and stops on a refused token."""
     gw = FakeGateway()
     stored = lambda: json.loads(emu.request("GET", emu.screen + "/fs/file?path=/config.json")[1])
-    gw.call("/reset", {"requirePairing": True, "token": "gw-shared", "bootstrapToken": "boot-once"})
+    gw.call("/reset", {"requirePairing": True, "token": "gw-shared", "bootstrapToken": "boot-once", "unavailable": 1})
     check(emu.status().get("openclaw") == "off", f"off by default: {emu.status().get('openclaw')}")
     expect_error(400, "ws://", emu.set, "ocurl", "wss://gateway:18789")
     emu.set("ocurl", "ws://gateway:18789")
     emu.set("ocpair", "token:gw-shared")
+    wait_openclaw(emu, "gateway: UNAVAILABLE")   # the gateway still starting: tried again, not given up
     s = wait_openclaw(emu, "pairing pending")
     dev = s["openclawId"]
     check(re.fullmatch(r"[0-9a-f]{64}", dev), f"device id {dev}")

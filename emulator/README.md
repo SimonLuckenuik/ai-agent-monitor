@@ -181,6 +181,42 @@ boot reports "Software/System restart". The log shows the cause and the call cha
 (`addr2line`), and `GET /stats` and the screen page's **Device** panel show it as the
 last crash. `malloc()` returning null is not a panic, as on the chip.
 
+## OpenClaw
+
+The emulated clock can be an OpenClaw node (spec 041), with two gateways to pair it with.
+
+**The stand-in gateway** (service `gateway`, `emulator/openclaw_gateway.py`, started with
+the emulator): the screen page's **OpenClaw** panel drives it (spec 043). *Pair the clock*
+gives the firmware a setup code; the panel shows the node, what the gateway checked in
+its `connect` (protocol, client, the signed nonce, the device id, the Ed25519 signature,
+no capabilities), its declared commands to run with example parameters, the results, and
+the frames both ways. *Require approval*, *Drop connection* and *Revoke token* play the
+gateway's side. Its control API is on http://127.0.0.1:8790 (the page calls it directly:
+the screen server runs in the firmware's loop and cannot wait for the node's answers).
+
+**The real OpenClaw Gateway** (service `openclaw`, optional, about 700 MB):
+
+```bash
+docker compose -f emulator/docker-compose.yml --profile openclaw up -d
+python emulator/openclaw_real.py                                   # allow, pair, approve, a message
+python emulator/openclaw_real.py invoke face.set '{"mood": "happy"}'
+```
+
+No model provider or subscription is needed: commands go through `openclaw nodes invoke`
+(agents would need one). Its Control UI is on http://127.0.0.1:18789 (token
+`emulator-token`). What it showed (2026-11-05, OpenClaw 2026.11.1):
+
+- Set `gateway.nodes.commands.allow` **before** approving the node: OpenClaw approves
+  the declared commands the allow list lets through, so approving first approves none
+  and asks again (`pending-reapproval`) once the list is set.
+- A setup code over plain `ws://` is "limited for safety": the device still needs
+  `openclaw devices approve`, then `openclaw nodes approve`.
+- `openclaw qr` takes the address from the config (`gateway.bind lan`), not from the
+  `--bind` flag; changing `gateway.bind` restarts the gateway, which answers
+  `UNAVAILABLE gateway starting` for a while (the clock tries again).
+- After *Forget*, the old identity stays listed under the same name: call the node by
+  its id (`/status` `openclawId`).
+
 ## Reset reasons
 
 | Action | Reset reason | Effect |

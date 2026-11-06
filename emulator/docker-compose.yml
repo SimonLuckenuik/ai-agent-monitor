@@ -23,6 +23,18 @@ services:
     ports:   # its control API, for the screen page (this computer only)
       - "127.0.0.1:8790:8790"
     restart: unless-stopped
+  openclaw:   # the real OpenClaw Gateway, optional: add --profile openclaw (emulator/README.md, "OpenClaw")
+    image: ghcr.io/openclaw/openclaw:latest   # tried with 2026.11.1; no model provider needed for nodes
+    profiles: ["openclaw"]
+    command: ["node", "openclaw.mjs", "gateway", "--dev", "--allow-unconfigured", "--bind", "lan", "--auth", "token", "--port", "18789"]
+    environment:
+      OPENCLAW_GATEWAY_TOKEN: emulator-token   # the clock pairs with token:emulator-token
+    volumes:
+      - openclaw-home:/home/node/.openclaw   # its config, approvals and devices
+    ports:   # its Control UI, for this computer only
+      - "127.0.0.1:18789:18789"
+    restart: unless-stopped
 
 volumes:
   clock-data:
+  openclaw-home:

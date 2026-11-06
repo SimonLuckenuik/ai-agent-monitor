@@ -94,12 +94,35 @@
 - Left: the full integration suite, unit, safety and face preview on the final build
   (below); a real gateway and the real clock (PLAN step 8); the release.
 
+- 2026-11-05: **with the real OpenClaw Gateway** (OpenClaw 2026.11.1, `ghcr.io/openclaw/openclaw`,
+  `gateway --dev --allow-unconfigured --bind lan --auth token`, no model provider), the
+  emulated clock on the same Docker network:
+  - the gateway accepted the clock's signature (`phase=auth_validated`), refused it as
+    `not-paired` with a request id; the clock showed "pairing pending" and kept asking;
+  - `openclaw devices approve`, then `openclaw nodes approve`: connected, listed as
+    "AI Agent Monitor, hw: SD PRO, esp8266";
+  - commands refused until `gateway.nodes.commands.allow` lists them ("not in the allowlist
+    for platform esp8266"), as the research said; and the first node approval, made before
+    the allow list, approved **no** commands ("the node did not declare any supported
+    commands", `pending-reapproval` after a reconnect): the allow list has to come first;
+  - then all 12 calls through `openclaw nodes invoke` returned what the stand-in had:
+    display.show/status/clear, face.set happy/sad/neutral, brightness, device.info/status,
+    vars, faces list, face.show; bad parameters came back as `INVALID_PARAMS: ...`;
+  - a real setup code (`openclaw qr --setup-code-only`): `{url, bootstrapToken, expiresAtMs}`;
+    over `ws://` OpenClaw limits it, so the device still needs approving; pairing from it
+    worked with a new identity;
+  - **bug found and fixed**: during the gateway's restart it answers `UNAVAILABLE gateway
+    starting; retry shortly`, which the node took as a final refusal. Now only codes with
+    `AUTH` or `INVALID_REQUEST` stop it; others are retried (`gateway: <code>` in /status).
+    The stand-in can now answer that way (`unavailable`), and `openclaw_node` checks it.
+  - `emulator/openclaw_real.py` and the compose service `openclaw` (profile `openclaw`)
+    repeat this. Image 601,808 B, room unchanged (8,192 B).
+- Still not verified: an agent calling the clock (needs a model provider), the real clocks.
+
 ## Not verified
 
 - The signing time on the clock (estimated 0.4 s; the emulator does not model it), the
-  heap during the handshake there, and a pairing with a real OpenClaw Gateway (whether
-  the owner runs one is open).
-- No real OpenClaw Gateway: whether the owner runs one is open. The fake gateway follows
+  heap during the handshake there, and the owner's own gateway (where it runs is open). The fake gateway follows
   the docs and schemas; real error codes for a pending pairing, the first-surface approval
   after a setup code, and tick handling are to check (PLAN step 6).
 - Not run against the real clocks.
