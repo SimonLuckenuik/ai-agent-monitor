@@ -142,7 +142,7 @@ assert "requireAuth()" in function(integ, "void handleIntegrations()"), "the API
 declared = re.findall(r'\\"([a-z.]+)\\"', integ[integ.index("const char OPENCLAW_COMMANDS[] PROGMEM ="):].split(";")[0])
 skill_md = (root / "integrations/openclaw/skill/ai-agent-monitor/SKILL.md").read_text(encoding="utf-8")
 documented = [m.group(1) for m in re.finditer(r"^\| `([a-z]+\.[a-z.]+)` \|.*$", skill_md, re.M) if "**Bridge only**" not in m.group(0)]
-assert len(declared) == 10 and sorted(declared) == sorted(documented), f"OpenClaw skill table {documented} != node {declared}"
+assert len(declared) == 11 and sorted(declared) == sorted(documented), f"OpenClaw skill table {documented} != node {declared}"
 # Our string literals stay in flash (spec 025): at most this much of them in RAM.
 subprocess.run(["python", str(root / "scripts/ram_report.py"), str(image.with_suffix(".elf")), "--max-ours", "4864"],
                check=True, stdout=subprocess.DEVNULL)

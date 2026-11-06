@@ -661,7 +661,7 @@ const char* jbool(bool b) { return b ? "true" : "false"; }
 extern const char OPENCLAW_COMMANDS[] PROGMEM;
 const char OPENCLAW_COMMANDS[] PROGMEM =
     "\"display.show\",\"display.clear\",\"display.status\",\"display.brightness\",\"face.set\",\"device.info\","
-    "\"device.status\",\"clock.face.show\",\"clock.faces.list\",\"clock.vars.set\"";
+    "\"device.status\",\"clock.face.show\",\"clock.faces.list\",\"clock.vars.set\",\"clock.help\"";
 
 // params: the request's object (changed in place); r: the result, "{" so far, the
 // caller closes it. Returns "" or "<CODE> <message>".
@@ -669,7 +669,7 @@ String openclawCommand(const String& cmd, JsonObject params, String& r) {
   OcParams P{params, ""};
   // The command's place in OPENCLAW_COMMANDS: 0 display.show, 1 display.clear, 2 display.status,
   // 3 display.brightness, 4 face.set, 5 device.info, 6 device.status, 7 clock.face.show,
-  // 8 clock.faces.list, 9 clock.vars.set.
+  // 8 clock.faces.list, 9 clock.vars.set, 10 clock.help.
   String all = FPSTR(OPENCLAW_COMMANDS);
   int c = cmd.length() ? all.indexOf("\"" + cmd + "\"") : -1;
   if (c > 0) { int n = 0; for (int i = 0; i < c; ++i) n += all[i] == ','; c = n; }
@@ -815,6 +815,23 @@ String openclawCommand(const String& cmd, JsonObject params, String& r) {
     applyVars(in, &full);
     if (full.length()) return String(F("UNAVAILABLE no room for ")) + full + F(" (40 variables at most)");
     jsonAddRaw(r, F("set"), set + ']');
+  } else if (c == 10) {
+    // Where the instructions are (spec 045): the OpenClaw skill of this release on GitHub,
+    // and its SKILL.md as plain text an agent can fetch. A -dev version has no tag: main.
+    P.only(PSTR(",,"));
+    if (P.err.length()) return P.err;
+    const char* v = firmwareVersion();
+    char ref[16] = "main";
+    if (!strchr(v, '-')) snprintf_P(ref, sizeof(ref), PSTR("v%s"), v);
+    std::unique_ptr<char[]> b(new (std::nothrow) char[400]);
+    if (!b) return F("UNAVAILABLE out of memory");
+    // r is "{" so far. The repository and the skill's folder appear twice.
+#define OC_REPO "SimonLuckenuik/ai-agent-monitor/"
+#define OC_SKILL "/integrations/openclaw/skill/ai-agent-monitor"
+    snprintf_P(b.get(), 400, PSTR("\"firmware\":\"%s\",\"skill\":\"https://github.com/" OC_REPO "tree/%s" OC_SKILL
+        "\",\"guide\":\"https://raw.githubusercontent.com/" OC_REPO "%s" OC_SKILL "/SKILL.md\","
+        "\"install\":\"openclaw skills install <skill folder> --global\""), v, ref, ref);
+    r += b.get();
   } else {
     return String(F("UNKNOWN_COMMAND ")) + cmd;
   }

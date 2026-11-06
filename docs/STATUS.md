@@ -1,18 +1,20 @@
 # Current status and next work
 
-Updated: 2026-11-05. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-06. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an OpenClaw
-node, flash room without losing a feature, the emulator's OpenClaw panel and an OpenClaw
-skill), published on GitHub as `SimonLuckenuik/ai-agent-monitor` with
+The latest version is **2.3.1** (2026-11-06: `clock.help` on the OpenClaw node, spec
+045), committed on `openclaw-native`; it is published as `AIAgentMonitor_v2.3.1.bin.gz`
+when pushed to `main`. Before it: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an
+OpenClaw node, flash room without losing a feature, the emulator's OpenClaw panel and an
+OpenClaw skill), published on GitHub as `SimonLuckenuik/ai-agent-monitor` with
 `AIAgentMonitor_v2.3.0.bin.gz`, `AIAgentMonitor_v2.3.0.elf` (for `scripts/decode_crash.py`)
 and `SHA256SUMS.txt`, built and tested by `.github/workflows/release.yml` on the push to
-`main`. `main` and `faces-v2` are the same commit. The plugin on `main` is 0.7.3. Before
-it: 2.2.0 (2026-11-04, Moni and animated messages).
+`main`. The plugin on `main` is 0.7.3. Before it: 2.2.0 (2026-11-04, Moni and animated
+messages).
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
 last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,
@@ -76,8 +78,10 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 On `faces-v2`, not released: [spec 042](../specs/042-flash-room-no-loss/SPEC.md) (nothing
 lost): `firmware.bin` 579,008 B, `firmware.bin.gz` 410,558 B, 45,056 B of room. On branch
 `openclaw-native`, with the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md)):
-601,808 B and 427,067 B, **8,192 B of room**
-([decision](decisions/2026-11-05-openclaw-node-flash.md)).
+601,808 B and 427,067 B, 8,192 B of room
+([decision](decisions/2026-11-05-openclaw-node-flash.md)). 2.3.1 (`clock.help`,
+[045](../specs/045-openclaw-help/SPEC.md)): 602,384 B and 427,337 B, **4,096 B of room**
+(the plain image crossed a sector boundary).
 
 ## Specs in flight
 
@@ -100,7 +104,8 @@ and the real OpenClaw 2026.11.1 gateway; not yet on the clock),
 [043](../specs/043-emulator-openclaw-panel/SPEC.md) (the emulator's OpenClaw panel) and
 [044](../specs/044-openclaw-skill/SPEC.md) (an OpenClaw skill that teaches the agents the
 clock: installed and loaded on the real gateway, its `clock.py` saves faces from there;
-no model was available to try an agent with).
+no model was available to try an agent with), all done in 2.3.0; and
+[045](../specs/045-openclaw-help/SPEC.md) (`clock.help`, links to the skill: done in 2.3.1).
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),

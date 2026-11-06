@@ -33,7 +33,8 @@ import http.cookiejar
 API, SCREEN = "http://127.0.0.1:8000", "http://127.0.0.1:8080"
 TOKEN = "emulator-token"   # OPENCLAW_GATEWAY_TOKEN in emulator/docker-compose.yml
 COMMANDS = ["display.show", "display.clear", "display.status", "display.brightness", "face.set", "device.info",
-            "device.status", "clock.face.show", "clock.faces.list", "clock.vars.set"]
+            "device.status", "clock.face.show", "clock.faces.list", "clock.vars.set",
+            "clock.help"]
 jar = http.cookiejar.CookieJar()
 web = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
 

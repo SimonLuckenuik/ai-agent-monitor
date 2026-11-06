@@ -13,6 +13,12 @@ that has this skill also knows:
 Nothing runs on the clock: the skill is a folder of instructions and references,
 installed on the Gateway's machine.
 
+Without it, the node has one pointer: `clock.help` (spec 045, firmware 2.3.1) answers
+with links to this skill at the clock's release tag, and to its `SKILL.md` as plain text.
+An agent with a web-fetch tool can read the instructions from there for one
+conversation; installing the skill is still the way for every conversation, and the
+only way for custom faces from the Gateway's machine.
+
 ```
 agent ── reads ──> skill (on the Gateway's machine)
   │

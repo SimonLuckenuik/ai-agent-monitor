@@ -990,7 +990,8 @@ def openclaw_node(emu):
           f"client {p['client']}")
     check(p["caps"] == [] and p["scopes"] == [] and list(p["auth"]) == ["token"], f"caps, scopes, auth {p['caps']} {p['auth']}")
     check(p["commands"] == ["display.show", "display.clear", "display.status", "display.brightness", "face.set",
-                            "device.info", "device.status", "clock.face.show", "clock.faces.list", "clock.vars.set"],
+                            "device.info", "device.status", "clock.face.show", "clock.faces.list", "clock.vars.set",
+                            "clock.help"],
           f"commands {p['commands']}")
     cfg = stored()
     check(cfg.get("octoken") == st["deviceToken"] and not cfg.get("ocauth"), "device token kept, the pairing credential dropped")
@@ -1026,6 +1027,11 @@ def openclaw_node(emu):
     emu.set("brightness", 100)
     info = ok("device.info", model="SD PRO", platform="esp8266")
     check(info["firmware"] == s["version"], f"device.info {info}")
+    ref = "v" + s["version"] if "-" not in s["version"] else "main"
+    ok("clock.help", firmware=s["version"],
+       skill=f"https://github.com/SimonLuckenuik/ai-agent-monitor/tree/{ref}/integrations/openclaw/skill/ai-agent-monitor",
+       guide=f"https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/{ref}/integrations/openclaw/skill/ai-agent-monitor/SKILL.md")
+    refused("clock.help", {"x": 1}, "INVALID_PARAMS")
     health = ok("device.status")
     check(health["heap"] > 0 and health["uptimeS"] > 0 and health["ip"], f"device.status {health}")   # crashes: only when there were some
     ok("clock.face.show", {"builtin": "big-time"}, face=7)

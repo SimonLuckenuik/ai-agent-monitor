@@ -52,6 +52,21 @@ function bool(params, key) {
 }
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + "~" : s);   // the clock's limits: title 40, text 160
 
+// clock.help's answer (spec 045), the firmware's own: links to the skill of the release the
+// clock runs (a -dev version has no tag: main).
+export function helpLinks(version) {
+  const v = String(version || "");
+  const ref = v && !v.includes("-") ? `v${v}` : "main";
+  const repo = "SimonLuckenuik/ai-agent-monitor/";
+  const tail = `${ref}/integrations/openclaw/skill/ai-agent-monitor`;
+  return {
+    firmware: v,
+    skill: `https://github.com/${repo}tree/${tail}`,
+    guide: `https://raw.githubusercontent.com/${repo}${tail}/SKILL.md`,
+    install: "openclaw skills install <skill folder> --global",
+  };
+}
+
 /** The command table for one clock. `opts.messageId` is the id the bridge's messages use. */
 export function commandsFor(clock, opts = {}) {
   const messageId = opts.messageId || "openclaw";
@@ -158,6 +173,14 @@ export function commandsFor(clock, opts = {}) {
       async run(p) { only(p, [], "device.status"); return statusSummary(); },
     },
     // ---------------------------------------------------------------- clock.* (screen output)
+    "clock.help": {
+      description: "Where the clock's instructions are: the OpenClaw skill for its firmware on GitHub, and its SKILL.md as plain text.",
+      async run(p) {
+        only(p, [], "clock.help");
+        const s = await clock.status();
+        return { clock: clock.name, ...helpLinks(s.version) };
+      },
+    },
     "clock.face.show": {
       description: "Switch to a face: name (a custom face) or builtin (classic, weather, big-time, agents, today, ... or its id).",
       async run(p) {

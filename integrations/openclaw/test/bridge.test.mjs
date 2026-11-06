@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { authPayloadV3, connectRequest, decodeSetupCode, makeIdentity, normalizeMeta } from "../lib/protocol.mjs";
-import { COMMAND_NAMES } from "../lib/commands.mjs";
+import { COMMAND_NAMES, helpLinks } from "../lib/commands.mjs";
 import { loadConfig, startClock } from "../bridge.mjs";
 import { FakeGateway, buildDeviceAuthPayloadV3 } from "./fake-gateway.mjs";
 import { FakeClock } from "./fake-clock.mjs";
@@ -192,7 +192,7 @@ test("brightness and built-in faces need the Home Assistant integration; custom 
   assert.equal(refused.error.code, "NOT_CONFIGURED");
 });
 
-test("device.info and device.status are read-only summaries of /status", async (t) => {
+test("device.info, device.status and clock.help are read-only summaries of /status", async (t) => {
   const r = await rig();
   t.after(r.close);
   const { conn, identity } = r.start();
@@ -202,6 +202,13 @@ test("device.info and device.status are read-only summaries of /status", async (
   assert.deepEqual(info.payload, { clock: "desk", model: "SD PRO", platform: "esp8266", firmware: "2.2.0", build: "fake", host: "agentmonitor-fake" });
   const st = await r.gw.invoke(identity.deviceId, "device.status", {});
   assert.equal(st.payload.rssi, -55);
+  const help = await r.gw.invoke(identity.deviceId, "clock.help", {});
+  assert.deepEqual(help.payload, { clock: "desk", firmware: "2.2.0",
+    skill: "https://github.com/SimonLuckenuik/ai-agent-monitor/tree/v2.2.0/integrations/openclaw/skill/ai-agent-monitor",
+    guide: "https://raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/v2.2.0/integrations/openclaw/skill/ai-agent-monitor/SKILL.md",
+    install: "openclaw skills install <skill folder> --global" });
+  assert.equal((await r.gw.invoke(identity.deviceId, "clock.help", { x: 1 })).error.code, "INVALID_PARAMS");
+  assert.equal(helpLinks("2.4.0-dev").guide.includes("/main/"), true);
   assert.ok(r.fc.requests.slice(before).every((q) => q.method === "GET"));
 });
 

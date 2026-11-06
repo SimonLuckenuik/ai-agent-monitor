@@ -7,6 +7,24 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.3.1 - 2026-11-06
+
+### Upgrading
+
+Install `AIAgentMonitor_v2.3.1.bin.gz` from the Firmware update card, as for 2.3.0.
+Settings, faces and photos are kept. If the clock is an OpenClaw node, add `clock.help`
+to the gateway's `gateway.nodes.commands.allow` and approve the node again (the gateway
+asks, because the clock declares a new command). This release leaves 4 KB of room for
+updates.
+
+### Added
+
+- **`clock.help` on the OpenClaw node** (spec 045): answers where the clock's
+  instructions are, for an agent on a gateway without the OpenClaw skill: the skill's
+  folder on GitHub at the release the clock runs, its `SKILL.md` as plain text an agent
+  can fetch, and the command that installs it. The bridge offers it too, and the
+  emulator's OpenClaw panel lists it.
+
 ## 2.3.0 - 2026-11-05
 
 ### Upgrading

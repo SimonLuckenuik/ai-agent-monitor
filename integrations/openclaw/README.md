@@ -29,6 +29,7 @@ agent -> OpenClaw Gateway --WebSocket (node protocol)--> bridge --HTTP--> clock
 | `clock.face.save` | `name`, `face` (face JSON), optional `show` | Saves a custom face (the [face format](../../docs/specifications/integrations-api.md#face-json)) |
 | `clock.faces.list` | | Custom faces, the one showing, the variables |
 | `clock.vars.set` | `vars` {name: value}, optional `ttl`, `history`, `add`, `persist` | Face variables (`POST /api/faces/vars`) |
+| `clock.help` | | Links to the OpenClaw skill for the clock's firmware, as the firmware node answers (spec 045) |
 
 `display.show`, `display.brightness` and `face.set` take the same parameters as on
 OpenClaw's ESP32 nodes (`heading`/`text`, `percent`, `mood`), plus the clock's own.
@@ -43,7 +44,8 @@ Install the OpenClaw skill on the gateway's machine as well
 ([skill/README.md](skill/README.md)). It tells the agents what each command takes and how
 to design custom faces. With the bridge, the skill saves faces through
 `clock.face.save`, so the gateway's machine needs no HTTP access of its own to the clock
-beyond the bridge's.
+beyond the bridge's. Without the skill, an agent can still call `clock.help`: it answers
+with links to the skill, and to its `SKILL.md` as plain text.
 
 ## What each clock needs
 
@@ -68,7 +70,7 @@ gateway and the clocks). No packages to install.
    { gateway: { nodes: { commands: { allow: [
      "display.show", "display.clear", "display.status", "display.brightness", "face.set",
      "device.info", "device.status", "clock.face.show", "clock.face.save",
-     "clock.faces.list", "clock.vars.set"] } } } }
+     "clock.faces.list", "clock.vars.set", "clock.help"] } } } }
    ```
 3. Pair, one of two ways:
    - **Gateway token** (same machine): set `gateway.token` (or `password`) and run

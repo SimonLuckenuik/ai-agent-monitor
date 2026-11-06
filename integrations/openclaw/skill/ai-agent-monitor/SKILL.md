@@ -58,6 +58,7 @@ node again.
 | `clock.face.show` | `name` (a saved custom face) **or** `builtin`: `classic` `weather` `photo` `big-date` `simple` `forecast` `big-time` `big-weather` `agents` `today` `day-1` (or `tomorrow`) `day-2` `day-3` `day-4` | Switches the screen to that face. Returns `{face}` |
 | `clock.faces.list` | none | `{faces, showing, vars}`: the saved custom faces, the one on screen, the variables set |
 | `clock.vars.set` | `vars` `{name: text, number or null}` (null deletes); `ttl` 1-86400 s; `history` (keep numbers for a chart); `add` (add to the value); `persist` (keep after a restart) | Sets the variables custom faces read. Returns `{set}` |
+| `clock.help` | none | `{firmware, skill, guide, install}`: links to this skill for the firmware the clock runs (`guide` is this file as plain text). For a Gateway without the skill |
 | `clock.face.save` | `name`, `face` (the face JSON), `show` | **Bridge only** (the OpenClaw bridge program beside the Gateway, not the clock's own node): saves a custom face |
 
 Icons for `display.show`:

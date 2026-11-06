@@ -595,7 +595,9 @@ OpenClaw skill on the gateway's machine so agents know each command's parameters
 when to use it, and how to design and save custom faces (spec 044):
 `openclaw skills install integrations/openclaw/skill/ai-agent-monitor --global`. Its
 guide is [integrations/openclaw/skill/README.md](../../integrations/openclaw/skill/README.md):
-settings, examples, and what was checked.
+settings, examples, and what was checked. An agent on a gateway without the skill can
+call `clock.help` (spec 045): it answers with links to the skill of the release the
+clock runs, including `SKILL.md` as plain text an agent can fetch and read.
 
 **Setting it up.** On the gateway's machine, `openclaw qr --setup-code-only` prints a
 setup code. In the settings page (Integrations → OpenClaw node) paste it and press
@@ -616,7 +618,7 @@ In the gateway's configuration:
 ```json
 {"gateway": {"nodes": {"commands": {"allow": ["display.show", "display.clear", "display.status",
   "display.brightness", "face.set", "device.info", "device.status", "clock.face.show",
-  "clock.faces.list", "clock.vars.set"]}}}}
+  "clock.faces.list", "clock.vars.set", "clock.help"]}}}}
 ```
 
 The gateway must be reachable from the clock over plain `ws://` (`gateway.bind lan`):
@@ -648,6 +650,7 @@ The settings behind the page (`/api/set`, signed in):
 | `clock.face.show` | `name` (a custom face) or `builtin`: `classic weather photo big-date simple forecast big-time big-weather agents today day-1` (or `tomorrow`) `day-2 day-3 day-4`, or a face id | `{face}` |
 | `clock.faces.list` | | `{faces, showing, vars}` |
 | `clock.vars.set` | `vars` `{name: text, number or null}`; `ttl`, `history`, `add`, `persist` (as [variables](#variables)) | `{set}` |
+| `clock.help` | | `{firmware, skill, guide, install}`: `skill` the OpenClaw skill's folder on GitHub at this release's tag (`v<version>`; `main` for a `-dev` build), `guide` its `SKILL.md` on `raw.githubusercontent.com`, `install` the command that installs it on the gateway |
 
 Unknown parameters, wrong types and values out of range are refused with
 `INVALID_PARAMS`; a full variable table with `UNAVAILABLE`. Saving faces stays on HTTP
