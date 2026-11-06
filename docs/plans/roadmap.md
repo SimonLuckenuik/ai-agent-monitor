@@ -18,6 +18,8 @@ approved.
    reachable from the IoT VLAN over `ws://`.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
+5. [046 The setup network closes once the clock is on the router](../../specs/046-setup-network-timeout/SPEC.md):
+   draft, waiting for approval and answers to its open questions (security).
 
 ## Waiting
 

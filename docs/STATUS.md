@@ -117,7 +117,8 @@ no model was available to try an agent with), all done in 2.3.0; and
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
-[040](../specs/040-scrolling-text/SPEC.md) (scrolling text).
+[040](../specs/040-scrolling-text/SPEC.md) (scrolling text),
+[046](../specs/046-setup-network-timeout/SPEC.md) (the setup network closes an hour after joining the router; draft).
 Deferred: [034](../specs/034-face-languages/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 
