@@ -7,8 +7,7 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 ## Release and checkout
 
 The latest version is **2.3.1** (2026-11-06: `clock.help` on the OpenClaw node, spec
-045), committed on `openclaw-native`; it is published as `AIAgentMonitor_v2.3.1.bin.gz`
-when pushed to `main`. Before it: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an
+045), released 2026-11-06 (tag `v2.3.1`, `AIAgentMonitor_v2.3.1.bin.gz`). Before it: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an
 OpenClaw node, flash room without losing a feature, the emulator's OpenClaw panel and an
 OpenClaw skill), published on GitHub as `SimonLuckenuik/ai-agent-monitor` with
 `AIAgentMonitor_v2.3.0.bin.gz`, `AIAgentMonitor_v2.3.0.elf` (for `scripts/decode_crash.py`)
@@ -30,6 +29,15 @@ with the custom faces (032), every time zone (033), one city search for the weat
 the time zone (035). None of it has run on the clock yet: the owner installs it next.
 
 ## The clock
+
+**Three clocks** are on the IoT VLAN (2026-11-06, found by reading `/status` across
+192.168.66.x; `.local` names do not resolve from the development machine):
+`agentmonitor-ade9c0` (192.168.66.79) runs **2.3.1**, installed by the owner on
+2026-11-06: 26.6 KB free and 25.5 KB at the lowest four minutes after the start, the Day
+tiles in 87-131 ms, mDNS on, MQTT off, OpenClaw off (not paired: the node and
+`clock.help` are not tested on a clock yet). `agentmonitor-adec8a` (now 192.168.66.229)
+and `agentmonitor-ade859` (192.168.66.57; 46 hours up, 26.3 KB free, 18.9 KB at the
+lowest) run 2.2.0.
 
 The owner's clock (MAC 8C:8C:29:AD:EC:8A, `agentmonitor-adec8a`; the address moves) runs
 **2.1.1** since 2026-11-03, installed by the owner and working as expected: five forecast

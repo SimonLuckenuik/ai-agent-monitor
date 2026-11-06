@@ -21,3 +21,10 @@
 - Not verified: the real OpenClaw gateway asking again for the new command (expected
   from spec 041's findings, written in the Upgrading note); an agent fetching the guide
   (no model key); the real clocks.
+
+## 2026-11-06: released
+
+- Released as 2.3.1 (the release workflow and the three branch builds passed). The owner
+  installed it on `agentmonitor-ade9c0` (192.168.66.79): `/status` reports 2.3.1, build
+  5a9fb81, 26.6 KB free, `openclaw: off`. The node and `clock.help` are not tested on the
+  clock (not paired with a gateway yet).
