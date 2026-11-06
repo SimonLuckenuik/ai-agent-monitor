@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **044**.
+Next free number: **045**.
 
 | Spec | Status |
 |---|---|
@@ -53,6 +53,7 @@ Next free number: **044**.
 | [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | In progress (built on branch `openclaw-native`, not released) |
 | [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Approved 2026-11-05 (on `faces-v2`, not released) |
 | [043 An OpenClaw panel in the emulator](043-emulator-openclaw-panel/SPEC.md) | In progress (built on branch `openclaw-native`) |
+| [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | Draft |
 
 ## Templates
 

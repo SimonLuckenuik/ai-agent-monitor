@@ -13,6 +13,8 @@ approved.
 3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): approved
    2026-11-05, built on branch `openclaw-native` and tested in the emulator (8 KB of update
    room left after it); next: merge, a real OpenClaw Gateway and the clock, release 2.3.0.
+   With it: [044 An OpenClaw skill for the clock](../../specs/044-openclaw-skill/SPEC.md)
+   (teaches OpenClaw agents the commands and custom faces; no firmware change): proposed.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
 
