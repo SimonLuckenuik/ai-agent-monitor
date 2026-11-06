@@ -1,6 +1,7 @@
-"""A stand-in OpenClaw Gateway for the openclaw_node integration case (spec 041).
+"""A stand-in OpenClaw Gateway: the emulator's OpenClaw panel (spec 043) and the
+openclaw_node integration case (spec 041) pair the emulated clock with it.
 
-    python fake_gateway.py [--ws 18789] [--control 8790]
+    python openclaw_gateway.py [--ws 18789] [--control 8790]    # GW_PUBLIC_URL: how clocks reach it
 
 Standard library only (it runs in python:3.12-alpine beside the emulator). The node
 side is checked the way the gateway checks it (openclaw/openclaw 92d5d16,
@@ -11,9 +12,12 @@ pure-Python Ed25519 (RFC 8032) over the payload rebuilt byte for byte. Then the
 credential: the shared token, a bootstrap token (once), or the device token issued in
 hello-ok, and the pairing approval when required.
 
-Control API (HTTP, JSON):
-    GET  /state             {"connects": [...], "nodes": [deviceId...], "refusals": [...], "frames": n}
+Control API (HTTP, JSON, CORS for the screen page):
+    GET  /state             nodes (client, commands, credential, since), connects, the last
+                            connect's checklist, devices awaiting approval, refusals, frames log
     POST /reset {options}   token, bootstrapToken, deviceToken, requirePairing; forgets everything
+    POST /config            {"requirePairing": bool}
+    POST /setup             a single-use setup code {"code", "url"}
     POST /approve {"id"}    approves a device
     POST /revoke            the device token stops working
     POST /drop              closes every node's socket, as a gateway restart would
@@ -143,6 +147,7 @@ class Conn:
     def __init__(self, sock):
         self.sock, self.buf, self.lock = sock, b"", threading.Lock()
         self.nonce, self.ts, self.device = uuid.uuid4().hex, int(time.time() * 1000), None
+        self.params, self.since = {}, 0
 
     def recv_exact(self, n):
         while len(self.buf) < n:
@@ -173,6 +178,21 @@ class Conn:
 
 
 # ---------------------------------------------------------------- the gateway
+PUBLIC_URL = os.environ.get("GW_PUBLIC_URL", "ws://gateway:18789")   # how the clock reaches it
+CHECKS = [("protocol", "Protocol range includes 3-4"), ("client", "Client node-host, mode and role node"),
+          ("nonce", "The challenge's nonce and time signed back"), ("publicKey", "Ed25519 key, 32 bytes, base64url"),
+          ("deviceId", "Device id = SHA-256 of the key"), ("signature", "v3 signature verifies"),
+          ("caps", "No capabilities, no scopes (output only)")]
+
+
+def short(obj, limit=1500):
+    """A frame for the log: hello-ok's snapshot left out, long text cut."""
+    if isinstance(obj, dict) and isinstance(obj.get("payload"), dict) and "snapshot" in obj["payload"]:
+        obj = {**obj, "payload": {**obj["payload"], "snapshot": "(about 100 KB, left out)"}}
+    text = json.dumps(obj)
+    return text if len(text) <= limit else text[:limit] + f"... ({len(text)} characters)"
+
+
 class Gateway:
     def __init__(self):
         self.lock = threading.Lock()
@@ -189,52 +209,79 @@ class Gateway:
                       "requirePairing": False, **o}
             self.approved, self.conns, self.nodes = set(), [], {}
             self.connects, self.refusals, self.frames, self.pending = [], [], 0, {}
+            self.awaiting, self.log, self.checks = {}, [], []   # devices waiting for approval; frames; last connect
+
+    def note(self, direction, obj):
+        with self.lock:
+            self.log.append({"t": time.time(), "dir": direction, "text": short(obj)})
+            del self.log[:-80]
+
+    def send(self, c, obj, opcode=1):
+        if opcode == 1:
+            self.note("out", obj)
+        c.send(obj, opcode)
 
     def state(self):
         with self.lock:
-            return {"connects": self.connects, "nodes": list(self.nodes), "refusals": self.refusals,
-                    "frames": self.frames, "deviceToken": self.o["deviceToken"]}
+            nodes = []
+            for dev, c in self.nodes.items():
+                p = c.params
+                nodes.append({"id": dev, "client": p.get("client"), "commands": p.get("commands"), "caps": p.get("caps"),
+                              "auth": next(iter(p.get("auth") or {}), ""), "since": c.since,
+                              "protocol": [p.get("minProtocol"), p.get("maxProtocol")], "userAgent": p.get("userAgent")})
+            return {"connects": self.connects, "nodes": nodes, "refusals": self.refusals, "frames": self.frames,
+                    "deviceToken": self.o["deviceToken"], "requirePairing": self.o["requirePairing"],
+                    "awaiting": [{"id": k, **v} for k, v in self.awaiting.items()], "checks": self.checks,
+                    "log": self.log[::-1], "url": PUBLIC_URL}
 
     def check(self, c, p):
-        if not (p.get("minProtocol", 99) <= 4 and p.get("maxProtocol", 0) >= 3):
-            return "protocol"
+        """Every check the gateway makes, as (name, passed, why): the first failure refuses."""
+        out = []
+        ok = lambda name, cond, why="": out.append((name, bool(cond), "" if cond else why))
+        ok("protocol", p.get("minProtocol", 99) <= 4 and p.get("maxProtocol", 0) >= 3,
+           f"{p.get('minProtocol')}-{p.get('maxProtocol')}")
         cl = p.get("client") or {}
-        if cl.get("id") != "node-host" or cl.get("mode") != "node" or p.get("role") != "node":
-            return "client"
+        ok("client", cl.get("id") == "node-host" and cl.get("mode") == "node" and p.get("role") == "node",
+           f"{cl.get('id')}/{cl.get('mode')}/{p.get('role')}")
         d = p.get("device") or {}
-        if d.get("nonce") != c.nonce or d.get("signedAt") != c.ts:
-            return "nonce"
+        ok("nonce", d.get("nonce") == c.nonce and d.get("signedAt") == c.ts,
+           f"signedAt {d.get('signedAt')} for ts {c.ts}")
         try:
             raw = b64url_decode(d.get("publicKey", ""))
         except ValueError:
-            return "publicKey"
-        if len(raw) != 32 or d.get("publicKey", "").endswith("="):
-            return "publicKey"
-        if hashlib.sha256(raw).hexdigest() != d.get("id"):
-            return "deviceId"
+            raw = b""
+        ok("publicKey", len(raw) == 32 and not d.get("publicKey", "").endswith("="), f"{len(raw)} bytes")
+        ok("deviceId", raw and hashlib.sha256(raw).hexdigest() == d.get("id"), "not the key's SHA-256")
         auth = p.get("auth") or {}
         kind = next(iter(auth), "")
         token = "" if kind == "password" else auth.get(kind, "")
-        payload = auth_payload_v3(d["id"], cl["id"], cl["mode"], p["role"], p.get("scopes") or [], d["signedAt"],
-                                  token, d["nonce"], cl.get("platform"), cl.get("deviceFamily"))
-        try:
-            sig = b64url_decode(d.get("signature", ""))
-        except ValueError:
-            return "signature"
-        if not ed25519_verify(raw, payload.encode(), sig):
-            return "signature"
-        return ""
+        good = False
+        if len(raw) == 32:
+            payload = auth_payload_v3(d.get("id", ""), cl.get("id", ""), cl.get("mode", ""), p.get("role", ""),
+                                      p.get("scopes") or [], d.get("signedAt"), token, d.get("nonce", ""),
+                                      cl.get("platform"), cl.get("deviceFamily"))
+            try:
+                good = ed25519_verify(raw, payload.encode(), b64url_decode(d.get("signature", "")))
+            except ValueError:
+                pass
+        ok("signature", good, "does not verify")
+        ok("caps", not p.get("caps") and not p.get("scopes"), f"caps {p.get('caps')}, scopes {p.get('scopes')}")
+        with self.lock:
+            self.checks = [{"name": n, "label": dict(CHECKS)[n], "ok": g, "why": w} for n, g, w in out]
+        bad = [n for n, g, _ in out if not g and n != "caps"]
+        return bad[0] if bad else ""
 
     def refuse(self, c, rid, code, message, detail):
         with self.lock:
-            self.refusals.append({"code": code, "detail": detail, "message": message})
-        c.send({"type": "res", "id": rid, "ok": False, "error": {"code": code, "message": message, "details": {"code": detail}}})
+            self.refusals.append({"code": code, "detail": detail, "message": message, "t": time.time()})
+        self.send(c, {"type": "res", "id": rid, "ok": False, "error": {"code": code, "message": message, "details": {"code": detail}}})
         time.sleep(0.05)
         c.send(b"\x03\xe8", 8)
 
     def on_connect(self, c, rid, p):
         with self.lock:
             self.connects.append(p)
+            del self.connects[:-20]
         bad = self.check(c, p)
         if bad:
             return self.refuse(c, rid, "INVALID_REQUEST", "device auth failed: " + bad, "DEVICE_AUTH_INVALID")
@@ -252,15 +299,18 @@ class Gateway:
             else:
                 ok = False
             pending = ok and self.o["requirePairing"] and dev not in self.approved
+            if pending:
+                self.awaiting[dev] = {"name": (p.get("client") or {}).get("displayName"), "t": time.time()}
         if not ok:
             return self.refuse(c, rid, "UNAUTHORIZED", "auth failed", "AUTH_TOKEN_MISMATCH")
         if pending:
             return self.refuse(c, rid, "NOT_PAIRED", "pairing required", "PAIRING_REQUIRED")
         with self.lock:
             self.approved.add(dev)
+            self.awaiting.pop(dev, None)
             self.nodes[dev] = c
-            c.device = dev
-        c.send({"type": "res", "id": rid, "ok": True, "payload": {
+            c.device, c.params, c.since = dev, p, time.time()
+        self.send(c, {"type": "res", "id": rid, "ok": True, "payload": {
             "type": "hello-ok", "protocol": 4, "server": {"version": "fake", "connId": uuid.uuid4().hex},
             "features": {"methods": ["node.invoke.result"], "events": ["node.invoke.request", "tick"]},
             "snapshot": {"presence": [{"text": "x" * 64} for _ in range(1500)]},   # about 100 KB, as a busy gateway
@@ -295,7 +345,7 @@ class Gateway:
                           f"Sec-WebSocket-Accept: {accept}\r\n\r\n").encode())
             with self.lock:
                 self.conns.append(c)
-            c.send({"type": "event", "event": "connect.challenge", "payload": {"nonce": c.nonce, "ts": c.ts}})
+            self.send(c, {"type": "event", "event": "connect.challenge", "payload": {"nonce": c.nonce, "ts": c.ts}})
             while True:
                 op, data = c.read_frame()
                 with self.lock:
@@ -309,12 +359,13 @@ class Gateway:
                 if op != 1:
                     continue
                 msg = json.loads(data)
+                self.note("in", msg)
                 if msg.get("type") != "req":
                     continue
                 if msg.get("method") == "connect":
                     self.on_connect(c, msg.get("id"), msg.get("params") or {})
                 elif msg.get("method") == "node.invoke.result":
-                    c.send({"type": "res", "id": msg.get("id"), "ok": True, "payload": {"ok": True}})
+                    self.send(c, {"type": "res", "id": msg.get("id"), "ok": True, "payload": {"ok": True}})
                     r = msg.get("params") or {}
                     with self.lock:
                         slot = self.pending.pop(r.get("id"), None)
@@ -322,8 +373,8 @@ class Gateway:
                         slot["result"] = r
                         slot["done"].set()
                 else:
-                    c.send({"type": "res", "id": msg.get("id"), "ok": False,
-                            "error": {"code": "UNKNOWN_METHOD", "message": str(msg.get("method"))}})
+                    self.send(c, {"type": "res", "id": msg.get("id"), "ok": False,
+                                  "error": {"code": "UNKNOWN_METHOD", "message": str(msg.get("method"))}})
         except (ConnectionError, OSError, ValueError):
             pass
         finally:
@@ -347,13 +398,16 @@ class Gateway:
         slot = {"done": threading.Event()}
         with self.lock:
             self.pending[rid] = slot
-        c.send({"type": "event", "event": "node.invoke.request", "payload": {
+        t0 = time.time()
+        self.send(c, {"type": "event", "event": "node.invoke.request", "payload": {
             "id": rid, "nodeId": dev, "command": command,
             "paramsJSON": raw if raw is not None else json.dumps(params or {}), "timeoutMs": timeout * 1000}})
         if not slot["done"].wait(timeout):
-            return {"error": "timeout"}
+            with self.lock:
+                self.pending.pop(rid, None)
+            return {"error": "timeout", "ms": round((time.time() - t0) * 1000)}
         r = slot["result"]
-        out = {"ok": r.get("ok"), "id": r.get("id") == rid, "nodeId": r.get("nodeId")}
+        out = {"ok": r.get("ok"), "id": r.get("id") == rid, "nodeId": r.get("nodeId"), "ms": round((time.time() - t0) * 1000)}
         if r.get("payloadJSON") is not None:
             try:
                 out["payload"] = json.loads(r["payloadJSON"])
@@ -362,6 +416,14 @@ class Gateway:
         if r.get("error"):
             out["error"] = r["error"]
         return out
+
+    def setup_code(self):
+        """A setup code as `openclaw qr --setup-code-only` prints one: a fresh single-use bootstrap token."""
+        token = "boot-" + uuid.uuid4().hex[:12]
+        with self.lock:
+            self.o["bootstrapToken"] = token
+        code = base64.urlsafe_b64encode(json.dumps({"url": PUBLIC_URL, "bootstrapToken": token}).encode()).decode()
+        return {"code": code.rstrip("="), "url": PUBLIC_URL}
 
     def drop(self):
         with self.lock:
@@ -383,8 +445,19 @@ class Control(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.cors()
         self.end_headers()
         self.wfile.write(body)
+
+    def cors(self):   # the emulator's screen page (another port) calls this API; published on 127.0.0.1 only
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.cors()
+        self.end_headers()
 
     def do_GET(self):
         self.reply(GW.state() if self.path == "/state" else {"error": "not found"}, 200 if self.path == "/state" else 404)
@@ -394,9 +467,15 @@ class Control(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(n) or b"{}")
         if self.path == "/reset":
             GW.reset(body)
+        elif self.path == "/config":
+            with GW.lock:
+                GW.o["requirePairing"] = bool(body.get("requirePairing"))
+        elif self.path == "/setup":
+            return self.reply(GW.setup_code())
         elif self.path == "/approve":
             with GW.lock:
                 GW.approved.add(body["id"])
+                GW.awaiting.pop(body["id"], None)
         elif self.path == "/revoke":
             with GW.lock:
                 GW.o["deviceToken"] = "revoked-" + uuid.uuid4().hex
@@ -419,7 +498,7 @@ def main():
     a = ap.parse_args()
     srv = socket.create_server(("0.0.0.0", a.ws), reuse_port=False)
     threading.Thread(target=ThreadingHTTPServer(("0.0.0.0", a.control), Control).serve_forever, daemon=True).start()
-    print(f"fake gateway: ws on {a.ws}, control on {a.control}", flush=True)
+    print(f"OpenClaw stand-in gateway: ws on {a.ws} (clocks use {PUBLIC_URL}), control on {a.control}", flush=True)
     while True:
         sock, _ = srv.accept()
         threading.Thread(target=GW.serve, args=(sock,), daemon=True).start()

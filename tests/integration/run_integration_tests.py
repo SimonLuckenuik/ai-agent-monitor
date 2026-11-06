@@ -932,7 +932,7 @@ def restart_keeps_settings(emu):
 
 
 class FakeGateway:
-    """The stand-in OpenClaw Gateway (tests/integration/fake_gateway.py, compose service
+    """The stand-in OpenClaw Gateway (emulator/openclaw_gateway.py, compose service
     "gateway"): its control API on 18790."""
 
     def __init__(self, url="http://127.0.0.1:18790"):

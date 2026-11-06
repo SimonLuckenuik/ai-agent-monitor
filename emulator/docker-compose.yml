@@ -1,6 +1,7 @@
 # docker compose -f emulator/docker-compose.yml up --build   (ports bound to 127.0.0.1)
 #   http://localhost:8080  the emulated screen
 #   http://localhost:8000  the clock's settings page and API (firmware port 80)
+#   http://localhost:8790  the stand-in OpenClaw Gateway's control API (the OpenClaw panel)
 services:
   smartclock:
     build:
@@ -13,6 +14,14 @@ services:
       - clock-data:/data   # storage, EEPROM: survives restarts and rebuilds
     environment:   # EMU_HEAPMAP=0 turns the page's heap map off (every allocation is unwound)
       EMU_HEAPMAP: ${EMU_HEAPMAP:-1}
+    restart: unless-stopped
+  gateway:   # a stand-in OpenClaw Gateway (spec 043): the screen page's OpenClaw panel, "gateway" to the clock
+    image: python:3.12-alpine
+    command: python -u /gw/openclaw_gateway.py
+    volumes:
+      - ./openclaw_gateway.py:/gw/openclaw_gateway.py:ro
+    ports:   # its control API, for the screen page (this computer only)
+      - "127.0.0.1:8790:8790"
     restart: unless-stopped
 
 volumes:

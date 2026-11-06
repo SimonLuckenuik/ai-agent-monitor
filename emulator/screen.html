@@ -124,6 +124,21 @@
   td.num { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
   .note { color: var(--warn); }
   h2 { font-size: 15px; margin: 18px 0 8px; }
+  .openclaw { grid-column: 1 / -1; }
+  .openclaw header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .oc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px; }
+  @media (max-width: 680px) { .oc-grid { grid-template-columns: minmax(0, 1fr); } }
+  .oc-grid dd { overflow-wrap: anywhere; }
+  .oc-checks { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .oc-checks li { padding: 2px 0; } .oc-checks .ok { color: #1f9d55; } .oc-checks .bad { color: var(--warn); }
+  .chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .oc-result { margin: 0; font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+               max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 40px; }
+  .oc-result.bad { border-color: var(--warn); }
+  .oc-frames { margin-top: 14px; } .oc-frames summary { cursor: pointer; font-weight: 600; }
+  .oc-frames ol { list-style: none; margin: 8px 0 0; padding: 0; max-height: 420px; overflow: auto; font-size: 12px; color: var(--muted); }
+  .oc-frames li { border-top: 1px solid var(--line); padding: 6px 0; }
+  .oc-frames pre { margin: 4px 0 0; color: var(--text); font: 12px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -274,6 +289,45 @@
       <textarea id="mq-body" spellcheck="false"></textarea>
       <small>Each push goes through the firmware's MQTT handler, as if the broker had sent it: no broker needed.</small>
     </div>
+  </section>
+  <section class="panel openclaw" id="oc">
+    <header>
+      <div><h1>OpenClaw</h1><small>The clock as an OpenClaw node (spec 041), paired with a stand-in gateway that checks what it sends and lets you call its commands.</small></div>
+      <small id="oc-state">–</small>
+    </header>
+    <div class="row">
+      <button class="primary" id="oc-pair" title="A setup code from the gateway, given to the clock as the settings page would">Pair the clock</button>
+      <label title="Refuse new devices until you approve them, as a real gateway does"><input type="checkbox" id="oc-approval"> Require approval</label>
+      <button id="oc-drop" title="Close the socket, as a gateway restart would: the clock comes back by itself">Drop connection</button>
+      <button id="oc-revoke" title="The device token stops working: the next connect is refused">Revoke token</button>
+      <button id="oc-forget" title="The clock forgets its key: it pairs again as a new device">Forget key</button>
+      <button id="oc-off">Turn off</button>
+    </div>
+    <p class="note" id="oc-gw-down" hidden>No gateway at <code id="oc-gw-url"></code>. Start it with the emulator:
+      <code>docker compose -f emulator/docker-compose.yml up -d</code> (the <code>gateway</code> service).</p>
+    <div id="oc-awaiting"></div>
+    <div class="oc-grid">
+      <div>
+        <h2>Node</h2>
+        <dl id="oc-node"><dt>Not connected</dt><dd></dd></dl>
+        <h2>Checked in its connect</h2>
+        <ul class="oc-checks" id="oc-checks"><li><small>Nothing yet.</small></li></ul>
+      </div>
+      <div>
+        <h2>Commands <small id="oc-count"></small></h2>
+        <div class="chips" id="oc-commands"><small>The node's commands appear when it connects.</small></div>
+        <textarea id="oc-params" spellcheck="false" placeholder="{ }"></textarea>
+        <div class="row">
+          <button class="primary" id="oc-invoke" disabled>Invoke</button>
+          <small id="oc-ms"></small>
+        </div>
+        <pre class="oc-result" id="oc-result"></pre>
+      </div>
+    </div>
+    <details class="oc-frames" id="oc-frames">
+      <summary>Frames <small id="oc-frames-n"></small></summary>
+      <ol id="oc-log"></ol>
+    </details>
   </section>
   <section class="panel storage">
     <header>
@@ -898,6 +952,134 @@ $("sc-real").onclick = async () => {
     onclick: () => { fillWeather(w.weather); applyWeather().then(() => scStatus(`Weather: ${w.name}`)).catch(e => scStatus(e.message, true)); } })));
 })();
 refreshTime();
+
+// ---- OpenClaw (spec 043): the stand-in gateway's control API, called directly (CORS):
+// the screen server runs in the firmware's loop, so it cannot wait for the node's answers.
+const OC_GW = `${location.protocol}//${location.hostname}:8790`;
+const OC_EXAMPLES = {
+  "display.show": { heading: "OpenClaw", text: "Waiting for your answer", icon: "waiting" },
+  "display.clear": {},
+  "display.status": {},
+  "display.brightness": { percent: 60 },
+  "face.set": { mood: "happy", text: "Deployed" },
+  "device.info": {},
+  "device.status": {},
+  "clock.face.show": { builtin: "big-time" },
+  "clock.faces.list": {},
+  "clock.vars.set": { vars: { who: "OpenClaw", n: 3 }, ttl: 600 },
+};
+let ocCommand = "", ocNodeId = "";
+const ocEl = id => document.getElementById(id);
+async function ocGw(path, body) {
+  const r = await fetch(OC_GW + path, body === undefined ? { cache: "no-store" }
+    : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return r.json();
+}
+async function ocClock(path = "/openclaw", body) {
+  const r = await fetch(path, body === undefined ? { cache: "no-store" } : { method: "POST", body, cache: "no-store" });
+  return r.json();
+}
+const ocTime = t => new Date(t * 1000).toLocaleTimeString();
+function ocPickCommand(name) {
+  ocCommand = name;
+  for (const b of ocEl("oc-commands").querySelectorAll("button")) b.classList.toggle("on", b.dataset.cmd === name);
+  ocEl("oc-params").value = JSON.stringify(OC_EXAMPLES[name] ?? {}, null, 1);
+  ocEl("oc-invoke").disabled = false;
+  ocEl("oc-invoke").textContent = "Invoke " + name;
+}
+function ocShow(gw, clock) {
+  ocEl("oc-gw-down").hidden = !!gw;
+  ocEl("oc-gw-url").textContent = OC_GW;
+  ocEl("oc-state").textContent = clock ? `Clock: ${clock.openclaw || "?"}${clock.openclawSignMs ? `, signed in ${clock.openclawSignMs} ms` : ""}` : "Clock: not answering";
+  if (!gw) return;
+  if (document.activeElement !== ocEl("oc-approval")) ocEl("oc-approval").checked = gw.requirePairing;
+  const wait = ocEl("oc-awaiting");
+  wait.innerHTML = "";
+  for (const a of gw.awaiting) {
+    const row = document.createElement("div"); row.className = "row note";
+    row.append(`Waiting for approval: ${a.name || "a device"} (${a.id.slice(0, 16)}…) `);
+    const b = document.createElement("button"); b.textContent = "Approve"; b.className = "primary";
+    b.onclick = async () => { await ocGw("/approve", { id: a.id }); ocRefresh(); };
+    row.append(b); wait.append(row);
+  }
+  const node = gw.nodes[0], dl = ocEl("oc-node");
+  dl.innerHTML = "";
+  const add = (k, v) => { const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); };
+  if (node) {
+    const c = node.client || {};
+    add("Name", c.displayName); add("Device id", node.id);
+    add("Firmware", `${c.version} (${node.userAgent || ""})`);
+    add("Platform", `${c.platform}, ${c.deviceFamily}, ${c.modelIdentifier}`);
+    add("Protocol", `${node.protocol[0]}-${node.protocol[1]}`);
+    add("Credential", node.auth); add("Connected", "since " + ocTime(node.since));
+  } else add("Not connected", clock && clock.openclaw ? clock.openclaw : "");
+  const checks = ocEl("oc-checks");
+  checks.innerHTML = gw.checks.length ? "" : "<li><small>Nothing yet.</small></li>";
+  for (const ch of gw.checks) {
+    const li = document.createElement("li"); li.className = ch.ok ? "ok" : "bad";
+    li.textContent = `${ch.ok ? "✓" : "✗"} ${ch.label}${ch.why ? ": " + ch.why : ""}`;
+    checks.append(li);
+  }
+  const cmds = node ? node.commands || [] : [];
+  const box = ocEl("oc-commands");
+  if ((node ? node.id : "") !== ocNodeId || box.dataset.list !== cmds.join()) {
+    ocNodeId = node ? node.id : ""; box.dataset.list = cmds.join(); box.innerHTML = "";
+    if (!cmds.length) box.innerHTML = "<small>The node's commands appear when it connects.</small>";
+    for (const name of cmds) {
+      const b = document.createElement("button"); b.textContent = name; b.dataset.cmd = name;
+      b.onclick = () => ocPickCommand(name); box.append(b);
+    }
+    ocEl("oc-count").textContent = cmds.length ? `(${cmds.length}, as declared in its connect)` : "";
+    if (!cmds.includes(ocCommand)) { ocCommand = ""; ocEl("oc-invoke").disabled = true; ocEl("oc-invoke").textContent = "Invoke"; }
+    else ocPickCommand(ocCommand);
+  }
+  ocEl("oc-invoke").disabled = !node || !ocCommand;
+  ocEl("oc-frames-n").textContent = `(${gw.log.length} newest)`;
+  if (ocEl("oc-frames").open) {
+    const ol = ocEl("oc-log"); ol.innerHTML = "";
+    for (const f of gw.log) {
+      const li = document.createElement("li"), pre = document.createElement("pre");
+      li.className = f.dir; li.append(`${f.dir === "in" ? "← from the clock" : "→ to the clock"}, ${ocTime(f.t)}`);
+      pre.textContent = f.text; li.append(pre); ol.append(li);
+    }
+  }
+}
+async function ocRefresh() {
+  let gw = null, clock = null;
+  try { gw = await ocGw("/state"); } catch (e) {}
+  try { clock = await ocClock(); } catch (e) {}
+  ocShow(gw, clock);
+}
+ocEl("oc-pair").onclick = async () => {
+  try {
+    const { code } = await ocGw("/setup", {});
+    const r = await ocClock("/openclaw/pair", code);
+    ocEl("oc-result").textContent = r.error ? "Pairing refused by the clock: " + r.error : "Setup code given to the clock:\n" + code;
+  } catch (e) { ocEl("oc-result").textContent = "No gateway at " + OC_GW; }
+  ocRefresh();
+};
+ocEl("oc-approval").onchange = async e => { await ocGw("/config", { requirePairing: e.target.checked }); ocRefresh(); };
+ocEl("oc-drop").onclick = async () => { await ocGw("/drop", {}); ocRefresh(); };
+ocEl("oc-revoke").onclick = async () => { await ocGw("/revoke", {}); ocRefresh(); };
+ocEl("oc-forget").onclick = async () => { await ocClock("/openclaw/forget", ""); ocRefresh(); };
+ocEl("oc-off").onclick = async () => { await ocClock("/openclaw/off", ""); ocRefresh(); };
+ocEl("oc-frames").ontoggle = ocRefresh;
+ocEl("oc-invoke").onclick = async () => {
+  let params;
+  try { params = JSON.parse(ocEl("oc-params").value || "{}"); }
+  catch (e) { ocEl("oc-result").textContent = "The parameters are not JSON: " + e.message; return; }
+  ocEl("oc-invoke").disabled = true; ocEl("oc-ms").textContent = "Waiting for the node…";
+  try {
+    const r = await ocGw("/invoke", { command: ocCommand, params });
+    ocEl("oc-ms").textContent = r.ms !== undefined ? `${r.ok ? "OK" : "Failed"} in ${r.ms} ms` : "";
+    ocEl("oc-result").className = "oc-result " + (r.ok ? "ok" : "bad");
+    ocEl("oc-result").textContent = JSON.stringify(r.ok ? r.payload : (r.error || r), null, 1);
+  } catch (e) { ocEl("oc-ms").textContent = ""; ocEl("oc-result").textContent = "No gateway at " + OC_GW; }
+  ocEl("oc-invoke").disabled = false;
+  ocRefresh();
+};
+ocRefresh();
+setInterval(() => { if (!document.hidden) ocRefresh(); }, 2000);
 </script>
 </body>
 </html>

@@ -16,9 +16,9 @@ services:
     command: mosquitto -c /mosquitto-no-auth.conf
   gateway:   # a stand-in OpenClaw Gateway for the openclaw_node case (spec 041), "gateway" to the clock
     image: python:3.12-alpine
-    command: python -u /t/fake_gateway.py
+    command: python -u /t/openclaw_gateway.py
     volumes:
-      - ./:/t:ro
+      - ../../emulator:/t:ro
     ports:
       - "127.0.0.1:18790:8790"
 

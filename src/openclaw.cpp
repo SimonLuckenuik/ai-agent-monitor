@@ -61,7 +61,10 @@ const char* jsonText(JsonVariant v, const __FlashStringHelper* path) {
 namespace {
 
 enum Phase : uint8_t { IDLE, CHALLENGE, HELLO, READY };
-constexpr uint32_t MIN_HEAP = 12288;      // free heap needed to connect (spec 041 R6)
+// Free heap needed to connect (spec 041 R6): the socket and handshake took 4.4 KB in the
+// emulator, the signature 3.2 KB more for a moment. With a message on screen the
+// emulated clock has about 10.6 KB free.
+constexpr uint32_t MIN_HEAP = 9216;
 constexpr uint32_t FRAME_MAX = 8192;      // once connected, bigger frames are skipped unread
 constexpr uint32_t BACKOFF_MIN = 5000, BACKOFF_MAX = 300000, PENDING_RETRY = 30000;
 

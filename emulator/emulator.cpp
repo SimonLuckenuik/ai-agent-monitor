@@ -34,6 +34,8 @@
 #include <ArduinoJson.h>
 #include "weather.h"
 #include "config.h"
+#include "openclaw.h"
+String deviceHost();   // main.cpp
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -546,6 +548,20 @@ void handleRequest(WiFiClient& c, const String& head) {
     cfg.facesApi = queryArg(query, "on") != "0";
     cfg.save();
     sendText(c, 200, "text/plain", "OK");
+  } else if (path == "/openclaw" || path.startsWith("/openclaw/")) {   // the OpenClaw panel (spec 043)
+    String body = head.substring(head.indexOf("\r\n\r\n") + 4), err;
+    if (method == "POST" && path == "/openclaw/pair") err = openclawPair(body);   // as the settings page's setup code
+    else if (method == "POST" && path == "/openclaw/forget") openclawForget();
+    else if (method == "POST" && path == "/openclaw/off") { cfg.ocOn = false; openclawSettingsChanged(); }
+    if (method == "POST" && err.isEmpty()) cfg.save();
+    JsonDocument doc;
+    openclawStatus(doc);
+    doc["on"] = cfg.ocOn; doc["url"] = cfg.ocUrl; doc["name"] = cfg.ocName.length() ? cfg.ocName : deviceHost();
+    doc["paired"] = cfg.ocToken.length() > 0;
+    if (err.length()) doc["error"] = err;
+    String out;
+    serializeJson(doc, out);
+    sendText(c, err.length() ? 400 : 200, "application/json", out);
   } else if (path == "/presets") {
     String text = readFile(presetsPath().c_str());
     sendText(c, text.length() ? 200 : 404, "application/json", text.length() ? text : String("{}"));
