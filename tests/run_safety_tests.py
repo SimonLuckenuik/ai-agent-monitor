@@ -138,8 +138,13 @@ for name in ("handleFaces", "handleFaceGet", "handleFaceDelete", "handleFaceShow
 for name in ("handleThemeList", "handleThemeToggle", "handleThemeInterval", "handlePhotoToggle", "handlePhotoInterval"):
     assert "compatAllowed()" in function(integ, "void " + name + "()"), f"{name} must check compatAllowed()"
 assert "requireAuth()" in function(integ, "void handleIntegrations()"), "the API key is only shown when signed in"
+# The OpenClaw skill documents exactly the commands the firmware node declares (spec 044).
+declared = re.findall(r'\\"([a-z.]+)\\"', integ[integ.index("const char OPENCLAW_COMMANDS[] PROGMEM ="):].split(";")[0])
+skill_md = (root / "integrations/openclaw/skill/ai-agent-monitor/SKILL.md").read_text(encoding="utf-8")
+documented = [m.group(1) for m in re.finditer(r"^\| `([a-z]+\.[a-z.]+)` \|.*$", skill_md, re.M) if "**Bridge only**" not in m.group(0)]
+assert len(declared) == 10 and sorted(declared) == sorted(documented), f"OpenClaw skill table {documented} != node {declared}"
 # Our string literals stay in flash (spec 025): at most this much of them in RAM.
 subprocess.run(["python", str(root / "scripts/ram_report.py"), str(image.with_suffix(".elf")), "--max-ours", "4864"],
                check=True, stdout=subprocess.DEVNULL)
-print("PASS: stock-matching 4m3m layout, OTA size budget, no float printf, sign-in and integration guards,")
+print("PASS: stock-matching 4m3m layout, OTA size budget, no float printf, sign-in and integration guards, the OpenClaw skill's commands,")
 print("      the update unpacked as the bootloader does, strings in flash, non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, persistent AP")

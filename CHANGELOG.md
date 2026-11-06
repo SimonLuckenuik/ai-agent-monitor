@@ -20,6 +20,15 @@ versioning. `/version` on the device reports the version it was built as; a
   that pairs each clock as a node over its HTTP API), kept as a fallback and test tool.
   Its built-in face names now match the firmware's (`day-1`/`tomorrow` 11, `day-2` 12,
   `day-3` 13, `day-4` 6).
+- **An OpenClaw skill** (spec 044), `integrations/openclaw/skill/ai-agent-monitor/`:
+  teaches OpenClaw's agents the clock. It covers each command's parameters and limits,
+  good messages, and designing, checking and saving custom faces (the full face format
+  is included). Install it on the gateway's machine with
+  `openclaw skills install integrations/openclaw/skill/ai-agent-monitor --global`.
+  Custom faces are saved over HTTP from the gateway's machine (`CLOCK_URL` and
+  `CLOCK_API_KEY` in `skills.entries.ai-agent-monitor.env`), or through the bridge. Guide:
+  `integrations/openclaw/skill/README.md`. No firmware change.
+- Claude Code plugin 0.7.3: the skill's face format lists the OpenClaw fields of `/status`.
 
 ### Changed
 

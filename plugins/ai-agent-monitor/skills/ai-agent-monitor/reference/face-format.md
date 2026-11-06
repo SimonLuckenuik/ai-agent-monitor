@@ -386,7 +386,7 @@ and the slowest draw, in ms), the network, the weather (`weatherAge` in seconds,
 fetch has taken since boot), the face shown, MQTT (`mqtt`: `connected`, `off`, `no broker
 set`, `waiting for memory` or why it cannot connect; `mqttHeap`: what connecting took)
 and mDNS (`mdns`: the `.local` name; `mdnsState`: `on`, `starting` or `waiting for
-memory`; `mdnsHeap`: what starting took). `wifiDowngrades` counts the times since boot
+memory`; `mdnsHeap`: what starting took), the [OpenClaw node](#openclaw-node) (`openclaw`, `openclawId`, `openclawHeap`, `openclawSignMs`). `wifiDowngrades` counts the times since boot
 that the WiFi connection's security weakened and the clock joined again; `timeHeld`
 appears while an SNTP time jump waits for the weather server's time to confirm it
 (spec 029). After a crash it also has:

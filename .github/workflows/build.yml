@@ -109,6 +109,9 @@ jobs:
       - name: The skill's face format matches the specification
         run: python scripts/gen_face_format.py --check
 
+      - name: The OpenClaw skill's copies match the Claude Code skill
+        run: python scripts/gen_openclaw_skill.py --check
+
       - name: The big font's compiled glyphs match their source
         run: python scripts/gen_mono_glyphs.py --check
 

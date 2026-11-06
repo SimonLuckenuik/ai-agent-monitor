@@ -281,7 +281,12 @@ change.
   when it is out of date), and update the skill's `SKILL.md`, `reference/api.md`,
   `reference/face.schema.json` (new item types and fields), `scripts/clock.py`
   (`FIELDS`: the placeholder names `check` knows) and `examples/`. Check the skill's
-  examples still render (`agent_faces` in the integration tests).
+  examples still render (`agent_faces` in the integration tests). Then run
+  `python scripts/gen_openclaw_skill.py`: the OpenClaw skill
+  (`integrations/openclaw/skill/ai-agent-monitor/`) carries copies of these files, and
+  CI fails when they differ. A change to the OpenClaw node's commands or parameters
+  also goes in that skill's `SKILL.md` table (the safety tests compare it with
+  `OPENCLAW_COMMANDS`).
 - **Placeholder names** live in tables in `src/faces.cpp` (`GROUPS`, `TIME_F`,
   `DATE_F`, …, then `fieldValue()`); `net.*`, `sys.*`, `theme.night`, `time.zone`
   come from `deviceValue()` in `src/main.cpp`. A new name goes in the spec's table,

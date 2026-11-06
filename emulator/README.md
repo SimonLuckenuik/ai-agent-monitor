@@ -217,6 +217,15 @@ No model provider or subscription is needed: commands go through `openclaw nodes
 - After *Forget*, the old identity stays listed under the same name: call the node by
   its id (`/status` `openclawId`).
 
+**The OpenClaw skill** (spec 044): `python emulator/openclaw_real.py skill [--shot out.png]`
+installs `integrations/openclaw/skill/ai-agent-monitor/` on that gateway
+(`openclaw skills install ... --global`). It then turns on the emulated clock's custom
+faces and gives the skill the clock's address and key
+(`skills.entries.ai-agent-monitor.env`). Last, it prints `openclaw skills info`
+and runs the skill's `clock.py` inside the gateway's container (check, push, values,
+list, delete), as an agent's `exec` would. The clock is given by IP: it refuses the
+compose name `smartclock` (`403 Unknown host name`).
+
 ## Reset reasons
 
 | Action | Reset reason | Effect |

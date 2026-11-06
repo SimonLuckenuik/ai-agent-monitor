@@ -37,6 +37,14 @@ result says `clipped: true`. Errors come back as `INVALID_PARAMS`, `NOT_CONFIGUR
 (a clock setting or the API key is missing: the message says which), `UNAVAILABLE`
 (the clock did not answer) or `UNKNOWN_COMMAND`.
 
+## Teaching the agents
+
+Install the OpenClaw skill on the gateway's machine as well
+([skill/README.md](skill/README.md)). It tells the agents what each command takes and how
+to design custom faces. With the bridge, the skill saves faces through
+`clock.face.save`, so the gateway's machine needs no HTTP access of its own to the clock
+beyond the bridge's.
+
 ## What each clock needs
 
 | For | Clock setting |

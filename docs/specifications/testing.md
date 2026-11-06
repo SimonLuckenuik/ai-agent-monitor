@@ -40,6 +40,7 @@ builds and tests again before it publishes.
 | MQTT, mDNS, the weather fetch | Unit (`mdns_tests`), integration `mqtt_and_mdns`, `faces_beside_big_faces`, `status_and_fixed_time` |
 | Crash handling | Integration `crash_loop_protection` |
 | The OpenClaw node: signing, the protocol, its commands | Unit (`openclaw_tests`), integration `openclaw_node`; the bridge's own tests (`node --test integrations/openclaw/test/bridge.test.mjs`) |
+| The OpenClaw skill (spec 044) | Safety (its command table lists exactly the node's `OPENCLAW_COMMANDS`); CI `python scripts/gen_openclaw_skill.py --check` (its copies match the Claude Code skill's); by hand against the real gateway: `python emulator/openclaw_real.py skill` (installed, eligible, and its `clock.py` saves a face from the gateway's machine) |
 
 ## Unit tests
 

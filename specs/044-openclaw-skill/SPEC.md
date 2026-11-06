@@ -1,6 +1,8 @@
 # 044 An OpenClaw skill for the clock
 
-Status: Draft
+Status: Approved 2026-11-05 (the owner, in the chat: "aprove 044", with open questions
+1 and 2 as recommended, 3 no, 4 no key available; "make sure you document all this and how
+to use it")
 
 ## Problem
 
@@ -38,9 +40,9 @@ clock. The owner chose this over tool descriptions sent by the firmware
 - No firmware change, no `node.pluginTools.update` or `node.skills.update` (possible
   later: a separate spec).
 - No `clock.face.save` in the firmware node.
-- Publishing on ClawHub (needs the owner's ClawHub account: open question 3).
-- Proving that a model uses the skill well: that needs a model provider (open
-  question 4).
+- Publishing on ClawHub (the owner: no).
+- Proving that a model uses the skill well: that needs a model provider, and there is
+  no key (the owner). Only the loading is tested.
 
 ## Requirements
 
@@ -48,7 +50,8 @@ clock. The owner chose this over tool descriptions sent by the firmware
    - `SKILL.md`, written for OpenClaw;
    - `reference/face-format.md`, `reference/face.schema.json` and `reference/api.md`;
    - `scripts/clock.py`;
-   - `examples/` (the four message examples and two small faces).
+   - `examples/` (the Claude Code skill's four tested faces: `attention`, `progress`,
+     `done`, `error`).
 
    The files that are not `SKILL.md` are copies of the Claude Code skill's.
 2. **R2 Frontmatter** loads in OpenClaw 2026.11.1:
@@ -124,20 +127,21 @@ shows the face with `clock.face.show` and updates it later with `clock.vars.set`
   skill is used. The references are read on demand: face-format.md is about 25 KB and
   the schema about 21 KB, under OpenClaw's 256 KB per file.
 
-## Open questions
+## Open questions (answered 2026-11-05)
 
-1. **Where the shared files live.** Recommended: copies in the OpenClaw folder, made by
+1. **Where the shared files live.** Answer: as recommended, copies in the OpenClaw folder, made by
    the script and checked in CI, so the folder installs on its own (OpenClaw's
    `install ./path` copies one folder). The alternative was one skill folder for both
    tools, but each tool needs a different description and different instructions.
 2. **The gateway reaching the clock over HTTP.** Custom faces over HTTP need the
    gateway's machine to reach the clock (today only the clock dials the gateway).
    Across the IoT VLAN that means a firewall rule from the gateway to the clock's
-   port 80. The other way is the bridge for faces. Recommended: document both; nothing
-   to build.
+   port 80. The other way is the bridge for faces. Answer: as recommended, document
+   both; nothing to build.
 3. **ClawHub.** Publishing it (`clawhub skill publish`) would let anyone install it as
-   `@owner/ai-agent-monitor`. Needs the owner's account. Recommended: later.
+   `@owner/ai-agent-monitor`. Answer: no.
 4. **A model to try it with.** Without a provider key, only the loading is tested, not
    an agent using it. If the owner gives a key to the emulator's gateway (an
    environment variable, never committed), the plan adds one agent run per way (a
-   message, a face).
+   message, a face). Answer: no key available; the loading is tested, an agent using
+   it is not.

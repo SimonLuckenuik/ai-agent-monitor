@@ -53,7 +53,7 @@ Next free number: **045**.
 | [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | In progress (built on branch `openclaw-native`, not released) |
 | [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Approved 2026-11-05 (on `faces-v2`, not released) |
 | [043 An OpenClaw panel in the emulator](043-emulator-openclaw-panel/SPEC.md) | In progress (built on branch `openclaw-native`) |
-| [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | Draft |
+| [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | In progress (built on branch `openclaw-native`) |
 
 ## Templates
 

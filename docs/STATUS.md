@@ -74,7 +74,7 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 On `faces-v2`, not released: [spec 042](../specs/042-flash-room-no-loss/SPEC.md) (nothing
 lost): `firmware.bin` 579,008 B, `firmware.bin.gz` 410,558 B, 45,056 B of room. On branch
 `openclaw-native`, with the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md)):
-601,664 B and 426,724 B, **8,192 B of room**
+601,808 B and 427,067 B, **8,192 B of room**
 ([decision](decisions/2026-11-05-openclaw-node-flash.md)).
 
 ## Specs in flight
@@ -93,8 +93,12 @@ Closed 2026-11-03 after the checks on the clock: [018](../specs/018-first-run-on
 [024](../specs/024-memory-headroom/SPEC.md), [025](../specs/025-ram-mqtt-mdns/SPEC.md).
 On `faces-v2`, not released: [042](../specs/042-flash-room-no-loss/SPEC.md) (flash room,
 nothing lost). In progress on branch `openclaw-native`: [041](../specs/041-openclaw-node/SPEC.md)
-(the clock as an OpenClaw node: built, tested in the emulator against a stand-in gateway;
-not yet with a real gateway or on the clock).
+(the clock as an OpenClaw node: built, tested in the emulator against a stand-in gateway
+and the real OpenClaw 2026.11.1 gateway; not yet on the clock),
+[043](../specs/043-emulator-openclaw-panel/SPEC.md) (the emulator's OpenClaw panel) and
+[044](../specs/044-openclaw-skill/SPEC.md) (an OpenClaw skill that teaches the agents the
+clock: installed and loaded on the real gateway, its `clock.py` saves faces from there;
+no model was available to try an agent with).
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),

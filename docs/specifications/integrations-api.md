@@ -590,6 +590,13 @@ job or a heartbeat) call its commands through the gateway's `nodes` tool, or an
 operator through `openclaw nodes invoke`. Screen output and read-only status only:
 the node declares no capabilities and sends no events.
 
+**Teaching the agents.** The node tells the gateway its command names only. Install the
+OpenClaw skill on the gateway's machine so agents know each command's parameters,
+when to use it, and how to design and save custom faces (spec 044):
+`openclaw skills install integrations/openclaw/skill/ai-agent-monitor --global`. Its
+guide is [integrations/openclaw/skill/README.md](../../integrations/openclaw/skill/README.md):
+settings, examples, and what was checked.
+
 **Setting it up.** On the gateway's machine, `openclaw qr --setup-code-only` prints a
 setup code. In the settings page (Integrations → OpenClaw node) paste it and press
 *Pair & connect*; or set the gateway's address (`ws://host:18789`) and pair with the
@@ -649,7 +656,7 @@ bridge in `integrations/openclaw/` (a program beside the gateway) takes the same
 commands plus `clock.face.save`.
 
 `/status` reports `openclaw`: `off`, `not paired`, `waiting for memory` (it connects with
-12 KB free), `connecting`, `pairing pending: approve the clock on the gateway`,
+9 KB free), `connecting`, `pairing pending: approve the clock on the gateway`,
 `connected`, `refused: <code> <message>` (a credential or signature refused: no more
 tries until a setting changes), `gateway: <code> <message>` (anything else, such as
 `UNAVAILABLE gateway starting`: tried again),
