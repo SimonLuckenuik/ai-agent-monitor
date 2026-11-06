@@ -1,7 +1,7 @@
 # 041 The clock as an OpenClaw node
 
-Status: In progress (approved 2026-11-05: the owner said "start building"; built on branch
-`openclaw-native`, tested in the emulator against a stand-in gateway; not released)
+Status: Done in 2.3.0 (was: in progress (approved 2026-11-05: the owner said "start building"; built on branch
+`openclaw-native`, tested in the emulator against a stand-in gateway; not released))
 
 ## Problem
 

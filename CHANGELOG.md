@@ -7,6 +7,15 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.3.0 - 2026-11-05
+
+### Upgrading
+
+Install `AIAgentMonitor_v2.3.0.bin.gz` from the Firmware update card, as for 2.2.0.
+Settings, faces and photos are kept. The OpenClaw node is off until you pair it
+(Integrations -> OpenClaw node); nothing changes for clocks that do not use it. This
+release leaves 8 KB of room for updates.
+
 ### Added
 
 - **OpenClaw node** (spec 041): the clock pairs with an [OpenClaw](https://docs.openclaw.ai)
@@ -28,6 +37,11 @@ versioning. `/version` on the device reports the version it was built as; a
   Custom faces are saved over HTTP from the gateway's machine (`CLOCK_URL` and
   `CLOCK_API_KEY` in `skills.entries.ai-agent-monitor.env`), or through the bridge. Guide:
   `integrations/openclaw/skill/README.md`. No firmware change.
+- **The emulator's OpenClaw panel** (spec 043): the screen page pairs the emulated clock
+  with a stand-in gateway (`emulator/openclaw_gateway.py`), shows what the gateway
+  checked, lists the node's commands with examples and runs them. The `openclaw` compose
+  profile runs the real OpenClaw Gateway (no model provider needed);
+  `emulator/openclaw_real.py` pairs the clock with it and runs commands.
 - Claude Code plugin 0.7.3: the skill's face format lists the OpenClaw fields of `/status`.
 
 ### Changed

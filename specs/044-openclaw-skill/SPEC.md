@@ -1,8 +1,8 @@
 # 044 An OpenClaw skill for the clock
 
-Status: Approved 2026-11-05 (the owner, in the chat: "aprove 044", with open questions
+Status: Done in 2.3.0 (was: approved 2026-11-05 (the owner, in the chat: "aprove 044", with open questions
 1 and 2 as recommended, 3 no, 4 no key available; "make sure you document all this and how
-to use it")
+to use it"))
 
 ## Problem
 

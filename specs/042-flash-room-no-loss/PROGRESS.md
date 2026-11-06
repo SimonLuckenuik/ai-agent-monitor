@@ -16,3 +16,9 @@
 - Left: merging into `faces-v2` (on the owner's go) and the release; on the clock after release,
   the weather, a city search and `weatherHeap`. The unreachable (-1) and no reply (-11)
   paths were not exercised.
+
+## 2026-11-05: released in 2.3.0
+
+- Merged into `faces-v2` and released as 2.3.0 (the owner: "commit push merge + release").
+  Checked before the release: the firmware build and size guard, the unit, settings page
+  and safety tests. Not yet on the real clock.

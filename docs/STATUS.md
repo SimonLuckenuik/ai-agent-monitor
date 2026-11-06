@@ -6,11 +6,13 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest release is **2.2.0** (2026-11-04, tag `v2.2.0`: Moni and animated messages),
-published on GitHub as `SimonLuckenuik/ai-agent-monitor` with `AIAgentMonitor_v2.2.0.bin.gz`,
-`AIAgentMonitor_v2.2.0.elf` (for `scripts/decode_crash.py`) and `SHA256SUMS.txt`, built
-and tested by `.github/workflows/release.yml` on the push to `main`. `main` and
-`faces-v2` are the same commit. The plugin on `main` is 0.7.2 (spec 019's hooks).
+The latest release is **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an OpenClaw
+node, flash room without losing a feature, the emulator's OpenClaw panel and an OpenClaw
+skill), published on GitHub as `SimonLuckenuik/ai-agent-monitor` with
+`AIAgentMonitor_v2.3.0.bin.gz`, `AIAgentMonitor_v2.3.0.elf` (for `scripts/decode_crash.py`)
+and `SHA256SUMS.txt`, built and tested by `.github/workflows/release.yml` on the push to
+`main`. `main` and `faces-v2` are the same commit. The plugin on `main` is 0.7.3. Before
+it: 2.2.0 (2026-11-04, Moni and animated messages).
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
 last with a plain first-install image), 1.5.0 (face model), 1.6.0 (palettes and roles,

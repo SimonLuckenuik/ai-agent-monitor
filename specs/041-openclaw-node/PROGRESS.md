@@ -126,3 +126,9 @@
   the docs and schemas; real error codes for a pending pairing, the first-surface approval
   after a setup code, and tick handling are to check (PLAN step 6).
 - Not run against the real clocks.
+
+## 2026-11-05: released in 2.3.0
+
+- Merged into `faces-v2` and released as 2.3.0 (the owner: "commit push merge + release").
+  Checked before the release: the firmware build and size guard, the unit, settings page
+  and safety tests. Not yet on the real clock.

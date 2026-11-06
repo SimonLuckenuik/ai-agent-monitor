@@ -50,10 +50,10 @@ Next free number: **045**.
 | [038 A fifth forecast day, and its tile](038-fifth-forecast-day/SPEC.md) | Done in 2.1.1 |
 | [039 Animated waiting and done screens](039-animated-messages/SPEC.md) | Done in 2.2.0 |
 | [040 Scrolling text](040-scrolling-text/SPEC.md) | Draft |
-| [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | In progress (built on branch `openclaw-native`, not released) |
-| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Approved 2026-11-05 (on `faces-v2`, not released) |
-| [043 An OpenClaw panel in the emulator](043-emulator-openclaw-panel/SPEC.md) | In progress (built on branch `openclaw-native`) |
-| [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | In progress (built on branch `openclaw-native`) |
+| [041 The clock as an OpenClaw node](041-openclaw-node/SPEC.md) | Done in 2.3.0 |
+| [042 Flash room without losing a feature](042-flash-room-no-loss/SPEC.md) | Done in 2.3.0 |
+| [043 An OpenClaw panel in the emulator](043-emulator-openclaw-panel/SPEC.md) | Done in 2.3.0 |
+| [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | Done in 2.3.0 |
 
 ## Templates
 

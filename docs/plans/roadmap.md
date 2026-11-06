@@ -8,15 +8,13 @@ approved.
 
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
-2. [042 Flash room, nothing lost](../../specs/042-flash-room-no-loss/SPEC.md): approved
-   2026-11-05, on `faces-v2`; released with the next version.
-3. [041 The clock as an OpenClaw node](../../specs/041-openclaw-node/SPEC.md): approved
-   2026-11-05, built on branch `openclaw-native` and tested in the emulator (8 KB of update
-   room left after it); next: merge, a real OpenClaw Gateway and the clock, release 2.3.0.
-   With it: [044 An OpenClaw skill for the clock](../../specs/044-openclaw-skill/SPEC.md)
-   (teaches OpenClaw agents the commands and custom faces; no firmware change): approved
-   2026-11-05, built on `openclaw-native` and checked against the real gateway (loading and
-   its `clock.py`; no model to try an agent with).
+2. **Check 2.3.0 on the clock**: the update installs (8 KB of room left); pair the clock
+   with the owner's OpenClaw Gateway ([041](../../specs/041-openclaw-node/SPEC.md), done in
+   2.3.0 with [042](../../specs/042-flash-room-no-loss/SPEC.md),
+   [043](../../specs/043-emulator-openclaw-panel/SPEC.md) and
+   [044](../../specs/044-openclaw-skill/SPEC.md)): the signing time on the chip, the
+   commands, the skill with an agent once a model is available. Open: where the gateway
+   runs, reachable from the IoT VLAN over `ws://`.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
 

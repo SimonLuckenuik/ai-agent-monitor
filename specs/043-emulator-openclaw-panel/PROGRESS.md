@@ -14,3 +14,9 @@
 - Not verified: the panel's *Pair the clock* button from a real click (pairing worked
   through the same endpoints from a script; one click in the browser pane did not pair,
   not explained).
+
+## 2026-11-05: released in 2.3.0
+
+- Merged into `faces-v2` and released as 2.3.0 (the owner: "commit push merge + release").
+  Checked before the release: the firmware build and size guard, the unit, settings page
+  and safety tests. Not yet on the real clock.

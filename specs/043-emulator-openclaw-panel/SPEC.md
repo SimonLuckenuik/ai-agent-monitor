@@ -1,8 +1,8 @@
 # 043 An OpenClaw panel in the emulator
 
-Status: Approved 2026-11-05 (the owner, in the chat: "i want the panel to connect to the
+Status: Done in 2.3.0 (was: approved 2026-11-05 (the owner, in the chat: "i want the panel to connect to the
 openclaw node and the emulator panel to allow me to talk with the node ? (listing the
-tools, etc)")
+tools, etc)"))
 
 ## Problem
 
