@@ -25,3 +25,16 @@
   whether `softAPdisconnect(true)` / `enableAP(true)` keep the station associated:
   only the clock can tell.
 - Waiting for the owner: approval and the open questions in SPEC.md.
+
+## 2026-11-06, the owner's answers
+
+- Default 60 minutes for existing clocks too; the AP reopens both when the link drops
+  and at every boot; no settings-page button to reopen it (reaching the page means
+  there is a network). SPEC.md updated.
+- Searched online and in the SDK (RESEARCH.md): turning the AP off while connected is
+  what ESPHome does on ESP8266 when its station connects, with the same SDK call; not
+  documented by Espressif either way, so still to confirm on the clock.
+- The "saved stock AP at boot" question is withdrawn: core 3 keeps the radio off at boot
+  until our code starts it.
+- Still open: questions 3 (WPA2 on the recovery AP) and 4 (leave an unused recovery
+  after 30 minutes). Spec still Draft, not approved.

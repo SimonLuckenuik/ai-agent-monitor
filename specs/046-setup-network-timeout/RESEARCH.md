@@ -52,13 +52,18 @@ password.
 
 ### Other observations
 
-- **The SDK's saved AP may start before our code.** `WiFi.persistent(false)` means our
-  AP settings are never written to the SDK's configuration sector, so the opmode and
-  soft-AP configuration saved there (by the stock firmware, presumably "Smart Weather
-  Clock" in AP_STA) are what the SDK brings up at power-on, until `startAP()` replaces
-  them. This would explain the open issue
-  [2026-10-25 setup network kept its old name](../../docs/issues/2026-10-25-setup-network-kept-old-name-after-reboot.md).
-  Not measured: how long the stock AP is visible at boot, and with what security.
+- **The SDK's saved AP does not start before our code** (checked 2026-11-06, after the
+  first draft suggested it might). `WiFi.persistent(false)` means our AP settings are
+  never written to the SDK's configuration sector, so whatever the stock firmware saved
+  there ("Smart Weather Clock", presumably AP_STA) is still there. But the Arduino core
+  we build with (framework 3.30102.0, core 3.1.2) calls `__disableWiFiAtBootTime()` in
+  `user_init()` (`cores/esp8266/core_esp8266_main.cpp`): `wifi_set_opmode_current(0)`
+  and forced modem sleep, *"Starting from arduino core v3: wifi is disabled at boot
+  time"*, before the SDK starts the radio. Only our `WiFi.mode()` / `softAP()` wake it.
+  So nothing saved is broadcast at boot, and writing a clean saved configuration once is
+  not needed. This does not explain the open issue
+  [2026-10-25 setup network kept its old name](../../docs/issues/2026-10-25-setup-network-kept-old-name-after-reboot.md),
+  which stays open.
 - **No 802.11w (protected management frames)** in the NONOS SDK the core uses: anyone in
   range can send deauthentication frames and knock the station off the router. This
   matters for any design where "the station link is down" reopens the AP (see options).
@@ -67,9 +72,26 @@ password.
   `enableAP(false)`, which calls `mode(STA)`. Bringing it back is `enableAP(true)` (or
   `mode(WIFI_AP_STA)`), `softAPConfig()`, `softAP()`. `softAPgetStationNum()` returns
   how many clients are joined.
-- Whether `mode(STA)` from AP_STA keeps the station associated without a reconnect is
-  not documented for the NONOS SDK. To be checked on the clock (the emulator's WiFi is
-  a mock and always "connected").
+- **Does turning the AP off drop the station link?** Neither the NONOS SDK API reference
+  nor the Arduino core documents it either way (searched 2026-11-06: Espressif's API
+  reference, the core's docs and issues, esp8266.com). The best evidence is **ESPHome**,
+  which runs on a great many ESP8266 devices and does exactly this switch: when its
+  station connects while the fallback AP is up, `check_connecting_finished()` calls
+  `disable_ap_()`, which calls `wifi_mode_({}, false)`; on ESP8266 that is
+  `wifi_set_opmode_current(STATION_MODE)` with no reconnect or DHCP restart for the
+  station (it stops the DHCP client only when the *station* is turned off). Our
+  `softAPdisconnect(true)` ends in the same `wifi_set_opmode_current()` (through
+  `enableAP(false)` and `mode()`, which also waits up to 1 s for the mode to take).
+  Old reports of trouble are about other things: `softAPdisconnect` returning false and
+  leaving the AP up on core 2.1.0 (esp8266/Arduino#3793), a station dropping every few
+  minutes *in* AP_STA on core 2.3.0 (#3054), errors going from AP to STA and then
+  calling `begin()` (esp8266.com, SDK 1.5.1). So: very likely fine, to confirm on the
+  clock (the emulator's WiFi is a mock and always "connected"). The implementation
+  should check the return value and that `WiFi.getMode()` is `WIFI_STA` afterwards.
+- **Turning the AP back on while the station is connected never happens** in the chosen
+  design: the AP returns when the link is down, or at boot. (Had it been needed: in
+  AP_STA the AP must use the station's channel, so it starts on whatever channel the
+  router uses.)
 
 ## Options weighed
 
@@ -79,9 +101,9 @@ password.
 | B. **AP off N minutes after the station link comes up; back at once when the link drops; back at every boot** | AP for the first N minutes after each boot, and whenever the router is gone | the router gone or changed: the link drops, the AP is back with the setup screen, as today | **recommended** |
 | C. AP off N minutes after boot, whatever the link (the owner's first idea, literally) | as B | a clock that never joined, or whose router changed, has no AP after N minutes: a power cycle reopens it for N minutes | loses to B: a clock with no network would also have no AP; the setup screen would point at a network that is not there |
 | D. AP only while there is no link (N = 0) | smallest | as B | first setup breaks: joining the router closes the AP under the browser before it can show the new address. Kept as "the smallest N", not as 0 |
-| E. As B, but the AP returns only on a boot, never on a link drop | smaller than B: a deauth attack cannot reopen it | router changed: the owner power cycles once; the screen says so | strongest; costs one power cycle when the router changes (asked as an open question) |
+| E. As B, but the AP returns only on a boot, never on a link drop | smaller than B: a deauth attack cannot reopen it | router changed: the owner power cycles once; the screen says so | strongest; the owner chose B (both a link drop and a boot reopen it) |
 | F. Hide the SSID (`softAP(..., hidden)`) | none really: the SSID shows in probe responses and to any sniffer | always | security by obscurity; not worth the confusion |
-| G. A LAN button / API to reopen the AP for N minutes | adds a way to open it, signed in only | adds one | optional; a power cycle already does it (open question) |
+| G. A LAN button / API to reopen the AP for N minutes | adds a way to open it, signed in only | adds one | not wanted (the owner, 2026-11-06): reaching the settings page already means a network |
 
 **Why B is not weaker than today when it reopens the AP.** A deauth attacker in range
 can force the station off the router and so bring the AP back, but the AP is still
@@ -130,5 +152,12 @@ hardenings are possible and are listed as open questions rather than goals:
 
 - ESP8266 Arduino core soft-AP API: `libraries/ESP8266WiFi/src/ESP8266WiFiAP.cpp`
   (`softAPdisconnect`, `softAPgetStationNum`), `ESP8266WiFiGeneric.cpp` (`enableAP`, `mode`).
+- ESPHome's Wi-Fi component: `esphome/components/wifi/wifi_component.cpp`
+  (`check_connecting_finished`, `disable_ap_`) and `wifi_component_esp8266.cpp`
+  (`wifi_mode_`): https://github.com/esphome/esphome ,
+  https://api-docs-beta.esphome.io/wifi__component__esp8266_8cpp_source
+- Arduino core issues: https://github.com/esp8266/Arduino/issues/3793 ,
+  https://github.com/esp8266/Arduino/issues/3054 ; core docs on `persistent()`:
+  https://esp8266-arduino.readthedocs.io/en/stable/esp8266wifi/generic-class.html
 - Spec 029 (network guards: DNS rebinding, WPA downgrade), spec 018 (first run on the
   clock), `docs/specifications/updates-and-recovery.md`.

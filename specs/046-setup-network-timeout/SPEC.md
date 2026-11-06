@@ -32,6 +32,8 @@ soldering onto the ESP-12F's pads).
 
 - No change to the device password, the sign-in or the LAN side.
 - No button: the clock has no usable one (GPIO4 is never read).
+- No "reopen the setup network" button on the settings page (the owner, 2026-11-06):
+  reaching the settings page already means the clock has a network.
 - No routing between the AP and the LAN (there is none today: lwIP without NAPT).
 
 ## Requirements
@@ -50,8 +52,11 @@ soldering onto the ESP-12F's pads).
    link drops (the clock goes back to the setup screen, as today), and at every boot.
    The timer starts again from the next time the link comes up.
 5. Recovery and safe mode: unchanged by this setting (recovery's AP is never turned off).
-6. Turning the AP off or on never drops the station link. If the clock shows that it
-   does (a reconnect on each switch), the design is revisited before release.
+6. Turning the AP off never drops the station link. The switch is the same call
+   ESPHome makes on ESP8266 when its station connects (`wifi_set_opmode_current` to
+   station only, RESEARCH.md); turning it on only happens while the link is down or at
+   boot. Still to confirm on the clock (no reconnect, no gap in pings); if it does
+   reconnect, the design is revisited before release.
 7. `/status` reports `"ap": true|false`; the settings page shows the setup network as
    "off (restart the clock to open it)" when it is off, and offers the setting
    (Always on, 15 min, 1 h, 4 h, 24 h).
@@ -67,8 +72,8 @@ soldering onto the ESP-12F's pads).
 - Screens: nothing new. The setup screen still appears whenever the link is down, and
   the AP it names is then up.
 - After an update to this release, a clock that has been on its router for an hour
-  closes its setup network (the default applies to existing clocks too: open
-  question 1).
+  closes its setup network: the default applies to existing clocks too (the owner,
+  2026-11-06).
 
 ## Budget (flash, RAM, draw time)
 
@@ -86,27 +91,35 @@ soldering onto the ESP-12F's pads).
   passer-by to join, and no ESP8266 soft-AP stack exposed to pre-authentication bugs.
 - What it does not change: anyone in range can still knock the station off the router
   (the NONOS SDK has no 802.11w), which reopens the AP; the AP is then exactly what it
-  is today (WPA2, device password), never weaker. Open question 2 removes even that.
+  is today (WPA2, device password), never weaker. The owner chose this over "only on a
+  boot" (2026-11-06): a changed router needs no gesture.
 - A power cycle opens it: that needs physical access, which already gives the screen
   and the three-cycle recovery gesture.
 
 ## Open questions
 
-1. **Default for existing clocks**: 60 minutes for everyone after the update (more
-   secure by default), or 0 (always on) until the owner turns it on?
-2. **Reopen on a link drop, or only on a boot?** Reopening when the link drops (the
-   recommendation) keeps a clock whose router changed recoverable with no gesture, but
-   lets a deauth attacker in range reopen the WPA2 AP. Only on a boot: an attacker
-   cannot reopen it, and a changed router costs one power cycle (the setup screen
-   would then say "Restart the clock to open the setup network").
+Answered by the owner on 2026-11-06:
+
+1. Default for existing clocks: **60 minutes for everyone** after the update.
+2. Reopen on a link drop or on a boot: **both** (requirement 4).
+5. A settings-page button to reopen it: **no** (non-goals).
+6. The SDK's saved AP at power-on: **not needed** (RESEARCH.md). Arduino core 3 turns
+   the radio off at boot (`__disableWiFiAtBootTime()`) before the SDK can bring up a
+   saved configuration, so a stock network is not broadcast at boot by our firmware.
+   The 2026-10-25 issue stays open and unexplained.
+
+Still open:
+
 3. **Recovery's AP**: keep it open (today), or WPA2 with the device password, which the
    recovery screen already shows (no flash cost)? Today anyone in range of a clock in
    recovery can install firmware on it without a password.
-4. **Recovery that nobody uses**: leave it on until Restart (today), or restart normally
-   after, say, 30 minutes with no client and no request?
-5. **A LAN button to reopen it** ("Open the setup network for 15 minutes", signed in),
-   or is a power cycle enough?
-6. **The SDK's saved AP at power-on** (RESEARCH.md, the open issue of 2026-10-25): the
-   stock firmware's saved soft-AP configuration may come up for a moment at every boot
-   before our code replaces it. Write a harmless saved configuration once (STA only,
-   or our own AP) so nothing else is ever broadcast? Needs a look on the clock first.
+4. **Recovery that nobody uses**: recovery is entered by three quick power cycles, a
+   crash in the first 30 s, or a storage that does not mount, and lasts until someone
+   presses Restart. A clock that lands there by accident (power flickering three times
+   in a storm, one crash at boot) and is not noticed stays there for good: no faces,
+   and an open network on which anyone in range can install firmware. Option: when
+   nobody has joined the recovery network or made a request for 30 minutes, restart
+   normally. Cost: if the normal boot is what is broken, the clock goes back to recovery
+   by itself after the crash (a crash in the first 30 s re-enters it), so a few restarts
+   an hour at worst; a failed mount would keep restarting every 30 minutes (excluded:
+   stay in recovery when the storage did not mount). Leave it as today, or add it?
