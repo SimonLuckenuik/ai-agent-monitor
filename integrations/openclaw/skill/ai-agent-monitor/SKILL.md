@@ -132,8 +132,9 @@ Rules of the screen:
   digits only. `"font": "big"` with a `size` draws capitals, digits and `°` at any size.
 - **The clock's own colours** (`@time`, `@bg`, `@text`, `@muted`, `@warn`, `@error`,
   `@ok` ...) follow the user's palette: prefer them.
-- **No frame buffer.** Give changing text a `bg` and a `pad`, so it redraws in place
-  without flicker.
+- **No frame buffer.** Give changing text on the plain background a `bg` and a `pad`,
+  so it redraws in place without flicker. A text `bg` is an opaque box that wipes what
+  is under it: leave it out for text inside a ring, on a picture or on a gradient.
 
 `{baseDir}/reference/api.md` has the clock's HTTP API (messages, faces, variables).
 Calls marked "emulator" there only work against the emulator.

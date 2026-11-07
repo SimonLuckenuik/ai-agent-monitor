@@ -141,7 +141,9 @@ that answers 507 "No room for variable" (delete some with `null`).
   (position, visibility, a repeat's entries) is drawn again off screen around its old
   and new places, without a blink; wrapped text, images, the palette and the face's
   `bg` redraw the whole face, which flickers. Small moving parts redraw fastest; give
-  changing text a `bg` and a `pad`.
+  changing text on the plain background a `bg` and a `pad`. A text `bg` is an opaque
+  box that wipes what is under it: leave it out for text over another item (inside a
+  ring, on a picture or a gradient); the clock repaints around it off screen.
 - **Legibility.** The screen is 1.54″: one idea per face, large text, strong
   contrast, at most about 3 short lines of font 2 under a title in font 4.
 - **Attention.** There is no sound and no button. Colour and icon carry the meaning;

@@ -7,6 +7,13 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Changed
+
+- **Face format guidance on text `bg`**: the API reference and the skill now say that a
+  text `bg` is an opaque box that wipes the items under it, and recommend leaving it out
+  for text inside a ring, on a picture or on a gradient (the clock repaints around
+  changing text without a `bg`). Plugin 0.7.4.
+
 ## 2.3.1 - 2026-11-06
 
 ### Upgrading

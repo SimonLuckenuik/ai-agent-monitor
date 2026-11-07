@@ -177,7 +177,7 @@ or, where noted, a [gradient](#gradients).
 
 | `type` | Fields (defaults) |
 |---|---|
-| `text` | `x`, `y`, `text`, `font` (4), `color`, `align` (`tl`), `bg` (none = transparent), `pad` (0); `w` wraps to that width, `lines` (8) and `lh` (2, extra line spacing). With `"font": "big"`: `size` (40, the letters' height in pixels), and `w` shrinks the text to fit |
+| `text` | `x`, `y`, `text`, `font` (4), `color`, `align` (`tl`), `bg` (none = transparent; a colour fills a box that covers the items under it, see [Smooth updates](#face-json)), `pad` (0); `w` wraps to that width, `lines` (8) and `lh` (2, extra line spacing). With `"font": "big"`: `size` (40, the letters' height in pixels), and `w` shrinks the text to fit |
 | `rect` | `x`, `y`, `w`, `h`, `r` corner radius (0), `color` (or gradient), `fill` (true), `border` (colour), `bw` border width (2) |
 | `circle` | `x`, `y` (centre), `r` (10), `color` (or gradient), `fill` (true), `border`, `bw` (2), `under` (the colour its edge blends into: the face's `bg`; set it when the circle sits on another item, such as concentric rings) |
 | `line` | `x`, `y`, `x2`, `y2`, `w` width (2), `color` |
@@ -218,6 +218,12 @@ hidden item is not drawn: two items with opposite conditions (`"{sun.up}"` and
   redrawn. Text with a `bg` colour, rings, bars, and icons, sprites and sparklines
   with a `bg` are redrawn on their own when their content (text, value, colour,
   frame) changes. `pad` (pixels) clears the area around text whose width varies.
+  A text `bg` is opaque: it fills a box behind the glyphs and wipes whatever is
+  under it. Fonts 2 and 4 fill `pad` pixels along the alignment; the line font and
+  the digit fonts fill the text's box widened by `pad` on the left and the right.
+  Leave `bg` out for text drawn over another item (inside a ring, on a picture or a
+  gradient): the clock repaints around changing text without a `bg` off screen, with
+  the items under it, so nothing smears.
   When any other item moves, changes size, shows or hides, or changes without a
   `bg`, only the area around its old and new places is drawn again, with the items
   under and over it: off screen a strip at a time, then copied to the panel, so
@@ -466,7 +472,8 @@ Where a colour may be a gradient (`bg`, `rect` and `circle` `color`, path `fill`
 `stops` holds 2 to 4 colours, spread evenly; `{"from": "#…", "to": "#…"}` is the same
 as two stops. `angle` is in degrees as in CSS: `180` (the default) runs top to bottom,
 `90` left to right. The gradient spans the item's own box (the whole screen for `bg`).
-Text drawn over a gradient background needs its own `bg`, or is drawn transparent.
+Text over a gradient is drawn transparent: leave its `bg` out, as a solid `bg` would
+cover the gradient in a box.
 Gradients cost more to draw than solid colours: keep them off items that change
 several times a second.
 
