@@ -1,0 +1,21 @@
+{
+  "root": "screen",
+  "elements": {
+    "screen": {"type": "Screen", "props": {"background": "#0b1d33", "padding": 12, "gap": 10}, "children": ["top", "card", "stats", "spark"]},
+    "top": {"type": "Row", "props": {"gap": 8, "align": "center"}, "children": ["clock", "fill", "temp", "wx"]},
+    "clock": {"type": "Clock", "props": {"format": "hm", "size": "md", "maxChars": 5}},
+    "fill": {"type": "Spacer", "props": {"grow": 1}},
+    "temp": {"type": "Text", "props": {"text": {"$template": "${/now/temp}${/units/temp}"}, "size": "sm", "color": "#ffd60a", "maxChars": 4, "align": "right"}},
+    "wx": {"type": "Icon", "props": {"name": {"$state": "/now/icon"}, "size": 28, "color": "#ffd60a"}},
+    "card": {"type": "Card", "props": {"background": "#14304f", "border": {"$cond": {"$state": "/build", "eq": "fail"}, "$then": "#ff453a", "$else": "#30d158"}, "padding": 10, "gap": 6}, "children": ["repo", "statusrow", "progress"]},
+    "repo": {"type": "Text", "props": {"text": {"$state": "/repo", "fallback": "repo"}, "size": "sm", "color": "#8e8e93", "maxChars": 20}},
+    "statusrow": {"type": "Row", "props": {"gap": 10, "align": "center"}, "children": ["dot", "status"]},
+    "dot": {"type": "Dot", "props": {"size": 16, "color": {"$cond": {"$state": "/build", "eq": "fail"}, "$then": "#ff453a", "$else": "#30d158"}}},
+    "status": {"type": "Text", "props": {"text": {"$template": "Build ${/build|idle}"}, "size": "md", "color": "#ffffff", "maxChars": 13, "grow": 1}},
+    "progress": {"type": "Progress", "visible": {"$state": "/build", "eq": "running"}, "props": {"value": {"$state": "/pct"}, "height": 8, "color": "#64d2ff", "track": "#0b1d33"}},
+    "stats": {"type": "Row", "props": {"justify": "between"}, "children": ["passed", "failed"]},
+    "passed": {"type": "Text", "props": {"text": {"$template": "${/passed|0} passed"}, "size": "sm", "color": "#30d158", "maxChars": 10}},
+    "failed": {"type": "Text", "props": {"text": {"$template": "${/failed|0} failed"}, "size": "sm", "color": "#ff453a", "maxChars": 10, "align": "right"}},
+    "spark": {"type": "Sparkline", "props": {"state": "/load", "height": 44, "color": "#64d2ff", "fill": "#16324a"}}
+  }
+}

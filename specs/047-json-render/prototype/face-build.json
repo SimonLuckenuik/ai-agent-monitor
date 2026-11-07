@@ -1,0 +1,121 @@
+{
+ "bg": "#0b1d33",
+ "items": [
+  {
+   "type": "text",
+   "x": 12,
+   "y": 26,
+   "text": "{time.hm}",
+   "font": 4,
+   "align": "ml",
+   "bg": "#0b1d33",
+   "pad": 0
+  },
+  {
+   "type": "text",
+   "x": 192,
+   "y": 26,
+   "text": "{now.temp}{units.temp}",
+   "font": 2,
+   "align": "mr",
+   "color": "#ffd60a",
+   "bg": "#0b1d33",
+   "pad": 0
+  },
+  {
+   "type": "icon",
+   "x": 214,
+   "y": 26,
+   "size": 28,
+   "icon": "{now.icon}",
+   "color": "#ffd60a",
+   "bg": "#0b1d33"
+  },
+  {
+   "type": "rect",
+   "x": 12,
+   "y": 50,
+   "w": 216,
+   "h": 82,
+   "r": 10,
+   "color": "#14304f",
+   "border": "{build}==fail?#ff453a:#30d158",
+   "bw": 2
+  },
+  {
+   "type": "text",
+   "x": 22,
+   "y": 68,
+   "text": "{repo|repo}",
+   "font": 2,
+   "align": "ml",
+   "color": "#8e8e93",
+   "bg": "#14304f",
+   "pad": 28
+  },
+  {
+   "type": "circle",
+   "x": 30,
+   "y": 95,
+   "r": 8,
+   "color": "{build}==fail?#ff453a:#30d158",
+   "under": "#14304f"
+  },
+  {
+   "type": "text",
+   "x": 48,
+   "y": 95,
+   "text": "Build {build|idle}",
+   "font": 4,
+   "align": "ml",
+   "color": "#ffffff",
+   "bg": "#14304f",
+   "pad": 0
+  },
+  {
+   "type": "bar",
+   "x": 22,
+   "y": 114,
+   "w": 196,
+   "h": 8,
+   "value": "{pct}",
+   "max": 100,
+   "color": "#64d2ff",
+   "track": "#0b1d33",
+   "show": "{build}==running"
+  },
+  {
+   "type": "text",
+   "x": 12,
+   "y": 150,
+   "text": "{passed|0} passed",
+   "font": 2,
+   "align": "ml",
+   "color": "#30d158",
+   "bg": "#0b1d33",
+   "pad": 0
+  },
+  {
+   "type": "text",
+   "x": 228,
+   "y": 150,
+   "text": "{failed|0} failed",
+   "font": 2,
+   "align": "mr",
+   "color": "#ff453a",
+   "bg": "#0b1d33",
+   "pad": 0
+  },
+  {
+   "type": "spark",
+   "x": 12,
+   "y": 168,
+   "w": 216,
+   "h": 44,
+   "var": "load",
+   "color": "#64d2ff",
+   "fill": "#16324a",
+   "bg": "#0b1d33"
+  }
+ ]
+}
