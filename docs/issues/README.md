@@ -7,6 +7,7 @@ here from Open to Closed when it is fixed or explained.
 
 ## Open
 
+- [2026-11-07 Text with a `bg` wipes the items under it (a ring cut by its own label): fixed for json-render, face-format guidance open](2026-11-07-text-bg-wipes-items-under-it.md)
 - [2026-10-25 After a reboot the clock showed the old setup network name](2026-10-25-setup-network-kept-old-name-after-reboot.md)
 
 ## Closed/explained

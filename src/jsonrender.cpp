@@ -56,6 +56,7 @@ String warn, items, vis, bgS;   // warnings, the items so far, the visibility co
 int itemCount = 0;
 float scale = 1;                // the Frame's size to the screen's
 bool ink = false;               // a spec rooted at an Ink Box: lengths in character cells, Box is a row
+uint8_t textV = 1;              // how a line of text sits in its box: 0 top, 1 middle, 2 on the bottom (its row's alignItems)
 uint32_t bgHex = 0xffffff;      // the background colour as a number, when it is one (for rgba)
 bool bgKnown = true;
 bool overflowItems = false;
@@ -613,21 +614,21 @@ void emitText(const String& t, const Font& f, const String& colour, int x, int y
     fNum("x", ax); fNum("y", y + max(0, (lh - f.h) / 2));
     fStr("align", String("t") + hor); fNum("w", w); fNum("lines", lines); fNum("lh", max(0, lh - f.h));
   } else {
-    fNum("x", ax); fNum("y", y + h / 2); fStr("align", String("m") + hor);
+    // In a row aligned to the end, texts share a baseline at the bottom of their boxes (fonts 2
+    // and 4 have a descender below it: 3 and 6 px); aligned to the start, a top line.
+    if (n && textV == 2) { fNum("x", ax); fNum("y", y + h + (f.font == 2 ? 3 : f.font == 4 ? 6 : 0)); fStr("align", String("b") + hor); }
+    else if (n && textV == 0) { fNum("x", ax); fNum("y", y); fStr("align", String("t") + hor); }
+    else { fNum("x", ax); fNum("y", y + h / 2); fStr("align", String("m") + hor); }
   }
   fStr("text", t);
   if (f.font) fNum("font", f.font);
   else { fStr("font", f.name); fNum("size", f.size); if (f.weight > 1) items += ",\"weight\":1.7"; }
   if (!f.font && widthOf(sample(t), f) > w) fNum("w", w);   // the line font shrinks to fit
   if (colour.length()) fStr("color", colour);
-  if (live(t) && lines <= 1 && bgS.length()) {
-    fStr("bg", bgS);
-    // Fonts 2 and 4: pad is the width cleared, along the alignment. The large fonts clear
-    // pad on both sides of the text: only centred text can take it without leaving its
-    // box (a change of length repaints the old and new boxes anyway).
-    if (f.font) fNum("pad", w);
-    else if (al == A_CENTER) fNum("pad", max(0, (w - widthOf(sample(t), f)) / 2));
-  }
+  // No "bg" on text: it is drawn over whatever is under it (a ring, a box, an icon). When
+  // a live value changes, the renderer repaints the area around the old and new text with
+  // the items under and over it, off screen (spec 016), so nothing smears and nothing
+  // under the text is wiped by a background box.
   itemEnd();
   if (n && lines <= 1 && !live(t)) {
     const char* deco = n->p["textDecoration"];
@@ -1221,7 +1222,10 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
         by = pos + cl.mar[0]; bhgt = mainS[j] - cl.mar[0] - cl.mar[2];
         bx = lineTop + off + cl.mar[3]; bwid = crossIn - cl.mar[1] - cl.mar[3];
       }
+      uint8_t saveV = textV;
+      textV = !l.row ? 1 : al == A_END ? 2 : al == A_START ? 0 : 1;
       place(kid[j], bx, by, max(0, bwid), max(0, bhgt), depth + 1);
+      textV = saveV;
       pos += mainS[j] + gap;
     }
     lineTop += lineCross + l.gap;

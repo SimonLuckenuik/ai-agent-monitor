@@ -35,6 +35,10 @@ approved.
 
 ## Ideas (no spec yet)
 
+- **AI Agent Monitor Studio** (the owner, 2026-11-07; a follow-up spec if 047 goes
+  ahead): a GitHub Pages site, linked from the clock's settings page, for building custom
+  faces from the catalog's components with a live preview (the emulator's renderer in the
+  page). Opened from the clock, it would get what it needs to send the face to that clock.
 - Hardware scrolling and the panel's idle (8-colour) mode (spec 014 research).
 - A way back to stock over WiFi (upstream idea).
 - [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).

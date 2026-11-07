@@ -101,3 +101,17 @@ weather and variables: `ab/sheet.png`.
 Not verified: anything on a real clock (no device build has the feature); the heap a
 build without OpenClaw/MQTT really frees; json-render's own `validateSpec()` against the
 catalog (npm installs refused here). The OpenClaw `clock.catalog` command is not done.
+
+## 2026-11-07 (late): the owner's review of the pictures
+
+- The owner: "Keep going". Also a follow-up idea, recorded on the roadmap: "AI Agent
+  Monitor Studio", a GitHub Pages site for building faces from the catalog with a live
+  preview, linked from the settings page and able to send the face to the clock.
+- Defect found by the owner: text drawn over a ring wiped part of it, in both arms.
+  Issue record: docs/issues/2026-11-07-text-bg-wipes-items-under-it.md. The compiler no
+  longer gives text a `bg`. The renderer's off-screen repaint keeps live updates clean,
+  checked in the emulator (no stale pixels; repaint 104 ms, full draw 276 ms).
+- The owner: "the 12 and min should have been on the same bottom line". The compiler
+  centred every text vertically in its line box. Now, in a row with `alignItems:
+  flex-end`, texts share a baseline at the bottom of their boxes; with `flex-start`, a
+  top line. The A/B sheet was rendered again.
