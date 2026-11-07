@@ -27,3 +27,25 @@ Not verified:
   and no sign-in, as required).
 
 Left: the owner's decision and answers to the open questions.
+
+## 2026-11-07 (later): direction changed by the owner
+
+- The owner, in the chat: "Willing to ignore the available space for now and to drop
+  features if it means supporting a standard rendering. Could even be a fork or two
+  different builds. Full catalog exposed (non interactive, just display considering
+  the device as no input) + support as much rendering as possible."
+- Decision record: docs/decisions/2026-11-07-json-render-native.md.
+- SPEC.md rewritten for native support: `GET /api/catalog`, json-render specs accepted
+  by `POST /api/faces`, compiled on save into our face items (the renderer is
+  unchanged), and a separate build that can leave out OpenClaw, MQTT and mDNS. The host
+  compiler of the first draft became the prototype of the on-device compiler. PLAN.md
+  is now phases 0-3.
+- Read the two standard catalogs (`@json-render/image`: 9 display-only components;
+  `@json-render/shadcn`: 36, of which about 15 are display ones) into RESEARCH.md, and
+  sized phase 1 at about 12-16 KB of code plus 3-4 KB of gzipped catalog.
+
+Not verified: every size is an estimate until phase 0 measures the builds and the heap.
+The `repeat` shape comes from third-party mirrors of the docs.
+
+Left: the owner's answers to the open questions (separate build or not, keep our format,
+phase 2, the shadcn scope, `/vars/` paths, which features leave), then approval.

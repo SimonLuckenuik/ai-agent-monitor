@@ -133,7 +133,9 @@ normal answer.
 **Draw time.** Layout would run on every load and on every value change that resizes a
 box, on a chip where a full face redraw is already the visible cost.
 
-Conclusion: no.
+Conclusion (first draft): no, as long as flash is the limit. On 2026-11-07 the owner set
+flash aside and chose native support (separate build allowed). The sections below the
+prototype's work size that direction.
 
 ## Option d: render to an image on the host
 
@@ -157,6 +159,88 @@ summary), not for a face. If the owner wants it, it is a separate, small spec.
   tooling cannot validate against it. It would have to re-implement validation. The
   plugin's scripts are standard-library only by design.
 - **Firmware:** option c.
+
+## The standard catalogs (for native support)
+
+json-render has no single standard catalog. Each renderer package ships its own. Two
+matter here.
+
+### `@json-render/image` (display-only, the base)
+
+From `packages/image/src/catalog.ts` (2026-11-07). Every prop is nullable.
+
+| Component | Props | On the clock |
+|---|---|---|
+| `Frame` (root) | `width`, `height`, `backgroundColor`, `padding`, `display`, `flexDirection`, `alignItems`, `justifyContent` | Face `bg`. A size other than 240×240 is laid out at its own size, then scaled |
+| `Box` | `padding`, `paddingTop/Bottom/Left/Right`, `margin`, `backgroundColor`, `borderWidth`, `borderColor`, `borderRadius`, `flex`, `width`/`height` (number or string, e.g. `"50%"`), `alignItems`, `justifyContent`, `flexDirection`, `position` (`relative`/`absolute`), `top/left/right/bottom`, `overflow` | `rect` (fill, border, radius); layout. `overflow: hidden` cannot clip (warned) |
+| `Row` | `gap`, `alignItems`, `justifyContent` (incl. `space-between`, `space-around`), `padding`, `flex`, `wrap` | layout |
+| `Column` | `gap`, `alignItems`, `justifyContent`, `padding`, `flex` | layout |
+| `Heading` | `text`, `level` h1-h4, `color`, `align`, `letterSpacing`, `lineHeight` | text: h1/h2 line font, h3/h4 font 4 |
+| `Text` | `text`, `fontSize`, `color`, `align`, `fontWeight`, `fontStyle`, `lineHeight`, `letterSpacing`, `textDecoration` | text: nearest font; bold on the line font; underline as a line; italic and spacing ignored |
+| `Image` | `src`, `width`, `height`, `borderRadius`, `objectFit` | `image` for a photo on the clock (JPEG scale 1/2/4/8); a URL draws a placeholder |
+| `Divider` | `color`, `thickness`, `marginTop`, `marginBottom` | `line` |
+| `Spacer` | `height` | layout |
+
+All of it can be drawn with today's items. The new work is the layout (margins, %,
+wrap, absolute), CSS colours, and mapping font sizes.
+
+### `@json-render/shadcn` (36 components, web)
+
+From `packages/shadcn/src/catalog.ts`:
+
+- **Display, drawable:** `Card` (title, description), `Stack` (direction, gap sm-xl,
+  align, justify), `Grid` (columns, gap), `Separator`, `Heading`, `Text` (variant
+  body/caption/muted/lead/code), `Image`, `Avatar` (initials in a circle), `Badge`
+  (variant), `Alert` (type info/success/warning/error: icon, title, message), `Progress`
+  (value, max, label), `Skeleton`, `Spinner` (an animated ring), `Table` (columns, rows:
+  font 2, ruled), `Carousel` (the first item).
+- **Hidden by default, drawn as nothing:** `Dialog`, `Drawer` (open by state),
+  `Tooltip`, `Popover` (their trigger text only).
+- **Interactive, can be drawn in their resting state:** `Button`, `Link`, `Toggle`,
+  `ToggleGroup`, `ButtonGroup`, `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`,
+  `Switch`, `Slider`, `Tabs`, `Accordion`, `Collapsible`, `DropdownMenu`,
+  `Pagination`. They show a value, a label or a choice, and that has meaning on a
+  display.
+
+Names overlap between the two sets (`Text`, `Heading`, `Image`, with different props).
+The clock's catalog would be their union: `Text` accepts `fontSize` and `variant`, so
+specs written for either renderer draw.
+
+### What core does not give
+
+No JSON or JSON Schema export of a catalog is documented. `catalog.prompt()` is the only
+output. Zod 4 has `z.toJSONSchema()`, so a build script can turn our `catalog.mjs` into
+the JSON the clock serves. Going the other way (JSON Schema back to zod, so an agent's
+json-render tools can use the clock's served catalog) has to be checked: zod 4's
+`fromJSONSchema`, or the published `catalog.mjs`. The shape of `repeat` is only partly
+documented: `{"repeat": {"statePath": "/list", "key": "id"}}`, with `$item` and
+`$index` inside, from third-party mirrors of the docs. Check it against the source
+before building.
+
+## Native support, sized (owner's direction, 2026-11-07)
+
+Estimates from comparable parts in footprint.md: the face loader 3.2 KB, expressions
+4.6 KB, items and text 11.2 KB. Measure in phase 1.
+
+| Part | Code | Notes |
+|---|---|---|
+| Parse, node array, checks, warnings | 2-2.5 KB | flat map → nodes (about 24 B each), cycles and dangling ids |
+| Flex layout: direction, gap, padding/margin per side, grow, px and %, align, justify (5 values), wrap, absolute | 4-5 KB | integer pixels; two passes (measure, place) |
+| Emit items (rect, text with bg/pad, line, image, bar, ring, path) | 2-3 KB | into the face format the renderer already reads |
+| CSS colours (`rgb()`, `rgba()` blended, names) | 1-1.5 KB | name table about 0.5 KB for 30 names |
+| Font mapping, wrapping hints, `asciiFold` | 1 KB | `textWidth` is already linked |
+| `$state` / `$template` / `$cond` / `visible` / `repeat` → placeholders, expressions, `show`, repeat | 1.5-2 KB | the target syntax exists |
+| `/api/catalog`, source kept beside the compiled face, backup | 1 KB code + 3-4 KB gzipped data | data does not compress again, so it counts twice in room |
+| **Phase 1 total** | **about 12-16 KB code, 3-4 KB data** | **about 25-35 KB of update room** |
+| shadcn display set (+ resting interactive) | 6-8 KB | mostly composites of existing items |
+| Phase 2: run-time relayout | 3-4 KB | plus heap per face on screen |
+
+Room comes from a build without OpenClaw (22.7 KB), MQTT (7 KB) and mDNS (4.5 KB): about
+34 KB of code, roughly 58 KB of room with the 1.7 factor, plus today's 10.7 KB raw.
+Phase 1 and the shadcn set fit in that. Heap: OpenClaw and MQTT both hold buffers when
+active, and leaving them out returns heap. The amount is to be measured in the
+emulator before setting the limits (12 KB source, 96 elements, 64 compiled items are
+placeholders).
 
 ## Links
 

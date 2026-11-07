@@ -1,173 +1,170 @@
-# 047 json-render documents on the clock
+# 047 json-render on the clock
 
-Status: Draft
+Status: Draft (direction changed 2026-11-07: native support, see below)
 
 ## Problem
 
 [json-render](https://github.com/vercel-labs/json-render) (Vercel Labs, Apache-2.0,
-`@json-render/core` 0.22.0) is a "generative UI" framework. A developer declares a
-**catalog** of components with zod prop schemas. `catalog.prompt()` turns the catalog
-into a system prompt. The model then writes a JSON **spec**: a flat map of elements,
-each with a `type`, `props` and `children`. `validateSpec()` checks the spec, and a
-renderer (React, Vue, React Native, Ink, Satori images and others) draws it from
-registered components only.
+`@json-render/core` 0.22.0) is a "generative UI" standard. A **catalog** declares
+components with zod prop schemas. `catalog.prompt()` turns it into a system prompt, the
+model writes a JSON **spec** (a flat map of elements: `type`, `props`, `children`), and a
+renderer draws it using registered components only. There are renderers for React, Vue,
+React Native, Ink, PDF, email and images. One of them, `@json-render/image`, is
+display-only by design: a fixed-size frame, flex boxes, text and images, with no input.
 
-The question is whether agents should be able to send the clock a json-render document
-in place of, or as well as, our own custom-face JSON. If so, what would it cost, and
-where should the work live (firmware, plugin, OpenClaw bridge)?
+Today an agent that wants a custom screen on the clock has to learn our own face format
+(25 KB of reference, pixel coordinates). The owner wants the clock to speak this
+standard instead:
 
-What was looked at and measured is in [RESEARCH.md](RESEARCH.md). In short:
+- the clock **publishes its catalog**: every component it can draw, for display only,
+  since it has no input;
+- the clock **accepts and renders a json-render spec** as a face, with as much of the
+  standard as it can draw;
+- **flash is not the constraint** for this spec. The owner will drop features, or ship a
+  separate build or a fork, to get there.
 
-- json-render's **structure** (a tree of typed components, data binding, visibility)
-  maps onto our face format. Its React-side concerns do not: actions, `emit`,
-  `$bindState`, `setState`, `watch`, input validation, streaming into a live UI,
-  `$computed` functions. They have no meaning on a 240×240 screen with no input.
-- The real difference is **layout**. A json-render document says Row, Column, gap and
-  padding, and the renderer places things. Our faces give every item pixel
-  coordinates. The renderer's flex layout is the thing an agent would gain, and it is
-  also what the ESP8266 can least afford.
-- A [prototype](prototype/) compiler (one file, no dependencies) translates a
-  json-render spec built from a small clock catalog into a face. It turned a 1,882 B
-  document into a 1,275 B face that `clock.py check` accepts. The emulator draws that
-  face correctly and updates it live from variables
-  ([build-running.png](prototype/build-running.png),
-  [build-fail.png](prototype/build-fail.png)).
-
-## Options
-
-| | What | Firmware | Fit | Cost |
-|---|---|---|---|---|
-| **a** | A host-side **compiler**, json-render spec → face JSON, with a fixed clock vocabulary | none | Good for anything that is a face; layout done on the host | Small: ~400-600 lines of JS plus tests |
-| **b** | **a**, plus a real **clock catalog** built with `defineCatalog` and zod, so agents use json-render's own `catalog.prompt()` and `validateSpec()` | none | Best: the json-render tooling works unchanged, and the compiler only receives valid specs | **a** plus a catalog file and a dependency on `@json-render/core` and `zod` (Node) |
-| **c** | **Native** parsing on the ESP8266: element map, flex layout, `$state`/`$cond` | +8-11 KB of code, so 14-19 KB of update room | Poor | Does not fit: 2.3.1 has ~10.7 KB of raw room (4 KB in whole sectors), and a document that size needs ~10-12 KB of heap, with ~14 KB free at rest |
-| **d** | **Render to an image** on the host (`@json-render/image`: Satori, then resvg, then JPEG) and upload it as a photo | none | Narrow: static only (no live time or weather, no variables); every update rewrites flash; full redraw | Satori, resvg and a JPEG encoder on the host |
-
-Option **c** is out; the numbers are in RESEARCH.md. Option **d** is a fallback for a
-rich, one-off picture, not a face. It is listed so it is not proposed again.
-
-## Recommendation
-
-**b, in two steps, at no firmware cost, and only if the owner has a use for it.**
-
-What an agent gains over writing our face format directly, honestly:
-
-1. **Layout without pixel arithmetic.** Rows, columns, gap, padding, `justify:
-   between` and `grow`. This is where hand-written faces most often go wrong:
-   overlapping text, things off screen, forgetting `bg`/`pad` so text smears. The
-   compiler also fills `bg` and `pad` for live text from the enclosing container,
-   which agents often forget.
-2. **The json-render toolchain.** An agent or app that already produces json-render
-   for a web UI can target the clock with the same prompt machinery, validation and
-   auto-fix (`autoFixSpec`). One spec can be drawn on a dashboard and on the clock.
-3. **Validation before upload** with precise issues, from zod.
-
-What it does not give:
-
-- **Anything the clock cannot already draw.** Every component compiles to an item
-  that exists today. The face format stays the source of truth and stays the only
-  thing the firmware reads.
-- **Smaller uploads.** A json-render spec is about 1.5 times the size of the face it
-  becomes (ids, the element map, `$state` objects).
-- **Runtime reflow.** Layout is fixed when the spec is compiled. A text whose value
-  grows at run time (`{repo}`) stays in the box it was given. The catalog's
-  `maxChars` prop sizes that box.
-- **The expressive parts of our format:** expressions in coordinates (animation),
-  paths, sprites, gradients, palettes chosen by expression, `repeat` over numbers.
-  These need an escape hatch (a `Face` or `Item` component that carries raw items), or
-  the agent writes our format directly for such faces.
-
-Step 1 (small): the catalog, the compiler and a CLI (`compile doc.json > face.json`,
-`--push NAME`), with unit tests and an integration case that compiles a sample
-document and captures it in the emulator. Step 2 (optional): a `clock.face.render`
-command on the OpenClaw bridge (Node, the natural home: branch `openclaw-node`,
-`integrations/openclaw/`), and a section in the Claude Code and OpenClaw skills.
-
-If the owner has no json-render producer in mind, the recommendation is to **record
-this and not build it**. The gain then is layout alone. That can also be had by
-teaching the skill a few layout recipes, or by adding a small `layout` helper to
-`clock.py`, without a second face language to keep in step with the firmware.
+The first draft of this spec (same date) recommended compiling on the host because of
+flash. The owner set that aside. That draft's findings are kept in
+[RESEARCH.md](RESEARCH.md), and its prototype compiler in [prototype/](prototype/). The
+prototype shows that the mapping works: a spec drawn in the emulator and updated live
+from variables.
 
 ## Goals (to agree)
 
-1. An agent can produce a json-render spec from a published **clock catalog**,
-   validate it with json-render's own tools, and have it shown on the clock as a
-   custom face.
-2. No firmware change: no flash, no heap, and the face format remains the only
-   format the clock reads.
-3. Live values keep working: json-render `$state`, `$template`, `$cond` and `visible`
-   become our placeholders, expressions and `show`, so the face is saved once and
-   updated with `/api/faces/vars`.
-4. Errors are clear before anything reaches the clock: an unknown component, an
-   unsupported dynamic value, more than 32 items, more than 4 KB, or a layout that
-   leaves the screen.
+1. `GET /api/catalog` on the clock returns its full catalog: every component with a
+   description and its props as JSON Schema, the state paths it can read, the functions
+   it offers, and the prompt text. An agent can generate against it with no other
+   documentation. A matching `catalog.mjs` (zod) is published for json-render's own
+   tools (`catalog.prompt()`, `validateSpec()`, `autoFixSpec()`).
+2. `POST /api/faces?name=…` takes a json-render spec as well as our face JSON. It is
+   told apart by `root` and `elements`. The face then behaves like any custom face:
+   rotation, `show`, `when`, the night face, backup, gallery.
+3. **Standard first.** `@json-render/image`'s components are drawn with their own names
+   and props (`Frame`, `Box`, `Row`, `Column`, `Heading`, `Text`, `Image`, `Divider`,
+   `Spacer`). A spec written for the image renderer at 240×240 shows on the clock with
+   no change. Then the display parts of `@json-render/shadcn` (`Card`, `Stack`, `Grid`,
+   `Separator`, `Badge`, `Alert`, `Progress`, `Table`, `Avatar`, `Spinner`, `Skeleton`),
+   and the interactive ones drawn in their resting state. Then clock components the
+   standard lacks: `Clock`, `WeatherIcon`, `Icon` (SVG path), `Ring`, `Sparkline`,
+   `Sprite`.
+4. **Live data the json-render way.** `$state` paths read the clock (`/time/hm`,
+   `/now/temp`, `/day0/high`, `/msg/title`, …) and pushed variables (`/vars/<name>`).
+   `$template`, `$cond`, `visible` and `repeat` (over `/days`, `/msgs`) work. A spec's
+   `state` seeds variables that are not set yet. Values change without a new upload, as
+   today, with no flicker for anything that has a fixed box.
+5. **Fidelity is written down.** Everything in the catalog is either drawn, or drawn
+   approximately with the approximation stated in its description. Nothing in the
+   standard is silently dropped: an unknown component draws as a labelled box and is
+   reported in the save's reply.
+6. Our own face format keeps working, so the 40+ example faces, animation by
+   expression, paths and gradients are not lost.
 
 ## Non-goals
 
-- Parsing json-render on the ESP8266 (option c).
-- Actions, events, input, `$bindState`, `setState`, `watch`, `$computed` functions,
-  and the shadcn/React component sets. The clock has no input.
-- Streaming onto the screen. SpecStream patches can be applied on the host, but only a
-  finished spec is compiled and sent: the clock cannot draw a half-built face, and
-  each save writes flash.
-- Arbitrary state arrays for `repeat`. Our variables are scalars. Only the clock's own
-  lists (forecast days, messages) and counts can repeat.
-- Replacing our face format, its schema or its skill reference.
+- Input of any kind: actions, `on`/`emit`, `setState`, `watch`, `$bindState`,
+  `$bindItem`, form validation (`checks`). These are accepted and ignored (reported as
+  warnings), so a spec made for a web page still shows.
+- Arbitrary frame sizes drawn 1:1. A `Frame` other than 240×240 is scaled to fit, and
+  text picks the nearest size the clock can draw.
+- Fetching images from URLs (no TLS budget, no RAM for remote JPEGs). `Image.src` names
+  a photo on the clock; a URL draws a placeholder box with the `alt` text.
+- SpecStream on the clock (phase 3 at the earliest). Live values go through variables,
+  which already update faces without a new save.
+- Replacing our face format.
 
-## Requirements (draft, for step 1)
+## Design
 
-1. The catalog: `Screen` (root: background, padding, gap), `Column`, `Row`, `Card`
-   (background, border, radius, padding, gap, align, justify, grow, width, height),
-   `Spacer`; and leaves that are one item each: `Text` (`size` sm/md/lg/xl → font 2,
-   font 4, big 36, big 60; `font` for the digit fonts; `maxChars`, align, color),
-   `Clock` (a `time.`/`date.` format), `Icon` (weather icon name), `Glyph` (SVG path
-   data), `Dot`, `Progress` (bar), `Ring`, `Sparkline` (a `$history` variable),
-   `Image` (a photo's file name), `Divider`. One escape hatch, `Item`, carries a raw
-   face item at the position the layout gives it.
-2. State paths: `/name` is a variable (one level only); `/time/hm`, `/now/temp`,
-   `/day0/high`, … are the clock's own placeholders (the group names in
-   integrations-api.md). The compiler rejects unknown clock names, using the same
-   list as `clock.py check`.
-3. Dynamic values: `$state` (with `fallback` → `{name|text}`), `$template` (`${/path}`
-   and `${/path|fallback}`), `$cond` with `eq`, `neq`, `gt`, `lt`, `not`, `$and`,
-   `$or` → `cond?a:b`. Element `visible` → item `show`. Anything else is an error that
-   names the element.
-4. Face-level fields with no json-render counterpart (`when`, `duration`, `palettes`,
-   `maps`, `fps`, `invert`) are given as props on `Screen`.
-5. Text measurement uses the clock's real glyph widths (fonts 2 and 4 from TFT_eSPI's
-   tables, the big font's 16.9-unit cells, the digit fonts' advances), not estimates
-   as in the prototype.
-6. Output passes `clock.py check`; the compiler fails above 32 items or 4,096 B.
-7. Tests: unit tests for each component and dynamic value, a golden test (spec → face),
-   and an integration case that pushes a compiled sample and captures it.
+**Compile on save, draw with the existing renderer.** On `POST /api/faces`, the clock:
 
-## Behaviour
+1. parses the spec (ArduinoJson; the flat element map needs the whole document);
+2. builds a compact node array (type, parent, first child, layout props: about 24 B
+   per element) and checks it (unknown types, cycles, dangling children);
+3. lays it out: a flex subset (direction, gap, padding and margin per side, `flex`
+   grow, width and height in px or %, `alignItems`, `justifyContent` including
+   `space-between`/`space-around`, `wrap`, `position: absolute` with
+   top/left/right/bottom). It measures text with the real fonts (`textWidth`), and live
+   text by its current value or a `maxChars` hint;
+4. emits the face as items in our format (rects for backgrounds and borders, text with
+   `bg`/`pad` from the enclosing box, bars, rings, paths …) and saves both the compiled
+   face and the source (`GET /api/faces/get` returns the source; backup keeps the
+   source and recompiles on restore).
 
-- `node integrations/json-render/compile.mjs doc.json > face.json`, or `--push NAME
-  [--show]` with `CLOCK_URL` and `CLOCK_API_KEY` as `clock.py` uses them.
-- `catalog.mjs` exports the catalog. `node integrations/json-render/prompt.mjs` prints
-  `catalog.prompt()` for agents that have no skill.
-- Step 2: the OpenClaw bridge gains `clock.face.render {name, spec, show}`.
+The renderer, the flicker-free redraws, placeholders, expressions, maps and the night
+tint stay exactly as they are: no second drawing engine. The heap peak is at save time
+only.
+
+**Phase 2: run-time relayout.** In json-render, an element that turns invisible takes
+no space, and text that grows pushes its neighbours. Compile-on-save gives fixed boxes:
+a hidden element leaves a gap. Phase 2 keeps the node array (not the JSON) for the face
+on screen. When a `visible` condition or a measured value changes, it lays out again and
+repaints the boxes that moved (`repaintBox`). It costs heap on every face (about 24 B
+per element, plus items) and is the most expensive part. It is worth doing only if
+phase 1 shows the gaps matter.
+
+**A separate build.** `env:esp12e_jr` (name to agree) with `SMARTCLOCK_JSONRENDER=1`,
+and options to leave out features, so the standard build is not held to json-render's
+size and json-render is not held to 4 KB of room:
+
+| Can leave the json-render build | Flash (footprint.md) |
+|---|---|
+| OpenClaw node (spec 041) | 22.7 KB |
+| MQTT and Home Assistant discovery | about 7 KB |
+| mDNS | about 4.5 KB |
+| geekmagic-hacs compatibility | to measure |
+| Our face format (only if the owner wants a json-render-only clock) | parts of the 32 KB engine: the loader and checks, not the drawing |
+
+Both builds share settings, storage layout and the update path. Each release would
+publish two `.bin.gz` files. The firmware reports its build in `/status` and the
+catalog, so agents and the skill can tell which one they reach.
+
+## Requirements (draft)
+
+1. `GET /api/catalog` (no sign-in, like `/status`): gzipped JSON in flash, generated at
+   build time from `integrations/json-render/catalog.mjs` (zod 4's `z.toJSONSchema`),
+   with `version`, `build`, `screen: {width: 240, height: 240, input: false}`,
+   `components`, `state` (paths and examples), `functions`, `prompt`.
+   `GET /api/catalog/prompt` returns the prompt as text.
+2. `POST /api/faces?name=<n>` with a json-render spec: 200 with
+   `{"ok": true, "warnings": [...]}`; 400 with the element id and the reason for a spec
+   that cannot be drawn at all; 507 when short of memory. Limits (json-render build):
+   source up to 12 KB (to measure), up to 96 elements, compiled face up to 64 items.
+3. Colours: `#rgb`, `#rrggbb`, `rgb()`, `rgba()` (alpha blended at compile time against
+   the known background), CSS named colours (the 16 basic ones and the common greys at
+   least), `transparent`, and our `@role` names.
+4. Text: fonts 2 and 4 for `fontSize` up to about 28; the line font (`"big"`, any size)
+   or the digit fonts above that. `fontWeight: bold` → stroke weight 2 on the line font.
+   `textDecoration` underline/line-through as lines. Wrapping inside the box (`w`).
+   Accents folded to ASCII (`asciiFold`). Italic and `letterSpacing` ignored (warned).
+5. Each catalog entry's description states what the clock does with it
+   (approximations included), so the prompt is honest.
+6. `$state` paths and clock fields come from one table (`fieldValue()`'s groups plus
+   `/vars/*`). `catalog.json`, `clock.py`'s `FIELDS` and the unit tests read the same
+   list.
+7. Tests: host unit tests for the layout (golden spec → items), the integration suite
+   runs every catalog example in the emulator, the face preview renders them, and a
+   check that spec → image renderer PNG and spec → clock look alike (manual at first).
 
 ## Budget
 
-- Flash and RAM: none (host only).
-- Host: Node 20 or later, `@json-render/core` (Apache-2.0, depends only on `zod`).
-  The package is 0.x: 36 versions since January 2026, 0.22.0 on 2026-11-04. Pin the
-  version, and expect to follow API changes.
-- Upkeep: a new face item type or placeholder group means a catalog change. Add the
-  catalog to "Things to keep in step" in CLAUDE.md.
+Flash is not a constraint (owner, 2026-11-07); it is still measured and recorded per
+phase. RESEARCH.md has the estimates: phase 1 (image catalog, layout, colours, catalog
+endpoint) about 12-16 KB of code plus 3-4 KB of gzipped catalog; the shadcn display set
+about 6-8 KB more; phase 2 about 3-4 KB more. Heap is the real limit. A save needs
+the source in an ArduinoJson tree (1.5-2 times its text) plus the node array. The
+compiled face then lives in `customDoc` as faces do today, larger than 4 KB. That
+needs measuring in the emulator (it models the clock's heap) before limits are set.
+The heap freed by leaving out OpenClaw and MQTT is what makes room.
 
 ## Open questions
 
-1. **Is there a json-render producer?** An app, a dashboard or an agent framework
-   that already emits json-render. Without one, the gain is layout only, and the
-   recommendation is to record this spec and not build it.
-2. Where should the compiler live: `integrations/json-render/` (Node, beside the
-   OpenClaw bridge, which can import it), or a Python port in the plugin's `clock.py`
-   (no Node, but no zod catalog either, so option a only)?
-3. Should the catalog take json-render's standard names (`Heading`, `Text`, `Box`,
-   `Row`, `Column`, `Divider`, `Spacer`, as in `@json-render/image`), so a spec written
-   for the image renderer also compiles for the clock, or clock-specific names
-   (`Clock`, `Ring`, `Sparkline`) only where there is no standard one?
-4. The escape hatch (`Item`): allow it, so animation and paths stay possible, or keep
-   the catalog pure and send such faces in our own format?
+1. **Separate build or replace?** Two builds from one source (recommended), a fork,
+   or one build that drops features for everyone?
+2. Keep our face format in the json-render build (recommended: the examples, animation
+   and the skill depend on it), or json-render only?
+3. Phase 2 (run-time relayout): plan for it now, or decide after phase 1 on the clock?
+4. The shadcn set: display components only, or also interactive ones drawn in their
+   resting state (Button as a label pill, Switch as a toggle, Slider as a bar, Tabs
+   showing the default tab)?
+5. State path for variables: `/vars/<name>` (clear, recommended) or `/<name>` (shorter,
+   but it can clash with clock groups)?
+6. Which features leave the json-render build: OpenClaw, MQTT, mDNS, geekmagic-hacs?

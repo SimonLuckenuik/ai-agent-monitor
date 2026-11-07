@@ -1,32 +1,52 @@
 # 047 Plan
 
-A first plan for the recommendation in SPEC.md (option b). Nothing is built until the
-owner approves the spec and answers its open questions.
+For the native direction (SPEC.md, 2026-11-07). Nothing is built until the owner
+approves the spec and answers its open questions. Each step is measured with
+`pio run` for both builds, and logged in PROGRESS.md.
 
-## Step 1: catalog and compiler (host only)
+## Phase 0: groundwork (no feature yet)
 
-1. `integrations/json-render/package.json`: pin `@json-render/core` and `zod`.
-2. `catalog.mjs`: the components in requirement 1, with zod props and descriptions
-   written for a model (the fonts, ASCII only, 240×240, `maxChars`).
-3. `fonts.mjs`: glyph widths for fonts 2 and 4, taken from TFT_eSPI's tables in the
-   build. Add the big font's cell and the digit fonts' advances.
-4. `compile.mjs`: `validateSpec()` first, then the layout and the value translation
-   (from `prototype/translate.mjs`), the limits, and `--push`.
-5. `prompt.mjs`: prints `catalog.prompt()`.
-6. Tests (`node --test`): each component, each dynamic value, the errors, and a
-   golden spec → face test. Each output goes through `clock.py check`.
-7. Integration: a case in `tests/integration/run_integration_tests.py` that compiles
-   `integrations/json-render/examples/*.json` and captures each one.
-8. Docs: `integrations/json-render/README.md`, a line in integrations-api.md, the
-   CHANGELOG, and CLAUDE.md "Things to keep in step" (a new item type or placeholder
-   group means a catalog change).
+1. Build options: `SMARTCLOCK_OPENCLAW`, `SMARTCLOCK_MQTT` (and `SMARTCLOCK_HACS` if it
+   is worth it) beside `SMARTCLOCK_MDNS`, and `env:esp12e_jr` in `platformio.ini`.
+   `scripts/build_options.py` prints both builds' sizes. The safety tests check that
+   both stay within their limits.
+2. Measure the heap freed in the emulator (`EMU_HEAP`) with those features out. Set
+   the json-render limits (source size, elements, compiled items) from that.
+3. Check json-render's `repeat` and spec `state` shapes against the source. Check that
+   `validateSpec()` accepts specs built from the clock catalog. This needs a session
+   where npm installs are allowed.
 
-Checked by: unit tests, `clock.py check`, the emulator screenshots. No firmware, so no
-release is needed. It ships with the next release's notes, or on its own.
+## Phase 1: image catalog, compile on save
 
-## Step 2 (optional): agents
+1. `integrations/json-render/catalog.mjs`: the `@json-render/image` components with
+   their own props, plus `Clock`, `WeatherIcon`, `Icon`, `Ring`, `Sparkline`, `Sprite`.
+   Descriptions say what the clock does with each prop. `scripts/gen_catalog.mjs` →
+   `catalog.json` → gzipped into the firmware (like the settings page).
+2. `src/jsonrender.cpp` (new; added to `emulator/build.sh` and the test copy lists):
+   parse, node array, layout, colours, emit items. Host unit tests: golden spec →
+   items, one per layout feature and component.
+3. `src/integrations.cpp`: format detection in `POST /api/faces`; source kept as
+   `/faces/<name>.jr.json`; warnings in the reply; `/api/catalog` routes in
+   `src/routes.h`. Backup and restore keep the source.
+4. Examples: `examples/json-render/*.json` (specs written for the image renderer at
+   240×240, and clock ones). An integration case that pushes and captures each one, and
+   the face preview renders them.
+5. Docs and skill: integrations-api.md (a json-render section), the skill (SKILL.md, a
+   json-render reference generated from `catalog.json`, `clock.py push` accepts a spec,
+   `clock.py catalog`), the OpenClaw skill copy (`gen_openclaw_skill.py`), CHANGELOG,
+   CLAUDE.md "Things to keep in step", settings.md if a setting is added.
+6. Release: MINOR, with two `.bin.gz` files. `release.yml` and `make_release.py` build
+   both.
 
-1. OpenClaw bridge: `clock.face.render {name, spec, show}` imports the compiler
-   (branch `openclaw-node`), with its tests and the OpenClaw skill's command table.
-2. Claude Code skill: a short "json-render" section pointing to the catalog prompt.
-   Bump the plugin version.
+Checked by: unit tests, the face preview, the integration suite, emulator screenshots
+compared by eye with `@json-render/image` PNGs of the same specs, then the owner's clock.
+
+## Phase 2: the shadcn display set
+
+The display components, then (if the owner wants them) the interactive ones in their
+resting state. Same checks; each component gets an example.
+
+## Phase 3 (decided after phase 1 on the clock)
+
+Run-time relayout for `visible` and growing text. SpecStream patches
+(`POST /api/faces/patch`, RFC 6902) if agents need incremental edits beyond variables.
