@@ -44,6 +44,24 @@ for name in ("getFreeHeap", "getMaxFreeBlockSize", "getFreeContStack", "getReset
         sys.exit("build.sh: could not take EspClass::%s out of %s" % (name, path))
 open(path, "w").write(s)
 PY
+# The mock's WiFi mode is always "station" and its soft AP always has two clients. Spec
+# 046 turns the setup network off and on: remember the mode that was set, and no clients
+# (the emulator has no radio). Taken out of a pristine copy at each build.
+git -C /esp8266 checkout -q -- tests/host/common/user_interface.cpp
+python3 - common/user_interface.cpp <<'PY'
+import re, sys
+path = sys.argv[1]
+s = open(path).read()
+s, a = re.subn(r"(uint8 wifi_get_opmode\(void\)\s*\{\s*)return STATION_MODE;",
+               r"\1return emu_opmode;", s)
+s, b = re.subn(r"(bool wifi_set_opmode(?:_current)?\(uint8 opmode\)\s*\{\s*)",
+               r"\1if (opmode == STATION_MODE || opmode == STATIONAP_MODE) emu_opmode = opmode;\n        ", s)
+s, c = re.subn(r"(uint8 wifi_softap_get_station_num\(void\)\s*\{\s*)return 2;", r"\1return 0;", s)
+if (a, b, c) != (1, 2, 1):
+    sys.exit("build.sh: could not patch the WiFi mode in %s (%d %d %d)" % (path, a, b, c))
+s = s.replace("#include <user_interface.h>", "#include <user_interface.h>\nstatic uint8 emu_opmode = STATION_MODE;", 1)
+open(path, "w").write(s)
+PY
 # emu_build_flags.h: platformio.ini's build_flags, in every source. F_CPU also goes on
 # the command line: the core's forced includes (common/mock.h) read it before that
 # header. The core's objects do not track flags, so a new F_CPU rebuilds everything.

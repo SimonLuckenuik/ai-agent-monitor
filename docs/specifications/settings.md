@@ -157,6 +157,12 @@ steps and the default is used).
   clock keeps the zone's name (`tzname`, up to 40 characters; setting `tz` clears it) to
   show it. When a city typed by hand is in another zone, the page says so (spec 033).
 - **Host names:** `localhost` is always answered, as the IP address is (spec 029).
+- **WiFi: Setup network** (`apoff`, minutes, default 60; 0 = always on, otherwise 5 to
+  1440; the page offers Always on, 15 min, 1 h, 4 h, 24 h). The clock's own network
+  (**AI Agent Monitor XXXXXX**, WPA2 with the device password) closes `apoff` minutes
+  after the clock joins the home network, but not while someone is on it, and opens
+  again by itself when the link drops and at every boot. `/status` `ap` says whether it
+  is up (spec 046).
 - **WiFi: Other names for this clock** (`hostnames`, a comma list, at most 200
   characters). On the home network the clock answers only requests addressed to it:
   its IP address, its host name, `<host>.local`, or a name listed here (a name the

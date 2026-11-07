@@ -1,6 +1,6 @@
 # 046 The setup network closes once the clock is on the router
 
-Status: Draft
+Status: Approved 2026-11-07 (the owner, in the chat: "Approve, build it", with the 30-minute recovery exit)
 
 ## Problem
 

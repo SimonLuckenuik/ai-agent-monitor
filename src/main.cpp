@@ -578,7 +578,7 @@ String configJson() {
   doc[F("nightmode")] = cfg.nightMode; doc[F("starttime")] = cfg.startHour; doc[F("stoptime")] = cfg.stopHour;
   doc[F("nightbrightness")] = cfg.nightBrightness; doc[F("nightface")] = cfg.nightFace; doc[F("ntp")] = cfg.ntp;
   doc[F("nighttint")] = cfg.nightTint; doc[F("nightcolor")] = cfg.nightColor;
-  doc[F("timezone")] = cfg.timezoneMin; doc[F("tz")] = cfg.tz; doc[F("themeInterval")] = cfg.themeInterval;
+  doc[F("timezone")] = cfg.timezoneMin; doc[F("tz")] = cfg.tz; doc[F("themeInterval")] = cfg.themeInterval; doc[F("apoff")] = cfg.apOff;
   doc[F("faces")] = cfg.faceMask; doc[F("nightauto")] = cfg.nightAuto;
   {   // the faces in rotation order, and the custom faces' own rules
     String list[FACE_ENTRIES], order;
@@ -712,6 +712,7 @@ String applySetting(const String& key, const String& val) {
     cfg.customFace = val; cfg.theme = FACE_CUSTOM; faceSince = millis(); faceTurnSec = 0;
   }
   else if (key == F("themeInterval")) cfg.themeInterval = constrain(val.toInt(), 0, 3600);
+  else if (key == F("apoff")) cfg.apOff = val.toInt() > 0 ? constrain(val.toInt(), 5, 1440) : 0;
   else if (key == F("brightness")) { cfg.brightness = constrain(val.toInt(), 0, 100); setBacklight(cfg.brightness); }
   else if (key == F("gamma") || key == F("nightgamma")) {   // a curve: 2.2, 1.8, 2.5 or 1.0; "" at night: the day's
     int g = Config::gammaIndex(val);
@@ -1169,7 +1170,9 @@ const Route ROUTES[] PROGMEM = {
 // addressed to the clock: its IP, <host>, <host>.local, or a name the owner listed. The
 // setup network and recovery answer any name (the captive portal relies on it), and so
 // does a request with no Host (HTTP/1.0 tools).
+bool requestSeen = false;   // any web request since boot (recoveryLoop's idle exit)
 bool hostAllowed() {
+  requestSeen = true;
   IPAddress ap = WiFi.softAPIP();   // a request on the setup network arrives on its address
   if (recoveryMode || (server.client().localIP() == ap && ap != WiFi.localIP())) return true;
   String h = server.hostHeader();
@@ -1234,6 +1237,7 @@ volatile bool staDowngraded = false;
 uint32_t wifiDowngrades = 0;   // since boot, for /status
 int authRank(uint8_t mode) { return mode == AUTH_OPEN ? 0 : mode == AUTH_WEP ? 1 : 2; }
 
+void apOn();
 void startAP() {
   mode = MODE_AP;
   WiFi.persistent(false);
@@ -1244,16 +1248,47 @@ void startAP() {
   staAuthChanged = WiFi.onStationModeAuthModeChanged([](const WiFiEventStationModeAuthModeChanged& e) {
     if (authRank(e.newMode) < authRank(e.oldMode)) staDowngraded = true;   // handled in the loop, out of the SDK
   });
+  apOn();
+}
+
+// A firmware minute: the emulator's tests shorten it (EMU_MINUTE_MS) to see the timers.
+#ifdef HOST_MOCK
+uint32_t emuMinuteMs();
+#define MINUTE_MS emuMinuteMs()
+#else
+#define MINUTE_MS 60000UL
+#endif
+
+// Spec 046: the setup network closes cfg.apOff minutes after the station link came up
+// (not while a client is on it), and opens again when the link drops and at every boot.
+// Turning it off while connected is the switch ESPHome makes on the ESP8266 when its
+// station connects (wifi_set_opmode_current to station only).
+bool apUp = false;
+uint32_t apRetryAt = 0;   // a failed switch waits a minute before trying again
+void apOn() {
+  WiFi.enableAP(true);
   WiFi.softAPConfig(IPAddress(192,168,4,1), IPAddress(192,168,4,1), IPAddress(255,255,255,0));
   restartAP();
   dns.start(53, "*", WiFi.softAPIP());
+  apUp = true;
+}
+void serviceAp() {
+  bool want = !cfg.apOff || mode != MODE_RUN || millis() - linkUpAt < cfg.apOff * MINUTE_MS ||
+              WiFi.softAPgetStationNum();
+  if (want == apUp || (apRetryAt && (int32_t)(millis() - apRetryAt) < 0)) return;
+  apRetryAt = 0;
+  if (want) { apOn(); return; }
+  dns.stop();
+  apUp = !WiFi.softAPdisconnect(true) || (WiFi.getMode() & WIFI_AP);
+  if (apUp) { apRetryAt = millis() + MINUTE_MS; if (!apRetryAt) apRetryAt = 1; dns.start(53, "*", WiFi.softAPIP()); }
 }
 
-// WPA2 with the device password; open in recovery, so recovery is always reachable.
+// WPA2 with the device password, in recovery too (spec 046): its screen shows the
+// password. Open only in a recovery that skips the panel, where nothing can show it.
 // "AI Agent Monitor 1a2b3c": the hostname's suffix, so clocks side by side differ.
 String setupSsid() { String h = deviceHost(); return "AI Agent Monitor " + h.substring(h.lastIndexOf('-') + 1); }
 void restartAP() {
-  if (recoveryMode) WiFi.softAP(setupSsid().c_str());
+  if (recoveryMode && !recoveryDisplay) WiFi.softAP(setupSsid().c_str());
   else WiFi.softAP(setupSsid().c_str(), devicePassword.c_str());
 }
 
@@ -1418,6 +1453,7 @@ void handleStatus() {
   doc[F("ssid")] = linked ? WiFi.SSID() : staSsid;
   if (!linked && staFail >= 0) { doc[F("wifiError")] = staFailText(); doc[F("wifiCode")] = staFailReason; }
   if (linked) { doc[F("ip")] = WiFi.localIP().toString(); doc[F("rssi")] = WiFi.RSSI(); }
+  doc[F("ap")] = !apUp ? F("off") : recoveryMode && !recoveryDisplay ? F("open") : F("wpa2");
   doc[F("apIp")] = WiFi.softAPIP().toString(); doc[F("apSsid")] = setupSsid();
   doc[F("host")] = deviceHost();   // the DHCP hostname, as the router lists it
   if (SMARTCLOCK_MDNS) {
@@ -1474,6 +1510,12 @@ void handleStatus() {
 // device does not look dead, unless the panel itself reset the previous boot.
 void recoveryLoop() {
   serviceSta();
+  // Nobody used it for 30 minutes (no client on its network, no request): an accident,
+  // such as a flickering power supply, so start normally (spec 046). A broken normal
+  // start comes back here by itself; a storage that did not mount stays.
+  static bool used = false;
+  used = used || requestSeen || WiFi.softAPgetStationNum();
+  if (!used && !storageMountFailed && millis() - bootStarted >= 30 * MINUTE_MS) safeRestart();
   if (!displayReady && recoveryDisplay && millis() - bootStarted >= 3000) {
     markBoot(BOOT_RECOVERY_DISPLAY);
     displayBegin();
@@ -1566,6 +1608,7 @@ void loop() {
   }
   crashTick();
   serviceSta();
+  serviceAp();
   if (WiFi.status() == WL_CONNECTED && mode != MODE_RUN) {
     mode = MODE_RUN;
     linkUpAt = millis();

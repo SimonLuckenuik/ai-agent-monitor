@@ -7,12 +7,26 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Added
+
+- **The setup network closes once the clock is on your WiFi** (spec 046): the clock's
+  own network, AI Agent Monitor XXXXXX, closes an hour after the clock joins the home
+  network (Settings > WiFi > Setup network: Always on, 15 min, 1 h, 4 h, 24 h), so it is
+  not left for anyone in range to try. It opens again by itself when the clock loses its
+  WiFi, and for the same time after each restart. `/status` has `ap`.
+
 ### Changed
 
 - **Face format guidance on text `bg`**: the API reference and the skill now say that a
   text `bg` is an opaque box that wipes the items under it, and recommend leaving it out
   for text inside a ring, on a picture or on a gradient (the clock repaints around
   changing text without a `bg`). Plugin 0.7.4.
+- **Recovery's network has a password**: the device password, which the recovery screen
+  shows (before, recovery's network was open, and anyone in range could install firmware).
+  It stays open only when recovery skips the panel.
+- **A recovery nobody uses ends by itself** after 30 minutes with no one on its network and
+  no request: a clock that entered recovery by accident goes back to normal. A storage that
+  did not mount keeps it in recovery.
 
 ## 2.3.1 - 2026-11-06
 

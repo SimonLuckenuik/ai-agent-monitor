@@ -47,3 +47,39 @@
 - Recommended to the owner: an unused recovery restarts normally after 30 idle minutes,
   except after a failed mount (requirement 10, open question 4). Waiting for the go and
   for the spec's approval.
+
+## 2026-11-07, built
+
+- Approved by the owner ("Approve, build it", with the 30-minute recovery exit).
+- Firmware (`src/main.cpp`, `src/config.h`): setting `apoff` (default 60, 0 or 5-1440);
+  `apOn()` and `serviceAp()` (closes `apoff` minutes after the link came up, not while a
+  client is joined, reopens when the link drops; a failed switch retries after a
+  minute); recovery's AP is WPA2 unless the panel is skipped; an unused recovery
+  (no client, no request, storage mounted) restarts normally after 30 minutes;
+  `/status` `ap` = `wpa2` / `open` / `off`. The strings are in flash (`F()`): the first
+  build put "off"/"open"/"wpa2" in RAM and went 4 B over the safety test's limit.
+- Settings page: WiFi card, "Setup network" select (Always on, 15 min, 1 h, 4 h, 24 h);
+  System shows it "off (restart the clock to open it)".
+- Emulator: `build.sh` patches the core's WiFi mock to remember the mode set and to
+  report no AP clients; `EMU_MINUTE_MS` shortens the firmware's minute (1 s in the
+  integration tests' compose file).
+- Tests: safety test guard replaced ("persistent AP" became: closes only in
+  `serviceAp()`, never from recovery); integration cases `setup_network_timer` and
+  `recovery_network`.
+- Docs: `updates-and-recovery.md` (also fixes "an open AP"), `settings.md`,
+  `integrations-api.md` (`ap`; skill's `face-format.md` regenerated, both skills),
+  `testing.md`, `emulator/README.md`, README's Recovery, CHANGELOG; plugin 0.7.4.
+
+  | Build | `firmware.bin` | `firmware.bin.gz` | Room (whole sectors) |
+  |---|---|---|---|
+  | 2.3.1 | 602,384 B | 427,332 B | 8,192 B (10,668 B unrounded) |
+  | spec 046 | 603,392 B (+1,008) | 428,139 B (+807) | 8,192 B (8,853 B unrounded) |
+  Less than 700 B of growth is left before the room drops to one sector (4 KB).
+- Checked: `pio run`; safety tests; unit tests (all suites, with mDNS, guards and
+  OpenClaw); `tests/web` (backup, minified page, time zones); `claude plugin validate .`;
+  integration tests, 37 cases pass, `setup_network_timer` and `recovery_network`
+  included, no screen changed. (The integration image was built a few minutes before
+  the strings moved to `F()`; the firmware's behaviour is the same.)
+- Not checked (only the clock can): that the station link survives the AP closing (the
+  emulator's WiFi is a mock), the heap the AP frees, the AP reopening on a real link
+  drop (the emulator cannot drop the link), joining recovery's WPA2 network from a phone.

@@ -77,7 +77,8 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
   with your custom faces and their saved values) and firmware updates. It works on phones, follows light or dark mode, and needs no internet on
   the clock's setup network.
 - **Hard to brick:** updates are checked before anything is written, the setup network
-  is always on, and there is a recovery mode reached by power cycling. See
+  comes back whenever the clock loses its WiFi or restarts, and there is a recovery mode
+  reached by power cycling. See
   [Recovery](#recovery).
 - **Private:** no cloud account, no tracking, and WiFi passwords are never exposed by
   the web API.
@@ -290,14 +291,16 @@ password, backup and firmware updates.
 
 ## Recovery
 
-- The **AI Agent Monitor XXXXXX** setup network stays on at all times, so you can
-  always reach **http://192.168.4.1/**, even when your home WiFi is down or wrong.
+- The **AI Agent Monitor XXXXXX** setup network is on whenever the clock is not on your
+  WiFi, so you can always reach **http://192.168.4.1/** when your home WiFi is down or
+  wrong. Once the clock is on your WiFi it closes after an hour (Settings > WiFi >
+  Setup network); unplug the clock and plug it back in to open it again.
 - **Forgotten the password?** On the sign-in page, press **Show the password on the
   clock**, or use recovery mode below, which shows it on screen.
 - **Recovery mode:** power the clock on for less than 10 seconds, twice, then power it
-  on and leave it. The screen shows "Recovery". In recovery the setup network is open
-  and no sign-in is needed. You can install firmware, and **Restart** returns to
-  normal. The clock also enters recovery by itself if it crashes during startup.
+  on and leave it. The screen shows "Recovery" and the password of the setup network;
+  no sign-in is needed once you are on it. You can install firmware, and **Restart**
+  returns to normal (so does leaving it unused for 30 minutes). The clock also enters recovery by itself if it crashes during startup.
 - **Crash loops:** if the clock crashes three times in a row, it turns custom faces
   off; two more and it starts in safe mode, which draws no face but keeps the settings
   page and the API working. **System > Crashes** lists what happened and has

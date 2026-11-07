@@ -41,9 +41,13 @@ it, refuses it).
 
 ## Recovery access
 
-The firmware starts an open AP, **AI Agent Monitor XXXXXX** (the hostname's suffix), at **http://192.168.4.1/** and
-starts its embedded web server before any storage or display initialization. The AP stays
-up in every mode, alongside home WiFi. No button is needed to reach it. While the saved
+The firmware starts its setup network, **AI Agent Monitor XXXXXX** (the hostname's suffix),
+WPA2 with the device password, at **http://192.168.4.1/**, and starts its embedded web
+server before any storage or display initialization. No button is needed to reach it.
+Since spec 046 it closes `apoff` minutes (default 60) after the clock joins the home
+network, unless someone is on it, and opens again by itself whenever the link drops and
+at every boot: a clock whose router changed or disappeared always has it, and unplugging
+the clock and plugging it back in opens it for another `apoff` minutes. While the saved
 network is missing, the STA side searches in 30 s windows every 5 minutes, because
 continuous searching makes the ESP8266 hop channels and drop AP clients. On the LAN the
 clock's DHCP hostname is **agentmonitor-XXXXXX**, where XXXXXX is from the chip id, so
@@ -69,10 +73,15 @@ when any of these happen:
   storage** button (POST `/format_storage?confirm=erase`). It is accepted only after a
   mount actually failed and erases the whole FS region.
 
-In recovery the screen shows "Recovery", the AP name and address, and the LAN IP if one is
-connected. If the panel itself reset the previous recovery boot, the panel is skipped. In
-recovery, settings requests return HTTP 503. Only OTA, format (after a failed mount),
-status, and restart work. **Restart** leaves recovery.
+In recovery the screen shows "Recovery", the AP name, address and password, and the LAN IP
+if one is connected. The AP never closes in recovery. It is WPA2 with that password (spec
+046; open before 2.4.0); if the panel itself reset the previous recovery boot, the panel
+is skipped and the AP is open, since nothing can show the password. The web server needs
+no sign-in in recovery. Settings requests return HTTP 503. Only OTA, format (after a
+failed mount), status, and restart work. **Restart** leaves recovery, and so does 30
+minutes in recovery with nobody on its network and no request (spec 046: a recovery
+started by accident, by a flickering power supply say, ends by itself; a broken normal
+start comes back to recovery). After a failed mount the clock stays in recovery.
 
 ### Crash records, crash loops and safe mode
 

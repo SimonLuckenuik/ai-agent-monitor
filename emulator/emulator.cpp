@@ -683,6 +683,14 @@ String EspClass::getResetReason() {
 // stack; emuExit() leaves from the host's.
 void EspClass::restart() { emuExit(EXIT_SUCCESS); }
 
+// A firmware minute (main.cpp's MINUTE_MS: the setup network's and recovery's timers,
+// spec 046). EMU_MINUTE_MS shortens it for the integration tests.
+uint32_t emuMinuteMs() {
+  static uint32_t ms = 0;
+  if (!ms) { const char* e = getenv("EMU_MINUTE_MS"); ms = e && atol(e) > 0 ? atol(e) : 60000; }
+  return ms;
+}
+
 // The backlight PWM (GPIO5, active-low) feeds the brightness shown by screen.html.
 void emuAnalogWrite(uint8_t pin, int value) {
   if (pin == 5) backlightDuty = value;

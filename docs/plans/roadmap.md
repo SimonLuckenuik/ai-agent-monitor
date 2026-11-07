@@ -19,7 +19,8 @@ approved.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
 5. [046 The setup network closes once the clock is on the router](../../specs/046-setup-network-timeout/SPEC.md):
-   draft, waiting for approval and answers to its open questions (security).
+   approved 2026-11-07, built on branch `ap-timeout` (tested in the emulator); next: the
+   clock (the station link survives the switch, heap with the AP off), then 2.4.0.
 
 ## Waiting
 

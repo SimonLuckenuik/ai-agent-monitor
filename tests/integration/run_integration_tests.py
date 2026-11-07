@@ -1088,6 +1088,72 @@ def openclaw_node(emu):
     emu.set("ocforget", 1)
 
 
+# ---------------------------------------------------------------- the setup network (spec 046)
+# The test emulator's firmware minute is a second (EMU_MINUTE_MS in docker-compose.yml).
+def wait_status(emu, key, value, timeout=10):
+    end = time.time() + timeout
+    while emu.status()[key] != value:
+        if time.time() > end:
+            return False
+        time.sleep(0.5)
+    return True
+
+
+@case
+def setup_network_timer(emu):
+    emu.set("apoff", 0)
+    check(wait_status(emu, "ap", "wpa2"), "apoff 0: the setup network is always on")
+    emu.set("apoff", 2)
+    check(emu.config()["apoff"] == 5, "apoff is at least 5 minutes")
+    check(wait_status(emu, "ap", "off"), "closed 5 minutes after joining")
+    emu.set("apoff", 0)
+    check(wait_status(emu, "ap", "wpa2"), "opens again when the setting allows it")
+    emu.set("apoff", 60)
+
+
+def enter_recovery(emu):
+    """Three power-on boots that each end within 10 s (the screen page's Enter recovery)."""
+    for _ in range(3):
+        emu.request("POST", emu.screen + "/power", b"")
+        time.sleep(4)
+    emu.jar.clear()
+    end = time.time() + 30
+    while emu.stats()["uptime"] < 5:   # the screen server's, not a firmware request
+        check(time.time() < end, "the emulator did not come back")
+        time.sleep(0.5)
+
+
+@case
+def recovery_network(emu):
+    enter_recovery(emu)
+    screen = digest(emu.screenshot())
+    s = emu.status()   # a request: this recovery is in use
+    check(s["recovery"], "three quick power cycles enter recovery")
+    check(s["ap"] == "wpa2", f"recovery's network has the password: {s['ap']}")
+    while emu.stats()["uptime"] < 35:
+        time.sleep(1)
+    check(emu.status()["recovery"], "a recovery in use does not end by itself")
+    # Again, and this time nobody uses it: it restarts normally after 30 minutes.
+    enter_recovery(emu)
+    check(digest(emu.screenshot()) == screen, "the recovery screen again")
+    end = time.time() + 60
+    up = 0
+    while True:   # the boot's uptime climbs past 30 s, then a new boot starts
+        try:
+            now = emu.stats(timeout=5)["uptime"]
+        except (OSError, HttpError, ValueError):
+            now = up
+        if now < up:
+            break
+        up = now
+        check(time.time() < end, "an unused recovery did not restart")
+        time.sleep(1)
+    check(up >= 29, f"restarted after {up} s, before 30 minutes")
+    emu.wait_ready()
+    check(not emu.status()["recovery"], "an unused recovery restarts normally")
+    emu.sign_in()
+
+
 # ---------------------------------------------------------------- runner
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

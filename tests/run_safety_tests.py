@@ -78,6 +78,15 @@ assert setup.index("server.begin()") >= setup.index("startAP()")
 assert setup.index("countPowerCycle()") < setup.index("startAP()")
 assert "LittleFS.setConfig(LittleFSConfig(false))" in source
 assert "WIFI_AP_STA" in source and "WIFI_STA)" not in source
+# Spec 046: the setup network closes only in serviceAp(), never in recovery, and only
+# while the station link is up (MODE_RUN) and nobody is on it.
+assert source.count("softAPdisconnect(") == 1 and "WiFi.mode(WIFI_OFF)" not in source
+service_ap = source[source.index("void serviceAp()"):]
+service_ap = service_ap[:service_ap.index("\n}")]
+assert "softAPdisconnect(" in service_ap and "mode != MODE_RUN" in service_ap and "softAPgetStationNum()" in service_ap
+recovery_loop = source[source.index("void recoveryLoop()"):]
+assert "serviceAp()" not in recovery_loop[:recovery_loop.index("\n}")]
+assert source.index("if (recoveryMode) { recoveryLoop(); return; }") < source.index("  serviceAp();")
 assert "digitalRead(PIN_BUTTON)" not in source, "GPIO4 must not select recovery (no button fitted)"
 assert "WiFi.setAutoReconnect(false)" in source and "STA_TRY_MS" in source
 assert "U_FS" not in handler
@@ -147,4 +156,4 @@ assert len(declared) == 11 and sorted(declared) == sorted(documented), f"OpenCla
 subprocess.run(["python", str(root / "scripts/ram_report.py"), str(image.with_suffix(".elf")), "--max-ours", "4864"],
                check=True, stdout=subprocess.DEVNULL)
 print("PASS: stock-matching 4m3m layout, OTA size budget, no float printf, sign-in and integration guards, the OpenClaw skill's commands,")
-print("      the update unpacked as the bootloader does, strings in flash, non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, persistent AP")
+print("      the update unpacked as the bootloader does, strings in flash, non-formatting mount, early recovery server, power-cycle/crash recovery, safe restarts, STA backoff, setup network (spec 046)")

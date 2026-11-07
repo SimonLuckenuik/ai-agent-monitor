@@ -145,7 +145,7 @@ step with the work it does.
 
 | On the clock | In the emulator |
 |---|---|
-| WiFi | Always connected, through the container's network. The setup AP is not emulated |
+| WiFi | Always connected, through the container's network. The setup AP is not emulated: only its on/off state is (the WiFi mode the firmware sets; never a client on it), so `/status` `ap` closes after `apoff` minutes as on the clock (spec 046). A link drop cannot be simulated |
 | Time | The host's clock; the time zone from settings is applied |
 | Weather, MQTT | Real network requests |
 | Storage (LittleFS, 3 MB) | `/data/smartclock-littlefs3048KB` in the `clock-data` volume, formatted on first start (`EMU_NO_FORMAT=1` keeps a blank volume, to test the "storage not mounted" recovery) |
@@ -174,6 +174,7 @@ and are not counted.
 | Variable | Default | |
 |---|---|---|
 | `EMU_HEAP` | 25600 | Arena bytes: the clock had about 15.7 KB free at rest with built-in faces (1.8.0), the emulator's firmware uses about 9.8 KB there |
+| `EMU_MINUTE_MS` | 60000 | A firmware minute, for the setup network's `apoff` and recovery's 30-minute exit (spec 046); the integration tests set 1000 |
 | `EMU_STACK` | 4096 | Stack bytes for the firmware's frames. The host's x86 frames are not the chip's Xtensa ones: compare `stackFree` in `/status` on the clock and here, and adjust |
 
 Out of memory in `new` and a stack overflow end as on the chip: a panic, and the next

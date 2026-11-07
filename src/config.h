@@ -35,6 +35,7 @@ struct Config {
   String lang        = "en";         // the faces' language: "en" or "fr"
   int    theme      = 0;            // 0=Classic 1=Weather 2=Photo 3=Date 4=Simple 5=Forecast (6 retired)
   int    themeInterval = 10;         // seconds; 0 = no rotation
+  int    apOff = 60;                 // minutes the setup network stays up after joining; 0 = always (spec 046)
   int    faceMask    = (1 << FACE_COUNT) - 1;   // bit n set = face n takes part in rotation
   int    brightness  = 60;           // 0..100
   int    orientation = 0;            // the screen turned by 0-3 quarter turns (clockwise), in hardware
@@ -135,6 +136,7 @@ struct Config {
     turns       = doc[F("turns")]       | turns;
     theme       = doc[F("theme")]       | theme;
     themeInterval = doc[F("themeInterval")] | themeInterval;
+    apOff = doc[F("apoff")] | apOff;
     faceMask    = doc[F("faces")]       | faceMask;
     brightness  = doc[F("brightness")]  | brightness;
     orientation = ((doc[F("orientation")] | 0) / 90 % 4 + 4) % 4;
@@ -216,7 +218,7 @@ struct Config {
     doc[F("tz")] = tz;
     doc[F("celsius")] = celsius;     doc[F("hour12")] = hour12;   doc[F("mile")] = mile;   doc[F("lang")] = lang;
     doc[F("order")] = order;         doc[F("customoff")] = customOff; doc[F("turns")] = turns;
-    doc[F("theme")] = theme;         doc[F("themeInterval")] = themeInterval;
+    doc[F("theme")] = theme;         doc[F("themeInterval")] = themeInterval; doc[F("apoff")] = apOff;
     doc[F("faces")] = faceMask;     doc[F("facesv")] = 5;
     doc[F("brightness")] = brightness; doc[F("orientation")] = orientation * 90;
     doc[F("gamma")] = GAMMAS[gamma]; doc[F("nightgamma")] = nightGamma < 0 ? "" : GAMMAS[nightGamma]; doc[F("nightoff")] = nightOff;

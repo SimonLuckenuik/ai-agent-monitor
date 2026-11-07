@@ -35,7 +35,8 @@ builds and tests again before it publishes.
 | A built-in face's drawing | Face preview (look at `.pio/face-preview/sheet.png`), integration `builtin_faces` and the screens it saves |
 | Custom faces (format, rotation, palettes, sprites) | Unit, integration (`example_faces`, `example_faces_memory`, `rotation_*`, `palettes_and_roles`) |
 | The web API, settings, sign-in, routes | Safety (the guards), integration (`settings_round_trip`, `route_methods`, `face_validation`, `messages_api`) |
-| Firmware updates, recovery, the flash layout | Safety |
+| Firmware updates, recovery, the flash layout | Safety; integration `recovery_network` |
+| The setup network (spec 046) | Safety (closes only in `serviceAp()`, never in recovery); integration `setup_network_timer`, `recovery_network`; on the clock: the station link survives the switch |
 | Memory: anything allocated, any new string | Safety (the strings check), integration `example_faces_memory`, `faces_beside_big_faces`, `mqtt_and_mdns`; the emulator's Device panel and heap map |
 | MQTT, mDNS, the weather fetch | Unit (`mdns_tests`), integration `mqtt_and_mdns`, `faces_beside_big_faces`, `status_and_fixed_time` |
 | Crash handling | Integration `crash_loop_protection` |
@@ -162,6 +163,8 @@ python tests/integration/run_integration_tests.py --reuse      # use an emulator
 | `request_host` | on the home network only requests addressed to the clock are answered (DNS rebinding, spec 029) |
 | `city_place` | the place picked on the settings page: kept for its city, refused when malformed, carried by a backup, dropped by a city typed by hand (spec 035) |
 | `restart_keeps_settings` | after a restart: settings, faces and the fixed time kept; messages gone; no recovery |
+| `setup_network_timer` | the setup network closes `apoff` minutes after joining (a minute is a second in the test emulator, `EMU_MINUTE_MS`), stays with `apoff` 0, `apoff` at least 5 (spec 046) |
+| `recovery_network` | three quick power cycles enter recovery; its network has the password (`ap` `wpa2`); a recovery in use stays; an unused one restarts normally after 30 minutes (spec 046) |
 
 ### Writing a case
 
