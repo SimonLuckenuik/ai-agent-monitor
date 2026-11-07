@@ -38,3 +38,12 @@
   until our code starts it.
 - Still open: questions 3 (WPA2 on the recovery AP) and 4 (leave an unused recovery
   after 30 minutes). Spec still Draft, not approved.
+
+## 2026-11-07
+
+- The owner: WPA2 on the recovery AP, yes (requirement 9). Found while writing it: when
+  the panel is skipped in recovery, the password is not on the screen, so the AP stays
+  open in that one case, or the clock could not be joined at all.
+- Recommended to the owner: an unused recovery restarts normally after 30 idle minutes,
+  except after a failed mount (requirement 10, open question 4). Waiting for the go and
+  for the spec's approval.

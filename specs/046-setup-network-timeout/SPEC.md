@@ -25,8 +25,10 @@ soldering onto the ESP-12F's pads).
    first setup, a router that is gone, a changed Wi-Fi password.
 3. A power cycle always brings the setup network back for the same time.
 4. The owner can choose the time, or keep the network always on (today's behaviour).
-5. Recovery mode is unchanged (open, no sign-in) unless the owner chooses otherwise
-   (open questions 3 and 4).
+5. Recovery's network is no longer open to anyone in range: WPA2 with the device
+   password that the recovery screen shows (the owner, 2026-11-06).
+6. A recovery that nobody uses ends by itself (recommended, waiting for the owner's go:
+   open question 4).
 
 ## Non-goals
 
@@ -51,7 +53,8 @@ soldering onto the ESP-12F's pads).
 4. The AP comes back on, with the same name, password and address, when the station
    link drops (the clock goes back to the setup screen, as today), and at every boot.
    The timer starts again from the next time the link comes up.
-5. Recovery and safe mode: unchanged by this setting (recovery's AP is never turned off).
+5. Recovery and safe mode are not affected by `apoff` (recovery's AP is never turned off
+   by the timer).
 6. Turning the AP off never drops the station link. The switch is the same call
    ESPHome makes on ESP8266 when its station connects (`wifi_set_opmode_current` to
    station only, RESEARCH.md); turning it on only happens while the link is down or at
@@ -61,6 +64,17 @@ soldering onto the ESP-12F's pads).
    "off (restart the clock to open it)" when it is off, and offers the setting
    (Always on, 15 min, 1 h, 4 h, 24 h).
 8. Backup and restore carry `apoff` like any other setting.
+9. **Recovery's AP uses WPA2 with the device password** whenever the recovery screen is
+   drawn, since that screen shows the password. When the panel is skipped (the panel
+   itself reset the previous recovery boot, `recoveryDisplay` false), the password
+   cannot be read off the clock, so the AP stays open as today: a recovery that cannot
+   be joined would leave only the soldering iron. Recovery's web server still needs no
+   sign-in (being on the WPA2 network already proves the password).
+10. **An unused recovery ends by itself** (if the owner agrees, open question 4): after
+    30 minutes in recovery with no client ever joined to its network and no web request,
+    the clock restarts normally (`safeRestart()`). Not when the storage failed to mount
+    (a restart cannot fix it, and recovery's Format button is the way out). A client
+    joining or any request stops the countdown for good on that boot.
 
 ## Behaviour (settings, API, screens)
 
@@ -80,6 +94,7 @@ soldering onto the ESP-12F's pads).
 - Flash: measured on a prototype (PROGRESS.md): +496 B plain, +389 B compressed, 885 B
   of update room (2.3.1 keeps two whole sectors, 8 KB, of room), plus the settings page
   field; at ~1.7 KB of update room per KB of code, well under one 4 KB sector of room.
+- Recovery (requirements 9, 10): a few dozen bytes; measured with the rest.
 - RAM: one `int` in `Config`. Turning the AP off should free 1-2 KB of heap (the SDK's
   soft-AP and DHCP server, the DNS socket); to measure on the clock.
 - Draw time: none.
@@ -108,18 +123,18 @@ Answered by the owner on 2026-11-06:
    saved configuration, so a stock network is not broadcast at boot by our firmware.
    The 2026-10-25 issue stays open and unexplained.
 
+3. Recovery's AP: **WPA2 with the device password** (requirement 9), open only when the
+   panel is skipped and so cannot show the password.
+
 Still open:
 
-3. **Recovery's AP**: keep it open (today), or WPA2 with the device password, which the
-   recovery screen already shows (no flash cost)? Today anyone in range of a clock in
-   recovery can install firmware on it without a password.
-4. **Recovery that nobody uses**: recovery is entered by three quick power cycles, a
-   crash in the first 30 s, or a storage that does not mount, and lasts until someone
-   presses Restart. A clock that lands there by accident (power flickering three times
-   in a storm, one crash at boot) and is not noticed stays there for good: no faces,
-   and an open network on which anyone in range can install firmware. Option: when
-   nobody has joined the recovery network or made a request for 30 minutes, restart
-   normally. Cost: if the normal boot is what is broken, the clock goes back to recovery
-   by itself after the crash (a crash in the first 30 s re-enters it), so a few restarts
-   an hour at worst; a failed mount would keep restarting every 30 minutes (excluded:
-   stay in recovery when the storage did not mount). Leave it as today, or add it?
+4. **Recovery that nobody uses** (recommendation: yes, requirement 10). Recovery is
+   entered by three quick power cycles, a crash in the first 30 s, or a storage that
+   does not mount, and lasts until someone presses Restart. A clock that lands there
+   by accident (power flickering three times in a storm, one crash at boot) and is not
+   noticed stays there for good, showing "Recovery" instead of faces. With WPA2 on its
+   network (question 3) that is no longer a security hole, but the clock is out of
+   service until someone notices. Restarting after 30 idle minutes heals the accident;
+   if the normal boot really is broken, it crashes back into recovery (a crash in the
+   first 30 s re-enters it), so the owner still finds it there, at worst one restart
+   every half hour. The mount failure is excluded. Agree?
