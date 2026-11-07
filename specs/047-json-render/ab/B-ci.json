@@ -1,0 +1,132 @@
+{
+ "root": "screen",
+ "elements": {
+  "screen": {
+   "type": "Box",
+   "props": {"flexDirection": "column", "paddingTop": 1, "paddingBottom": 1, "paddingLeft": 2, "paddingRight": 2, "backgroundColor": "#06080c"},
+   "children": ["header", "branchRow", "rule", "status", "fill", "counts"]
+  },
+  "header": {
+   "type": "Box",
+   "props": {"alignItems": "center"},
+   "children": ["repo", "hsp", "time"]
+  },
+  "repo": {
+   "type": "Text",
+   "props": {"text": {"$state": "/vars/repo", "fallback": "repository"}, "color": "#ffffff", "maxChars": 24, "wrap": "truncate"}
+  },
+  "hsp": {"type": "Spacer"},
+  "time": {
+   "type": "Clock",
+   "props": {"format": "hm", "fontSize": 16, "color": "@muted", "align": "right"}
+  },
+  "branchRow": {
+   "type": "Box",
+   "props": {"alignItems": "center", "gap": 1},
+   "children": ["branchIcon", "branch"]
+  },
+  "branchIcon": {
+   "type": "Icon",
+   "props": {"d": ["M6 3v12", "M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M18 9a9 9 0 0 1-9 9"], "size": 3, "color": "#5ab4ff", "fill": "none"}
+  },
+  "branch": {
+   "type": "Text",
+   "props": {"text": {"$state": "/vars/branch", "fallback": "main"}, "color": "#5ab4ff", "maxChars": 30, "wrap": "truncate"}
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {"color": {"$cond": {"$state": "/vars/build", "eq": "fail"}, "$then": "#ff4d4d", "$else": "#2c333d"}}
+  },
+  "status": {
+   "type": "Box",
+   "props": {"height": 6},
+   "children": ["failView", "okView", "runView"]
+  },
+  "failView": {
+   "type": "Box",
+   "visible": {"$state": "/vars/build", "eq": "fail"},
+   "props": {"position": "absolute", "top": 0, "left": 0, "right": 0, "bottom": 0, "alignItems": "center", "justifyContent": "center", "gap": 2},
+   "children": ["failIcon", "failText"]
+  },
+  "failIcon": {
+   "type": "Icon",
+   "props": {"d": ["M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z", "m15 9-6 6", "m9 9 6 6"], "size": 8, "color": "#ff4d4d", "fill": "none", "strokeWidth": 2.5}
+  },
+  "failText": {
+   "type": "Text",
+   "props": {"text": "FAILED", "font": "big", "fontSize": 40, "color": "#ff4d4d", "bold": true}
+  },
+  "okView": {
+   "type": "Box",
+   "visible": {"$state": "/vars/build", "eq": "ok"},
+   "props": {"position": "absolute", "top": 0, "left": 0, "right": 0, "bottom": 0, "alignItems": "center", "justifyContent": "center", "gap": 2},
+   "children": ["okIcon", "okText"]
+  },
+  "okIcon": {
+   "type": "Icon",
+   "props": {"d": ["M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z", "m8 12 3 3 5-6"], "size": 8, "color": "#3ddc84", "fill": "none", "strokeWidth": 2.5}
+  },
+  "okText": {
+   "type": "Text",
+   "props": {"text": "PASSED", "font": "big", "fontSize": 40, "color": "#3ddc84", "bold": true}
+  },
+  "runView": {
+   "type": "Box",
+   "visible": {"$state": "/vars/build", "eq": "running"},
+   "props": {"position": "absolute", "top": 0, "left": 0, "right": 0, "bottom": 0, "alignItems": "center", "justifyContent": "center", "gap": 3},
+   "children": ["runRing", "runCol"]
+  },
+  "runRing": {
+   "type": "Ring",
+   "props": {"value": {"$state": "/vars/pct", "fallback": "0"}, "max": 100, "size": 13, "thickness": 1, "color": "#ffb020", "track": "#2c333d", "label": {"$template": "${/vars/pct|0}%"}}
+  },
+  "runCol": {
+   "type": "Box",
+   "props": {"flexDirection": "column", "gap": 1},
+   "children": ["runText", "runSpin"]
+  },
+  "runText": {
+   "type": "Text",
+   "props": {"text": "RUNNING", "fontSize": 26, "color": "#ffb020"}
+  },
+  "runSpin": {
+   "type": "Spinner",
+   "props": {"label": "testing", "color": "@muted"}
+  },
+  "fill": {"type": "Spacer"},
+  "counts": {
+   "type": "Box",
+   "props": {"justifyContent": "space-between", "alignItems": "flex-end"},
+   "children": ["passCol", "failCol"]
+  },
+  "passCol": {
+   "type": "Box",
+   "props": {"flexDirection": "column"},
+   "children": ["passN", "passL"]
+  },
+  "passN": {
+   "type": "Text",
+   "props": {"text": {"$state": "/vars/passed", "fallback": "0"}, "fontSize": 26, "color": "#3ddc84", "maxChars": 5}
+  },
+  "passL": {
+   "type": "Text",
+   "props": {"text": "passed", "color": "@muted"}
+  },
+  "failCol": {
+   "type": "Box",
+   "props": {"flexDirection": "column", "alignItems": "flex-end"},
+   "children": ["failN", "failL"]
+  },
+  "failN": {
+   "type": "Text",
+   "props": {"text": {"$state": "/vars/failed", "fallback": "0"}, "fontSize": 26, "align": "right", "maxChars": 5, "color": {"$cond": {"$state": "/vars/failed", "gt": 0}, "$then": "#ff4d4d", "$else": "@muted"}}
+  },
+  "failL": {
+   "type": "Text",
+   "props": {"text": "failed", "color": "@muted", "align": "right"}
+  }
+ },
+ "state": {
+  "vars": {"repo": "ai-agent-monitor", "branch": "faces-v2", "build": "fail", "pct": 64, "passed": 402, "failed": 3}
+ }
+}

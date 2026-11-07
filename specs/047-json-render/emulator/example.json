@@ -1,0 +1,89 @@
+{
+ "root": "screen",
+ "elements": {
+  "screen": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1
+   },
+   "children": [
+    "top",
+    "status",
+    "bar",
+    "fill",
+    "kv"
+   ]
+  },
+  "top": {
+   "type": "Box",
+   "children": [
+    "clock",
+    "sp",
+    "wx"
+   ],
+   "props": {
+    "alignItems": "center"
+   }
+  },
+  "clock": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "fontSize": 40
+   }
+  },
+  "sp": {
+   "type": "Spacer"
+  },
+  "wx": {
+   "type": "WeatherIcon",
+   "props": {
+    "size": 6
+   }
+  },
+  "status": {
+   "type": "StatusLine",
+   "props": {
+    "status": "success",
+    "text": {
+     "$template": "Build ${/vars/build|idle}"
+    }
+   }
+  },
+  "bar": {
+   "type": "ProgressBar",
+   "visible": {
+    "$state": "/vars/build",
+    "eq": "running"
+   },
+   "props": {
+    "label": "Tests",
+    "progress": {
+     "$state": "/vars/progress",
+     "fallback": "0"
+    }
+   }
+  },
+  "fill": {
+   "type": "Spacer"
+  },
+  "kv": {
+   "type": "KeyValue",
+   "props": {
+    "label": "Branch",
+    "value": {
+     "$state": "/vars/branch",
+     "fallback": "main"
+    }
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "build": "running",
+   "progress": 0.4
+  }
+ }
+}

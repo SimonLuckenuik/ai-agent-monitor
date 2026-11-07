@@ -1,0 +1,22 @@
+{
+  "bg": "@bg",
+  "palette": "{mins|99}<=5?urgent:calm",
+  "palettes": {
+    "calm":   {"bg": "#0a1120", "panel": "#18233a", "accent": "#64d2ff", "fg": "#ffffff", "dim": "#8a98b0"},
+    "urgent": {"bg": "#2a0505", "panel": "#4a1212", "accent": "#ff453a", "fg": "#ffffff", "dim": "#e0a0a0"}
+  },
+  "items": [
+    {"type": "text", "x": 14, "y": 10, "text": "{{mins|99}<=5?STARTING SOON:NEXT MEETING}", "font": 2, "align": "tl", "color": "@accent"},
+    {"type": "text", "x": 226, "y": 10, "text": "{time.hm}", "font": 2, "align": "tr", "color": "@dim", "bg": "@bg", "pad": 6},
+
+    {"type": "ring", "x": 120, "y": 100, "r": 62, "w": 9, "value": "30-min(max({mins|30},0),30)", "max": 30, "color": "@accent", "track": "@panel"},
+    {"type": "text", "x": 120, "y": 90, "text": "{mins|--}", "font": "bebas", "size": 64, "align": "mc", "color": "@fg", "bg": "@bg", "pad": 6, "show": "{mins|1}>0"},
+    {"type": "text", "x": 120, "y": 128, "text": "{{mins}==1?MINUTE:MINUTES}", "font": 2, "align": "tc", "color": "@dim", "bg": "@bg", "pad": 4, "show": "{mins|1}>0"},
+    {"type": "text", "x": 120, "y": 100, "text": "NOW", "font": "big", "size": 34, "weight": 1.5, "align": "mc", "color": "@accent", "show": "{mins|1}<=0"},
+
+    {"type": "text", "x": 120, "y": 184, "text": "{meeting:15|Meeting}", "font": 4, "align": "mc", "color": "@fg"},
+    {"type": "path", "x": 120, "y": 216, "size": 16, "align": "mr", "stroke": "@dim", "sw": 2, "show": "{room}",
+     "d": ["M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0", "M15 10a3 3 0 1 0 -6 0a3 3 0 1 0 6 0"]},
+    {"type": "text", "x": 124, "y": 216, "text": "{room:14}", "font": 2, "align": "ml", "color": "@dim"}
+  ]
+}

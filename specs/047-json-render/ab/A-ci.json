@@ -1,0 +1,37 @@
+{
+  "bg": "@bg",
+  "palette": "{build:pal}",
+  "palettes": {
+    "fail": {"bg": "#170607", "panel": "#2b0f11", "accent": "#ff453a", "fg": "#ffffff", "dim": "#b08a8c"},
+    "run":  {"bg": "#06111e", "panel": "#102238", "accent": "#0a84ff", "fg": "#ffffff", "dim": "#8a9bb0"},
+    "ok":   {"bg": "#05160c", "panel": "#0f2a18", "accent": "#30d158", "fg": "#ffffff", "dim": "#8aa894"},
+    "idle": {"bg": "#0e0e10", "panel": "#1f1f23", "accent": "#8e8e93", "fg": "#ffffff", "dim": "#8e8e93"}
+  },
+  "maps": {
+    "pal": {"fail": "fail", "running": "run", "ok": "ok", "*": "idle"},
+    "label": {"fail": "FAILED", "running": "RUNNING", "ok": "PASSING", "*": "WAITING"}
+  },
+  "items": [
+    {"type": "text", "x": 14, "y": 10, "text": "{repo:18|repository}", "font": 2, "align": "tl", "color": "@fg"},
+    {"type": "text", "x": 226, "y": 10, "text": "{time.hm}", "font": 2, "align": "tr", "color": "@dim", "bg": "@bg", "pad": 6},
+    {"type": "path", "x": 14, "y": 30, "size": 16, "stroke": "@dim", "sw": 2,
+     "d": ["M6 3v12", "M21 6a3 3 0 1 0 -6 0a3 3 0 1 0 6 0", "M9 18a3 3 0 1 0 -6 0a3 3 0 1 0 6 0", "M18 9a9 9 0 0 1 -9 9"]},
+    {"type": "text", "x": 36, "y": 30, "text": "{branch:22|main}", "font": 2, "align": "tl", "color": "@dim"},
+    {"type": "line", "x": 14, "y": 56, "x2": 226, "y2": 56, "w": 1, "color": "@panel"},
+
+    {"type": "ring", "x": 120, "y": 108, "r": 40, "w": 8, "value": "{pct|0}", "max": 100, "color": "@accent", "track": "@panel", "show": "{build}==running"},
+    {"type": "text", "x": 120, "y": 108, "text": "{pct|0}%", "font": 4, "align": "mc", "color": "@fg", "bg": "@bg", "pad": 8, "show": "{build}==running"},
+
+    {"type": "circle", "x": 120, "y": 108, "r": 40, "color": "@accent", "show": "{build}==fail||{build}==ok"},
+    {"type": "path", "x": 120, "y": 108, "size": 44, "align": "mc", "stroke": "@bg", "sw": 3.2, "d": ["M18 6 6 18", "m6 6 12 12"], "show": "{build}==fail"},
+    {"type": "path", "x": 120, "y": 108, "size": 44, "align": "mc", "stroke": "@bg", "sw": 3.2, "d": "M20 6 9 17l-5-5", "show": "{build}==ok"},
+    {"type": "circle", "x": 120, "y": 108, "r": 40, "fill": false, "border": "@panel", "bw": 4, "show": "{build}!=fail&&{build}!=ok&&{build}!=running"},
+
+    {"type": "text", "x": 120, "y": 162, "text": "{build:label}", "font": "big", "size": 24, "weight": 1.4, "align": "mc", "color": "@accent", "bg": "@bg", "pad": 4},
+
+    {"type": "rect", "x": 12, "y": 188, "w": 104, "h": 42, "r": 10, "color": "@panel"},
+    {"type": "text", "x": 64, "y": 209, "text": "✓ {passed|0}", "font": "big", "size": 20, "align": "mc", "color": "#30d158", "bg": "@panel", "pad": 2},
+    {"type": "rect", "x": 124, "y": 188, "w": 104, "h": 42, "r": 10, "color": "@panel"},
+    {"type": "text", "x": 176, "y": 209, "text": "✗ {failed|0}", "font": "big", "size": 20, "align": "mc", "color": "{failed|0}>0?#ff453a:@dim", "bg": "@panel", "pad": 2}
+  ]
+}

@@ -1,6 +1,36 @@
 # 047 json-render on the clock
 
-Status: Draft (direction changed 2026-11-07: native support, see below)
+Status: In progress: an emulator prototype (the owner, 2026-11-07: "can we start by
+implementing with the emulator and adjust the space accordingly in the emulator just to
+see it in action and then you do the test you propose"). The spec as a whole is not
+approved; the device build is unchanged.
+
+## Scope decided on the way (2026-11-07, the owner in the chat)
+
+These supersede the goals and requirements below where they differ.
+
+- **The catalog follows `@json-render/ink`'s display components** ("maybe something
+  similar to ink without the input components"): Box, Text, Heading, Newline, Spacer,
+  Divider, Badge, Spinner, ProgressBar, Sparkline, BarChart, Table, List, ListItem, Card,
+  KeyValue, Link, StatusLine, Metric, Callout, Timeline, Markdown. Lengths are character
+  cells: a cell is 6 px across (40 columns), a row 16 px. Left out: TextInput, Select,
+  MultiSelect, ConfirmInput, Tabs.
+- **`@json-render/image` is dropped as the target, and so is `Image`** ("willing to drop
+  image and support a path a la svg"). Image-style specs (Frame, Row, Column, lengths in
+  px) and shadcn's display components still draw, but the published catalog leaves them
+  out.
+- **Clock components:** `Clock`, `WeatherIcon`, `Ring`, and `Icon`. `Icon` takes SVG path
+  data, one path or `paths` with their own fill and stroke, so agents can draw icons
+  (Lucide's work as they are).
+- **OpenClaw** ("we'll need to expose that to the openclaw node tools as well"):
+  `clock.catalog` on the node (the catalog's summary and the `/api/catalog` URL). Specs
+  are saved through the bridge's `clock.face.save` or HTTP, because the native node has
+  no heap for a face in a frame (spec 041). Not done in the prototype.
+- **Compiled on a stack of its own.** Layout recurses as deep as the spec nests. The
+  emulator caught a stack overflow on the chip's 4 KB stack on the first spec. Specs are
+  now compiled on the core's stack thunk: 6.2 KB taken from the heap while compiling, as
+  BearSSL uses it. The emulator models the thunk (`emuStackThunk` in
+  `emulator/memory.cpp`).
 
 ## Problem
 

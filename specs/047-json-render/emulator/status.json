@@ -1,0 +1,104 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1
+   },
+   "children": [
+    "card",
+    "tab"
+   ]
+  },
+  "card": {
+   "type": "Card",
+   "props": {
+    "title": "Home lab"
+   },
+   "children": [
+    "k1",
+    "k2",
+    "pb",
+    "sl"
+   ]
+  },
+  "k1": {
+   "type": "KeyValue",
+   "props": {
+    "label": "nas",
+    "value": "online",
+    "color": "green"
+   }
+  },
+  "k2": {
+   "type": "StatusLine",
+   "props": {
+    "status": "warning",
+    "text": "backup 3 h late"
+   }
+  },
+  "pb": {
+   "type": "ProgressBar",
+   "props": {
+    "progress": 0.72,
+    "label": "disk 72%",
+    "color": "yellow"
+   }
+  },
+  "sl": {
+   "type": "Sparkline",
+   "props": {
+    "data": [
+     3,
+     5,
+     4,
+     8,
+     6,
+     9,
+     7,
+     10,
+     8,
+     12
+    ],
+    "color": "cyan"
+   }
+  },
+  "co": {
+   "type": "Callout",
+   "props": {
+    "type": "tip",
+    "title": "Tip",
+    "content": "Rotate the keys before Friday."
+   }
+  },
+  "tab": {
+   "type": "Table",
+   "props": {
+    "columns": [
+     {
+      "header": "host",
+      "key": "h"
+     },
+     {
+      "header": "cpu",
+      "key": "c",
+      "align": "right"
+     }
+    ],
+    "rows": [
+     {
+      "h": "pi-1",
+      "c": "12%"
+     },
+     {
+      "h": "nuc",
+      "c": "48%"
+     }
+    ]
+   }
+  }
+ }
+}

@@ -1,0 +1,61 @@
+{
+ "root": "screen",
+ "elements": {
+  "screen": {
+   "type": "Box",
+   "props": {"flexDirection": "column", "paddingTop": 1, "paddingBottom": 1, "paddingLeft": 1, "paddingRight": 1, "justifyContent": "space-between", "backgroundColor": "#05070d"},
+   "children": ["time", "date", "now", "rule", "days"]
+  },
+  "time": {
+   "type": "Clock",
+   "props": {"format": "hm", "font": "big", "fontSize": 64, "color": "@time", "align": "center"}
+  },
+  "date": {
+   "type": "Text",
+   "props": {"text": {"$template": "${/date/wday} ${/date/text}"}, "color": "@muted", "align": "center", "maxChars": 22}
+  },
+  "now": {
+   "type": "Box",
+   "props": {"alignItems": "center", "justifyContent": "center", "gap": 2},
+   "children": ["nowIcon", "nowCol"]
+  },
+  "nowIcon": {
+   "type": "WeatherIcon",
+   "props": {"size": 8}
+  },
+  "nowCol": {
+   "type": "Box",
+   "props": {"flexDirection": "column"},
+   "children": ["nowTemp", "nowText"]
+  },
+  "nowTemp": {
+   "type": "Text",
+   "props": {"text": {"$template": "${/now/temp}°${/units/temp}"}, "font": "big", "fontSize": 32, "color": "#ffffff", "maxChars": 5}
+  },
+  "nowText": {
+   "type": "Text",
+   "props": {"text": {"$state": "/now/text"}, "color": "#9fc4ff", "maxChars": 18, "wrap": "truncate"}
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {"color": "#232a36"}
+  },
+  "days": {
+   "type": "Box",
+   "props": {"justifyContent": "space-around"},
+   "children": ["d1", "d2", "d3"]
+  },
+  "d1": {"type": "Box", "props": {"flexDirection": "column", "alignItems": "center", "width": 12}, "children": ["d1n", "d1i", "d1t"]},
+  "d1n": {"type": "Text", "props": {"text": {"$state": "/days/1/wday3"}, "color": "@accent1", "align": "center", "maxChars": 3}},
+  "d1i": {"type": "WeatherIcon", "props": {"name": {"$state": "/days/1/icon"}, "size": 4}},
+  "d1t": {"type": "Text", "props": {"text": {"$template": "${/days/1/high}/${/days/1/low}"}, "color": "#ffffff", "align": "center", "maxChars": 7}},
+  "d2": {"type": "Box", "props": {"flexDirection": "column", "alignItems": "center", "width": 12}, "children": ["d2n", "d2i", "d2t"]},
+  "d2n": {"type": "Text", "props": {"text": {"$state": "/days/2/wday3"}, "color": "@accent1", "align": "center", "maxChars": 3}},
+  "d2i": {"type": "WeatherIcon", "props": {"name": {"$state": "/days/2/icon"}, "size": 4}},
+  "d2t": {"type": "Text", "props": {"text": {"$template": "${/days/2/high}/${/days/2/low}"}, "color": "#ffffff", "align": "center", "maxChars": 7}},
+  "d3": {"type": "Box", "props": {"flexDirection": "column", "alignItems": "center", "width": 12}, "children": ["d3n", "d3i", "d3t"]},
+  "d3n": {"type": "Text", "props": {"text": {"$state": "/days/3/wday3"}, "color": "@accent1", "align": "center", "maxChars": 3}},
+  "d3i": {"type": "WeatherIcon", "props": {"name": {"$state": "/days/3/icon"}, "size": 4}},
+  "d3t": {"type": "Text", "props": {"text": {"$template": "${/days/3/high}/${/days/3/low}"}, "color": "#ffffff", "align": "center", "maxChars": 7}}
+ }
+}

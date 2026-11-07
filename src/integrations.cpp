@@ -3,6 +3,7 @@
 #include <ESP8266WebServer.h>
 #include <ArduinoJson.h>
 #include "json_parse.h"
+#include "jsonrender.h"
 #include <LittleFS.h>
 #ifndef SMARTCLOCK_MQTT
 #define SMARTCLOCK_MQTT 1   // 0: a build without MQTT
@@ -293,7 +294,31 @@ void showFace(const String& name) {
 // Saves (or, with an empty body, deletes) a face. Returns "" or the reason.
 #define NO_MEMORY "Not enough memory"
 
-String storeFace(const String& name, const String& body) {
+#if SMARTCLOCK_JSONRENDER
+String jrWarnings;   // what the last json-render spec could not draw exactly (spec 047)
+#endif
+
+String storeFace(const String& name, const String& bodyIn) {
+#if SMARTCLOCK_JSONRENDER
+  // A json-render spec is compiled into a face first, then saved like any face.
+  String compiled, seed;
+  jrWarnings = "";
+  bool spec = jrIsSpec(bodyIn);
+  if (spec) {
+    String err = jrCompile(bodyIn, compiled, jrWarnings, seed);
+    if (err.length()) return err;
+    if (seed.length()) {   // the spec's state, for variables not set yet
+      JsonDocument sd;
+      if (!parseJson(sd, seed)) for (JsonPair kv : sd.as<JsonObject>()) if (!findVar(kv.key().c_str())) setVar(kv.key().c_str(), kv.value(), VarOptions());
+    }
+  }
+  const String& body = spec ? compiled : bodyIn;
+  const size_t faceMax = spec ? JR_FACE_MAX : FACE_JSON_MAX;
+  const size_t itemsMax = spec ? JR_ITEMS_MAX : 32;
+#else
+  const String& body = bodyIn;
+  const size_t faceMax = FACE_JSON_MAX, itemsMax = 32;
+#endif
   if (!storageReady || recoveryMode) return F("Storage unavailable");
   if (body.length() == 0 || body == "{}") {
     LittleFS.remove(facePath(name));
@@ -301,7 +326,7 @@ String storeFace(const String& name, const String& body) {
     if (cfg.theme == FACE_CUSTOM && cfg.customFace == name) cfg.theme = FACE_CLASSIC;
     return "";
   }
-  if (body.length() > FACE_JSON_MAX) return F("Face is larger than 4 KB");
+  if (body.length() > faceMax) return F("Face is larger than 4 KB");
   // Checked with only the items' types kept: about 1 KB instead of the whole face (spec 024).
   JsonDocument filter, doc;
   filter[F("items")][0]["type"] = true;
@@ -309,7 +334,7 @@ String storeFace(const String& name, const String& body) {
   DeserializationError e = parseJson(doc, body, filter);
   if (e == DeserializationError::NoMemory) return F(NO_MEMORY);
   if (e || !doc[F("items")].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
-  if (doc[F("items")].size() > 32) return F("At most 32 items");
+  if (doc[F("items")].size() > itemsMax) return F("At most 32 items");
   if (!LittleFS.exists("/faces")) LittleFS.mkdir("/faces");
   if (!LittleFS.exists(facePath(name)) && customFaceCount() >= FACES_MAX) return F("At most 40 custom faces");
   File f = LittleFS.open(facePath(name), "w");
@@ -345,6 +370,9 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
     String err = storeFace(name, server.arg("plain"));
     if (err.length()) { server.send(err == F(NO_MEMORY) ? 507 : 400, "text/plain", err); return; }
     if (server.arg("show") == "1") showFace(name);
+#if SMARTCLOCK_JSONRENDER
+    if (jrWarnings.length()) { server.send(200, "text/plain", "OK\n" + jrWarnings); jrWarnings = ""; return; }
+#endif
     server.send(200, PSTR("text/plain"), PSTR("OK"));
     return;
   }
@@ -947,6 +975,10 @@ const Route ROUTES[] PROGMEM = {
   {"/api/faces/delete", HTTP_POST, handleFaceDelete, nullptr},
   {"/api/faces/show",   HTTP_POST, handleFaceShow, nullptr},
   {"/api/faces/vars",   HTTP_POST, handleFaceVars, nullptr},
+#if SMARTCLOCK_JSONRENDER
+  {"/api/catalog",      HTTP_GET,  []{ jrSendCatalog(false); }, nullptr},
+  {"/api/catalog/prompt", HTTP_GET, []{ jrSendCatalog(true); }, nullptr},
+#endif
   {"/api/integrations", HTTP_ANY,  handleIntegrations, nullptr},
   {"/api/message",      HTTP_ANY,  handleMessage, nullptr},
   {"/theme/list",       HTTP_ANY,  handleThemeList, nullptr},

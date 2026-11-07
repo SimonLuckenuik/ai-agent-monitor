@@ -107,8 +107,8 @@ if [ "${EMU_STARTER:-0}" = 1 ]; then
   firmware="$root/emulator/fw_starter.cpp $root/src/update.cpp $root/src/json_parse.cpp"
   variant=-DSMARTCLOCK_STARTER=1
 else
-  firmware="$root/emulator/fw_main.cpp $root/src/faces.cpp $root/src/update.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/json_parse.cpp $root/src/openclaw.cpp $root/src/ed25519.cpp $root/src/openclaw_proto.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp"
-  variant=
+  firmware="$root/emulator/fw_main.cpp $root/src/faces.cpp $root/src/update.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/json_parse.cpp $root/src/openclaw.cpp $root/src/ed25519.cpp $root/src/openclaw_proto.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp $root/src/jsonrender.cpp"
+  variant=-DSMARTCLOCK_JSONRENDER=1   # spec 047: json-render specs, on in the emulator
 fi
 if [ "$(cat "$work/variant" 2>/dev/null)" != "$variant" ]; then
   # fullcore.a only ever gains objects: the other variant's would win the link.

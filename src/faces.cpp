@@ -528,7 +528,8 @@ String customName;
 String customWanted;   // the custom face to draw: cfg.customFace, or the night face
 uint32_t customVer = 0, customEvalAt = 0;
 bool customLoaded = false;
-constexpr size_t CUSTOM_ITEMS = 32;
+#include "jsonrender.h"
+constexpr size_t CUSTOM_ITEMS = SMARTCLOCK_JSONRENDER ? JR_ITEMS_MAX : 32;   // json-render faces may have more (spec 047)
 uint32_t customHash[CUSTOM_ITEMS], customGeo[CUSTOM_ITEMS];
 // The item being drawn on its own (-1: in a repaint), and whether only its content
 // changed: big text then redraws just the characters that differ.
@@ -2948,6 +2949,11 @@ void agents(const struct tm& t, bool force) {
 }
 
 }  // namespace
+
+#if SMARTCLOCK_JSONRENDER   // for the json-render compiler (spec 047)
+String jrResolve(const char* tpl, const struct tm& t) { return resolve(tpl, t); }
+float jrMonoWidth(const char* s) { return monoWidth(s); }
+#endif
 
 // For settings (the place, spec 035): the expressions' parser, not libc's (~9 KB).
 float readNumber(const char*& s, bool* ok) { return parseNum(s, ok); }

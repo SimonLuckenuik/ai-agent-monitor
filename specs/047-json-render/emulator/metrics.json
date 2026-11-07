@@ -1,0 +1,14 @@
+{"root": "s", "elements": {
+ "s": {"type": "Box", "props": {"flexDirection": "column", "padding": 1, "gap": 1}, "children": ["hdr", "row", "chart", "div", "tl"]},
+ "hdr": {"type": "Box", "props": {"alignItems": "center", "gap": 1}, "children": ["ic", "h", "sp", "b"]},
+ "ic": {"type": "Icon", "props": {"size": 3, "paths": [{"d": "M12 2 2 7l10 5 10-5-10-5z", "fill": "#bf5af2"}, {"d": "M2 17l10 5 10-5M2 12l10 5 10-5", "stroke": "#64d2ff"}]}},
+ "h": {"type": "Heading", "props": {"text": "Deploys", "level": "h2"}},
+ "sp": {"type": "Spacer"},
+ "b": {"type": "Badge", "props": {"label": "LIVE", "variant": "success"}},
+ "row": {"type": "Box", "props": {"gap": 2}, "children": ["m1", "m2"]},
+ "m1": {"type": "Metric", "props": {"label": "Today", "value": {"$state": "/vars/deploys", "fallback": "0"}, "trend": "up", "color": "#30d158"}},
+ "m2": {"type": "Metric", "props": {"label": "Fail %", "value": "2.1", "trend": "down"}},
+ "chart": {"type": "BarChart", "props": {"data": [{"label": "api", "value": 12}, {"label": "web", "value": 7}, {"label": "jobs", "value": 3}]}},
+ "div": {"type": "Divider", "props": {"title": "latest", "dimColor": true}},
+ "tl": {"type": "Timeline", "props": {"items": [{"title": "api v2.4", "date": "10:31", "status": "completed"}, {"title": "web v9.1", "date": "now", "status": "current"}]}}
+}, "state": {"vars": {"deploys": 22}}}
