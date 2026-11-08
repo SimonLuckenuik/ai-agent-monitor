@@ -22,6 +22,7 @@ it belongs to ([specs](../../specs/README.md)).
 - [2026-11-05 The clocks become native OpenClaw nodes, not bridged ones](2026-11-05-openclaw-native-node.md)
 - [2026-11-05 The OpenClaw node takes 22.7 KB of flash, leaving 8 KB of update room](2026-11-05-openclaw-node-flash.md)
 - [2026-11-07 json-render is rendered on the clock, even at the cost of features](2026-11-07-json-render-native.md)
+- [2026-11-07 json-render goes in the one firmware, with every feature kept](2026-11-07-json-render-one-build.md)
 - [2026-11-08 The firmware is built with link-time optimisation](2026-11-08-link-time-optimisation.md)
 
 ## SmartClock-OSS (upstream, before the fork)

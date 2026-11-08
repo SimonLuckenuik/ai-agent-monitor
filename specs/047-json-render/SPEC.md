@@ -22,10 +22,21 @@ These supersede the goals and requirements below where they differ.
 - **Clock components:** `Clock`, `WeatherIcon`, `Ring`, and `Icon`. `Icon` takes SVG path
   data, one path or `paths` with their own fill and stroke, so agents can draw icons
   (Lucide's work as they are).
-- **OpenClaw** ("we'll need to expose that to the openclaw node tools as well"):
-  `clock.catalog` on the node (the catalog's summary and the `/api/catalog` URL). Specs
+- **OpenClaw** ("we'll need to expose that to the openclaw node tools as well"): specs
   are saved through the bridge's `clock.face.save` or HTTP, because the native node has
-  no heap for a face in a frame (spec 041). Not done in the prototype.
+  no heap for a face in a frame (spec 041). Done as below.
+- **One firmware, every feature kept** (the owner: "dont build the json-render device
+  build variant, try to keep everything", and "investigate how to reduce size without
+  dropping features"). The separate build in Design below is set aside
+  (docs/decisions/2026-11-07-json-render-one-build.md). Measured: the prototype is 92 KB
+  over the update limit; with the catalog gzipped (done) and LTO (measured) 60 KB over.
+  Read-only data as LittleFS files that come with the update (a spec of its own) and a
+  leaner compiler would make it fit: RESEARCH.md, "Room for json-render with every
+  feature kept".
+- **OpenClaw, done in the prototype:** the bridge has `clock.catalog` (bridge only: the
+  prompt, fetched gzipped from the clock) and `clock.face.save` takes a spec up to
+  12 KB. The node's `clock.help` adds a `catalog` link (the release's `prompt.md` on
+  GitHub) in json-render builds; no new node command, so no flash for one.
 - **Compiled on a stack of its own.** Layout recurses as deep as the spec nests. The
   emulator caught a stack overflow on the chip's 4 KB stack on the first spec. Specs are
   now compiled on the core's stack thunk: 6.2 KB taken from the heap while compiling, as
@@ -187,8 +198,7 @@ The heap freed by leaving out OpenClaw and MQTT is what makes room.
 
 ## Open questions
 
-1. **Separate build or replace?** Two builds from one source (recommended), a fork,
-   or one build that drops features for everyone?
+1. ~~Separate build or replace?~~ Answered: one build, every feature kept.
 2. Keep our face format in the json-render build (recommended: the examples, animation
    and the skill depend on it), or json-render only?
 3. Phase 2 (run-time relayout): plan for it now, or decide after phase 1 on the clock?
@@ -197,4 +207,6 @@ The heap freed by leaving out OpenClaw and MQTT is what makes room.
    showing the default tab)?
 5. State path for variables: `/vars/<name>` (clear, recommended) or `/<name>` (shorter,
    but it can clash with clock groups)?
-6. Which features leave the json-render build: OpenClaw, MQTT, mDNS, geekmagic-hacs?
+6. ~~Which features leave the json-render build?~~ None (one build).
+7. Adopt LTO for the firmware (about 20 KB of room for everyone; needs a run on a
+   clock)? And a spec for read-only data as LittleFS files that come with the update?

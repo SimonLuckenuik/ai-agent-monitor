@@ -860,6 +860,12 @@ String openclawCommand(const String& cmd, JsonObject params, String& r) {
         "\",\"guide\":\"https://raw.githubusercontent.com/" OC_REPO "%s" OC_SKILL "/SKILL.md\","
         "\"install\":\"openclaw skills install <skill folder> --global\""), v, ref, ref);
     r += b.get();
+#if SMARTCLOCK_JSONRENDER
+    // The json-render catalog's prompt of this release (spec 047). The node cannot take a
+    // spec (no heap for one in a frame): agents save it over HTTP or the bridge.
+    snprintf_P(b.get(), 400, PSTR(",\"catalog\":\"https://raw.githubusercontent.com/" OC_REPO "%s/integrations/json-render/prompt.md\""), ref);
+    r += b.get();
+#endif
   } else {
     return String(F("UNKNOWN_COMMAND ")) + cmd;
   }

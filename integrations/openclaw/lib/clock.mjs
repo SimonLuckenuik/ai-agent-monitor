@@ -17,12 +17,13 @@ export class Clock {
   }
 
   /** One request; JSON in and out. Errors become InvokeErrors the agent can act on. */
-  async request(method, path, { body, key = false, need = "" } = {}) {
+  async request(method, path, { body, key = false, need = "", accept } = {}) {
     if (key && !this.apiKey) {
       throw new InvokeError("NOT_CONFIGURED", `${this.name}: no faces API key in the bridge's config (clock settings: Integrations -> Custom faces)`);
     }
     const headers = {};
     if (key) headers["X-Api-Key"] = this.apiKey;
+    if (accept) headers["Accept-Encoding"] = accept;
     let payload;
     if (body !== undefined) {
       headers["Content-Type"] = "application/json";
@@ -54,6 +55,9 @@ export class Clock {
   setVars(vars) { return this.request("POST", "/api/faces/vars", { body: vars, key: true }); }
   faces() { return this.request("GET", "/api/faces", { key: true }); }
   showFace(name) { return this.request("POST", `/api/faces/show?name=${encodeURIComponent(name)}`, { key: true }); }
+  // The json-render catalog's prompt (spec 047): stored gzipped on the clock, which answers
+  // 406 to a client that does not take gzip, and 404 when its firmware has no json-render.
+  catalogPrompt() { return this.request("GET", "/api/catalog/prompt", { accept: "gzip" }); }
   saveFace(name, face, show) {
     return this.request("POST", `/api/faces?name=${encodeURIComponent(name)}${show ? "&show=1" : ""}`, { body: face, key: true });
   }

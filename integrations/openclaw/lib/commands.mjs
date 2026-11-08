@@ -198,17 +198,35 @@ export function commandsFor(clock, opts = {}) {
       },
     },
     "clock.face.save": {
-      description: "Save a custom face (the clock's face JSON, at most 4 KB) and optionally show it.",
+      description: "Save a custom face (the clock's face JSON, at most 4 KB, or a json-render spec, at most 12 KB) and optionally show it.",
       async run(p) {
         only(p, ["name", "face", "show"], "clock.face.save");
         const name = str(p, "name", { required: true, max: 20 });
         if (!/^[a-z0-9_-]{1,20}$/.test(name)) fail("name: 1-20 of a-z 0-9 _ -");
         if (!p.face || typeof p.face !== "object" || Array.isArray(p.face)) fail("face must be a face JSON object");
         const json = JSON.stringify(p.face);
-        if (json.length > 4096) fail(`face is ${json.length} bytes minified; the clock takes at most 4096`);
+        // A json-render spec ("root" and "elements", spec 047) is compiled by the clock: up to 12 KB.
+        const max = p.face.root !== undefined && p.face.elements !== undefined ? 12288 : 4096;
+        if (json.length > max) fail(`face is ${json.length} bytes minified; the clock takes at most ${max}`);
         const show = bool(p, "show") ?? false;
         await clock.saveFace(name, json, show);
         return { clock: clock.name, face: name, bytes: json.length, shown: show };
+      },
+    },
+    "clock.catalog": {
+      description: "The json-render catalog's prompt: the components the clock draws, for writing a spec to save with clock.face.save.",
+      async run(p) {
+        only(p, [], "clock.catalog");
+        let r;
+        try {
+          r = await clock.catalogPrompt();
+        } catch (e) {
+          if (e.code === "CLOCK_ERROR" && / 404/.test(e.message)) {
+            throw new InvokeError("UNAVAILABLE", `${clock.name}: its firmware has no json-render (spec 047)`);
+          }
+          throw e;
+        }
+        return { clock: clock.name, prompt: r.text ?? "" };
       },
     },
     "clock.faces.list": {

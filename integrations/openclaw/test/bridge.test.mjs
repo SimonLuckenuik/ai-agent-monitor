@@ -212,6 +212,27 @@ test("device.info, device.status and clock.help are read-only summaries of /stat
   assert.ok(r.fc.requests.slice(before).every((q) => q.method === "GET"));
 });
 
+test("clock.catalog returns the json-render prompt; clock.face.save takes a spec up to 12 KB", async (t) => {
+  const r = await rig();
+  t.after(r.close);
+  const { conn, identity } = r.start();
+  await ready(conn);
+  const none = await r.gw.invoke(identity.deviceId, "clock.catalog", {});
+  assert.equal(none.error.code, "UNAVAILABLE");
+  assert.match(none.error.message, /no json-render/);
+  r.fc.catalog = "# Drawing on the AI Agent Monitor clock with json-render\n";
+  const cat = await r.gw.invoke(identity.deviceId, "clock.catalog", {});
+  assert.equal(cat.ok, true, JSON.stringify(cat.error));
+  assert.deepEqual(cat.payload, { clock: "desk", prompt: "# Drawing on the AI Agent Monitor clock with json-render" });
+  assert.equal((await r.gw.invoke(identity.deviceId, "clock.catalog", { x: 1 })).error.code, "INVALID_PARAMS");
+  const pad = "x".repeat(6000);
+  const spec = { root: "t", elements: { t: { type: "Text", props: { text: pad }, children: [] } } };
+  const saved = await r.gw.invoke(identity.deviceId, "clock.face.save", { name: "spec", face: spec });
+  assert.equal(saved.ok, true, JSON.stringify(saved.error));
+  const face = { bg: "#000", items: [{ type: "text", x: 0, y: 0, text: pad }] };
+  assert.equal((await r.gw.invoke(identity.deviceId, "clock.face.save", { name: "big", face })).error.code, "INVALID_PARAMS");
+});
+
 test("a clock that does not answer gives UNAVAILABLE, and the node stays connected", async (t) => {
   const r = await rig();
   t.after(r.close);

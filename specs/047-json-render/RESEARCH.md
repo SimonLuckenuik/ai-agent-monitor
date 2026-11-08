@@ -242,6 +242,69 @@ active, and leaving them out returns heap. The amount is to be measured in the
 emulator before setting the limits (12 KB source, 96 elements, 64 compiled items are
 placeholders).
 
+## Room for json-render with every feature kept (measured, 2026-11-07)
+
+The owner, after the A/B pictures: "dont build the json-render device build variant, try
+to keep everything", and "investigate how to reduce size without dropping features". So
+the separate build (and leaving OpenClaw, MQTT or mDNS out) is off the table: one
+firmware, everything in it, plus json-render. These are measurements of the prototype
+built for the clock (`SMARTCLOCK_JSONRENDER=1` with `pio run`; nothing flashed).
+
+**What the budget is.** An update must fit the image and its `.bin.gz` together in the
+1 MB sketch area, two sectors spare, each rounded up to whole 4 KB sectors. "Over" below
+is how many bytes, in sectors, the pair overshoots. A byte of code costs about 1.7 bytes
+of that room (it is in the image, and in the `.bin.gz` at about 0.7). A byte of data
+that is already compressed (the settings page, the gzipped catalog) costs 2: zopfli
+cannot shrink it again.
+
+| Build | Image | `.bin.gz` | Room or over |
+|---|---|---|---|
+| 2.3.1 as it is | 602,384 | 427,330 | 4 KB of room |
+| + json-render, catalog and prompt as text (first try) | 665,216 | 463,935 | **92 KB over** |
+| + json-render, catalog and prompt gzipped | 654,272 | 466,193 | 80 KB over |
+| 2.3.1 with LTO | 592,384 | 420,537 | 24 KB of room (+20 KB) |
+| + json-render, gzipped catalog, LTO | 642,336 | 457,900 | **60 KB over** |
+
+What json-render adds (symbol sizes, without LTO): the catalog and prompt text 19 KB (in
+7.7 KB gzipped), `leaf()` 8.4 KB and `leafInk()` 6.0 KB (one case per component, String
+heavy), `place()` 4.0 KB, `measure()` 2.8 KB, `jrCompileHere()` 2.8 KB, `value()` 1.9 KB,
+the rest small: about 35 KB of code. The earlier estimate (12-16 KB) was for a careful
+implementation; the prototype was written for speed.
+
+### Levers, measured
+
+| Lever | Saves | State |
+|---|---|---|
+| **Catalog and prompt stored gzipped**, sent with `Content-Encoding: gzip`; a client that does not send `Accept-Encoding: gzip` gets 406 and a one-line hint (`curl --compressed`). Browsers, Node's `fetch`, `requests` take it | image -11 KB, `.bin.gz` +2.3 KB: **12 KB of room** | done (`scripts/gen_jr_catalog.py`) |
+| **Link-time optimisation of our own sources** (`-flto` on `src/` only; the core and SDK stay as they are, or their link order breaks). The core's linker script places code in flash by file name (`*.cpp.o`); LTO's objects are `*.ltrans.o`, so the script needs that pattern too, or the code lands in IRAM and does not fit | 2.3.1: image -10.0 KB, `.bin.gz` -6.8 KB (**20 KB of room**); with json-render -11.9 KB and -8.3 KB | measured; `scripts/lto_options.py`, not used by the build. Needs a run on a clock (crash decoding, IRAM, timing) before any release uses it |
+| `noinline` lookup helper for the ~200 `p["key"]` reads in jsonrender.cpp | +16 B: GCC already calls them | tried, reverted |
+
+### Levers, estimated (not built)
+
+| Lever | Would save | Cost and risk |
+|---|---|---|
+| **The settings page in LittleFS** (24.4 KB gzipped today, the largest single item): the image keeps a small fallback page (sign in, WiFi, firmware update, about 4 KB) for the setup AP and recovery; the full page is a file. It must come with the update: the `.bin.gz` followed by the files, the update handler writing the files to LittleFS and the image to the staging area. A clock updated by an older firmware lacks the files until the next update, and shows the fallback page | about 20 KB from each: **about 40 KB of room**, for every build, not only json-render | Its own spec: update format, recovery path, the stock-update first install, tests in the emulator |
+| The json-render catalog and prompt as LittleFS files the same way | 7.7 KB from each: **about 15 KB** | same mechanism |
+| Weather icon data (`WI_DATA` 7.5 KB) and the Message face's JSON (3.9 KB) as files | **about 15-20 KB** | same mechanism; they are drawn often, so read speed to check |
+| A size-minded rewrite of the compiler: components as a table (defaults, colours as `uint32_t`, fonts) instead of one String-heavy case each; colours as numbers until written out | 30-40% of 35 KB: **about 15-20 KB of room** (estimate) | the prototype's behaviour stays; the A/B specs and the emulator screenshots are the regression check |
+| The prompt generated on the clock from the catalog, not stored | 3.9 KB gzipped, less about 1.5 KB of code: **about 6 KB** | small |
+
+**Where that leaves it.** LTO and the gzipped catalog bring json-render to 60 KB over.
+The settings page as a file (40 KB) and a leaner compiler (15-20 KB) bring it to about
+zero; the catalog and icons as files give 30-35 KB of margin. So json-render fits with
+every feature kept, but only with an "assets in the filesystem" update (a spec of its
+own, useful to every future feature) and LTO, both of which change the standard
+firmware and need the real clock to check. Without them it does not fit, whatever the
+compiler does: even a 15 KB compiler with no catalog would use the 4 KB of room twice
+over.
+
+Heap was not changed by any of this. A 3.9 KB spec needs about 10.8 KB at once (6.2 KB
+of it the stack thunk) and fails with 507 on the clock's 25.6 KB arena; leaving
+OpenClaw and MQTT out was the plan to make room, and is now off the table. Options to
+measure: compile when the face is saved without the current face loaded (frees
+`customDoc`, up to 8 KB), parse with an ArduinoJson filter, or a smaller thunk now that
+layout keeps its arrays on the heap (3.3 KB used of 6.2 KB).
+
 ## Links
 
 - https://github.com/vercel-labs/json-render (README, packages/core, packages/image)

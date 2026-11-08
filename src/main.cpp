@@ -31,6 +31,7 @@
 #include "weather.h"
 #include "faces.h"
 #include "integrations.h"
+#include "jsonrender.h"   // SMARTCLOCK_JSONRENDER
 #include "openclaw.h"
 #include "crash.h"
 #include "tz_rule.h"
@@ -1130,7 +1131,11 @@ void setupRoutes() {
   // On the heap, once: the server's destructor deletes its handlers (the emulator's
   // restart runs it; a static table aborted every restart there).
   server.addHandler(new RouteTable(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0])));
+#if SMARTCLOCK_JSONRENDER   // and whether the client takes the catalog gzipped (spec 047)
+  server.collectHeaders("Cookie", "X-Api-Key", "Accept-Encoding");
+#else
   server.collectHeaders("Cookie", "X-Api-Key");   // sessions; the faces API key
+#endif
   integrationsRoutes();
   server.onNotFound([]{
     if (!hostAllowed()) { server.send(403, PSTR("text/plain"), PSTR("Unknown host name")); return; }

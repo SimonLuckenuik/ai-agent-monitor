@@ -4,10 +4,12 @@
 // Assistant integration on). Records every request.
 
 import { createServer } from "node:http";
+import { gzipSync } from "node:zlib";
 
 export class FakeClock {
-  constructor({ apiKey = "k".repeat(32), haCompat = false } = {}) {
+  constructor({ apiKey = "k".repeat(32), haCompat = false, catalog = "" } = {}) {
     this.apiKey = apiKey;
+    this.catalog = catalog;   // the json-render prompt (spec 047); "" for a firmware without it
     this.haCompat = haCompat;
     this.requests = [];
     this.messages = new Map();
@@ -44,6 +46,11 @@ export class FakeClock {
         if (u.pathname === "/api/faces/show") { if (!this.faces[q.name]) return send(404, "No such face"); this.face = 14; this.custom = q.name; return send(200, "OK"); }
         if (u.pathname === "/api/faces" && req.method === "POST") { this.faces[q.name] = JSON.parse(body); if (q.show) { this.face = 14; this.custom = q.name; } return send(200, "OK"); }
         if (u.pathname === "/api/faces") return send(200, { faces: Object.keys(this.faces), showing: this.custom, vars: this.vars, persist: [] });
+      }
+      if (u.pathname === "/api/catalog/prompt" && this.catalog) {   // stored gzipped, as on the clock
+        if (!/gzip/.test(req.headers["accept-encoding"] || "")) return send(406, "Stored gzipped: send Accept-Encoding: gzip (curl --compressed)\n");
+        res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8", "Content-Encoding": "gzip" });
+        return res.end(gzipSync(this.catalog));
       }
       if (u.pathname === "/api/set") {
         if (!this.haCompat) return send(401, "Sign in first");

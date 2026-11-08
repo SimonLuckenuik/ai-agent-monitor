@@ -115,3 +115,33 @@ catalog (npm installs refused here). The OpenClaw `clock.catalog` command is not
   centred every text vertically in its line box. Now, in a row with `alignItems:
   flex-end`, texts share a baseline at the bottom of their boxes; with `flex-start`, a
   top line. The A/B sheet was rendered again.
+
+## 2026-11-07 (evening): room with every feature kept; OpenClaw
+
+- The owner: "keep going, also investigate how to reduce size without dropping
+  features", then "dont build the json-render device build variant, try to keep
+  everything". One firmware; decision record
+  docs/decisions/2026-11-07-json-render-one-build.md.
+- The device build with `SMARTCLOCK_JSONRENDER=1` did not compile: `jsonrender.h` was
+  included inside faces.cpp's anonymous namespace, and the stack thunk's target needs C
+  linkage (the thunk's assembly calls it by name; `used` so LTO keeps it). Fixed.
+- Measured (RESEARCH.md has the table): +62.8 KB of image, 92 KB over the update limit.
+  The catalog and prompt are now stored gzipped (`scripts/gen_jr_catalog.py`, 19 KB to
+  7.7 KB) and sent with `Content-Encoding: gzip`; a client without `Accept-Encoding:
+  gzip` gets 406 and a hint (checked in the emulator with curl, with and without
+  `--compressed`, and with the bridge's client): 80 KB over. LTO of our sources
+  (`scripts/lto_options.py`, not used by the build): 2.3.1 gains 20 KB of room;
+  json-render is then 60 KB over. A `noinline` lookup helper for props saved nothing
+  (reverted).
+- The rest (the settings page, catalog and icons as LittleFS files with the update; a
+  leaner compiler) is estimated, not built: RESEARCH.md.
+- OpenClaw: the bridge's `clock.catalog` (bridge only) and `clock.face.save` for specs
+  up to 12 KB, with a test against the fake clock (now serving the prompt gzipped);
+  the node's `clock.help` adds a `catalog` link in json-render builds. The OpenClaw
+  skill's table lists `clock.catalog`.
+- Checks: the standard build unchanged (602,384 B); unit tests 434 PASS, safety tests
+  PASS, time zone rules PASS, bridge tests 17 PASS; a spec pushed to the emulator after
+  the changes draws as before.
+
+Not verified: LTO on a clock; anything json-render on a clock (it does not fit yet); the
+heap problem (unchanged); `validateSpec()`.

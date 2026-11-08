@@ -1,17 +1,26 @@
 # 047 Plan
 
-For the native direction (SPEC.md, 2026-11-07). Nothing is built until the owner
-approves the spec and answers its open questions. Each step is measured with
-`pio run` for both builds, and logged in PROGRESS.md.
+For the native direction (SPEC.md, 2026-11-07), in the one firmware with every feature
+kept (the owner, same day; docs/decisions/2026-11-07-json-render-one-build.md). Nothing
+reaches a release until the owner approves the spec. Each step is measured with
+`pio run` (the standard build, and `PLATFORMIO_BUILD_FLAGS=-DSMARTCLOCK_JSONRENDER=1`
+in its own build directory) and logged in PROGRESS.md.
 
-## Phase 0: groundwork (no feature yet)
+## Phase 0: room and heap (no feature on the clock yet)
 
-1. Build options: `SMARTCLOCK_OPENCLAW`, `SMARTCLOCK_MQTT` (and `SMARTCLOCK_HACS` if it
-   is worth it) beside `SMARTCLOCK_MDNS`, and `env:esp12e_jr` in `platformio.ini`.
-   `scripts/build_options.py` prints both builds' sizes. The safety tests check that
-   both stay within their limits.
-2. Measure the heap freed in the emulator (`EMU_HEAP`) with those features out. Set
-   the json-render limits (source size, elements, compiled items) from that.
+1. Room (RESEARCH.md, "Room for json-render with every feature kept"; 60 KB short
+   after LTO and the gzipped catalog):
+   - LTO of our sources (`scripts/lto_options.py`, measured: about 20 KB of room): its
+     own decision, and a run on a clock (crash decoding, IRAM, timing);
+   - read-only data as LittleFS files that come with the update: the settings page,
+     the catalog and prompt, weather icons (40-70 KB of room): a spec of its own
+     (update format, fallback page in the image, first install from older firmware);
+   - the compiler rewritten for size: components as a table, colours as numbers
+     (15-20 KB estimated).
+2. Heap: a 3.9 KB spec needs about 10.8 KB at once and fails on the clock's arena.
+   Measure in the emulator (default `EMU_HEAP`): compiling without the current face
+   loaded, an ArduinoJson filter, a smaller thunk. Set the limits (source size,
+   elements, compiled items) from that.
 3. Check json-render's `repeat` and spec `state` shapes against the source. Check that
    `validateSpec()` accepts specs built from the clock catalog. This needs a session
    where npm installs are allowed.
@@ -35,8 +44,7 @@ approves the spec and answers its open questions. Each step is measured with
    json-render reference generated from `catalog.json`, `clock.py push` accepts a spec,
    `clock.py catalog`), the OpenClaw skill copy (`gen_openclaw_skill.py`), CHANGELOG,
    CLAUDE.md "Things to keep in step", settings.md if a setting is added.
-6. Release: MINOR, with two `.bin.gz` files. `release.yml` and `make_release.py` build
-   both.
+6. Release: MINOR, one `.bin.gz` as today, once phase 0 has made the room.
 
 Checked by: unit tests, the face preview, the integration suite, emulator screenshots
 compared by eye with `@json-render/image` PNGs of the same specs, then the owner's clock.

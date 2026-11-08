@@ -59,7 +59,8 @@ node again.
 | `clock.faces.list` | none | `{faces, showing, vars}`: the saved custom faces, the one on screen, the variables set |
 | `clock.vars.set` | `vars` `{name: text, number or null}` (null deletes); `ttl` 1-86400 s; `history` (keep numbers for a chart); `add` (add to the value); `persist` (keep after a restart) | Sets the variables custom faces read. Returns `{set}` |
 | `clock.help` | none | `{firmware, skill, guide, install}`: links to this skill for the firmware the clock runs (`guide` is this file as plain text). For a Gateway without the skill |
-| `clock.face.save` | `name`, `face` (the face JSON), `show` | **Bridge only** (the OpenClaw bridge program beside the Gateway, not the clock's own node): saves a custom face |
+| `clock.face.save` | `name`, `face` (the face JSON, or a json-render spec on a firmware with json-render), `show` | **Bridge only** (the OpenClaw bridge program beside the Gateway, not the clock's own node): saves a custom face |
+| `clock.catalog` | none | **Bridge only**: `{prompt}`, the json-render catalog of the components the clock draws, to write a spec for `clock.face.save`. `UNAVAILABLE` on a firmware without json-render |
 
 Icons for `display.show`:
 

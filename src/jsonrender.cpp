@@ -1251,14 +1251,16 @@ namespace {
 String jrCompileHere(const String& body, String& out, String& warnings, String& seedOut);
 // The arguments for the run on the stack thunk (it takes no arguments).
 const String* thBody; String* thOut; String* thWarn; String* thSeed; String thErr;
-void jrCompileThunked() { thErr = jrCompileHere(*thBody, *thOut, *thWarn, *thSeed); }
 }  // namespace
+// Called by name from the thunk's assembly: C linkage, not in the anonymous namespace.
+extern "C" __attribute__((used)) void jrCompileThunked() { thErr = jrCompileHere(*thBody, *thOut, *thWarn, *thSeed); }
 
 #if SMARTCLOCK_EMULATOR
 extern "C" bool emuStackThunk(void (*f)());
 #else
 #include <StackThunk.h>
 make_stack_thunk(jrCompileThunked);
+extern "C" void thunk_jrCompileThunked();
 #endif
 
 // Layout recurses as deep as the spec nests: it runs on a 6.2 KB stack of its own taken
@@ -1375,9 +1377,16 @@ String jrCompileHere(const String& body, String& out, String& warnings, String& 
 }
 }  // namespace
 
+// Both are stored gzipped. Every browser, fetch(), requests and curl --compressed take
+// that; a client that does not say so gets a hint rather than binary.
 void jrSendCatalog(bool prompt) {
-  if (prompt) server.send_P(200, PSTR("text/markdown; charset=utf-8"), JR_PROMPT);
-  else server.send_P(200, PSTR("application/json"), JR_CATALOG);
+  if (server.header(F("Accept-Encoding")).indexOf(F("gzip")) < 0) {
+    server.send(406, PSTR("text/plain"), PSTR("Stored gzipped: send Accept-Encoding: gzip (curl --compressed)\n"));
+    return;
+  }
+  server.sendHeader(F("Content-Encoding"), F("gzip"));
+  if (prompt) server.send_P(200, PSTR("text/markdown; charset=utf-8"), reinterpret_cast<PGM_P>(JR_PROMPT), JR_PROMPT_LEN);
+  else server.send_P(200, PSTR("application/json"), reinterpret_cast<PGM_P>(JR_CATALOG), JR_CATALOG_LEN);
 }
 
 #else

@@ -41,6 +41,8 @@ void emuWork(uint32_t cycles);   // emulator/panel.cpp
 #define EMU_WORK(cycles)
 #endif
 
+#include "jsonrender.h"
+
 namespace {
 
 constexpr int SCR_W = 240, SCR_H = 240;   // the panel
@@ -528,7 +530,6 @@ String customName;
 String customWanted;   // the custom face to draw: cfg.customFace, or the night face
 uint32_t customVer = 0, customEvalAt = 0;
 bool customLoaded = false;
-#include "jsonrender.h"
 constexpr size_t CUSTOM_ITEMS = SMARTCLOCK_JSONRENDER ? JR_ITEMS_MAX : 32;   // json-render faces may have more (spec 047)
 uint32_t customHash[CUSTOM_ITEMS], customGeo[CUSTOM_ITEMS];
 // The item being drawn on its own (-1: in a repaint), and whether only its content
