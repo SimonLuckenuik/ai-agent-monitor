@@ -728,7 +728,9 @@ void setup() {
     fsConfig.setAutoFormat(true);
     LittleFS.setConfig(fsConfig);
     LittleFS.begin();
+#if !SMARTCLOCK_STARTER   // a clock coming from stock has no /sys files
     seedSysFiles();
+#endif
     LittleFS.end();
   }
   setvbuf(stdout, nullptr, _IOLBF, 0);   // docker logs: each line as it is written

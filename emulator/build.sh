@@ -45,6 +45,25 @@ for name in ("getFreeHeap", "getMaxFreeBlockSize", "getFreeContStack", "getReset
         sys.exit("build.sh: could not take EspClass::%s out of %s" % (name, path))
 open(path, "w").write(s)
 PY
+# TLS (BearSSL) runs on a 6.2 KB stack the core takes from the heap while a secure
+# connection is open (the "stack thunk"); the host mock's calls do nothing, so the
+# emulator showed 6.2 KB more free heap during a download than the chip has (spec 048's
+# starter). Charge it to the clock's heap, from the first reference to the last.
+git -C /esp8266 checkout -q -- tests/host/common/MockTools.cpp
+python3 - common/MockTools.cpp <<'PY'
+import sys
+path = sys.argv[1]
+s = open(path).read()
+old = "void stack_thunk_add_ref() { }\n    void stack_thunk_del_ref() { }"
+new = ("static void* emu_thunk = nullptr; static int emu_thunk_refs = 0;\n"
+       "    void stack_thunk_add_ref() { if (!emu_thunk_refs++) emu_thunk = malloc(6200); }\n"
+       "    void stack_thunk_del_ref() { if (emu_thunk_refs && !--emu_thunk_refs) { free(emu_thunk); emu_thunk = nullptr; } }")
+if s.count(old) != 1:
+    sys.exit("build.sh: could not patch the stack thunk in %s" % path)
+s = s.replace(old, new)
+s = s.replace("uint32_t stack_thunk_get_stack_bot()\n    {\n        return 0;", "uint32_t stack_thunk_get_stack_bot()\n    {\n        return emu_thunk ? 1 : 0;", 1)
+open(path, "w").write(s)
+PY
 # The mock's WiFi mode is always "station" and its soft AP always has two clients. Spec
 # 046 turns the setup network off and on: remember the mode that was set, and no clients
 # (the emulator has no radio). Taken out of a pristine copy at each build.
@@ -61,15 +80,16 @@ s, c = re.subn(r"(uint8 wifi_softap_get_station_num\(void\)\s*\{\s*)return 2;", 
 if (a, b, c) != (1, 2, 1):
     sys.exit("build.sh: could not patch the WiFi mode in %s (%d %d %d)" % (path, a, b, c))
 s = s.replace("#include <user_interface.h>", "#include <user_interface.h>\nstatic uint8 emu_opmode = STATION_MODE;", 1)
-# wifi_get_ip_info() calls getifaddrs() each time and exit()s when it fails once. The
-# firmware asks for the setup network's address on every request (hostAllowed()), so
-# an upload asks hundreds of times and a passing EAGAIN killed the emulator (spec 048's
-# update uploads). Try a few times instead.
+# wifi_get_ip_info() calls getifaddrs() each time and exit()s when it fails. Its few KB
+# came from the clock's heap (memory.cpp), which a full heap could not give (spec 048:
+# the starter downloading an update): memory.cpp's emu_getifaddrs() takes them from the
+# host's, as the chip allocates nothing there.
 old = 'if (getifaddrs(&ifAddrStruct) != 0)'
-new = 'int tries = 0; while (getifaddrs(&ifAddrStruct) != 0 && ++tries < 20) usleep(2000); if (tries >= 20)'
+new = 'if (emu_getifaddrs(&ifAddrStruct) != 0)'
 if s.count(old) != 1:
     sys.exit("build.sh: could not patch getifaddrs() in %s" % path)
 s = s.replace(old, new)
+s = s.replace("#include <user_interface.h>", "#include <user_interface.h>\n#include <ifaddrs.h>\nextern \"C\" int emu_getifaddrs(struct ifaddrs**);", 1)
 open(path, "w").write(s)
 PY
 # emu_build_flags.h: platformio.ini's build_flags, in every source. F_CPU also goes on
@@ -77,6 +97,22 @@ PY
 # header. The core's objects do not track flags, so a new F_CPU rebuilds everything.
 # 32-bit (the chip's sizes for pointers, String and JSON slots, so memory use matches
 # it; needs g++-multilib) unless EMU_BITS=64.
+# EMU_STARTER=1: the starter (src/starter.cpp, spec 048) instead of the firmware, with
+# BearSSL for its HTTPS download (the Dockerfile builds the library for the host). The
+# project's objects are rebuilt when this changes: the same sources, other flags.
+if [ "${EMU_STARTER:-0}" = 1 ]; then
+  firmware="$root/emulator/fw_starter.cpp $root/src/update.cpp $root/src/json_parse.cpp"
+  variant=-DSMARTCLOCK_STARTER=1
+else
+  firmware="$root/emulator/fw_main.cpp $root/src/faces.cpp $root/src/update.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/json_parse.cpp $root/src/openclaw.cpp $root/src/ed25519.cpp $root/src/openclaw_proto.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp"
+  variant=
+fi
+if [ "$(cat "$work/variant" 2>/dev/null)" != "$variant" ]; then
+  # fullcore.a only ever gains objects: the other variant's would win the link.
+  rm -rf "/esp8266/tests/host/bin32$root" "/esp8266/tests/host/bin$root" \
+         /esp8266/tests/host/bin32/fullcore.a /esp8266/tests/host/bin/fullcore.a
+  echo "$variant" > "$work/variant"
+fi
 fcpu=$(sed -n 's/^#define F_CPU //p' "$work/generated/emu_build_flags.h")
 bits=${EMU_BITS:-32}
 if [ "$bits" = 32 ]; then force32=1; bindir=bin32; else force32=0; bindir=bin; fi
@@ -88,11 +124,10 @@ fi
 # binary's data must sit below 4 GB, as it does on the chip.
 make -j"$(nproc)" FORCE32=$force32 OPTZ=-O1 R=noexec USERLDFLAGS=-no-pie \
   ULIBDIRS=/libs/ArduinoJson:/libs/PubSubClient \
-  USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/emulator/panel.cpp $root/emulator/memory.cpp $root/emulator/flash.cpp \
-                  $root/src/faces.cpp $root/src/update.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/json_parse.cpp $root/src/openclaw.cpp $root/src/ed25519.cpp $root/src/openclaw_proto.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp \
-                  $work/TFT_eSPI/TFT_eSPI.cpp" \
+  USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/panel.cpp $root/emulator/memory.cpp $root/emulator/flash.cpp \
+                  $firmware $work/TFT_eSPI/TFT_eSPI.cpp" \
   USERCSOURCES=/libs/TJpg_Decoder/src/tjpgd.c \
-  USERCFLAGS="-g -finstrument-functions -finstrument-functions-exclude-file-list=/emulator/,/esp8266/,/usr/ -UF_CPU -DF_CPU=$fcpu -DSMARTCLOCK_EMULATOR=1 -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \
+  USERCFLAGS="-g -finstrument-functions -finstrument-functions-exclude-file-list=/emulator/,/esp8266/,/usr/ -UF_CPU -DF_CPU=$fcpu -DSMARTCLOCK_EMULATOR=1 $variant -fno-pie -include $work/generated/emu_build_flags.h -I$root/src -I$root/include -I$work/generated \
               -I$work/TFT_eSPI -I/libs/TJpg_Decoder/src" \
   "$work/sketch/smartclock"
 cp -L $bindir/smartclock/smartclock "$out"

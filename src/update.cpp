@@ -51,18 +51,23 @@ void clearStage() {
 // withheld, so a failed check can never commit an image (Update.end(false)).
 bool imageFeed(const uint8_t* data, size_t size) {
   if (!started) {
-    size_t take = std::min(size, FirmwareValidation::prefixSize - firmware->received);
+    // The first byte says how many the check needs: 28 (.bin.gz) or 4120 (plain).
+    if (!firmware->received && size) { firmware->consume(data, 1); ++data; --size; }
+    size_t len = firmware->prefixLen();
+    size_t take = std::min(size, len - firmware->received);
     firmware->consume(data, take);
     data += take; size -= take;
-    if (firmware->received < FirmwareValidation::prefixSize) return true;
+    if (firmware->noMemory) { updateFail(F("Not enough memory for an update: try again")); return false; }
+    if (firmware->received < len) return true;
     uint32_t freeSpace = ESP.getFreeSketchSpace();
     size_t capacity = freeSpace > 0x1000 ? (freeSpace - 0x1000) & 0xfffff000 : 0;
     if (const char* why = firmware->check(capacity, FS_PHYS_ADDR)) { updateFail(why); return false; }
     if (!Update.begin(firmware->expectedSize, U_FLASH)) { updateFail(F("Cannot stage firmware")); return false; }
     started = true;
-    if (Update.write(firmware->prefix, FirmwareValidation::prefixSize - 1) != FirmwareValidation::prefixSize - 1) {
+    if (Update.write(const_cast<uint8_t*>(firmware->prefix()), len - 1) != len - 1) {
       updateFail(F("Firmware staging failed")); return false;
     }
+    firmware->release();   // a plain image's 4 KB: staged now
   }
   if (!size) return true;
   if (size > firmware->expectedSize - firmware->received) { updateFail(F("Image exceeds declared length")); return false; }

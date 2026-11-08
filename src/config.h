@@ -244,3 +244,17 @@ struct Config {
 };
 
 extern Config cfg;   // defined in main.cpp
+
+// One colour of a palette (load() migrates the old accent colours with it); inline so
+// the starter (spec 048), which has no main.cpp, loads and saves the same settings.
+inline bool Config::setColor(const char* pal, const char* name, uint16_t c) {
+  JsonDocument doc;
+  if (parseJson(doc, palettes)) return false;
+  char hex[8];
+  snprintf(hex, sizeof(hex), "#%02x%02x%02x", (c >> 11) * 255 / 31, ((c >> 5) & 63) * 255 / 63, (c & 31) * 255 / 31);
+  doc[pal][name] = hex;
+  palettes = "";
+  serializeJson(doc, palettes);
+  colorsRev++;
+  return true;
+}

@@ -425,6 +425,19 @@ String emuHeapMap(bool raw) {
   return String(out.c_str());
 }
 
+// The host mock's wifi_get_ip_info() (WiFi.localIP(), softAPIP()) calls getifaddrs(),
+// which allocates a few KB; on the chip it allocates nothing. build.sh points the mock
+// here so that stays on the host heap: with the clock's heap nearly full (a download in
+// the starter, spec 048) it failed, and the mock exits when it does.
+#include <ifaddrs.h>
+extern "C" int emu_getifaddrs(struct ifaddrs** out) {
+  bool was = fwRunning;
+  fwRunning = false;
+  int r = getifaddrs(out);
+  fwRunning = was;
+  return r;
+}
+
 // What the core reports on the chip, from the arena and the stack.
 uint32_t EspClass::getFreeHeap() { arenaInit(); return freeBlocks * BLOCK; }
 uint32_t EspClass::getMaxFreeBlockSize() { arenaInit(); return largestRun() * BLOCK; }

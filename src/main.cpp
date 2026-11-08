@@ -611,18 +611,7 @@ String configJson() {
   String out; serializeJson(doc, out); return out;
 }
 
-// ---- Palettes and roles (docs/specifications/settings.md)
-bool Config::setColor(const char* pal, const char* name, uint16_t c) {
-  JsonDocument doc;
-  if (parseJson(doc, palettes)) return false;
-  char hex[8];
-  snprintf(hex, sizeof(hex), "#%02x%02x%02x", (c >> 11) * 255 / 31, ((c >> 5) & 63) * 255 / 63, (c & 31) * 255 / 31);
-  doc[pal][name] = hex;
-  palettes = "";
-  serializeJson(doc, palettes);
-  colorsRev++;
-  return true;
-}
+// ---- Palettes and roles (docs/specifications/settings.md; Config::setColor in config.h)
 
 bool colorName(const char* s) {   // 1-15 of A-Z a-z 0-9 _
   size_t n = strlen(s);

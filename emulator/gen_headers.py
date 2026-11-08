@@ -46,8 +46,9 @@ parts.append('static const char EMU_SYS_MANIFEST[] = "%08x";' % make_update.file
 sys_files.write_if_changed(os.path.join(out, "emu_sys_files.h"), "\n".join(parts) + "\n")
 
 build = "emulator %s" % datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+release = re.search(r'#define FW_VERSION "([^"]+)"', open(os.path.join(root, "src", "main.cpp"), encoding="utf-8").read()).group(1)
 with open(os.path.join(out, "build_info.h"), "w", newline="\n") as f:
-    f.write('#pragma once\n#define FW_BUILD "%s"\n' % build)
+    f.write('#pragma once\n#define FW_BUILD "%s"\n#define FW_RELEASE "%s"\n' % (build, release))
 with open(os.path.join(out, "wifi_secrets.h"), "w", newline="\n") as f:
     f.write("#pragma once\n")
 

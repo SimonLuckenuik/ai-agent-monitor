@@ -1,4 +1,5 @@
 #pragma once
+#include <new>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -12,59 +13,76 @@
 //   stages the file as it is, and the bootloader (eboot) unpacks it into place,
 //   taking the unpacked size from the gzip trailer, which must match the "AM" field.
 //   gunzip still reads the file: the extra field is standard gzip.
+//
+// The check reads the first bytes before anything is staged: 28 of a .bin.gz, 4120 of a
+// plain image (its second header ends there). Only a plain image takes those 4 KB, from
+// the heap, until staging starts (release()): a .bin.gz (and the .update files that carry
+// one, spec 048) is checked in 28 bytes, which left the starter room for TLS.
 struct FirmwareValidation {
-  static constexpr size_t prefixSize = 4120;
+  static constexpr size_t prefixSize = 4120;   // a plain image's first bytes
   static constexpr size_t gzHeaderSize = 28;   // 10 base + 2 XLEN + 4 subfield + 12 data
-  uint8_t prefix[prefixSize] = {};
+  uint8_t head[gzHeaderSize] = {};
+  uint8_t* plain = nullptr;                    // a plain image's first prefixSize bytes
+  bool noMemory = false;
   size_t received = 0;
   uint32_t expectedSize = 0, expectedCrc = 0, crc = 0xffffffff, rawSize = 0, tail = 0;
   uint8_t lastByte = 0;
 
-  void reset() {
-    received = expectedSize = expectedCrc = rawSize = tail = 0;
-    crc = 0xffffffff;
-    lastByte = 0;
-  }
+  FirmwareValidation() = default;
+  FirmwareValidation(const FirmwareValidation&) = delete;
+  FirmwareValidation& operator=(const FirmwareValidation&) = delete;
+  ~FirmwareValidation() { release(); }
+  void release() { delete[] plain; plain = nullptr; }   // after the first bytes are staged
 
   static uint32_t word(const uint8_t* p) {
     return uint32_t(p[0]) | (uint32_t(p[1]) << 8) |
            (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
   }
-  bool compressed() const { return prefix[0] == 0x1f; }
+  bool compressed() const { return head[0] == 0x1f; }
+  // How many first bytes the check needs (known from the first byte).
+  size_t prefixLen() const { return compressed() ? gzHeaderSize : prefixSize; }
+  const uint8_t* prefix() const { return compressed() || !plain ? head : plain; }
 
-  // After prefixSize bytes: nullptr when the image may be staged, else why not.
+  // After prefixLen() bytes: nullptr when the image may be staged, else why not.
   // capacity: the free sketch space for the staged file. area: where the filesystem
   // starts (FS_PHYS_ADDR): a compressed image unpacks from address 0 up to the staged
   // copy, which the updater puts right below that.
+  // The caller checks noMemory first (a plain image's 4 KB could not be had).
   const char* check(size_t capacity, size_t area) {
+    const uint8_t* p = prefix();
     if (compressed()) {
       // Restrict to the project's own compressed format: deflate, only FEXTRA set.
-      if (prefix[1] != 0x8b || prefix[2] != 8 || prefix[3] != 4 || prefix[10] != 16 || prefix[11] != 0 ||
-          prefix[12] != 'A' || prefix[13] != 'M' || prefix[14] != 12 || prefix[15] != 0)
+      if (p[1] != 0x8b || p[2] != 8 || p[3] != 4 || p[10] != 16 || p[11] != 0 ||
+          p[12] != 'A' || p[13] != 'M' || p[14] != 12 || p[15] != 0)
         return "Unsupported compressed image";
-      rawSize = word(prefix + 16);
-      expectedSize = word(prefix + 20);
-      expectedCrc = word(prefix + 24);
+      rawSize = word(p + 16);
+      expectedSize = word(p + 20);
+      expectedCrc = word(p + 24);
       size_t staged = (expectedSize + 0xfff) & ~size_t(0xfff), raw = (rawSize + 0xfff) & ~size_t(0xfff);
       if (expectedSize <= prefixSize || rawSize <= prefixSize) return "Invalid compressed image length";
       if (expectedSize > capacity || staged > area || raw > area - staged)
         return "Compressed image too big for this clock";
       return nullptr;
     }
-    expectedSize = word(prefix + 4112);
-    expectedCrc = word(prefix + 4116);
+    expectedSize = word(p + 4112);
+    expectedCrc = word(p + 4116);
     // Restrict OTA to the project's raw 4MB/DIO/40MHz Arduino image format.
-    if (!(prefix[0] == 0xe9 && prefix[2] == 2 && prefix[3] == 0x40 &&
-          prefix[4096] == 0xe9 && prefix[4098] == 2 && prefix[4099] == 0x40 &&
-          prefix[4097] == 5 && word(prefix + 4104) == 0x40201010 &&
-          expectedSize > prefixSize && word(prefix + 4108) <= expectedSize - prefixSize))
+    if (!(p[0] == 0xe9 && p[2] == 2 && p[3] == 0x40 &&
+          p[4096] == 0xe9 && p[4098] == 2 && p[4099] == 0x40 &&
+          p[4097] == 5 && word(p + 4104) == 0x40201010 &&
+          expectedSize > prefixSize && word(p + 4108) <= expectedSize - prefixSize))
       return "Unsupported image or invalid image length";
     if (expectedSize > capacity) return "Too big to update uncompressed: upload the .bin.gz";
     return nullptr;
   }
   void consume(const uint8_t* data, size_t size) {
     for (size_t i = 0; i < size; ++i) {
-      if (received < prefixSize) prefix[received] = data[i];
+      if (received < gzHeaderSize) head[received] = data[i];
+      if (received == 0 && !compressed() && !plain && !noMemory) {
+        plain = new (std::nothrow) uint8_t[prefixSize];
+        noMemory = !plain;
+      }
+      if (plain && received < prefixSize) plain[received] = data[i];
       bool gz = compressed();
       if (!gz || received >= gzHeaderSize) {
         uint8_t value = !gz && received >= 4112 && received < 4120 ? 0 : data[i];

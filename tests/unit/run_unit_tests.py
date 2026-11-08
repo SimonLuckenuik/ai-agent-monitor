@@ -28,6 +28,7 @@ if not (libs / "TFT_eSPI").is_dir():
 config = (root / "src" / "config.h").read_text(encoding="utf-8")
 config = re.sub(r"\n  bool load\(\) \{.*?\n  \}\n", "\n", config, flags=re.S)
 config = re.sub(r"\n  bool save\(\) \{.*?\n  \}\n", "\n", config, flags=re.S)
+config = re.sub(r"\n// One colour of a palette.*?\n}\n", "\n", config, flags=re.S)   # setColor(): serializes
 config = config.replace("#include <ArduinoJson.h>\n", "").replace("#include <LittleFS.h>\n", "")
 (build / "config.h").write_text(config, encoding="utf-8")
 for name in ("faces.cpp", "faces.h", "mono_glyphs.h", "outline_glyphs.h", "weather.h", "weather_icons.h", "integrations.h", "ascii.h", "ascii.cpp", "json_parse.h", "json_parse.cpp"):
