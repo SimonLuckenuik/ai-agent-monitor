@@ -557,7 +557,7 @@ Sz measure(int i, int avail, int depth = 0);
 // Sizes of the flow children along the main axis, given the container's content box.
 __attribute__((noinline)) Sz measure(int i, int avail, int depth) {
   const Node& n = nodes[i];
-  if (depth > JR_DEPTH_MAX) return {0, 0};
+  if (depth > JR_DEPTH_MAX) { warnOnce(String(F("nested deeper than ")) + JR_DEPTH_MAX + F(" levels: the deeper elements are left out")); return {0, 0}; }
   Lay l = layOf(n);
   int fw = fixedW(n, avail);
   if (!isContainer(n.type)) {
@@ -1131,7 +1131,7 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
   for (int c = n.first; c >= 0 && k < MAXK; c = nodes[c].next) {
     Lay cl = layOf(nodes[c]);
     if (cl.abs) {   // absolutely placed, inside the padding box
-      Sz s = measure(c, iw);
+      Sz s = measure(c, iw, depth + 1);
       int fwc = fixedW(nodes[c], iw), fhc = size(nodes[c].p["height"], ih, INK_ROW);
       if (fwc > 0) s.w = fwc;
       if (fhc > 0) s.h = fhc;
@@ -1159,13 +1159,13 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
       int m, cr;
       if (l.row) {
         int avail = l.cols ? (iw - l.gap * (l.cols - 1)) / l.cols : iw;
-        Sz s = measure(kid[end], avail);
+        Sz s = measure(kid[end], avail, depth + 1);
         m = l.cols ? avail : fills(cn) ? 0 : s.w; cr = s.h;
         int fh2 = size(cn.p["height"], ih, INK_ROW); if (fh2 > 0) cr = fh2;
         m += cl.mar[1] + cl.mar[3];
         cr += cl.mar[0] + cl.mar[2];
       } else {
-        Sz s = measure(kid[end], availCross);
+        Sz s = measure(kid[end], availCross, depth + 1);
         int fw2 = fixedW(cn, iw);
         cr = (fw2 > 0 ? fw2 : s.w) + cl.mar[1] + cl.mar[3];
         int fh2 = size(cn.p["height"], ih, INK_ROW);
@@ -1256,11 +1256,12 @@ const char* thPath; String* thOut; String* thWarn; String* thSeed; String thErr;
 extern "C" __attribute__((used)) void jrCompileThunked() { thErr = jrCompileHere(thPath, *thOut, *thWarn, *thSeed); }
 
 // Layout recurses as deep as the spec nests (at most JR_DEPTH_MAX): it runs on a stack of
-// its own taken from the heap while compiling, not on the 4 KB one. The core's stack thunk
-// (BearSSL's) is 6.2 KB; the deepest sample used 3.7 KB, so ours is 4.5 KB: the same switch
-// as the core's make_stack_thunk(), with our own stack. It is painted so the deepest use is
-// known (jrStackUsed(): /status jrStack).
-constexpr size_t JR_STACK = 4608;
+// its own taken from the heap while compiling, not on the 4 KB one. Measured in the
+// emulator: about 2.1 KB plus 384 B per level (depth 2: 2,848 B, 4: 3,616, 6: 4,384), so
+// depth 8 needs about 5.2 KB: 5.5 KB, where the core's stack thunk (BearSSL's, 6.2 KB)
+// would have overflowed past depth 10 anyway. The same switch as make_stack_thunk(), with
+// our own stack; painted, so the deepest use is known (jrStackUsed(): /status jrStack).
+constexpr size_t JR_STACK = 5632;
 uint32_t jrStackDeepest = 0;
 uint32_t jrStackUsed() { return jrStackDeepest; }
 

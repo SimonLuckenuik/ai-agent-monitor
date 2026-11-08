@@ -12,7 +12,7 @@ constexpr size_t JR_SOURCE_MAX = 12288;   // the spec as sent
 constexpr size_t JR_FACE_MAX = 8192;      // the face it compiles to
 constexpr int JR_ITEMS_MAX = 64;          // the face's items
 constexpr int JR_ELEMENTS_MAX = 96;
-constexpr int JR_DEPTH_MAX = 12;          // nesting: bounds the compile's stack (4.5 KB)
+constexpr int JR_DEPTH_MAX = 8;           // nesting: bounds the compile's stack (5.5 KB)
 
 // True when body looks like a json-render spec ("root" and "elements").
 bool jrIsSpec(const String& body);
@@ -20,7 +20,7 @@ bool jrIsSpec(const String& body);
 // the reason it cannot be drawn; warnings gets one line per thing drawn approximately or
 // left out; seed gets the spec's "state" values as a variables object ("" when none).
 String jrCompile(const char* path, String& out, String& warnings, String& seed);
-// The deepest the compile's own stack has gone since boot, in bytes (of 4,608).
+// The deepest the compile's own stack has gone since boot, in bytes (of 5,632).
 uint32_t jrStackUsed();
 // The catalog (GET /api/catalog) and its prompt (GET /api/catalog/prompt).
 void jrSendCatalog(bool prompt);

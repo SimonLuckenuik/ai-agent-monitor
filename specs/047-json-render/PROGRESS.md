@@ -169,3 +169,31 @@ heap problem (unchanged); `validateSpec()`.
   size-minded compiler (15-20 KB, estimated), and memory: parse the spec from a file
   instead of the request body, a smaller stack of our own instead of the core's 6.2 KB
   thunk, a filtered parse.
+
+## 2026-11-08: the memory work (the owner: "Memory work first")
+
+- **The emulator under-reports the clock's free heap.** The same 2.5.0 code, Big weather
+  face, weather fetched: the owner's clock 24,872 B free (its /status), the emulator 18,248 B
+  with the default arena (25,600 B, calibrated on 1.8.0). An arena of about 32 KB matches
+  the clock now; the measurements below use both. Recalibrating the default is a separate
+  decision (it moves every memory test).
+- **A save no longer holds the request body while compiling.** The HTTP handler moves the
+  web server's copy of the body into storeFace() (no second copy); a spec is written to
+  `/specs/<name>.json` (its source, kept), the String freed, and the compiler parses the
+  file.
+- **The face is built in place.** The compiler wrote its items, then copied them into the
+  whole face (twice the face at once); it now writes the face's head first and the items
+  after it, and the String becomes the face.
+- **A stack of our own, sized to what layout needs.** Measured (emulator): about 2.1 KB
+  plus 384 B per nesting level (depth 2: 2,848 B; 4: 3,616; 6: 4,384; 8: 5,152). The core's
+  6.2 KB thunk (with a depth limit of 24) would have overflowed past depth 10. Now: depth
+  limit 8 (deeper elements left out, with a warning), a 5.5 KB stack (the same switch as
+  make_stack_thunk(), our own buffer, painted: /status jrStack has the deepest use).
+- **A bug on the way:** place() called measure() without its depth, so measuring restarted
+  at 0 at each level: the stack grew with the whole tree, past any limit. Fixed.
+- **Result, on the default arena (25.6 KB):** every sample saves, including b-meeting (2.8 KB)
+  and b-ci (4.8 KB), which failed before; a 95-element, 9.9 KB stress spec too; nesting 2-12
+  never overflows (at most 5,152 B of 5,632). On the clock-sized arena (32.2 KB) the same.
+- Flash: unchanged by this (the json-render build is still 20 KB over the update limit).
+- Not verified: the stack on the chip (Xtensa frames are not the emulator's x86 ones; the
+  clock's /status jrStack will tell).
