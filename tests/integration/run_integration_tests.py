@@ -1154,11 +1154,17 @@ def recovery_network(emu):
     emu.sign_in()
 
 
+def html(body):
+    """A page as the clock sends it: gzipped (urllib does not unpack it)."""
+    import gzip
+    return (gzip.decompress(body) if body[:2] == b"\x1f\x8b" else body).decode(errors="replace")
+
+
 @case
 def update_files(emu):
     """Spec 048: the settings page is a file that comes with the update. This emulator
     starts without it (EMU_SEED_FILES=0): the setup page, then an .update installs it."""
-    page = lambda path="/": emu.get(path).decode(errors="replace")
+    page = lambda path="/": html(emu.get(path))
     s = emu.status()
     if s["files"] == "missing":   # this case runs once per emulator: later runs find it installed
         check("<title>AI Agent Monitor setup</title>" in page(), "without its files, / is the setup page")
@@ -1193,7 +1199,7 @@ def starter(emu):
     s = st.status()
     if s.get("starter"):
         check(s["download"] and not s["signedIn"], f"the starter downloads releases itself: {s}")
-        check("<title>AI Agent Monitor setup</title>" in st.get("/").decode(errors="replace"), "its page is the setup page")
+        check("<title>AI Agent Monitor setup</title>" in html(st.get("/")), "its page is the setup page")
         expect_error(401, "Sign in", st.get, "/api/update/latest")
         st.sign_in()
         check(st.status()["signedIn"], "signed in with the device password")
