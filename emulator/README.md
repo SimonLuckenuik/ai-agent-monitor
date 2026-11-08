@@ -91,9 +91,11 @@ version PlatformIO uses (3.1.2) and the library versions `platformio.ini` resolv
 | File | Does |
 |---|---|
 | `fw_main.cpp` | Includes `src/main.cpp` with `setup()`/`loop()` renamed, and reroutes what the host core lacks: `configTime()` (the core's is a stub that ignores the zone; the host's `TZ` follows the rule the firmware parses with `src/tz_rule.h`, for the emulator's own time controls), `EEPROM.end()`'s return value, the backlight PWM |
+| `fw_starter.cpp` | The same for the starter (`src/starter.cpp`, spec 048), built with `EMU_STARTER=1` (`/emulator/starter` in the image); stands in for the firmware the screen page's panels call |
 | `memory.cpp` | The clock's heap and stack (below): the allocator, the stack depth hook, the panic and its crash record |
+| `flash.cpp` | The chip's 4 MB flash for the updater (the host core dropped every write, so no update could complete), and the bootloader command that tells `run.sh` an update was installed |
 | `emulator.cpp` | Wraps `setup()`/`loop()`, serves the screen on port 8080, and provides the RTC user memory, reset reason, hardware RNG and button interrupt |
-| `run.sh` | The power supply: restarts the firmware when it reboots, with the matching reset reason |
+| `run.sh` | The power supply: restarts the firmware when it reboots, with the matching reset reason; runs the starter or the firmware (below) |
 | `screen.html` | The screen page |
 | `build.sh`, `gen_headers.py` | The build, with the headers `scripts/build_options.py` would generate, plus the settings page's `#password=` sign-in, and `emu_build_flags.h`: `platformio.ini`'s build flags (the panel config) and `board_build.f_cpu` |
 | `tft_host/` | TFT_eSPI's processor layer for the PC: `build.sh` swaps it in for the ESP8266 one (SPI registers) in its copy of the library |
@@ -177,6 +179,11 @@ and are not counted.
 | `EMU_MINUTE_MS` | 60000 | A firmware minute, for the setup network's `apoff` and recovery's 30-minute exit (spec 046); the integration tests set 1000 |
 | `EMU_STACK` | 4096 | Stack bytes for the firmware's frames. The host's x86 frames are not the chip's Xtensa ones: compare `stackFree` in `/status` on the clock and here, and adjust |
 
+TLS (BearSSL, the starter's download) runs on a 6.2 KB stack the core takes from the heap
+while a secure connection is open; `build.sh` charges it to the arena as the chip does
+(the host core's version allocated nothing). The host mock's own `getifaddrs()` behind
+`WiFi.localIP()` allocates on the host heap, as it allocates nothing on the chip.
+
 Out of memory in `new` and a stack overflow end as on the chip: a panic, and the next
 boot reports "Software/System restart". The log shows the cause and the call chain
 (`addr2line`), and `GET /stats` and the screen page's **Device** panel show it as the
@@ -238,6 +245,28 @@ compose name `smartclock` (`403 Unknown host name`).
 
 **Enter recovery** sends three power cycles 4 s apart: from a clock that has been up
 for 10 s, the third boot enters recovery, as on the device.
+
+## Updates, the settings page's files, and the starter (spec 048)
+
+Updates complete in the emulator: an `.update` or `.bin.gz` uploaded to `/update_ota` is
+checked, staged in the emulated flash and committed, and the emulator restarts. It keeps
+running its own binary (it cannot run the image); the files an `.update` brings land in
+storage as on the clock.
+
+| Variable | Default | |
+|---|---|---|
+| `EMU_SEED_FILES` | 1 | Puts this build's settings-page files in `/sys` at each start when the manifest is not this build's. `0` leaves storage alone: a clock without its files shows the setup page |
+| `EMU_FIRMWARE` | `smartclock` | `starter`: a clock fresh from stock, on the starter (with `EMU_HEAP=44000`, its free heap on the chip). Once the starter installs an update, `run.sh` runs the firmware from then on (`$EMU_DATA/firmware`), without seeded files |
+
+The starter's **Install** downloads from GitHub for real (BearSSL is built for the host in
+the image's `deps` stage). `GET :8080/sys-files` returns this build's files as the start
+of an update file: append any `.bin.gz` and it installs them (the integration tests'
+`update_files` and `starter` cases).
+
+```bash
+docker run -d --name starter -e EMU_FIRMWARE=starter -e EMU_HEAP=44000 \
+  -p 127.0.0.1:8100:80 -p 127.0.0.1:8180:8080 emulator-smartclock
+```
 
 ## Starting over
 

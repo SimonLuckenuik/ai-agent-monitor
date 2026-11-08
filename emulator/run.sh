@@ -18,12 +18,24 @@ stop() {
 }
 trap stop TERM INT
 
+# Which firmware the clock runs: EMU_FIRMWARE=starter starts a clock "fresh from stock"
+# on the starter (spec 048). Kept in $EMU_DATA/firmware, so an update the starter
+# installs moves the clock to the full firmware for good, as on the chip (the starter
+# leaves installed-update behind: emulator/flash.cpp). The full firmware then starts
+# without this build's settings-page files, as a clock does after the starter.
+[ -f firmware ] || echo "${EMU_FIRMWARE:-smartclock}" > firmware
 reset=power
 rm -f rtc.bin
 while true; do
   rm -f next-reset
+  if [ -f installed-update ]; then
+    rm -f installed-update
+    [ "$(cat firmware)" = starter ] && echo smartclock > firmware && echo "emulator: the starter installed an update: the full firmware from now on"
+  fi
+  bin=/emulator/$(cat firmware)
+  [ "$(cat firmware)" = starter ] || [ "${EMU_FIRMWARE:-smartclock}" != starter ] || export EMU_SEED_FILES=0
   # -L 3048: the clock's 3 MB LittleFS volume (0x100000-0x3FA000); no SPIFFS.
-  EMU_RESET=$reset /emulator/smartclock -P "$EMU_DATA" -L 3048 -S 0 "$@" &
+  EMU_RESET=$reset "$bin" -P "$EMU_DATA" -L 3048 -S 0 "$@" &
   child=$!
   wait "$child"
   code=$?

@@ -1,7 +1,8 @@
 # 048 Read-only data as files that come with the update
 
-Status: Approved 2026-11-07 (the owner: "lets release 048"). The starter image below
-was proposed the same day, at the owner's request, and waits for the owner's go.
+Status: In progress (approved 2026-11-07, the owner: "lets release 048"; the starter
+image approved the same day: "Go, with starter"). Built on branch
+`feat/048-update-files`; to release in 2.5.0 after a run on a clock.
 
 ## Problem
 
@@ -86,7 +87,7 @@ there costs no update room at all.
    (so the screen page's Settings button opens the full page), and the integration
    tests install a bundle on blank storage to test the path.
 
-## The starter image (proposed 2026-11-07, waiting for the owner's go)
+## The starter image (approved 2026-11-07)
 
 The owner: "create a second build ... small enough so that it can become the official
 upgrade file for a clock running the initial firmware (with proper SDP naming) ...
@@ -183,8 +184,8 @@ download itself and needs only step 1 and an Install button (above).
 - Updating from 2.4.x or older: install the `.bin.gz` (as today); the new firmware then
   shows the fallback page with **Install from GitHub** (or the `.update` file) once.
   Every later update: one click, or the `.update` file.
-- Stock clocks: v1.4.0's `SDPro_..._nomqtt.bin`, then the `.bin.gz`, then the bundle.
-  One step more than today; the release notes and README say so.
+- Stock clocks: the starter, then Install (it downloads the release itself): one step
+  fewer than v1.4.0's `_nomqtt.bin`, then the `.bin.gz`.
 - A clock whose storage was formatted shows the fallback page until the bundle is
   installed again: settings, faces and photos are gone anyway in that case.
 - Nothing else changes: the same page at the same address.
@@ -197,6 +198,17 @@ download itself and needs only step 1 and an Install button (above).
 | Fallback page | +4 KB | +4 KB | -8 KB |
 | Bundle reader, file serving, manifest check (about 1.5-2 KB of code) | +2 KB | +1.4 KB | -3.4 KB |
 | **Phase 1 total (estimate)** | **about -18 KB** | **about -19 KB** | **about +37 KB** |
+| **Measured** (2.4.0 then this branch, `pio run`) | 602 KB to 587,584 B | 427 KB to 410,889 B | 4 KB to **36 KB** |
+
+The starter: 500,704 B (plain limit 516,096 B; stock's first flash allows about 552 KB).
+
+RAM, measured in the emulator with the chip's heap for the starter (44 KB: its static
+RAM is 31.5 KB, the firmware's 49.9 KB) and TLS's 6.2 KB stack counted: TLS to GitHub
+takes about 33 KB (GitHub's hosts do not negotiate smaller records), so the starter
+downloads to storage first and installs after closing the connection; the lowest free
+heap was 5.4 KB during the release lookup and 9.4 KB during the download. The image
+check now keeps 28 bytes of a `.bin.gz` (4,120 only for a plain image): 4 KB less during
+every compressed update, in the firmware too.
 | Spec 047's catalog and prompt as files (when 047 lands) | -7.7 KB | -7.7 KB | +15 KB |
 
 RAM: the bundle reader keeps one file open and a CRC while an update runs (well under
@@ -210,17 +222,22 @@ LittleFS: about 30 KB for `/sys/`, twice that while an update stages the new fil
 
 1. ~~How the files arrive~~ The owner: downloaded from GitHub by the settings page by
    default (requirement 0); the bundle is what it pushes, and the file for offline use.
-2. The file's name: `AIAgentMonitor_v<version>.update` (suggested, 2026-11-07; the
-   owner to confirm). The stock update page refuses names not starting with `SDP`,
-   which is fine: it cannot install it.
+2. The file's name: `AIAgentMonitor_v<version>.update` (suggested 2026-11-07, built so;
+   the owner can still rename it). The stock update page refuses names not starting
+   with `SDP`, which is fine: it cannot install it.
 3. Phase 2, the weather icons (7.5 KB, about 13 KB of room) and the Message face (3.9 KB
    of text, about 5 KB): the owner, "good idea". Files go missing only in rare cases
    (once after the move from 2.4.x, after a storage format, a storage that does not
    mount, or a `.bin.gz` installed alone, which leaves them stale), so the fallback is
    minimal, not a second copy: no weather icon drawn, a message as plain title and text.
+   Not in the first release (2.5.0): phase 2, once 048's path has run on the clocks.
 4. Release order: 048 alone in a MINOR release, before spec 047 uses it (recommended:
    useful without 047, it changes the update path, which is worth checking on the
    clocks by itself, and 047 does not fit yet), or both in one release? The owner to
    answer.
-5. The starter image (above): go? It goes in the same release as 048, and the
-   release notes' first-install line points at it instead of v1.4.0's `_nomqtt.bin`.
+5. ~~The starter image~~ The owner: "Go, with starter". In the same release; the
+   release notes' first-install line points at it.
+6. GitHub Pages must be turned on for the repository (Settings > Pages > Source: GitHub
+   Actions) for the browser's Install: the owner's setting. Until then the release
+   workflow's Pages job fails, the release itself is published, and Install says the
+   file is not on Pages yet (the starter is not affected: it downloads from the release).

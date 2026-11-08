@@ -7,6 +7,40 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Added
+
+- **The starter** (spec 048): `SDPro_AIAgentMonitor_starter_v<version>.bin`, a small plain
+  image the stock update page installs. It shows its setup network and password, joins
+  your WiFi from a step-by-step page, then downloads the latest release from GitHub
+  itself (HTTPS, checked against GitHub's root certificates) and installs it. From the
+  stock firmware to AI Agent Monitor in two steps; it replaces v1.4.0's `_nomqtt.bin` as
+  the first install.
+- **Install from GitHub**: the settings page's update notice has an **Install** button
+  that downloads the release and sends it to the clock; `http://<clock>/setup` always
+  opens the setup page (sign in, WiFi, Install, or a file by hand).
+- **Update files** (`.update`): the firmware and the files it reads from storage in one
+  file. The clock stages the files apart and puts them in place only once the firmware is
+  in, so a failed update changes nothing. `/status` has `files` (`ok`, `missing`,
+  `stale`, `unmounted`).
+
+### Changed
+
+- **The settings page is a file in the clock's storage** (spec 048), installed with the
+  update, no longer part of the firmware: 36 KB of room for future updates (2.4.0 had
+  4 KB). The
+  firmware keeps a small setup page for recovery, the setup network, and a clock whose
+  files are missing or from another version.
+- **Updates need 4 KB less memory**: a compressed image is checked from its first 28
+  bytes (a plain image still from its first 4 KB).
+- The README lists more related firmware (SmartClock-OSS, esp-mini_screen,
+  esphome-geekmagic-smalltv) and says up front that going back to the stock firmware
+  needs a USB-serial adapter.
+
+### Fixed
+
+- Emulator: an update can now complete (the emulated flash kept nothing), and restarts no
+  longer abort (the route tables were freed as if they were on the heap).
+
 ## 2.4.0 - 2026-11-07
 
 ### Upgrading

@@ -13,6 +13,19 @@ services:
       - clock-data:/data
     environment:
       EMU_MINUTE_MS: "1000"   # a firmware minute is a second: the setup network's and recovery's timers (spec 046)
+      EMU_SEED_FILES: "0"     # no settings-page files until a case installs them (spec 048)
+  starter:   # a clock fresh from stock, on the starter (spec 048): the starter case
+    build:
+      context: ../..
+      dockerfile: emulator/Dockerfile
+    ports:
+      - "127.0.0.1:18100:80"
+      - "127.0.0.1:18180:8080"
+    volumes:
+      - starter-data:/data
+    environment:
+      EMU_FIRMWARE: starter
+      EMU_HEAP: "44000"   # the starter's free heap on the chip (RAM 31.5 KB in use, not 50)
   broker:   # an MQTT broker for the mqtt_and_mdns case (spec 025), as "broker" to the clock
     image: eclipse-mosquitto:2.0.18
     command: mosquitto -c /mosquitto-no-auth.conf
@@ -26,3 +39,4 @@ services:
 
 volumes:
   clock-data:
+  starter-data:

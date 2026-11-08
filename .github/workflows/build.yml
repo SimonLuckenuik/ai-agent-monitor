@@ -40,6 +40,9 @@ jobs:
       - name: Build the firmware (fails above the OTA size budget)
         run: pio run
 
+      - name: Build the starter (fails above the plain-image limit; spec 048)
+        run: pio run -e starter
+
       - name: Unit tests
         run: python tests/unit/run_unit_tests.py
 

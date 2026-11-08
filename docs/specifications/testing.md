@@ -35,7 +35,8 @@ builds and tests again before it publishes.
 | A built-in face's drawing | Face preview (look at `.pio/face-preview/sheet.png`), integration `builtin_faces` and the screens it saves |
 | Custom faces (format, rotation, palettes, sprites) | Unit, integration (`example_faces`, `example_faces_memory`, `rotation_*`, `palettes_and_roles`) |
 | The web API, settings, sign-in, routes | Safety (the guards), integration (`settings_round_trip`, `route_methods`, `face_validation`, `messages_api`) |
-| Firmware updates, recovery, the flash layout | Safety; integration `recovery_network` |
+| Firmware updates, recovery, the flash layout | Safety (the update handler with images and `.update` files, on mock storage); unit (`update_tests.cpp`: the update file reader against `scripts/make_update.py`); integration `recovery_network`, `update_files` |
+| The starter (spec 048) | `pio run -e starter` (its size limit); integration `starter` (a second emulator running it); its GitHub download by hand in the emulator (`EMU_FIRMWARE=starter`, emulator/README.md), and on a clock |
 | The setup network (spec 046) | Safety (closes only in `serviceAp()`, never in recovery); integration `setup_network_timer`, `recovery_network`; on the clock: the station link survives the switch |
 | Memory: anything allocated, any new string | Safety (the strings check), integration `example_faces_memory`, `faces_beside_big_faces`, `mqtt_and_mdns`; the emulator's Device panel and heap map |
 | MQTT, mDNS, the weather fetch | Unit (`mdns_tests`), integration `mqtt_and_mdns`, `faces_beside_big_faces`, `status_and_fixed_time` |

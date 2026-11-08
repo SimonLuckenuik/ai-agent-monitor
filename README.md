@@ -102,24 +102,18 @@ this firmware is not for your clock.
 ## Release files
 
 Each [release](../../releases/latest) has these files. The clock's flash holds the
-running firmware and the incoming update in the same 1 MB, so the firmware can only be
-sent compressed, and only a clock running 1.4.0 or later can unpack it.
+running firmware and the incoming update in the same 1 MB, so the firmware is sent
+compressed, and the settings page comes along as a file the clock keeps in its storage.
 
 | File | What it is | Use it for |
 |---|---|---|
-| `AIAgentMonitor_v<version>.bin.gz` | The firmware, compressed | **Every install and update** on a clock running 1.4.0 or later, from this firmware's own Firmware update card |
+| `SDPro_AIAgentMonitor_starter_v<version>.bin` | The starter: a small plain image that joins your WiFi and installs the latest release by itself | **The first install** on a clock with the stock firmware, from its own update page |
+| `AIAgentMonitor_v<version>.update` | The firmware and its settings page, in one file | **Updates** on a clock running 2.5.0 or later (Settings > Firmware update; the **Install** button there downloads it for you) |
+| `AIAgentMonitor_v<version>.bin.gz` | The firmware alone, compressed | Clocks running 1.4.0 to 2.4.x, which take nothing else; the clock then shows a setup page that installs the rest |
 | `SHA256SUMS.txt` | Checksums | `sha256sum -c SHA256SUMS.txt` |
 
-**The first install** on a new clock uses one file from the
-[v1.4.0 release](../../releases/tag/v1.4.0):
-[`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin). It is a plain image, small enough for the stock
-update page and for SmartClock-OSS before 1.4.0, without MQTT and mDNS. It is not built
-for later releases, so their features are not limited by its size: once it runs,
-install the latest `.bin.gz`.
-
 Keep the file names. The stock update page only accepts names starting with `SDP`, so
-only the first-install image has that prefix: the stock firmware cannot unpack the
-compressed image, and its name keeps it from being tried there.
+only the starter has that prefix: the stock firmware cannot unpack the compressed image.
 
 ## Install
 
@@ -130,45 +124,49 @@ compressed image, and its name keeps it from being tried there.
 
 ### From the stock firmware (a new clock)
 
-1. Download **[`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin)** from the
-   [v1.4.0 release](../../releases/tag/v1.4.0) (the first-install image; later releases
-   have only the `.bin.gz`).
+1. Download **`SDPro_AIAgentMonitor_starter_v<version>.bin`** from the
+   [latest release](../../releases/latest).
 2. Open the clock's web page in a browser (its IP address is shown on the clock when it
    starts), and find **Firmware Update (OTA)**.
 3. Choose the file and press **Start Update**. Confirm, then wait for "Update Success".
-   The clock restarts by itself within about 30 seconds.
+   The clock restarts by itself within about 30 seconds and shows its setup screen.
 4. On your phone or computer, join the WiFi network **AI Agent Monitor XXXXXX** with the
-   password shown on the clock, and open **http://192.168.4.1/**. Sign in with the same
-   password.
-5. In the **WiFi** card, pick your network, enter its password, and press
-   **Connect & restart**. The clock shows its new address when it connects.
-6. Open that address. In **Firmware update**, install
-   **`AIAgentMonitor_v<version>.bin.gz`** from the
-   [latest release](../../releases/latest): everything since 1.4.0, MQTT and mDNS.
-7. In **Time & region**, type your city and pick it from the list (it sets the weather
-   and the time zone), and choose your faces.
+   password shown on the clock, and open **http://192.168.4.1/**.
+5. Follow the steps: sign in with the same password, pick your WiFi network and enter
+   its password, then press **Install**. The clock downloads the latest release from
+   GitHub itself and installs it (a minute or two), then restarts on your WiFi and shows
+   its new address. Your phone can stay on the clock's network until then.
+6. Open that address from your home network. In **Time & region**, type your city and
+   pick it from the list (it sets the weather and the time zone), and choose your faces.
 
-### From SmartClock-OSS
+If the browser has no internet or GitHub cannot be reached, the setup page also takes
+the release's `.update` file by hand.
+
+### From SmartClock-OSS or AI Agent Monitor before 2.5.0
 
 Clocks running SmartClock-OSS **1.3.x or earlier** only take plain images: install the
-[`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin) from its Firmware update card first, then the latest
-`.bin.gz` as in step 6 above. Settings and photos are kept.
+starter from their Firmware update card and continue at step 4 above. Clocks running
+**1.4.0 to 2.4.x**: install the latest **`.bin.gz`**; the clock comes back with a setup
+page (the settings page is not on it yet) where **Install** finishes the update.
+Settings, faces and photos are kept.
 
 ### Updating
 
-On a clock running 1.4.0 or later, install the new **`.bin.gz`** from the **Firmware
-update** card. The settings page tells you when a new release is out. The card accepts
-only this firmware's images and checks each one (size, checksum, layout) before writing
-anything; a `.bin` that is too big for a plain update is refused with a pointer to the
-`.gz`.
+On a clock running 2.5.0 or later, the settings page tells you when a new release is
+out: **Install** downloads it from GitHub and sends it to the clock (the browser needs
+internet). Or install the release's **`.update`** file from the **Firmware update** card.
+The clock accepts only this firmware's files and checks each one (size, checksum,
+layout) before writing anything; the settings page's file is replaced only once the
+firmware is in. `http://<clock>/setup` always opens the setup page, which can install
+the latest release too.
 
 ### Finding the clock
 
 The clock names itself `agentmonitor-XXXXXX` (unique per clock) in your router's list
 of devices, and its setup network **AI Agent Monitor XXXXXX** carries the same suffix.
 The full firmware also answers at `http://agentmonitor-XXXXXX.local/` (mDNS, same
-network only). The first-install image leaves mDNS out to stay small; it comes with the
-`.bin.gz` update.
+network only). The starter leaves mDNS out to stay small: it shows its address on the
+screen instead.
 
 ## Messages from agents and scripts
 

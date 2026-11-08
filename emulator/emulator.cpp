@@ -54,6 +54,7 @@ extern uint16_t emuPanel[240 * 240];   // panel.cpp: what the panel's glass show
 String emuTimingJson(bool reset);       // panel.cpp
 constexpr int PANEL_W = 240, PANEL_H = 240;
 extern String devicePassword;
+String sysFilesUpdate();   // below: this build's /sys files in update format (spec 048)
 
 namespace {
 
@@ -501,6 +502,8 @@ void handleRequest(WiFiClient& c, const String& head) {
     sendText(c, 200, "application/json", emuTimingJson(queryArg(query, "reset") == "1"));
   } else if (path == "/password") {   // for the screen page's sign-in link
     sendText(c, 200, "text/plain; charset=utf-8", devicePassword);
+  } else if (path == "/sys-files") {   // the integration tests make an .update file of them
+    sendText(c, 200, "application/octet-stream", sysFilesUpdate());
   } else if (path == "/fs") {
     serveDir(c, queryArg(query, "path"));
   } else if (path == "/fs/file") {
@@ -702,6 +705,24 @@ void emuAnalogWriteRange(uint32_t range) { backlightRange = int(range); }
 // Only when /sys/manifest is not this build's. EMU_SEED_FILES=0 leaves storage as it is
 // (the integration tests of a clock without them, and of installing an .update file).
 #include "emu_sys_files.h"
+#include <coredecls.h>   // crc32(): the update format's (include/update_bundle.h)
+
+// GET :8080/sys-files: this build's /sys files as the start of an update file (the
+// header and the files, no image): append a .bin.gz and it installs them (spec 048).
+String sysFilesUpdate() {
+  auto put32 = [](String& s, uint32_t v) { for (int i = 0; i < 4; ++i) s += char((v >> (8 * i)) & 0xff); };
+  size_t count = sizeof(EMU_SYS_FILES) / sizeof(EMU_SYS_FILES[0]);
+  String s = "AMUP";
+  s += char(1); s += char(count); s += char(0); s += char(0);
+  put32(s, strtoul(EMU_SYS_MANIFEST, nullptr, 16));
+  for (const EmuSysFile& f : EMU_SYS_FILES) {
+    s += char(strlen(f.name)); s += f.name;
+    put32(s, f.size); put32(s, crc32(f.data, f.size));
+    s.concat(reinterpret_cast<const char*>(f.data), f.size);
+  }
+  return s;
+}
+
 void seedSysFiles() {
   const char* seed = getenv("EMU_SEED_FILES");
   if (seed && !strcmp(seed, "0")) return;

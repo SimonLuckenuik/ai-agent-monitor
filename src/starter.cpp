@@ -341,6 +341,7 @@ void handleStatus() {
   doc[F("download")] = true;   // the clock downloads releases itself
   doc[F("version")] = FW_RELEASE;
   doc[F("build")] = FW_BUILD;
+  doc[F("uptime")] = millis() / 1000;
   doc[F("files")] = "";
   doc[F("recovery")] = false;
   doc[F("storageReady")] = storageReady;

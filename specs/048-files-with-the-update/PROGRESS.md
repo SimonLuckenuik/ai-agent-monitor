@@ -35,3 +35,48 @@
   for a download; two root certificates). The starter downloads by itself; the full
   firmware cannot afford TLS and keeps the browser path. SPEC, RESEARCH and PLAN
   updated.
+
+## 2026-11-07 to 2026-11-08: built (branch feat/048-update-files, from faces-v2 at 2.4.0)
+
+The owner: "Go, with starter". Built in this order (commits on the branch):
+
+- **The update file** (`include/update_bundle.h`, `scripts/make_update.py`): "AMUP", the
+  files with their sizes and CRCs, then the `.bin.gz`. Every build writes
+  `firmware.update`. Unit tests read files written by the Python writer in pieces of
+  every size, and damaged, truncated and badly named ones (74 checks).
+- **`src/update.cpp`**: the update handler, moved out of main.cpp and shared with the
+  starter. Files go to `/sys.new` and move to `/sys` after `Update.end()`; the manifest
+  last. In recovery or without storage the image installs and the files are skipped. The
+  safety harness runs it on mock storage: files only after the commit, old files removed,
+  photos untouched, damaged file or image, truncated, storage full, recovery, a failed
+  rename, the manifest states.
+- **The settings page from `/sys`**, the setup page (`web/fallback.html`, 4.3 KB gzipped)
+  otherwise and at `/setup`. `/status` has `files`. The settings page's update notice
+  links to Install.
+- **Emulator**: `update.cpp` and the seeded `/sys` files; updates complete (emulated
+  flash); restarts no longer abort (the route tables are on the heap now: the server's
+  destructor deleted the static ones, exit 134 on every restart); an upload checks the
+  host once, not per piece.
+- **The starter** (`src/starter.cpp`, `[env:starter]`, 500,704 B): tried in the emulator
+  against GitHub (BearSSL built for the host, TLS's stack charged to the heap). Lookups
+  and downloads ran out of memory three ways before the design settled: TLS (~33 KB)
+  plus the image check (4 KB) plus the updater's buffer (4 KB) do not fit in 44 KB, and
+  GitHub's redirect means two handshakes. Now: the release notes are left out of the
+  lookup, the roots are freed after the handshake, the image check keeps 28 bytes of a
+  `.bin.gz`, and the download goes to storage before the install. Lowest free heap 5.4 KB
+  (lookup) and 9.4 KB (download). A release without an `.update` (2.4.0) installs its
+  `.bin.gz`; the firmware's setup page then gets the files.
+- **Release**: `make_release.py` builds and names the `.update`, the `.bin.gz` and the
+  starter; `release.yml` publishes them, notes which file is for which clock, and copies
+  the `.update` to GitHub Pages; `build.yml` builds the starter.
+- **Docs**: README (release files, install from stock in two steps, updating, the
+  stock-firmware warning and related projects the owner asked for), CHANGELOG,
+  updates-and-recovery.md, testing.md, emulator/README.md, CLAUDE.md.
+
+Measured: the firmware 587,584 B and 410,889 B, 36 KB of update room (2.4.0: 4 KB).
+
+Not in this release: phase 2 (icons and the Message face as files), spec 047's catalog.
+
+Not verified yet: anything on a clock (the starter over stock, TLS's real heap, the
+page from storage, an update from 2.4.0); GitHub Pages (not turned on); the browser's
+Install against a real release with an `.update` (none published yet).

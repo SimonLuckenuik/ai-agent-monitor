@@ -6,15 +6,18 @@ Builds with SMARTCLOCK_RELEASE=1, which makes build_options.py ignore secrets.in
 then refuses to finish if an image contains the SSID or password from a local
 secrets.ini. Writes to release/:
 
-- AIAgentMonitor_v<version>.bin.gz: the firmware, compressed, for clocks running 1.4.0
-  or later. No "SDP" prefix: a stock clock cannot unpack it, and its update page only
-  accepts names starting with "SDP".
-- AIAgentMonitor_v<version>.elf: the same build with its symbols, for
+- AIAgentMonitor_v<version>.update: the firmware's .bin.gz with the files it reads from
+  storage (the settings page, spec 048), for clocks running 2.5.0 or later, and for the
+  starter. The settings page's Install button downloads it.
+- AIAgentMonitor_v<version>.bin.gz: the firmware alone, compressed, for clocks running
+  1.4.0 to 2.4.x (they take nothing else); its setup page then installs the .update. No
+  "SDP" prefix: a stock clock cannot unpack it, and its update page only accepts names
+  starting with "SDP".
+- SDPro_AIAgentMonitor_starter_v<version>.bin: the starter (spec 048), a plain image the
+  stock update page installs; it joins WiFi and installs the latest release from GitHub.
+- AIAgentMonitor_v<version>.elf: the firmware with its symbols, for
   scripts/decode_crash.py (a crash's addresses to file:line). Not for the clock.
 - SHA256SUMS.txt
-
-A new clock first installs the plain SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin from the
-v1.4.0 release (the last one with a plain image), then this .bin.gz.
 """
 from pathlib import Path
 import configparser
@@ -56,13 +59,16 @@ def build(name):
     return image
 
 
+starter = build("starter")
 full = build("esp12e")   # .pio/build/esp12e is then the release build, for the tests
 
 out = root / "release"
 out.mkdir(exist_ok=True)
-for old in out.glob("*AIAgentMonitor_v*"):
+for old in list(out.glob("*AIAgentMonitor_v*")) + list(out.glob("*AIAgentMonitor_starter_v*")):
     old.unlink()   # one release's files at a time
-files = ((full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),
+files = ((full.with_suffix(".update"), f"AIAgentMonitor_v{version}.update"),
+         (full.with_suffix(".bin.gz"), f"AIAgentMonitor_v{version}.bin.gz"),
+         (starter, f"SDPro_AIAgentMonitor_starter_v{version}.bin"),
          (full.with_suffix(".elf"), f"AIAgentMonitor_v{version}.elf"))
 sums = ""
 for src, dst in files:

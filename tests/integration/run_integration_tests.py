@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from emulator import (FIXED_TIME, ROOT, TZ, Emulator, HttpError, digest, epoch,  # noqa: E402
-                      open_meteo, sheet)
+                      open_meteo, sheet, stand_in_image)
 
 OUT = ROOT / ".pio" / "integration"
 EXAMPLES = ROOT / "examples" / "faces"
@@ -1152,6 +1152,57 @@ def recovery_network(emu):
     emu.wait_ready()
     check(not emu.status()["recovery"], "an unused recovery restarts normally")
     emu.sign_in()
+
+
+@case
+def update_files(emu):
+    """Spec 048: the settings page is a file that comes with the update. This emulator
+    starts without it (EMU_SEED_FILES=0): the setup page, then an .update installs it."""
+    page = lambda path="/": emu.get(path).decode(errors="replace")
+    s = emu.status()
+    if s["files"] == "missing":   # this case runs once per emulator: later runs find it installed
+        check("<title>AI Agent Monitor setup</title>" in page(), "without its files, / is the setup page")
+        files = emu.sys_files()
+        image = stand_in_image()
+        bad = bytearray(files + image)
+        bad[40] ^= 1   # inside the first file: its CRC fails
+        code, reply = emu.upload_update(bytes(bad))
+        check(code == 400 and "CRC" in reply, f"a damaged file is refused: {code} {reply}")
+        check(emu.status()["files"] == "missing", "nothing installed")
+        bad = bytearray(files + image)
+        bad[-100] ^= 1   # inside the image
+        code, reply = emu.upload_update(bytes(bad))
+        check(code == 400, f"a damaged image is refused: {code} {reply}")
+        check(emu.status()["files"] == "missing", "the files wait for the image")
+        code, reply = emu.upload_update(files + image)
+        check(code == 200 and reply == "OK", f"the update file installs: {code} {reply}")
+        emu.wait_restart()
+        emu.sign_in()
+        emu.set("tz", TZ)
+    check(emu.status()["files"] == "ok", "the files match the firmware")
+    check("<title>AI Agent Monitor</title>" in page(), "/ is the settings page again")
+    check("<title>AI Agent Monitor setup</title>" in page("/setup"), "/setup is always the setup page")
+
+
+@case
+def starter(emu):
+    """Spec 048: a clock fresh from stock runs the starter (the second emulator, ports
+    18100/18180); an update file installed from it moves it to the full firmware."""
+    st = Emulator("http://127.0.0.1:18100", "http://127.0.0.1:18180")
+    st.wait_ready()
+    s = st.status()
+    if s.get("starter"):
+        check(s["download"] and not s["signedIn"], f"the starter downloads releases itself: {s}")
+        check("<title>AI Agent Monitor setup</title>" in st.get("/").decode(errors="replace"), "its page is the setup page")
+        expect_error(401, "Sign in", st.get, "/api/update/latest")
+        st.sign_in()
+        check(st.status()["signedIn"], "signed in with the device password")
+        shot(st, "starter")
+        code, reply = st.upload_update(emu.sys_files() + stand_in_image())
+        check(code == 200 and reply == "OK", f"the starter installs an update file: {code} {reply}")
+        st.wait_restart()
+    s = st.status()
+    check(not s.get("starter") and s["files"] == "ok", f"the full firmware, with its files: {s.get('files')}")
 
 
 # ---------------------------------------------------------------- runner

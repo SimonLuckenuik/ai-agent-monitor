@@ -43,6 +43,10 @@ for name in ("getFreeHeap", "getMaxFreeBlockSize", "getFreeContStack", "getReset
     s, n = re.subn(r"\n[^\n]*EspClass::%s\([^)]*\)\n\{.*?\n\}\n" % name, "\n", s, flags=re.S)
     if not n:
         sys.exit("build.sh: could not take EspClass::%s out of %s" % (name, path))
+# eboot_command_write(): flash.cpp's tells the supervisor an update was installed.
+s, n = re.subn(r"\nvoid eboot_command_write\([^)]*\)\n\{.*?\n\}\n", "\n", s, flags=re.S)
+if not n:
+    sys.exit("build.sh: could not take eboot_command_write out of %s" % path)
 open(path, "w").write(s)
 PY
 # TLS (BearSSL) runs on a 6.2 KB stack the core takes from the heap while a secure

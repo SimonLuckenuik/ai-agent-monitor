@@ -46,3 +46,14 @@ bool EspClass::flashRead(uint32_t offset, uint8_t* data, size_t size) {
 bool EspClass::flashRead(uint32_t offset, uint32_t* data, size_t size) {
   return flashRead(offset, reinterpret_cast<uint8_t*>(data), size);
 }
+
+// The updater's last step: the command eboot reads at the next boot to copy the staged
+// image into place. The emulator cannot run the image, so it tells the supervisor
+// (run.sh) instead: after the starter installs an update, it boots the full firmware.
+#include <eboot_command.h>
+extern "C" void eboot_command_write(struct eboot_command*) {
+  const char* dir = getenv("EMU_DATA");
+  String path = String(dir && *dir ? dir : ".") + "/installed-update";
+  if (FILE* f = fopen(path.c_str(), "w")) fclose(f);
+  printf("emulator: an update was installed (the bootloader would copy it into place now)\n");
+}

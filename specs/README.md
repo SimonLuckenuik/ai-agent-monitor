@@ -6,7 +6,7 @@ decisions change) is in [CLAUDE.md](../CLAUDE.md#how-we-work-spec-driven-develop
 Specs 001-017 were written after the fact on 2026-10-30, from the work and the
 conversations that produced it; from 018 on, specs come first.
 
-Next free number: **047**.
+Next free number: **049** (047 is used on branch `json-render`).
 
 | Spec | Status |
 |---|---|
@@ -56,6 +56,7 @@ Next free number: **047**.
 | [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | Done in 2.3.0 |
 | [045 A help command on the OpenClaw node](045-openclaw-help/SPEC.md) | Done in 2.3.1 |
 | [046 The setup network closes once the clock is on the router](046-setup-network-timeout/SPEC.md) | Done in 2.4.0 |
+| [048 Read-only data as files that come with the update](048-files-with-the-update/SPEC.md) | In progress (approved 2026-11-07) |
 
 ## Templates
 

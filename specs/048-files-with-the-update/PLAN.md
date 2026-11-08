@@ -5,7 +5,10 @@ Nothing is built until the owner approves the spec. Each step is measured with
 
 ## Phase 1: the settings page as a file
 
-1. **Bundle format and tool.** `scripts/make_bundle.py`: header, files, `.bin.gz`;
+Steps 1-9 are built (PROGRESS.md has the commits and what was checked); step 10 waits
+for a run on a clock.
+
+1. **Bundle format and tool.** `scripts/make_update.py` (built under that name): header, files, `.bin.gz`;
    called by `scripts/build_options.py` after the `.bin.gz` (`firmware.bundle` beside
    it) and by `scripts/make_release.py`. The files' hash goes into a generated header
    (`files_hash.h`) the firmware compiles in. The page is built as today

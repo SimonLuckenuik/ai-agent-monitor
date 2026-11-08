@@ -67,6 +67,26 @@ def open_meteo(temp=18.4, feels=16.9, humidity=72, wind=5.2, code=2, is_day=1, c
     }
 
 
+def stand_in_image(size=24000):
+    """A .bin.gz the update check accepts (scripts/build_options.py's format: the "AM"
+    header, its CRC, the gzip trailer): random data, not a firmware. The emulator never
+    runs what it installs; it checks it, stages it and restarts (spec 048)."""
+    import random
+    import struct
+    import zlib
+    raw = random.Random(48).randbytes(size)
+    body = zlib.compress(raw, 9)[2:-4]   # raw deflate
+    body += struct.pack("<II", zlib.crc32(raw) & 0xFFFFFFFF, len(raw))
+    crc = 0xFFFFFFFF
+    for b in body:   # elf2bin's CRC: MSB first, no final xor
+        crc ^= b << 24
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x04C11DB7 if crc & 0x80000000 else crc << 1) & 0xFFFFFFFF
+    head = bytes([0x1F, 0x8B, 8, 4, 0, 0, 0, 0, 2, 3]) + struct.pack("<H", 16) + b"AM" + \
+        struct.pack("<HIII", 12, len(raw), 28 + len(body), crc)
+    return head + body
+
+
 class HttpError(Exception):
     def __init__(self, code, text):
         super().__init__(f"HTTP {code}: {text}")
@@ -137,6 +157,37 @@ class Emulator:
 
     def status(self):
         return json.loads(self.get("/status", timeout=5))
+
+    # ---- Updates (spec 048)
+    def upload_update(self, data, name="test.update"):
+        """POST /update_ota as the settings page does (multipart): (status, reply)."""
+        boundary = "----aamtest" + hashlib.md5(data).hexdigest()
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"update\"; filename=\"{name}\"\r\n"
+                f"Content-Type: application/octet-stream\r\n\r\n").encode() + data + f"\r\n--{boundary}--\r\n".encode()
+        try:
+            status, reply, _ = self.request("POST", self.api + "/update_ota", body,
+                                            content_type="multipart/form-data; boundary=" + boundary, timeout=60)
+            return status, reply.decode(errors="replace")
+        except HttpError as e:
+            return e.code, e.text
+
+    def sys_files(self):
+        """This build's settings-page files as the start of an .update (no image yet)."""
+        return self.request("GET", self.screen + "/sys-files")[1]
+
+    def wait_restart(self, timeout=60):
+        """After an update or a restart: until a new boot answers (its uptime starts again)."""
+        end = time.time() + timeout
+        time.sleep(3)
+        while time.time() < end:
+            try:
+                if self.status()["uptime"] < 20:
+                    self.wait_ready(timeout=max(5, end - time.time()))
+                    return
+            except (OSError, HttpError, ValueError, KeyError):
+                pass
+            time.sleep(1)
+        raise TimeoutError("the clock did not restart")
 
     # ---- Sign-in and settings
     def password(self):

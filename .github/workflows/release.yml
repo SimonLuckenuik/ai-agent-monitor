@@ -15,6 +15,8 @@ concurrency:
 
 permissions:
   contents: write
+  pages: write      # the .update file on GitHub Pages (spec 048)
+  id-token: write
 
 jobs:
   release:
@@ -80,16 +82,20 @@ jobs:
             on && /^## / { exit }
             on { print }' > notes.md
           if [ ! -s notes.md ]; then echo "No '## ${{ steps.version.outputs.version }}' section in CHANGELOG.md" >&2; exit 1; fi
-          # Every release page says how a new clock gets its first install: the plain image
-          # was only built for 1.4.0, the first release that unpacks .bin.gz updates.
+          # Every release page says how a new clock gets its first install (spec 048).
           cat >> notes.md <<'EOF'
 
-          ### First install on a new clock
-          A clock on the stock firmware (or on SmartClock-OSS before 1.4.0) only takes a plain
-          image: install [`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin`](https://github.com/SimonLuckenuik/ai-agent-monitor/releases/download/v1.4.0/SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin)
-          from v1.4.0 first, from the clock's own update page, then this release's `.bin.gz`.
+          ### Which file
+          - **A clock on the stock firmware:** install `SDPro_AIAgentMonitor_starter_v<v>.bin`
+            from the clock's own update page, join its setup network, and press Install: it
+            downloads and installs this release itself.
+          - **AI Agent Monitor 2.5.0 or later:** Settings > Firmware update > Install, or the
+            `.update` file by hand.
+          - **AI Agent Monitor 1.4.0 to 2.4.x:** the `.bin.gz`, then Install on the setup page
+            that comes up (or the `.update` file).
           See the README's Install section.
           EOF
+          sed -i "s/<v>/${{ steps.version.outputs.version }}/" notes.md
           sed -i 's/^          //' notes.md
 
       - name: Publish the release
@@ -98,5 +104,36 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ steps.version.outputs.version }}" --target "$GITHUB_SHA" \
-            release/*.bin.gz release/*.elf release/SHA256SUMS.txt \
+            release/*.update release/*.bin.gz release/*.bin release/*.elf release/SHA256SUMS.txt \
             --title "AI Agent Monitor ${{ steps.version.outputs.version }}" --notes-file notes.md
+
+      # The settings page's Install button downloads the .update from GitHub Pages: a
+      # browser cannot fetch a release download (no CORS header; spec 048's RESEARCH).
+      # Pages must be on, once: Settings > Pages > Source: GitHub Actions.
+      - name: The .update file for GitHub Pages
+        if: steps.version.outputs.new == 'true'
+        run: |
+          mkdir -p site/update
+          cp release/*.update site/update/
+          printf '{"version":"%s","file":"AIAgentMonitor_v%s.update"}\n' \
+            "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.version }}" > site/update/latest.json
+          touch site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.version.outputs.new == 'true'
+        with:
+          path: site
+
+    outputs:
+      new: ${{ steps.version.outputs.new }}
+
+  pages:
+    needs: release
+    if: needs.release.outputs.new == 'true'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

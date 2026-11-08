@@ -117,7 +117,8 @@ clock: installed and loaded on the real gateway, its `clock.py` saves faces from
 no model was available to try an agent with), all done in 2.3.0; and
 [045](../specs/045-openclaw-help/SPEC.md) (`clock.help`, links to the skill: done in 2.3.1).
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
-hooks, plugin 0.7.2, seen on the real clock). Proposed:
+hooks, plugin 0.7.2, seen on the real clock). In progress on branch `feat/048-update-files`:
+[048](../specs/048-files-with-the-update/SPEC.md) (the settings page as a file that comes with the update; the starter). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
 [040](../specs/040-scrolling-text/SPEC.md) (scrolling text),
 [046](../specs/046-setup-network-timeout/SPEC.md) (the setup network closes an hour after joining the router, WPA2 in recovery, an unused recovery ends; done in 2.4.0, not on a clock yet).

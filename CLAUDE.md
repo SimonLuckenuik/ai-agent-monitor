@@ -63,7 +63,10 @@ product as it is, and change with the code; specs describe a piece of work.
   its `.bin.gz` must fit the 1 MB sketch area, about 640 KB of firmware
   (`scripts/build_options.py` prints both and fails above it). The plain image is over
   the plain-update limit (0x7E000 = 516,096 B) and is not released: new clocks install
-  v1.4.0's `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` first. Flash is still scarce: measure every change with `pio run`; find what grew with a link map
+  the starter first (`pio run -e starter`, a plain image under that limit, spec 048).
+  The settings page is not in the image but a file that comes with the update
+  (`/sys/index.html.gz` in the `.update`; the image keeps `web/fallback.html`, the setup
+  page), so page changes cost no update room. Flash is still scarce: measure every change with `pio run`; find what grew with a link map
   (see Debugging). Things that cost a lot for little: `strtof`/`atof`/`strtod`
   (~9 KB of libc: use `parseNum()` in faces.cpp), `atan2f`/`fmodf`, any `%f`/`%g`
   in printf (also forbidden by the safety tests: float printf is not linked), inlined
@@ -105,7 +108,9 @@ product as it is, and change with the code; specs describe a piece of work.
 
 | Path | What |
 |---|---|
-| `src/main.cpp` | Boot, recovery, WiFi/AP, web API, settings, OTA, rotation, night tile, backlight |
+| `src/main.cpp` | Boot, recovery, WiFi/AP, web API, settings, rotation, night tile, backlight |
+| `src/update.cpp` | Updates: images and `.update` files (`/sys`), shared with the starter (spec 048) |
+| `src/starter.cpp` | The starter: setup page, WiFi, HTTPS download from GitHub (`[env:starter]` only) |
 | `src/faces.cpp` | Every face; the custom-face renderer (expressions, SVG paths, gradients, wrapping); the Message face; the Big tiles and their monoline font; weather icons |
 | `src/integrations.cpp` | Custom faces API, agent messages, geekmagic-hacs compatibility, MQTT |
 | `src/routes.h` | The web server's routes as tables in flash, answered by one handler (no heap per route) |
@@ -113,7 +118,8 @@ product as it is, and change with the code; specs describe a piece of work.
 | `src/weather.cpp` | Open-Meteo, WMO words in English and French |
 | `src/config.h` | Settings stored in `/config.json` (load/save/migrations) |
 | `src/ascii.cpp` | UTF-8 to ASCII folding |
-| `web/index.html` | Settings page, gzipped into the firmware (self-contained: no CDN) |
+| `web/index.html` | Settings page: a file that comes with the update (`/sys/index.html.gz`; self-contained: no CDN) |
+| `web/fallback.html` | The setup page in flash: sign in, WiFi, install (recovery, missing files, the starter) |
 | `emulator/` | Docker emulator (see below) |
 | `tests/unit/` | Host unit tests (expressions, paths, colours, icons, folding) |
 | `tests/face_preview/` | Renders every face to PNG; checks incremental == full redraw |
@@ -155,19 +161,24 @@ case, look at `.pio/integration/sheet.png`, and read the "changed since the last
 line. After a visible change, run `scripts/screenshots.py` so the README's images
 match the firmware.
 
-Flash images for the owner: `cp .pio/build/esp12e/firmware.bin.gz release/AIAgentMonitor_v<FW_VERSION>.bin.gz`.
-The build writes both the plain image and the compressed one (gzip with an "AM" header
-field: unpacked size, file size, CRC; `include/firmware_validation.h`) for clocks
-running 1.4.0 on; the bootloader unpacks it into place. Since the Weather Icons the
-full plain image is over the plain limit (516,096 B): it can only be flashed over UART
-(a USB-serial adapter on the board's pads; the clock's USB port is power only), so it is
-not a release file.
-Clocks that only take plain images (stock, SmartClock-OSS before 1.4.0) first install
-`SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0 release, the last plain image
-(no MQTT, no mDNS); later releases do not build one, so features are not held to its
-size. File names: only an image the stock update page can install starts with `SDP`
-(that page refuses other names). The stock firmware cannot unpack the `.bin.gz`, so it
-has no `SDP` prefix. The release workflow adds this first-install note to every release.
+Flash images for the owner: `cp .pio/build/esp12e/firmware.update release/AIAgentMonitor_v<FW_VERSION>.update`
+(and the `.bin.gz` for clocks before 2.5.0). The build writes the plain image, the
+compressed one (gzip with an "AM" header field: unpacked size, file size, CRC;
+`include/firmware_validation.h`; the bootloader unpacks it into place) and the update file
+(`firmware.update`: "AMUP", the files from `$BUILD_DIR/sys/`, then the `.bin.gz`;
+`include/update_bundle.h`, `scripts/make_update.py`, spec 048). Since the Weather Icons
+the full plain image is over the plain limit (516,096 B): it can only be flashed over
+UART (a USB-serial adapter on the board's pads; the clock's USB port is power only), so it
+is not a release file.
+Clocks that only take plain images (stock, SmartClock-OSS before 1.4.0) install the
+starter (`.pio/build/starter/firmware.bin`, released as
+`SDPro_AIAgentMonitor_starter_v<version>.bin`): it joins WiFi and downloads the latest
+release's `.update` from GitHub itself. Clocks on 1.4.0 to 2.4.x take the `.bin.gz`,
+then install the `.update` from the setup page. File names: only an image the stock
+update page can install starts with `SDP` (that page refuses other names). The release
+workflow adds this note to every release, and copies the `.update` to GitHub Pages
+(`/update/`), where the settings page's Install downloads it (Pages must be on: Settings >
+Pages > Source: GitHub Actions).
 
 ### Releases and the version number
 
@@ -178,7 +189,9 @@ on the pushed commit, and publishes:
 
 | File | For |
 |---|---|
-| `AIAgentMonitor_v<version>.bin.gz` | Every update after that |
+| `AIAgentMonitor_v<version>.update` | Every update from 2.5.0 on (and what the starter installs) |
+| `AIAgentMonitor_v<version>.bin.gz` | Clocks on 1.4.0 to 2.4.x |
+| `SDPro_AIAgentMonitor_starter_v<version>.bin` | The first install over stock |
 | `SHA256SUMS.txt` | Checksums |
 
 The release notes are the version's `## <version> - <date>` section of `CHANGELOG.md`;

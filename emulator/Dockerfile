@@ -17,7 +17,9 @@ RUN npm install --global --no-audit --no-fund terser@5.36.0 \
 ARG CORE_VERSION=3.1.2
 RUN git clone --quiet --depth 1 --branch ${CORE_VERSION} https://github.com/esp8266/Arduino /esp8266 \
     && cd /esp8266 && git submodule update --quiet --init --depth 1 \
-         libraries/LittleFS/lib/littlefs libraries/ESP8266SdFat
+         libraries/LittleFS/lib/littlefs libraries/ESP8266SdFat tools/sdk/ssl/bearssl \
+    && make -C tools/sdk/ssl native32 >/dev/null
+# (BearSSL for the host, 32-bit like the binary: the starter's HTTPS download, spec 048.)
 RUN mkdir /libs && cd /libs \
     && git clone --quiet --depth 1 --branch V2.5.43 https://github.com/Bodmer/TFT_eSPI \
     && git clone --quiet --depth 1 --branch v7.4.3 https://github.com/bblanchon/ArduinoJson \
@@ -29,11 +31,12 @@ FROM deps AS build
 COPY src /app/src
 COPY include /app/include
 COPY web /app/web
-COPY scripts/minify_page.py /app/scripts/minify_page.py
+COPY scripts/minify_page.py scripts/sys_files.py scripts/make_update.py /app/scripts/
 # The panel config and F_CPU (emu_build_flags.h, from gen_headers.py).
 COPY platformio.ini /app/platformio.ini
 COPY emulator /app/emulator
-RUN sh /app/emulator/build.sh /app /smartclock
+RUN sh /app/emulator/build.sh /app /smartclock \
+    && EMU_STARTER=1 sh /app/emulator/build.sh /app /starter
 
 # ---- Run: the emulator binary, the screen page and the supervisor.
 # The binary is 32-bit, as the chip is (build.sh); addr2line turns a crash's addresses
@@ -42,7 +45,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libc6-i386 lib32stdc++6 lib32gcc-s1 binutils \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=build /smartclock /emulator/smartclock
+COPY --from=build /smartclock /starter /emulator/
 COPY emulator/screen.html emulator/presets.json emulator/run.sh /emulator/
 # The Scenarios panel loads the example faces and their sample values.
 COPY examples/faces /emulator/faces

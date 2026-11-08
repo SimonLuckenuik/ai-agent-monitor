@@ -5,11 +5,13 @@ through our own updater several times since
 ([record](../decisions/2026-10-05-first-flash-over-stock.md)). One unit has been tested.
 Going back to stock still needs UART, so a full flash backup over UART beforehand is the
 only way to keep the vendor firmware; the vendor update binaries are not full-device
-backups. The first install over stock uses `SDPro_AIAgentMonitor_v1.4.0_nomqtt.bin` from the v1.4.0
-release (a plain image without MQTT and mDNS; later releases do not build one), and every
-update after it the latest `AIAgentMonitor_v<version>.bin.gz` from
-`python scripts/make_release.py` (no `SDP` prefix, so the stock page, which cannot unpack
-it, refuses it).
+backups. Since 2.5.0 (spec 048) the first install over stock is the starter,
+`SDPro_AIAgentMonitor_starter_v<version>.bin` (a plain image, built with every release:
+`pio run -e starter`), which joins WiFi and installs the latest release's `.update` file,
+downloaded from GitHub by itself. Every update after it is the `.update` file (the
+firmware's `.bin.gz` and the settings page as a file); clocks on 1.4.0 to 2.4.x take the
+`.bin.gz` first. All come from `python scripts/make_release.py`; only the starter has
+the `SDP` prefix the stock page requires.
 
 ## Build and first flash
 
@@ -28,7 +30,7 @@ it, refuses it).
    1.4.0, so it is installed as `firmware.bin.gz`, whose limit is the image plus the
    `.gz` within 1 MB (`scripts/build_options.py` prints both and fails above). The first
    flash through the stock updater allows about 552 KB (1 MB minus the 488 KB stock
-   image); use v1.4.0's `_nomqtt.bin` for it.
+   image); the starter (about 500 KB, held under 516,096 B by the build) is made for it.
 4. Establish recovery and back up the device before using its stock OTA page. The stock
    updater controls the first transfer; our validation applies only to subsequent uploads.
 5. If proceeding with the stock updater, use the built firmware image and stable power.
@@ -122,15 +124,42 @@ reaches this code; UART remains the fallback.
 
 ## Subsequent updates
 
-Use the embedded **Firmware Update (OTA)** form, or POST a single multipart firmware
-file to `/update_ota`. Accepted: the compressed `AIAgentMonitor_v<version>.bin.gz` (gzip
-with an "AM" header field: unpacked size, file size, CRC; the bootloader unpacks it), and
-raw project-compatible ESP8266 Arduino images that fit a plain update: 4 MB/DIO/40 MHz,
-with the embedded image length and CRC produced by `elf2bin.py`. Filesystem and vendor
-binaries are refused.
-The filename never selects a flash region; uploads always use `U_FLASH`.
+Use the embedded **Firmware Update (OTA)** form (or **Install**, which downloads the
+latest release's `.update` from GitHub Pages in the browser), or POST a single multipart
+file to `/update_ota`. Accepted:
 
-The updater buffers and validates the image header before staging. It checks the declared
+- the update file `AIAgentMonitor_v<version>.update` (spec 048, `include/update_bundle.h`):
+  "AMUP", the files the firmware reads from storage (each with its size and CRC), then the
+  firmware's `.bin.gz`. The files go to `/sys.new/` as they arrive and move to `/sys/` only
+  after the image is committed; `/sys/manifest` then holds their hash, which the image
+  compares with its own (`FILES_HASH`) at boot. In recovery, or when storage did not
+  mount, the image installs and the files are skipped (the reply says so);
+- the compressed `AIAgentMonitor_v<version>.bin.gz` (gzip with an "AM" header field:
+  unpacked size, file size, CRC; the bootloader unpacks it);
+- raw project-compatible ESP8266 Arduino images that fit a plain update: 4 MB/DIO/40 MHz,
+  with the embedded image length and CRC produced by `elf2bin.py`.
+
+Filesystem and vendor binaries are refused. The filename never selects a flash region;
+uploads always use `U_FLASH`. The code is `src/update.cpp`, shared by the firmware and
+the starter.
+
+**The settings page is a file** (`/sys/index.html.gz`, since 2.5.0). When `/sys/manifest`
+matches the image, `/` serves it; otherwise (files missing after a `.bin.gz` alone or a
+storage format, files from another version, storage not mounted, recovery) `/` serves the
+setup page in flash (`web/fallback.html`): sign in, WiFi, install the latest release or a
+file. `/setup` serves it always. `/status` reports `files`: `ok`, `missing`, `stale` or
+`unmounted`.
+
+**The starter** (`src/starter.cpp`) has only the setup page and the update handler. It
+downloads the release itself: `api.github.com` for the latest release, then its
+`.update` (or `.bin.gz` for releases before 2.5.0) over HTTPS, checked against the two
+roots in `include/starter_roots.h` (`scripts/gen_starter_roots.py`) and the time from NTP.
+GitHub's hosts do not negotiate smaller TLS records, so TLS takes about 33 KB of heap; the
+download goes to storage first (`/download.update`) and installs once TLS is closed, as
+TLS and the updater do not fit in the heap together (measured in the emulator).
+
+The updater buffers and validates the image header before staging (28 bytes of a
+`.bin.gz`; 4,120 of a plain image, whose second header ends there). It checks the declared
 length against available sketch space, accounts for every received byte, and verifies the
 CRC of the entire image with the embedded length/CRC fields zeroed. It checks each updater
 operation and withholds the final byte until the complete HTTP request is validated.
