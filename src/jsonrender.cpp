@@ -1253,7 +1253,7 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
 const char* thPath; String* thOut; String* thWarn; String* thSeed; String thErr;
 }  // namespace
 // Called by name from the stack switch's assembly: C linkage, not in the anonymous namespace.
-extern "C" __attribute__((used)) void jrCompileThunked() { thErr = jrCompileHere(thPath, *thOut, *thWarn, *thSeed); }
+extern "C" __attribute__((used, externally_visible)) void jrCompileThunked() { thErr = jrCompileHere(thPath, *thOut, *thWarn, *thSeed); }
 
 // Layout recurses as deep as the spec nests (at most JR_DEPTH_MAX): it runs on a stack of
 // its own taken from the heap while compiling, not on the 4 KB one. Measured in the
@@ -1268,11 +1268,13 @@ uint32_t jrStackUsed() { return jrStackDeepest; }
 #if SMARTCLOCK_EMULATOR
 extern "C" bool emuStackThunk(void (*f)(), size_t size);
 #else
+// Used only from the assembly below: kept, and kept global, under LTO (which dropped them).
+#define JR_ASM_USED __attribute__((used, externally_visible))
 extern "C" {
-uint32_t* jr_stack_ptr = nullptr;   // the stack's lowest word (the canary)
-uint32_t* jr_stack_top = nullptr;   // where it starts (it grows down)
-uint32_t* jr_stack_save = nullptr;  // the caller's stack pointer while it runs
-void jr_stack_smashed() { panic(); }   // overflowed: the heap below it is damaged
+JR_ASM_USED uint32_t* jr_stack_ptr = nullptr;   // the stack's lowest word (the canary)
+JR_ASM_USED uint32_t* jr_stack_top = nullptr;   // where it starts (it grows down)
+JR_ASM_USED uint32_t* jr_stack_save = nullptr;  // the caller's stack pointer while it runs
+JR_ASM_USED void jr_stack_smashed() { panic(); }   // overflowed: the heap below it is damaged
 }
 __asm__ (
   ".text\n.literal_position\n.literal .LC_JR_STACK_VALUE, 0xdeadbeef\n.text\n"
