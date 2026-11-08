@@ -5,6 +5,7 @@ No device connection or flash operations are performed.
 """
 from pathlib import Path
 import os
+import re
 import shutil
 import subprocess
 
@@ -12,10 +13,15 @@ root = Path(__file__).resolve().parents[1]
 out = root / ".pio" / "safety-tests"
 out.mkdir(parents=True, exist_ok=True)
 source = (root / "src/main.cpp").read_text(encoding="utf-8")
-handler = source[source.index("FirmwareValidation* firmware = nullptr;"):source.index("// Crash log and crash-loop protection")]
+# The update handler (spec 048: src/update.cpp, shared with the starter), from its first
+# namespace on (the includes and externs are the harness's mocks).
+update_src = (root / "src/update.cpp").read_text(encoding="utf-8")
+handler = update_src[update_src.index("namespace {"):]
+files_hash = re.search(r"FILES_HASH (0x[0-9a-f]+u)", (root / ".pio/build/esp12e/generated/files_hash.h").read_text())
 cycles = source[source.index("constexpr int CYCLE_ADDR"):source.index("// Every deliberate reboot")]
 harness = (root / "tests/ota_harness.cpp").read_text(encoding="utf-8")
 harness = harness.replace("// OTA_IMPLEMENTATION", handler).replace("// CYCLE_IMPLEMENTATION", cycles)
+harness = re.sub(r"#define FILES_HASH 0x[0-9a-f]+u", "#define FILES_HASH " + files_hash.group(1), harness)
 (out / "ota.cpp").write_text(harness, encoding="utf-8")
 vs = Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Microsoft Visual Studio/2022"
 scripts = list(vs.glob("*/VC/Auxiliary/Build/vcvars64.bat"))
@@ -48,7 +54,7 @@ if result.returncode:
     print((out / "compiler.log").read_text(encoding="utf-8", errors="replace")[-6000:])
     raise SystemExit(result.returncode)
 subprocess.run([str(out / "ota.exe"), str(root / ".pio/build/esp12e/firmware.bin"),
-                str(root / ".pio/build/esp12e/firmware.bin.gz")], check=True)
+                str(root / ".pio/build/esp12e/firmware.bin.gz"), str(root / ".pio/build/esp12e/firmware.update")], check=True)
 
 # The update as the bootloader unpacks it (spec 036): uzlib from the core, driven as eboot
 # does, must give back firmware.bin byte for byte from the zopfli-compressed .bin.gz.
@@ -126,7 +132,12 @@ for name in ("handleApiSet", "handleConnect", "handleFormatStorage", "handleWeat
              "handlePasswordChange", "handleSettingsExport", "handleSettingsImport", "handleSettingsReset",
              "handleWifiForget", "handleScanWifi"):
     assert "requireAuth()" in function(source, "void " + name + "()"), f"{name} does not require sign-in"
-assert "if (!requestAuthorized()) { failOta(" in handler, "OTA upload must require sign-in"
+assert "if (!requestAuthorized()) {" in function(update_src, "void handleOtaUpload()"), "OTA upload must require sign-in"
+# /sys is written by the update only (spec 048): no other source names it.
+for f in list((root / "src").glob("*.cpp")):
+    if f.name not in ("update.cpp", "main.cpp"):
+        assert '"/sys' not in f.read_text(encoding="utf-8"), f"{f.name} must not touch /sys (update.cpp owns it)"
+assert source.count('"/sys/') == 1 and 'LittleFS.open(F("/sys/index.html.gz"), "r")' in source, "main.cpp only reads the page"
 # Photos: signed in, or the stock-compatible /photo/* API while "Home Assistant dashboards" is on.
 access = function(source, "bool photoAccess()")
 assert "requestAuthorized()" in access and "cfg.haCompat" in access and '"/photo/"' in access

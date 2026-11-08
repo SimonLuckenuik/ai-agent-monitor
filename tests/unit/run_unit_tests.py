@@ -59,5 +59,15 @@ subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "guard_test
 openclaw = build / "openclaw_tests.exe"
 subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "openclaw_tests.cpp"), str(root / "src" / "ed25519.cpp"),
                 str(root / "src" / "openclaw_proto.cpp"), "-o", str(openclaw)], check=True, env=env)
+# The update file (spec 048): written by scripts/make_update.py, read by update_bundle.h.
+sys.path.insert(0, str(root / "scripts"))
+import make_update   # noqa: E402
+fixture_files = [("index.html.gz", bytes((i * 7) & 0xFF for i in range(3000))), ("empty.txt", b""), ("notes.md", b"hello")]
+fixture = build / "fixture.update"
+fixture.write_bytes(make_update.make_update(fixture_files, bytes((i * 13) & 0xFF for i in range(5000))))
+update = build / "update_tests.exe"
+subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", f"-I{root / 'include'}", str(here / "update_tests.cpp"), "-o", str(update)],
+               check=True, env=env)
 sys.exit(faces or subprocess.run([str(mdns)]).returncode or subprocess.run([str(guard)]).returncode
-         or subprocess.run([str(openclaw)]).returncode)
+         or subprocess.run([str(openclaw)]).returncode
+         or subprocess.run([str(update), str(fixture), "%08x" % make_update.files_hash(fixture_files)]).returncode)

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>AI Agent Monitor setup</title>
+<!-- The setup page (spec 048): in the firmware's flash, for when the settings page (a
+     file that comes with the update) is not there, in recovery, and in the starter.
+     Steps: sign in, WiFi, install the latest release, or a file by hand. -->
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--text:#16181d;--muted:#667085;--line:#e3e5ea;--accent:#2563eb;--ok:#16a34a;--bad:#dc2626}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1013;--card:#171a1f;--text:#e9ebef;--muted:#98a1b0;--line:#2a2f37;--accent:#5b8cff;--ok:#22c55e;--bad:#f87171}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:520px;margin:auto;padding:16px}
+h1{font-size:19px;margin:8px 0 2px}h2{font-size:15px;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.sub,.note{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.card.off{opacity:.55}.card.off :is(input,button,select){pointer-events:none}
+.n{width:22px;height:22px;border-radius:50%;background:var(--line);display:inline-grid;place-items:center;font-size:12px;flex:none}
+.done .n{background:var(--ok);color:#fff}.done .n::after{content:"\2713"}.done .n b{display:none}
+input,select,button{font:inherit;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);width:100%;margin:4px 0}
+button{background:var(--accent);color:#fff;border:0;cursor:pointer;font-weight:600}button:disabled{opacity:.5}
+button.plain{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.msg{font-size:13px;min-height:1em;margin-top:4px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.banner{padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:14px}
+pre{white-space:pre-wrap;font:12px/1.4 ui-monospace,monospace;max-height:160px;overflow:auto;background:var(--bg);padding:8px;border-radius:8px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<h1>AI Agent Monitor</h1>
+<div class="sub" id="ver">Setup</div>
+<p class="banner" id="why" hidden></p>
+
+<section class="card" id="s1"><h2><span class="n"><b>1</b></span>Sign in</h2>
+  <div id="s1in"><p class="note">The password is on the clock's screen (it is also the setup network's password).</p>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="Clock password">
+  <button onclick="signIn()">Sign in</button><button class="plain" onclick="reveal()">Show the password on the clock</button></div>
+  <div class="msg" id="m1"></div></section>
+
+<section class="card" id="s2"><h2><span class="n"><b>2</b></span>WiFi</h2>
+  <div id="s2in"><select id="ssids"><option value="">Searching for networks…</option></select>
+  <input id="ssid" placeholder="Network name" autocomplete="off">
+  <input id="wpw" type="password" placeholder="Network password" autocomplete="off">
+  <button onclick="connect()">Connect</button></div>
+  <div class="msg" id="m2"></div></section>
+
+<section class="card" id="s3"><h2><span class="n"><b>3</b></span>Install the latest release</h2>
+  <div class="msg" id="m3"></div>
+  <pre id="notes" hidden></pre>
+  <div class="bar" id="b3" hidden><i></i></div>
+  <button id="go" onclick="install()" hidden>Install</button></section>
+
+<section class="card" id="s4"><h2>Or install a file</h2>
+  <p class="note">An <b>.update</b> or <b>.bin.gz</b> file from the <a href="https://github.com/SimonLuckenuik/ai-agent-monitor/releases" target="_blank" rel="noopener">releases page</a>, when the browser has no internet or for another version.</p>
+  <input type="file" id="file" accept=".update,.gz,.bin">
+  <button onclick="send($('file').files[0],$('m4'),$('b4'))">Install the file</button>
+  <div class="bar" id="b4" hidden><i></i></div><div class="msg" id="m4"></div></section>
+
+<p class="note"><button class="plain" onclick="post('/restart').then(()=>wait('Restarting'))">Restart</button>
+<button class="plain" id="fmt" hidden onclick="if(confirm('Erase the whole storage area? Photos and settings are lost.'))post('/format_storage?confirm=erase').then(()=>wait('Formatting'))">Format storage</button></p>
+</main>
+<script>
+const REPO='SimonLuckenuik/ai-agent-monitor',PAGES='https://simonluckenuik.github.io/ai-agent-monitor/update/';
+const $=i=>document.getElementById(i);let st={},rel=null,busy=0;
+const say=(m,t,c)=>{m.className='msg '+(c||'');m.textContent=t};
+const post=(u,b)=>fetch(u,{method:'POST',body:b?new URLSearchParams(b):undefined}).then(async r=>{const t=await r.text();if(!r.ok)throw Error(t||r.status);return t});
+const step=(id,on,done)=>{$(id).classList.toggle('off',!on);$(id).classList.toggle('done',!!done)};
+const vnum=v=>(v||'').replace(/^v/,'').split('-')[0].split('.').map(n=>+n||0);
+const newer=(a,b)=>{const x=vnum(a),y=vnum(b);for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]>y[i];return false};
+async function status(){try{st=await(await fetch('/status',{cache:'no-store'})).json()}catch(e){return}render()}
+function render(){
+  $('ver').textContent=(st.starter?'Starter ':'Firmware ')+(st.version||'')+(st.connected?' · '+st.ip:'');
+  const why={missing:'The settings page is not on the clock yet: install the latest release (or the .update file) to get it.',
+    stale:'The settings page on the clock is from another version: install the latest release to match.',
+    unmounted:st.storageMountFailed?'Storage could not be mounted. Updating still works; formatting erases it.':''}[st.files]||'';
+  $('why').hidden=!(st.recovery||why);$('why').textContent=st.recovery?'Recovery: the clock started in recovery. Updates and restart work here.':why;
+  $('fmt').hidden=!st.storageMountFailed;
+  const signed=!!st.signedIn,linked=!!st.connected,onAp=location.hostname===st.apIp;
+  step('s1',1,signed);$('s1in').hidden=signed;if(signed)say($('m1'),'Signed in','ok');
+  step('s2',signed,linked);$('s2in').hidden=!signed||linked&&!$('s2').dataset.edit;
+  if(linked)say($('m2'),'Connected to '+st.ssid+' as '+st.ip+(onAp&&!st.download?'. Now switch this phone or computer back to '+st.ssid+' and open http://'+st.ip:''),'ok');
+  else if(st.wifiError)say($('m2'),'Could not join '+st.ssid+': '+st.wifiError,'bad');
+  if(signed&&!linked&&$('ssids').options.length<2&&!scan.done)scan();
+  step('s3',signed&&linked,0);step('s4',signed,0);
+  if(signed&&linked&&!busy)latest(onAp)}
+async function signIn(){try{await post('/api/auth/login',{password:$('pw').value});status()}catch(e){say($('m1'),e.message,'bad')}}
+async function reveal(){try{await post('/api/auth/reveal');say($('m1'),'On the clock for a minute')}catch(e){say($('m1'),e.message,'bad')}}
+async function scan(){scan.done=1;try{const l=await(await fetch('/scanwifi?detail=1')).json(),s=$('ssids');
+  s.innerHTML='<option value="">Choose a network…</option>'+l.sort((a,b)=>b.rssi-a.rssi).filter((n,i,a)=>n.ssid&&a.findIndex(m=>m.ssid===n.ssid)===i)
+    .map(n=>'<option>'+n.ssid.replace(/[<&]/g,'')+'</option>').join('');s.onchange=()=>$('ssid').value=s.value}catch(e){}}
+async function connect(){const m=$('m2');say(m,'Connecting…');
+  try{await post('/connect',{ssid:$('ssid').value,password:$('wpw').value})}catch(e){if(!/Saved|OK/.test(e.message)){say(m,e.message,'bad');return}}
+  say(m,'Connecting… the clock may restart; this page follows it.');delete $('s2').dataset.edit;
+  for(let i=0;i<45;i++){await new Promise(r=>setTimeout(r,2000));await status();if(st.connected||st.wifiError)return}}
+// The latest release: the clock asks GitHub itself when it can (the starter), else the browser.
+async function latest(onAp){const m=$('m3');if(rel)return;
+  if(st.download){try{rel=await(await fetch('/api/update/latest',{cache:'no-store'})).json()}catch(e){say(m,'The clock could not reach GitHub: '+e.message,'bad');return}
+    if(rel.error){say(m,'The clock could not reach GitHub: '+rel.error,'bad');rel=null;return}}
+  else{if(onAp){say(m,'Open http://'+st.ip+' from the home network to install from GitHub, or install a file below.');return}
+    try{const j=await(await fetch('https://api.github.com/repos/'+REPO+'/releases/latest')).json();rel={tag:j.tag_name,notes:j.body||''}}
+    catch(e){say(m,'GitHub cannot be reached from this browser: install a file below.','bad');return}}
+  const v=rel.tag.replace(/^v/,''),upToDate=!newer(v,st.version)&&st.files==='ok'&&!st.starter;
+  say(m,upToDate?'Up to date ('+v+')':'Latest release: '+v+(st.version?' (this clock: '+(st.starter?'starter ':'')+st.version+')':''),upToDate?'ok':'');
+  $('notes').hidden=!rel.notes;$('notes').textContent=(rel.notes||'').slice(0,3000);$('go').hidden=upToDate;$('go').textContent='Install '+v}
+async function install(){const m=$('m3'),b=$('b3');busy=1;$('go').disabled=true;
+  if(st.download){try{await post('/api/update/github',{tag:rel.tag})}catch(e){say(m,e.message,'bad');busy=0;$('go').disabled=false;return}
+    b.hidden=false;for(;;){await new Promise(r=>setTimeout(r,1000));let u;try{u=(await(await fetch('/status',{cache:'no-store'})).json()).update||{}}catch(e){break}
+      if(u.error){say(m,u.error,'bad');busy=0;$('go').disabled=false;return}
+      if(u.total)b.firstChild.style.width=Math.round(u.got/u.total*100)+'%';say(m,'Downloading… '+(u.total?Math.round(u.got/u.total*100)+'%':''));if(u.done)break}
+    return wait('Installing '+rel.tag)}
+  say(m,'Downloading…');b.hidden=false;
+  try{const v=rel.tag.replace(/^v/,''),r=await fetch(PAGES+'AIAgentMonitor_v'+v+'.update');if(!r.ok)throw Error('the update file is not on GitHub Pages yet ('+r.status+')');
+    const total=+r.headers.get('content-length')||0,rd=r.body.getReader(),parts=[];let got=0;
+    for(;;){const{done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;if(total)b.firstChild.style.width=Math.round(got/total*50)+'%'}
+    await send(new Blob(parts),m,b,50)}catch(e){say(m,'Download failed: '+e.message,'bad');busy=0;$('go').disabled=false}}
+function send(f,m,b,from=0){if(!f)return;busy=1;b.hidden=false;say(m,'Sending to the clock…');
+  return new Promise(done=>{const fd=new FormData();fd.append('update',f,f.name||'update.update');const x=new XMLHttpRequest();x.open('POST','/update_ota');
+    x.upload.onprogress=e=>{if(e.lengthComputable)b.firstChild.style.width=(from+Math.round(e.loaded/e.total*(100-from)))+'%'};
+    x.onload=()=>{if(x.status===200&&/^OK/.test(x.responseText)){say(m,x.responseText.replace(/^OK:? ?/,'')||'Installed','ok');wait('Installing')}else{say(m,x.responseText||'Rejected','bad');busy=0;$('go').disabled=false}done()};
+    x.onerror=()=>{say(m,'Upload failed','bad');busy=0;done()};x.send(fd)})}
+// The clock restarts: wait for it, then load whatever page it now serves.
+async function wait(what){document.body.style.cursor='progress';const was=st.build;$('ver').textContent=what+'… keep the clock powered';
+  await new Promise(r=>setTimeout(r,8000));
+  for(let i=0;i<90;i++){try{const s=await(await fetch('/status',{cache:'no-store'})).json();if(s.build!==was||i>20){location.replace('/');return}}catch(e){}await new Promise(r=>setTimeout(r,2000))}
+  $('ver').textContent='The clock has not come back here: it may be on the home network now (see its screen).'}
+status();setInterval(()=>{if(!busy)status()},5000);
+</script>
+</body>
+</html>

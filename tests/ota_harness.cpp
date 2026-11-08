@@ -2,15 +2,23 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <cstdio>
+#include <cstring>
 #include <iterator>
+#include <map>
 #include <new>
 #include <string>
 #include <vector>
 #include "firmware_validation.h"
+#include "update_bundle.h"
 struct String : std::string {
   using std::string::string;
+  String(const std::string& s) : std::string(s) {}
   size_t length() const { return size(); }
 };
+String operator+(const String& a, const char* b) { return String(std::string(a) + b); }
+String operator+(const String& a, char b) { return String(std::string(a) + b); }
+String operator+(const String& a, const String& b) { return String(std::string(a) + std::string(b)); }
 enum { U_FLASH, HTTP_POST, UPLOAD_FILE_START, UPLOAD_FILE_WRITE,
        UPLOAD_FILE_END, UPLOAD_FILE_ABORTED };
 struct HTTPUpload { int status; uint8_t* buf; size_t currentSize; String filename; };
@@ -49,7 +57,54 @@ struct MockUpdate {
   }
   bool isRunning() { return running; }
 } Update;
+// Storage: files by path, directories implied by them.
+struct FSInfo { size_t totalBytes = 0, usedBytes = 0; };
+struct MockFS {
+  std::map<std::string, std::string> files;
+  size_t total = 1 << 20;
+  bool failRename = false;
+  size_t used() const { size_t n = 0; for (auto& f : files) n += f.second.size(); return n; }
+} fs;
+struct File {
+  std::string path; size_t pos = 0; bool open = false, writing = false;
+  explicit operator bool() const { return open; }
+  size_t write(const uint8_t* p, size_t n) { if (!open || !writing) return 0; fs.files[path].append((const char*)p, n); return n; }
+  size_t print(const char* s) { return write((const uint8_t*)s, strlen(s)); }
+  size_t readBytes(char* out, size_t n) { auto& d = fs.files[path]; size_t k = std::min(n, d.size() - pos); memcpy(out, d.data() + pos, k); pos += k; return k; }
+  void close() { open = false; }
+};
+struct Dir {
+  std::vector<std::string> names; size_t at = 0; std::string current;
+  bool next() { if (at >= names.size()) return false; current = names[at++]; return true; }
+  String fileName() { return current; }
+};
+struct MockLittleFS {
+  File open(const String& path, const char* mode) {
+    File f; f.path = path;
+    if (*mode == 'w') { fs.files[path] = ""; f.open = f.writing = true; }
+    else f.open = fs.files.count(path) > 0;
+    return f;
+  }
+  bool remove(const String& path) { return fs.files.erase(path) > 0; }
+  bool mkdir(const char*) { return true; }
+  bool rmdir(const char*) { return true; }
+  bool rename(const String& from, const String& to) {
+    if (fs.failRename || !fs.files.count(from)) return false;
+    fs.files[to] = fs.files[from]; fs.files.erase(from); return true;
+  }
+  bool info(FSInfo& i) { i.totalBytes = fs.total; i.usedBytes = fs.used(); return true; }
+  Dir openDir(const char* dir) {
+    Dir d; std::string prefix = std::string(dir) + "/";
+    for (auto& f : fs.files) if (f.first.rfind(prefix, 0) == 0 && f.first.find('/', prefix.size()) == std::string::npos) d.names.push_back(f.first.substr(prefix.size()));
+    return d;
+  }
+} LittleFS;
+bool storageReady = true, recoveryMode = false;
+#define FILES_HASH 0x6109c34du   // replaced by the runner with the build's own
 #define F(s) s       // flash strings are plain ones on the host
+#define FPSTR(s) s
+#define snprintf_P snprintf
+using __FlashStringHelper = char;
 #define PSTR(s) s
 #define FS_PHYS_ADDR 0x100000u   // 4m3m: the filesystem starts at 1 MB
 void delay(unsigned) {}
@@ -72,14 +127,18 @@ struct MockEEPROM {
 // The runner inserts the power-cycle counter from src/main.cpp here.
 // CYCLE_IMPLEMENTATION
 
-// The runner inserts the actual OTA implementation from src/main.cpp here.
+// src/update.h, without Arduino.h.
+void updateBegin(); bool updateFeed(const uint8_t*, size_t); bool updateFinish(); void updateFail(const String&);
+const String& updateError(); const String& updateNote(); bool updateBusy(); uint32_t updateReceived();
+void handleOtaUpload(); void finishOta(); const __FlashStringHelper* filesState(); bool filesOk(); void filesCheck();
+// The runner inserts the actual update implementation from src/update.cpp here.
 // OTA_IMPLEMENTATION
 
 void reset() {
   assert(!Update.running);
   server = MockServer{}; ESP = MockESP{}; Update = MockUpdate{};
-  otaStarted = otaReady = otaFailed = false; otaFiles = 0; otaError = "";
-  assert(!firmware);   // freed after every upload, accepted or not
+  assert(!firmware && !bundle);   // freed after every upload, accepted or not
+  assert(!updateBusy());
 }
 void event(int status, uint8_t* data = nullptr, size_t size = 0) {
   server.up.status = status; server.up.buf = data; server.up.currentSize = size;
@@ -109,7 +168,7 @@ void put32(std::vector<uint8_t>& v, size_t at, uint32_t x) { for (int i = 0; i <
 void compressedCases(std::vector<uint8_t>& gz) {
   assert(gz.size() > FirmwareValidation::prefixSize && gz[0] == 0x1f);
   for (size_t chunk : {size_t(1), size_t(2048), gz.size()}) {
-    reset(); upload(gz, chunk); assert(otaReady && Update.staged.size() == gz.size() - 1);
+    reset(); upload(gz, chunk); assert(updateBusy() && Update.staged.size() == gz.size() - 1);
     finishOta(); assert(server.code == 200 && Update.committed && Update.staged == gz);
   }
   for (size_t length : {size_t(27), size_t(4120), gz.size() - 1}) {
@@ -134,13 +193,67 @@ void compressedCases(std::vector<uint8_t>& gz) {
                "(unpacked size, length, CRC, tag, flags), no room, would overlap\n";
 }
 
+// Update files (spec 048): firmware.update from scripts/build_options.py, the files then
+// the .bin.gz. The image is committed first; the files reach /sys only after it.
+void updateFileCases(std::vector<uint8_t>& up, std::vector<uint8_t>& gz) {
+  assert(up.size() > gz.size() && std::equal(gz.begin(), gz.end(), up.end() - gz.size()));
+  std::string page;   // index.html.gz: the first file (scripts/sys_files.py)
+  { BundleReader b; size_t at = 0; BundleReader::Event ev;
+    while (at < up.size()) { at += b.next(up.data() + at, up.size() - at, ev);
+      if (ev == BundleReader::FILE_DATA && !strcmp(b.name, "index.html.gz")) page.append((const char*)b.data, b.len);
+      if (ev == BundleReader::IMAGE) break; } }
+  char want[9]; snprintf(want, sizeof want, "%08x", (unsigned)FILES_HASH);
+  for (size_t chunk : {size_t(1), size_t(1460), size_t(2048), up.size()}) {
+    reset(); fs = MockFS{}; fs.files["/sys/index.html.gz"] = "old page"; fs.files["/sys/old.css"] = "x";
+    fs.files["/sys/manifest"] = "00000000"; fs.files["/photo/a.jpg"] = "photo";
+    filesCheck(); assert(!strcmp(filesState(), "stale"));
+    upload(up, chunk);
+    assert(fs.files["/sys/index.html.gz"] == "old page");   // nothing replaced before the commit
+    finishOta();
+    assert(server.code == 200 && server.message == "OK" && Update.committed && Update.staged == gz && ESP.restarts == 1);
+    assert(fs.files["/sys/index.html.gz"] == page && fs.files["/sys/manifest"] == want);
+    assert(!fs.files.count("/sys/old.css") && fs.files["/photo/a.jpg"] == "photo");   // only /sys is touched
+    for (auto& f : fs.files) assert(f.first.rfind("/sys.new/", 0) != 0);
+    filesCheck(); assert(!strcmp(filesState(), "ok") && filesOk());
+  }
+  // A damaged image: nothing committed, /sys as it was, the staging removed.
+  reset(); fs = MockFS{}; fs.files["/sys/index.html.gz"] = "old page"; fs.files["/sys/manifest"] = "00000000";
+  auto bad = up; bad[bad.size() - 3000] ^= 1; upload(bad); rejected();
+  assert(fs.files["/sys/index.html.gz"] == "old page" && fs.files["/sys/manifest"] == "00000000" && fs.files.size() == 2);
+  // A damaged file: refused before the image is staged.
+  reset(); fs = MockFS{}; bad = up; bad[12 + 1 + 13 + 8 + 200] ^= 1; upload(bad); rejected();
+  assert(Update.staged.empty() && fs.files.empty() && server.message.find("CRC") != std::string::npos);
+  // Truncated inside the files.
+  reset(); fs = MockFS{}; bad = up; bad.resize(5000); upload(bad); rejected(); assert(fs.files.empty());
+  // Storage full: refused, with the reason.
+  reset(); fs = MockFS{}; fs.total = 20000; upload(up); rejected();
+  assert(server.message.find("Storage is full") == 0 && Update.staged.empty());
+  // Recovery (and storage not mounted): the image installs, the files wait for the next update.
+  for (int c = 0; c < 2; ++c) {
+    reset(); fs = MockFS{}; (c ? storageReady : recoveryMode) = c ? false : true;
+    upload(up); finishOta();
+    assert(server.code == 200 && server.message.find("not its files") != std::string::npos && Update.committed && fs.files.empty());
+    recoveryMode = false; storageReady = true;
+  }
+  // A rename that fails: the image is in, the reply says to install the update again.
+  reset(); fs = MockFS{}; fs.failRename = true; upload(up); finishOta();
+  assert(server.code == 200 && server.message.find("only in part") != std::string::npos && !fs.files.count("/sys/manifest"));
+  filesCheck(); assert(!strcmp(filesState(), "missing"));
+  storageReady = false; filesCheck(); assert(!strcmp(filesState(), "unmounted")); storageReady = true;
+  // An update file inside an update file, or an image other than ours after the files.
+  reset(); fs = MockFS{}; bad = up; bad.resize(up.size() - gz.size()); bad.insert(bad.end(), up.begin(), up.end());
+  upload(bad); rejected(); assert(!Update.committed && !fs.files.count("/sys/manifest"));
+  std::cout << "PASS: update files: chunked, files only after the commit, old files removed, photos kept, damaged image or file, "
+               "truncated, storage full, recovery and unmounted (image only), failed rename, manifest states\n";
+}
+
 int main(int argc, char** argv) {
-  assert(argc == 3);
-  std::vector<uint8_t> image = load(argv[1]), gz = load(argv[2]);
+  assert(argc == 4);
+  std::vector<uint8_t> image = load(argv[1]), gz = load(argv[2]), up = load(argv[3]);
   assert(image.size() > FirmwareValidation::prefixSize);
   for (size_t chunk : {size_t(1), size_t(511), size_t(2048), size_t(4096), image.size()}) {
     reset(); server.up.filename = "clock-lfs.bin"; upload(image, chunk);
-    assert(otaReady && !Update.committed && ESP.restarts == 0);
+    assert(updateBusy() && !Update.committed && ESP.restarts == 0);
     assert(Update.staged.size() == image.size() - 1);
     finishOta();
     assert(server.code == 200 && Update.committed && ESP.restarts == 1 && Update.staged == image);
@@ -172,6 +285,7 @@ int main(int argc, char** argv) {
   reset(); Update.failWrite = true; upload(image); rejected();
   reset(); Update.failEnd = true; upload(image); rejected();
   compressedCases(gz);
+  updateFileCases(up, gz);
   // Power-cycle recovery: boots shorter than the window count up; the third triggers.
   EEPROM = MockEEPROM{}; EEPROM.flash[0x10] = 0x5a;   // a stock byte elsewhere in the sector
   assert(!countPowerCycle() && !countPowerCycle() && countPowerCycle());

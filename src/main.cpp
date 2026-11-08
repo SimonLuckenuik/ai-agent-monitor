@@ -18,7 +18,6 @@
 #include <EEPROM.h>
 #include <LittleFS.h>
 #include <TFT_eSPI.h>
-#include <Updater.h>
 #include <time.h>
 #include <coredecls.h>   // settimeofday_cb
 #include "time_guard.h"
@@ -27,8 +26,8 @@
 #include "pins.h"
 #include "config.h"
 #include "routes.h"
-#include "web_index.h"   // generated from web/index.html by scripts/build_options.py
-#include "firmware_validation.h"
+#include "web_fallback.h"   // the setup page in flash, generated from web/fallback.html (spec 048)
+#include "update.h"
 #include "weather.h"
 #include "faces.h"
 #include "integrations.h"
@@ -1014,97 +1013,22 @@ void handlePhotoDelete() {
   server.send(200, PSTR("text/plain"), PSTR("OK"));
 }
 
-// The page is stored gzipped in flash; every browser accepts gzip.
+// The settings page is a file that comes with the update (/sys/, spec 048), gzipped;
+// every browser accepts gzip. Without it (recovery, storage that did not mount, files
+// missing or from another version) the setup page in flash, which can install them.
 void sendIndex() {
-  server.sendHeader(F("Content-Encoding"), F("gzip"));
   server.sendHeader(F("Cache-Control"), F("no-cache"));
-  server.send_P(200, "text/html", reinterpret_cast<PGM_P>(INDEX_HTML_GZ), INDEX_HTML_GZ_LEN);
+  if (filesOk()) {
+    File f = LittleFS.open(F("/sys/index.html.gz"), "r");   // streamFile() says gzip (.gz)
+    if (f) { server.streamFile(f, F("text/html")); f.close(); return; }
+  }
+  server.sendHeader(F("Content-Encoding"), F("gzip"));
+  server.send_P(200, "text/html", reinterpret_cast<PGM_P>(FALLBACK_HTML_GZ), FALLBACK_HTML_GZ_LEN);
 }
 
 void handleVersion() { server.send(200, "text/plain", "SmartClock-OSS V" FW_VERSION); }
 
-// Firmware-only OTA, plain .bin or compressed .bin.gz (firmware_validation.h). Stage
-// bytes in free sketch space; never write U_FS. The check's 4.1 KB is allocated when an
-// upload starts and freed when it ends: only an update needs it (spec 025).
-FirmwareValidation* firmware = nullptr;
-bool otaStarted = false, otaReady = false, otaFailed = false;
-unsigned otaFiles = 0;
-String otaError;
-
-void releaseOta() { delete firmware; firmware = nullptr; }
-
-void failOta(const String& message) {
-  otaFailed = true;
-  otaReady = false;
-  otaError = message;
-  // A byte is always withheld, so end(false) cannot commit a rejected image.
-  if (Update.isRunning()) Update.end(false);
-  otaStarted = false;
-  releaseOta();
-}
-
-void handleOtaUpload() {
-  HTTPUpload& up = server.upload();
-  if (up.status == UPLOAD_FILE_START) {
-    if (!requestAuthorized()) { failOta(F("Sign in first")); return; }
-    if (++otaFiles != 1 || otaFailed) { failOta(F("Upload exactly one firmware image")); return; }
-    releaseOta();
-    firmware = new (std::nothrow) FirmwareValidation;
-    if (!firmware) { failOta(F("Not enough memory for an update: try again")); return; }
-    otaError = "";
-  } else if (up.status == UPLOAD_FILE_WRITE && !otaFailed) {
-    const uint8_t* data = up.buf;
-    size_t size = up.currentSize;
-    if (!otaStarted) {
-      size_t take = std::min(size, FirmwareValidation::prefixSize - firmware->received);
-      firmware->consume(data, take);
-      data += take; size -= take;
-      if (firmware->received < FirmwareValidation::prefixSize) return;
-      uint32_t freeSpace = ESP.getFreeSketchSpace();
-      size_t capacity = freeSpace > 0x1000 ? (freeSpace - 0x1000) & 0xfffff000 : 0;
-      if (const char* why = firmware->check(capacity, FS_PHYS_ADDR)) { failOta(why); return; }
-      if (!Update.begin(firmware->expectedSize, U_FLASH)) { failOta(F("Cannot stage firmware")); return; }
-      otaStarted = true;
-      if (Update.write(firmware->prefix, FirmwareValidation::prefixSize - 1) != FirmwareValidation::prefixSize - 1) {
-        failOta(F("Firmware staging failed")); return;
-      }
-    }
-    if (size) {
-      if (size > firmware->expectedSize - firmware->received) { failOta(F("Image exceeds declared length")); return; }
-      uint8_t previous = firmware->lastByte;
-      firmware->consume(data, size);
-      if (Update.write(&previous, 1) != 1 ||
-          (size > 1 && Update.write(const_cast<uint8_t*>(data), size - 1) != size - 1)) {
-        failOta(F("Firmware staging failed")); return;
-      }
-    }
-  } else if (up.status == UPLOAD_FILE_END && !otaFailed) {
-    if (!otaStarted || !firmware->complete()) { failOta(F("Incomplete image or CRC mismatch")); return; }
-    otaReady = true; // Commit only after the complete HTTP request has been parsed.
-  } else if (up.status == UPLOAD_FILE_ABORTED) {
-    failOta(F("Upload aborted"));
-    // The parser may not call the response handler for a disconnected client.
-    otaFiles = 0;
-    otaFailed = false;
-  }
-  yield();
-}
-
-void finishOta() {
-  bool success = otaFiles == 1 && otaReady && !otaFailed;
-  if (success) {
-    success = Update.write(&firmware->lastByte, 1) == 1 && Update.end(false);
-    if (!success) failOta(F("Firmware commit failed"));
-  }
-  server.sendHeader(F("Connection"), F("close"));
-  server.send(success ? 200 : 400, "text/plain",
-              success ? "OK" : (otaError.length() ? otaError : String("No complete firmware uploaded")));
-  if (success) safeRestart();
-  otaStarted = otaReady = otaFailed = false;
-  otaFiles = 0;
-  otaError = "";
-  releaseOta();
-}
+// Updates (/update_ota): src/update.cpp, shared with the starter (spec 048).
 
 void handleStatus();
 // Crash log and crash-loop protection (crash.cpp): a signed-in session or the API key.
@@ -1397,6 +1321,7 @@ void startOptionalServices() {
     return;
   }
   cfg.load();
+  filesCheck();   // the settings page's files: this version's? (spec 048)
   crashBoot(FW_VERSION);   // a crash record from RTC memory into the log; crash-loop level
   displayBegin();
   drawSetupScreen();
@@ -1437,6 +1362,7 @@ void handleStatus() {
   JsonDocument doc;
   doc[F("recovery")] = recoveryMode; doc[F("storageReady")] = storageReady;
   doc[F("storageMountFailed")] = storageMountFailed;
+  doc[F("files")] = filesState();   // ok, missing, stale, unmounted (spec 048)
   doc[F("version")] = FW_VERSION; doc[F("build")] = FW_BUILD; doc[F("uptime")] = millis() / 1000; doc[F("heap")] = ESP.getFreeHeap();
   doc[F("heapLow")] = heapLow;   // (getMaxFreeBlockSize() would add 1.6 KB of umm stats)
   doc[F("stackFree")] = ESP.getFreeContStack();   // the least free stack since boot (of 4 KB)
@@ -1591,7 +1517,7 @@ void loop() {
   uint32_t heap = ESP.getFreeHeap();
   if (heap < heapLow) heapLow = heap;
   // OTA must be the only activity while staging; no settings writes or network work.
-  if (otaFiles || otaStarted) { delay(1); return; }
+  if (updateBusy()) { delay(1); return; }
   if (!powerCyclesCleared && millis() - bootStarted >= CYCLE_WINDOW_MS) {
     clearPowerCycles();               // this boot outlived the power-cycle window
     powerCyclesCleared = true;
