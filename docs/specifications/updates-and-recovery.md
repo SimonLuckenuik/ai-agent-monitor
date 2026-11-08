@@ -7,8 +7,8 @@ Going back to stock still needs UART, so a full flash backup over UART beforehan
 only way to keep the vendor firmware; the vendor update binaries are not full-device
 backups. Since 2.5.0 (spec 048) the first install over stock is the starter,
 `SDPro_AIAgentMonitor_starter_v<version>.bin` (a plain image, built with every release:
-`pio run -e starter`), which joins WiFi and installs the latest release's `.update` file,
-downloaded from GitHub by itself. Every update after it is the `.update` file (the
+`pio run -e starter`), which joins WiFi; its page downloads the latest release's
+`.update` file from GitHub in the browser and sends it to the clock. Every update after it is the `.update` file (the
 firmware's `.bin.gz` and the settings page as a file); clocks on 1.4.0 to 2.4.x take the
 `.bin.gz` first. All come from `python scripts/make_release.py`; only the starter has
 the `SDP` prefix the stock page requires.
@@ -150,13 +150,19 @@ setup page in flash (`web/fallback.html`): sign in, WiFi, install the latest rel
 file. `/setup` serves it always. `/status` reports `files`: `ok`, `missing`, `stale` or
 `unmounted`.
 
-**The starter** (`src/starter.cpp`) has only the setup page and the update handler. It
-downloads the release itself: `api.github.com` for the latest release, then its
-`.update` (or `.bin.gz` for releases before 2.5.0) over HTTPS, checked against the two
-roots in `include/starter_roots.h` (`scripts/gen_starter_roots.py`) and the time from NTP.
-GitHub's hosts do not negotiate smaller TLS records, so TLS takes about 33 KB of heap; the
-download goes to storage first (`/download.update`) and installs once TLS is closed, as
-TLS and the updater do not fit in the heap together (measured in the emulator).
+**The starter** (`src/starter.cpp`) has only the setup page and the update handler; the
+browser downloads the release, as with the firmware. On its own network it keeps the
+captive portal (every name answers with the clock, so a phone opens the setup page)
+except GitHub's names (`api.github.com`, `simonluckenuik.github.io`): once the clock is on
+WiFi it looks them up on the home network and answers with their real addresses, and
+forwards the setup network's traffic (NAPT, 64 entries; lwIP with its features, which the
+firmware leaves out: `scripts/starter_options.py`). So the page works the same from the
+home network and from the clock's own. An earlier version downloaded over HTTPS on the
+clock (BearSSL): 76 KB of the image and about 33 KB of heap, given up for this.
+
+**Both builds' web servers queue at most 4 connections not yet served** (the core's
+default is 255): on the setup network every name leads to the clock, and a phone's burst
+of connections could take the heap.
 
 The updater buffers and validates the image header before staging (28 bytes of a
 `.bin.gz`; 4,120 of a plain image, whose second header ends there). It checks the declared

@@ -46,9 +46,9 @@ for a run on a clock.
    budget").
 9. **Starter image** (if the owner says go): move the update handler to
    `src/update.cpp`; `src/starter.cpp` (setup screen, WiFi, sign-in, the fallback page,
-   the update handler, and the download: HTTPS with BearSSL, two trust anchors, NTP
-   time, the latest release from the API, the redirect followed, streamed into the
-   update handler; heap measured in the emulator during a download); `env:starter`
+   the update handler; GitHub's names answered with their real addresses and NAT for
+   the setup network once on WiFi, so the setup page's browser download works there as
+   from the home network); `env:starter`
    with `build_src_filter` and its size guard; the
    emulator builds it too (`emulator/build.sh` with a flag), and integration cases run
    it on blank storage and install a `.update` from it. `make_release.py` and
@@ -56,7 +56,11 @@ for a run on a clock.
    first-install note points at it. Check: the owner flashes it over stock only if a
    stock clock is at hand (the owner's clocks run our firmware: they install it as a
    plain image from our update page, then Install).
-10. **Release.** MINOR. The release publishes the `.bin.gz`, the `.update` (and the
+10. **README summary, after the owner's tests** (the owner, 2026-11-08: "TODO after the
+   testing is completed: on the readme page, a TLDR explain upgrade from original
+   firmware to starter to full"): a short box at the top of the README: stock firmware,
+   then the starter, then Install.
+11. **Release.** MINOR. The release publishes the `.bin.gz`, the `.update` (and the
    starter); `release.yml` checks they exist. Before it: the owner installs the `.bin.gz` and then
    the bundle on a clock (ade9c0 gets new releases first), and checks the page, a
    restart, recovery (power cycles) and a factory format.

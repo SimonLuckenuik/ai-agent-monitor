@@ -102,18 +102,25 @@ and install the full firmware.
 
 - **On the screen:** "AI Agent Monitor setup", the setup network's name and password,
   and once on WiFi the address to open. Font 2/4 text, no faces.
-- **It downloads the release itself** (the owner: "once the clock is connected to the
-  new network, can't it fetch itself whatever is required?"). Over HTTPS (BearSSL,
-  about 60 KB of flash, to measure; GitHub's hosts do not negotiate smaller TLS
-  records, so about 30 KB of heap while downloading, which the starter has and the full
-  firmware does not). It checks GitHub's certificates against two built-in roots
-  (USERTrust ECC, ISRG Root X1) with the time from NTP, reads the latest release from
-  `api.github.com`, follows the download's redirect, and streams the `.update` into the
-  same update handler as an upload.
-- **Its page** (on the setup network): WiFi, then "2.5.0 is the latest: Install", with
-  progress on the page and the screen. The browser needs no internet and the phone
-  stays on the setup network until the full firmware is running; then it switches back
-  and opens the address on the screen. Uploading a file by hand stays.
+- **The browser downloads the release, as in the full firmware** (the owner,
+  2026-11-08: "the starter page should work the same way both when connected to the
+  device from own network (wifi where device connects) and from its own SSID
+  connection, having browser responsible for download and upload to device"). The page
+  is the setup page: it reads the latest release from `api.github.com`, downloads its
+  `.update` from GitHub Pages and sends it to the clock. The clock has no HTTPS.
+- **GitHub reachable from the clock's own network** (the owner: "keep actual behaviour
+  and have a special case just for the github dns we need and have it nat"): the captive
+  portal stays (every name answers with the clock, so the phone opens the setup page:
+  Windows' `www.msftconnecttest.com`, Android's `connectivitycheck.gstatic.com`, Apple's
+  `captive.apple.com` all land on it), except `api.github.com` and
+  `simonluckenuik.github.io`: once the clock is on WiFi, it looks them up on the home
+  network and answers with their real addresses (IPv4; no IPv6 answer), and forwards
+  the setup network's traffic (NAPT, 64 entries). In practice only GitHub's traffic goes
+  out: every other name still leads to the clock. Before the clock is on WiFi those
+  names have no answer, and the page asks for WiFi first anyway.
+- An earlier version (built 2026-11-07, given up 2026-11-08) downloaded on the clock over
+  HTTPS (BearSSL, two built-in roots, NTP); RESEARCH.md keeps what it measured: 76 KB of
+  image and about 33 KB of heap, which forced a download to storage before installing.
 - **What it installs:** the `.update` (files and image) or a `.bin.gz`, with the same
   update handler and checks as the full firmware (including our bootloader, which comes
   with any image and unpacks `.bin.gz`).
@@ -122,8 +129,8 @@ and install the full firmware.
   EEPROM, as today); stock's LittleFS volume as today's first install does (never
   formatted without the user's click).
 - **What it leaves out:** faces, weather, photos, messages, MQTT, OpenClaw, mDNS,
-  crash records. About 330-370 KB, plus about 60 KB for HTTPS (to measure), under stock's first-flash limit
-  (about 552 KB) and our plain-update limit (516,096 B).
+  crash records, HTTPS. 381,568 B (lwIP with its features, for NAT), under stock's
+  first-flash limit (about 552 KB) and our plain-update limit (516,096 B).
 
 **The paths it opens:**
 
@@ -200,15 +207,15 @@ download itself and needs only step 1 and an Install button (above).
 | **Phase 1 total (estimate)** | **about -18 KB** | **about -19 KB** | **about +37 KB** |
 | **Measured** (2.4.0 then this branch, `pio run`) | 602 KB to 587,584 B | 427 KB to 410,889 B | 4 KB to **36 KB** |
 
-The starter: 500,704 B (plain limit 516,096 B; stock's first flash allows about 552 KB).
+The starter: 381,568 B (plain limit 516,096 B; stock's first flash allows about 552 KB).
+It was 500,720 B when it downloaded over HTTPS itself.
 
-RAM, measured in the emulator with the chip's heap for the starter (44 KB: its static
-RAM is 31.5 KB, the firmware's 49.9 KB) and TLS's 6.2 KB stack counted: TLS to GitHub
-takes about 33 KB (GitHub's hosts do not negotiate smaller records), so the starter
-downloads to storage first and installs after closing the connection; the lowest free
-heap was 5.4 KB during the release lookup and 9.4 KB during the download. The image
-check now keeps 28 bytes of a `.bin.gz` (4,120 only for a plain image): 4 KB less during
-every compressed update, in the firmware too.
+RAM: the starter's NAT table takes about 1.8 KB (64 entries of 28 bytes), and what it
+forwards passes through its heap (about 44 KB free; no TLS on the clock now). The image
+check keeps 28 bytes of a `.bin.gz` (4,120 only for a plain image): 4 KB less during
+every compressed update, in the firmware too. Both builds' web servers queue at most 4
+connections not yet served (the core's default is 255): a phone on the setup network,
+whose every name leads to the clock, could take the heap with them.
 | Spec 047's catalog and prompt as files (when 047 lands) | -7.7 KB | -7.7 KB | +15 KB |
 
 RAM: the bundle reader keeps one file open and a CRC while an update runs (well under

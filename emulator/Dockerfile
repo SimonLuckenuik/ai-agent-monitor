@@ -17,9 +17,7 @@ RUN npm install --global --no-audit --no-fund terser@5.36.0 \
 ARG CORE_VERSION=3.1.2
 RUN git clone --quiet --depth 1 --branch ${CORE_VERSION} https://github.com/esp8266/Arduino /esp8266 \
     && cd /esp8266 && git submodule update --quiet --init --depth 1 \
-         libraries/LittleFS/lib/littlefs libraries/ESP8266SdFat tools/sdk/ssl/bearssl \
-    && make -C tools/sdk/ssl native32 >/dev/null
-# (BearSSL for the host, 32-bit like the binary: the starter's HTTPS download, spec 048.)
+         libraries/LittleFS/lib/littlefs libraries/ESP8266SdFat
 RUN mkdir /libs && cd /libs \
     && git clone --quiet --depth 1 --branch V2.5.43 https://github.com/Bodmer/TFT_eSPI \
     && git clone --quiet --depth 1 --branch v7.4.3 https://github.com/bblanchon/ArduinoJson \

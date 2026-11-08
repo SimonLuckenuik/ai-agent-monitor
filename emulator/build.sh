@@ -51,8 +51,8 @@ open(path, "w").write(s)
 PY
 # TLS (BearSSL) runs on a 6.2 KB stack the core takes from the heap while a secure
 # connection is open (the "stack thunk"); the host mock's calls do nothing, so the
-# emulator showed 6.2 KB more free heap during a download than the chip has (spec 048's
-# starter). Charge it to the clock's heap, from the first reference to the last.
+# emulator would show 6.2 KB more free heap than the chip has during TLS. Charge it to
+# the clock's heap, from the first reference to the last.
 git -C /esp8266 checkout -q -- tests/host/common/MockTools.cpp
 python3 - common/MockTools.cpp <<'PY'
 import sys
@@ -101,8 +101,7 @@ PY
 # header. The core's objects do not track flags, so a new F_CPU rebuilds everything.
 # 32-bit (the chip's sizes for pointers, String and JSON slots, so memory use matches
 # it; needs g++-multilib) unless EMU_BITS=64.
-# EMU_STARTER=1: the starter (src/starter.cpp, spec 048) instead of the firmware, with
-# BearSSL for its HTTPS download (the Dockerfile builds the library for the host). The
+# EMU_STARTER=1: the starter (src/starter.cpp, spec 048) instead of the firmware. The
 # project's objects are rebuilt when this changes: the same sources, other flags.
 if [ "${EMU_STARTER:-0}" = 1 ]; then
   firmware="$root/emulator/fw_starter.cpp $root/src/update.cpp $root/src/json_parse.cpp"

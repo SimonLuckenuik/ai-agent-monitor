@@ -80,3 +80,28 @@ Not in this release: phase 2 (icons and the Message face as files), spec 047's c
 Not verified yet: anything on a clock (the starter over stock, TLS's real heap, the
 page from storage, an update from 2.4.0); GitHub Pages (not turned on); the browser's
 Install against a real release with an `.update` (none published yet).
+
+## 2026-11-08: the starter downloads in the browser, not on the clock
+
+- The owner asked for a way without BearSSL, with the browser doing the download and the
+  upload, the same from the home network and from the clock's own network, keeping the
+  captive portal "with a special case just for the github dns we need and have it nat".
+  (In between I had started, without asking, to turn the captive portal off once the
+  clock is on WiFi; the owner had been describing the problem, not asking for that. Taken
+  back: the firmware's setup network behaves as before.)
+- Built: the starter's own name responder (GitHub's two names looked up on the home
+  network once on WiFi, every other name the clock, no IPv6 answers) and NAPT for the
+  setup network (64 entries), lwIP with features for the starter only
+  (`scripts/starter_options.py`: the core picks lwIP before `build_unflags` applies). The
+  starter's HTTPS code, `/api/update/*`, the root certificates and the emulator's BearSSL
+  are gone. The setup page has one path: the browser, on either network.
+- Both builds' web servers queue at most 4 waiting connections (the core's 255 let a
+  phone's burst of connections take the heap).
+- Measured: the starter 381,568 B (was 500,720 B); the firmware 587,424 B and 410,730 B.
+  In the emulator the responder answered api.github.com and simonluckenuik.github.io
+  with their real addresses (as the host's own lookup), www.msftconnecttest.com and
+  connectivitycheck.gstatic.com with the clock, and no IPv6 answer.
+- To do after the owner's tests: the README summary (PLAN step 10).
+
+Not verified: NAT (lwIP on the chip only), and phones' behaviour on the setup network
+with it (whether each sends the browser's traffic through the clock once it is online).

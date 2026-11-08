@@ -110,7 +110,7 @@ product as it is, and change with the code; specs describe a piece of work.
 |---|---|
 | `src/main.cpp` | Boot, recovery, WiFi/AP, web API, settings, rotation, night tile, backlight |
 | `src/update.cpp` | Updates: images and `.update` files (`/sys`), shared with the starter (spec 048) |
-| `src/starter.cpp` | The starter: setup page, WiFi, HTTPS download from GitHub (`[env:starter]` only) |
+| `src/starter.cpp` | The starter: setup page, WiFi, GitHub's names and NAT for the setup network (`[env:starter]` only) |
 | `src/faces.cpp` | Every face; the custom-face renderer (expressions, SVG paths, gradients, wrapping); the Message face; the Big tiles and their monoline font; weather icons |
 | `src/integrations.cpp` | Custom faces API, agent messages, geekmagic-hacs compatibility, MQTT |
 | `src/routes.h` | The web server's routes as tables in flash, answered by one handler (no heap per route) |
@@ -172,8 +172,10 @@ UART (a USB-serial adapter on the board's pads; the clock's USB port is power on
 is not a release file.
 Clocks that only take plain images (stock, SmartClock-OSS before 1.4.0) install the
 starter (`.pio/build/starter/firmware.bin`, released as
-`SDPro_AIAgentMonitor_starter_v<version>.bin`): it joins WiFi and downloads the latest
-release's `.update` from GitHub itself. Clocks on 1.4.0 to 2.4.x take the `.bin.gz`,
+`SDPro_AIAgentMonitor_starter_v<version>.bin`): it joins WiFi, and its page (the setup
+page, in the browser) downloads the latest release's `.update` from GitHub and sends it,
+from the home network or from the clock's own (the starter forwards GitHub's traffic:
+lwIP with features, `scripts/starter_options.py`). Clocks on 1.4.0 to 2.4.x take the `.bin.gz`,
 then install the `.update` from the setup page. File names: only an image the stock
 update page can install starts with `SDP` (that page refuses other names). The release
 workflow adds this note to every release, and copies the `.update` to GitHub Pages

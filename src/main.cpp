@@ -913,7 +913,7 @@ bool photoAccess() {
   return requestAuthorized() || (cfg.haCompat && server.uri().startsWith("/photo/"));
 }
 
-void dropPhotoUpload(const char* why) {
+void dropPhotoUpload(const __FlashStringHelper* why) {
   if (photoFile) { photoFile.close(); LittleFS.remove(photoPath); }
   if (photoError.isEmpty()) photoError = why;
 }
@@ -922,24 +922,24 @@ void handlePhotoUpload() {
   HTTPUpload& up = server.upload();
   if (up.status == UPLOAD_FILE_START) {
     photoError = "";
-    if (!photoAccess()) { photoError = "Sign in first"; return; }
-    if (!storageReady || recoveryMode) { photoError = "Storage unavailable"; return; }
+    if (!photoAccess()) { photoError = F("Sign in first"); return; }
+    if (!storageReady || recoveryMode) { photoError = F("Storage unavailable"); return; }
     String name = photoName(up.filename);
-    if (name.isEmpty()) { photoError = "Only .jpg photos can be uploaded"; return; }
+    if (name.isEmpty()) { photoError = F("Only .jpg photos can be uploaded"); return; }
     FSInfo fs; LittleFS.info(fs);
-    if (fs.totalBytes - fs.usedBytes < PHOTO_MAX + PHOTO_FREE_MARGIN) { photoError = "Storage is full"; return; }
+    if (fs.totalBytes - fs.usedBytes < PHOTO_MAX + PHOTO_FREE_MARGIN) { photoError = F("Storage is full"); return; }
     LittleFS.mkdir("/photo");
     photoPath = "/photo/" + name;
     photoFile = LittleFS.open(photoPath, "w");
-    if (!photoFile) photoError = "Could not create the file";
+    if (!photoFile) photoError = F("Could not create the file");
   } else if (up.status == UPLOAD_FILE_WRITE) {
     if (!photoFile || photoError.length()) return;
-    if (photoFile.size() + up.currentSize > PHOTO_MAX) dropPhotoUpload("Photo is larger than 200 KB");
-    else if (photoFile.write(up.buf, up.currentSize) != up.currentSize) dropPhotoUpload("Write failed");
+    if (photoFile.size() + up.currentSize > PHOTO_MAX) dropPhotoUpload(F("Photo is larger than 200 KB"));
+    else if (photoFile.write(up.buf, up.currentSize) != up.currentSize) dropPhotoUpload(F("Write failed"));
   } else if (up.status == UPLOAD_FILE_END) {
     if (photoFile) photoFile.close();
   } else if (up.status == UPLOAD_FILE_ABORTED) {
-    dropPhotoUpload("Upload aborted");
+    dropPhotoUpload(F("Upload aborted"));
   }
 }
 
@@ -1185,6 +1185,10 @@ uint32_t emuMinuteMs();
 // station connects (wifi_set_opmode_current to station only).
 bool apUp = false;
 uint32_t apRetryAt = 0;   // a failed switch waits a minute before trying again
+// The web server's queue of connections not yet served: a few. With the core's default
+// (255), a phone on the setup network, whose every name leads here (the captive portal),
+// could open enough of them to take the heap (spec 048).
+constexpr uint8_t WEB_BACKLOG = 4;
 void apOn() {
   WiFi.enableAP(true);
   WiFi.softAPConfig(IPAddress(192,168,4,1), IPAddress(192,168,4,1), IPAddress(255,255,255,0));
@@ -1501,7 +1505,7 @@ void setup() {
   loadPassword();   // before startAP(): it is the setup network's WPA2 key
   startAP();
   setupRoutes();
-  server.begin();
+  server.getServer().begin(80, WEB_BACKLOG);
   if (recoveryMode) staConfigure(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASS);
   bootStarted = millis();
 }

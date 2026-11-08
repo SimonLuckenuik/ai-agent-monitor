@@ -79,6 +79,26 @@ draws almost nothing and keeps no faces or weather, so it has the heap, and Bear
 (about 60 KB of flash, to measure) still leaves it under 516,096 B. So the starter
 downloads by itself; the full firmware's fallback page has the browser do it.
 
+**Built and measured, then given up (2026-11-07 to 08).** In the emulator with the chip's
+heap (44 KB for the starter) and TLS's stack counted: HTTPS code 76 KB of the 500 KB
+image; TLS about 33 KB of heap; it did not fit beside the image check (4 KB) and the
+updater's buffer (4 KB), and GitHub's redirect means two handshakes. It worked once the
+download went to storage first and the release notes were left out (lowest free heap
+5.4 KB looking up, 9.4 KB downloading). The owner chose the browser instead.
+
+## The browser on the clock's own network (2026-11-08)
+
+The page's browser needs GitHub; on the setup network every name is the clock. Kept:
+the captive portal. Added in the starter, once it is on WiFi: GitHub's two names answered
+with their real addresses (looked up on the home network), and NAPT for the setup
+network. The core's DNSServer answers one name or all of them, so the starter has its
+own small responder (A records; no IPv6 answer, so clients use IPv4). NAPT needs lwIP
+with its features: +10 KB of image (measured on both builds), which the firmware does
+not take (its update room would fall from 36 to about 20 KB) and the starter can
+(381,568 B). Its table: 28 bytes per entry, 64 entries. Phones that decided the setup
+network has no internet when they joined may keep the browser's traffic off it: to
+check on real phones.
+
 ## Files, then image, or image, then files?
 
 Files first, into `/sys.new/`, swapped after `Update.end()`: a failed upload or a bad

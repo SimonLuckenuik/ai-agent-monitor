@@ -107,7 +107,7 @@ compressed, and the settings page comes along as a file the clock keeps in its s
 
 | File | What it is | Use it for |
 |---|---|---|
-| `SDPro_AIAgentMonitor_starter_v<version>.bin` | The starter: a small plain image that joins your WiFi and installs the latest release by itself | **The first install** on a clock with the stock firmware, from its own update page |
+| `SDPro_AIAgentMonitor_starter_v<version>.bin` | The starter: a small plain image that joins your WiFi; its page installs the latest release | **The first install** on a clock with the stock firmware, from its own update page |
 | `AIAgentMonitor_v<version>.update` | The firmware and its settings page, in one file | **Updates** on a clock running 2.5.0 or later (Settings > Firmware update; the **Install** button there downloads it for you) |
 | `AIAgentMonitor_v<version>.bin.gz` | The firmware alone, compressed | Clocks running 1.4.0 to 2.4.x, which take nothing else; the clock then shows a setup page that installs the rest |
 | `SHA256SUMS.txt` | Checksums | `sha256sum -c SHA256SUMS.txt` |
@@ -133,9 +133,11 @@ only the starter has that prefix: the stock firmware cannot unpack the compresse
 4. On your phone or computer, join the WiFi network **AI Agent Monitor XXXXXX** with the
    password shown on the clock, and open **http://192.168.4.1/**.
 5. Follow the steps: sign in with the same password, pick your WiFi network and enter
-   its password, then press **Install**. The clock downloads the latest release from
-   GitHub itself and installs it (a minute or two), then restarts on your WiFi and shows
-   its new address. Your phone can stay on the clock's network until then.
+   its password, then press **Install**. Your browser downloads the latest release from
+   GitHub and sends it to the clock (a minute or two); the clock restarts on your WiFi
+   and shows its new address. Your phone can stay on the clock's network: once the clock
+   is on your WiFi, it lets the page reach GitHub through it. From your home network, at
+   the clock's address, the same page works the same way.
 6. Open that address from your home network. In **Time & region**, type your city and
    pick it from the list (it sets the weather and the time zone), and choose your faces.
 

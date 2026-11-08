@@ -80,7 +80,7 @@ ini = (root / "platformio.ini").read_text(encoding="utf-8")
 assert "board_build.ldscript = eagle.flash.4m3m.ld" in ini, "layout must match stock (4m3m)"
 assert "pre:scripts/build_options.py" in ini, "OTA size guard must run"
 assert "LittleFS.begin" not in setup and "displayBegin" not in setup
-assert setup.index("server.begin()") >= setup.index("startAP()")
+assert setup.index("server.getServer().begin(80, WEB_BACKLOG)") >= setup.index("startAP()")
 assert setup.index("countPowerCycle()") < setup.index("startAP()")
 assert "LittleFS.setConfig(LittleFSConfig(false))" in source
 assert "WIFI_AP_STA" in source and "WIFI_STA)" not in source

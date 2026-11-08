@@ -179,7 +179,7 @@ and are not counted.
 | `EMU_MINUTE_MS` | 60000 | A firmware minute, for the setup network's `apoff` and recovery's 30-minute exit (spec 046); the integration tests set 1000 |
 | `EMU_STACK` | 4096 | Stack bytes for the firmware's frames. The host's x86 frames are not the chip's Xtensa ones: compare `stackFree` in `/status` on the clock and here, and adjust |
 
-TLS (BearSSL, the starter's download) runs on a 6.2 KB stack the core takes from the heap
+TLS (BearSSL) runs on a 6.2 KB stack the core takes from the heap
 while a secure connection is open; `build.sh` charges it to the arena as the chip does
 (the host core's version allocated nothing). The host mock's own `getifaddrs()` behind
 `WiFi.localIP()` allocates on the host heap, as it allocates nothing on the chip.
@@ -258,10 +258,12 @@ storage as on the clock.
 | `EMU_SEED_FILES` | 1 | Puts this build's settings-page files in `/sys` at each start when the manifest is not this build's. `0` leaves storage alone: a clock without its files shows the setup page |
 | `EMU_FIRMWARE` | `smartclock` | `starter`: a clock fresh from stock, on the starter (with `EMU_HEAP=44000`, its free heap on the chip). Once the starter installs an update, `run.sh` runs the firmware from then on (`$EMU_DATA/firmware`), without seeded files |
 
-The starter's **Install** downloads from GitHub for real (BearSSL is built for the host in
-the image's `deps` stage). `GET :8080/sys-files` returns this build's files as the start
-of an update file: append any `.bin.gz` and it installs them (the integration tests'
-`update_files` and `starter` cases).
+The starter answers GitHub's names with their real addresses (it looks them up on the
+host's network) and every other name with itself; its forwarding (NAT) is the chip's lwIP
+and does not exist here, so its page reaches GitHub from the browser's own network.
+`GET :8080/sys-files` returns this build's files as the start of an update file: append
+any `.bin.gz` and it installs them (the integration tests' `update_files` and `starter`
+cases).
 
 ```bash
 docker run -d --name starter -e EMU_FIRMWARE=starter -e EMU_HEAP=44000 \

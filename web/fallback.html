@@ -83,7 +83,7 @@ function render(){
   const signed=!!st.signedIn,linked=!!st.connected,onAp=location.hostname===st.apIp;
   step('s1',1,signed);$('s1in').hidden=signed;if(signed)say($('m1'),'Signed in','ok');
   step('s2',signed,linked);$('s2in').hidden=!signed||linked&&!$('s2').dataset.edit;
-  if(linked)say($('m2'),'Connected to '+st.ssid+' as '+st.ip+(onAp&&!st.download?'. Now switch this phone or computer back to '+st.ssid+' and open http://'+st.ip:''),'ok');
+  if(linked)say($('m2'),'Connected to '+st.ssid+' as '+st.ip,'ok');
   else if(st.wifiError)say($('m2'),'Could not join '+st.ssid+': '+st.wifiError,'bad');
   if(signed&&!linked&&$('ssids').options.length<2&&!scan.done)scan();
   step('s3',signed&&linked,0);step('s4',signed,0);
@@ -98,23 +98,20 @@ async function connect(){const m=$('m2');say(m,'Connecting…');
   try{await post('/connect',{ssid:$('ssid').value,password:$('wpw').value})}catch(e){if(!/Saved|OK/.test(e.message)){say(m,e.message,'bad');return}}
   say(m,'Connecting… the clock may restart; this page follows it.');delete $('s2').dataset.edit;
   for(let i=0;i<45;i++){await new Promise(r=>setTimeout(r,2000));await status();if(st.connected||st.wifiError)return}}
-// The latest release: the clock asks GitHub itself when it can (the starter), else the browser.
+// The latest release, as the browser reads it from GitHub, on either network: from the
+// clock's own, the clock looks up GitHub's names and forwards their traffic once it is on
+// WiFi (the starter). Asked again at each status poll until it answers.
 async function latest(onAp){const m=$('m3');if(rel)return;
-  if(st.download){try{rel=await(await fetch('/api/update/latest',{cache:'no-store'})).json()}catch(e){say(m,'The clock could not reach GitHub: '+e.message,'bad');return}
-    if(rel.error){say(m,'The clock could not reach GitHub: '+rel.error,'bad');rel=null;return}}
-  else{if(onAp){say(m,'Open http://'+st.ip+' from the home network to install from GitHub, or install a file below.');return}
-    try{const j=await(await fetch('https://api.github.com/repos/'+REPO+'/releases/latest')).json();rel={tag:j.tag_name,notes:j.body||''}}
-    catch(e){say(m,'GitHub cannot be reached from this browser: install a file below.','bad');return}}
+  try{const j=await(await fetch('https://api.github.com/repos/'+REPO+'/releases/latest')).json();rel={tag:j.tag_name,notes:j.body||''}}
+  catch(e){say(m,onAp?(st.nat||st.starter?'GitHub cannot be reached through the clock yet: this page tries again. If it keeps failing, join the clock\'s network again, or open http://'+st.ip+' from '+st.ssid+'.':'From the clock\'s own network, open http://'+st.ip+' from '+st.ssid+' instead to install from GitHub.'):'GitHub cannot be reached from this browser.','bad');
+    $('m3').append(' Or install a file below.');return}
   const v=rel.tag.replace(/^v/,''),upToDate=!newer(v,st.version)&&st.files==='ok'&&!st.starter;
   say(m,upToDate?'Up to date ('+v+')':'Latest release: '+v+(st.version?' (this clock: '+(st.starter?'starter ':'')+st.version+')':''),upToDate?'ok':'');
   $('notes').hidden=!rel.notes;$('notes').textContent=(rel.notes||'').slice(0,3000);$('go').hidden=upToDate;$('go').textContent='Install '+v;
   if(rel.url&&!rel.notes){$('m3').append(' · ');const l=document.createElement('a');l.href=rel.url;l.target='_blank';l.rel='noopener';l.textContent='release notes';$('m3').append(l)}}
+// The browser downloads the release's .update from GitHub Pages (a release download has no
+// CORS header) and sends it to the clock: the same in the starter and the firmware.
 async function install(){const m=$('m3'),b=$('b3');busy=1;$('go').disabled=true;
-  if(st.download){try{await post('/api/update/github',{tag:rel.tag})}catch(e){say(m,e.message,'bad');busy=0;$('go').disabled=false;return}
-    b.hidden=false;for(;;){await new Promise(r=>setTimeout(r,1000));let u;try{u=(await(await fetch('/status',{cache:'no-store'})).json()).update||{}}catch(e){break}
-      if(u.error){say(m,u.error,'bad');busy=0;$('go').disabled=false;return}
-      if(u.total)b.firstChild.style.width=Math.round(u.got/u.total*100)+'%';say(m,'Downloading… '+(u.total?Math.round(u.got/u.total*100)+'%':''));if(u.done)break}
-    return wait('Installing '+rel.tag)}
   say(m,'Downloading…');b.hidden=false;
   try{const v=rel.tag.replace(/^v/,''),r=await fetch(PAGES+'AIAgentMonitor_v'+v+'.update');if(!r.ok)throw Error('the update file is not on GitHub Pages yet ('+r.status+')');
     const total=+r.headers.get('content-length')||0,rd=r.body.getReader(),parts=[];let got=0;

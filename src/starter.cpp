@@ -1,30 +1,36 @@
 // The starter (spec 048): a small plain image, built from this repository with every
 // release as SDPro_AIAgentMonitor_starter_v<version>.bin, so a clock on the stock
 // firmware (which only takes plain images named SDP...) gets to AI Agent Monitor in two
-// steps: install the starter, then press Install. It puts the clock on WiFi, downloads
-// the latest release's .update file from GitHub itself (HTTPS: the full firmware has no
-// room for TLS) and installs it with the full firmware's update handler (update.cpp).
-// Its page is the full firmware's setup page (web/fallback.html).
+// steps: install the starter, then press Install on its page. Its page is the full
+// firmware's setup page (web/fallback.html), and as there the browser downloads the
+// release from GitHub and sends it to the clock (update.cpp, the full firmware's handler):
+// the clock itself has no HTTPS.
 //
-// Built by [env:starter] only (platformio.ini: build_src_filter); the firmware and the
-// emulator compile none of it.
+// From its own network, the browser reaches GitHub through the clock: the captive portal
+// stays (every name is the clock, so the phone opens the setup page), except GitHub's
+// names, which the clock looks up on the home network once it is on it, and whose
+// traffic it forwards (NAT). From the home network the browser has internet anyway.
+//
+// Built by [env:starter] only (platformio.ini: build_src_filter); the firmware compiles
+// none of it, the emulator only with EMU_STARTER=1.
 #if SMARTCLOCK_STARTER
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <DNSServer.h>
 #include <EEPROM.h>
-#include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
 #include <TFT_eSPI.h>
-#include <WiFiClientSecureBearSSL.h>
-#include <memory>
-#include <time.h>
+#include <WiFiUdp.h>
+#if LWIP_FEATURES && !LWIP_IPV6 && !SMARTCLOCK_EMULATOR
+#include <lwip/napt.h>
+#define STARTER_NAPT 1
+#else
+#define STARTER_NAPT 0   // the emulator: no lwIP, no forwarding
+#endif
 #include "build_info.h"      // FW_BUILD, FW_RELEASE
 #include "config.h"
 #include "pins.h"
-#include "starter_roots.h"   // the roots GitHub's hosts chain to
 #include "update.h"
 #include "web_fallback.h"
 
@@ -36,8 +42,6 @@ bool requestAuthorized();
 void safeRestart();
 
 namespace {
-const char REPO[] PROGMEM = "SimonLuckenuik/ai-agent-monitor";
-DNSServer dns;
 TFT_eSPI tft;
 bool storageMountFailed = false;
 
@@ -84,15 +88,90 @@ String setupSsid() {
   return name;
 }
 
-// ---- The download (one at a time, run from loop()).
-enum Download : uint8_t { DL_IDLE, DL_PENDING, DL_RUNNING, DL_DONE, DL_FAILED } dl = DL_IDLE;
-String dlTag, dlUrl, dlError;
-int32_t dlTotal = 0;
-uint32_t dlGot = 0;
-uint32_t dlHeapLow = 0;   // the least free heap while installing: the margin, in /status
+// ---- Names on the setup network. The captive portal answers every name with the clock,
+// so a phone opens the setup page (Windows asks for www.msftconnecttest.com, Android
+// connectivitycheck.gstatic.com, Apple captive.apple.com: all of them land here). The
+// names the page needs to reach GitHub are the exception once the clock is on WiFi: the
+// clock looks them up on the home network and answers with the real address, and forwards
+// their traffic (NAT, below). Anything else still lands on the clock.
+const char* const GITHUB_NAMES[] = {"api.github.com", "simonluckenuik.github.io"};
+WiFiUDP dnsUdp;
+struct Known { IPAddress ip; uint32_t at = 0; } known[sizeof(GITHUB_NAMES) / sizeof(GITHUB_NAMES[0])];
 
-// ---- The screen: what to do now, in large type.
-String line;   // a status line under the steps (connecting, an error, the progress)
+int githubName(const char* name) {
+  for (size_t i = 0; i < sizeof(GITHUB_NAMES) / sizeof(GITHUB_NAMES[0]); ++i)
+    if (!strcasecmp(name, GITHUB_NAMES[i])) return int(i);
+  return -1;
+}
+
+void serviceDns() {
+  int n = dnsUdp.parsePacket();
+  if (n <= 0) return;
+  uint8_t q[300];   // a question is far shorter; anything longer is not one we answer
+  if (n > (int)sizeof(q)) { dnsUdp.flush(); return; }
+  dnsUdp.read(q, n);
+  // A query (QR 0, opcode 0) with one question.
+  if (n < 17 || (q[2] & 0xf8) || q[4] || q[5] != 1) return;
+  char name[256];
+  int at = 12, len = 0;
+  while (at < n && q[at]) {
+    int label = q[at++];
+    if (label > 63 || at + label > n || len + label + 1 >= (int)sizeof(name)) return;
+    if (len) name[len++] = '.';
+    memcpy(name + len, q + at, label);
+    len += label; at += label;
+  }
+  name[len] = 0;
+  if (at + 5 > n) return;
+  uint16_t type = (q[at + 1] << 8) | q[at + 2];
+  int end = at + 5;   // the end of the question: name's 0, type, class
+  IPAddress ip = WiFi.softAPIP();
+  bool failed = false;
+  int g = githubName(name);
+  if (g >= 0) {
+    if (WiFi.status() != WL_CONNECTED) {
+      failed = true;   // not on WiFi yet: no answer to give (the page asks for WiFi first)
+    } else if (known[g].at && millis() - known[g].at < 300000) {
+      ip = known[g].ip;
+    } else if (WiFi.hostByName(name, ip, 3000) == 1) {
+      known[g].ip = ip; known[g].at = millis() ? millis() : 1;
+    } else {
+      failed = true;
+    }
+  }
+  uint8_t r[sizeof(q) + 16];
+  memcpy(r, q, end);
+  r[2] = 0x80 | (q[2] & 0x01);           // a response; recursion desired, as asked
+  r[3] = 0x80 | (failed ? 2 : 0);        // recursion available; SERVFAIL when not found
+  r[6] = 0; r[8] = 0; r[9] = 0; r[10] = 0; r[11] = 0;
+  bool answer = !failed && type == 1;    // A records only: anything else (AAAA) has none
+  r[7] = answer ? 1 : 0;
+  int out = end;
+  if (answer) {
+    const uint8_t rr[] = {0xc0, 0x0c, 0, 1, 0, 1, 0, 0, 0, uint8_t(g >= 0 ? 60 : 10), 0, 4,
+                          ip[0], ip[1], ip[2], ip[3]};   // the name at 12, A, IN, TTL, 4 bytes
+    memcpy(r + out, rr, sizeof(rr));
+    out += sizeof(rr);
+  }
+  dnsUdp.beginPacket(dnsUdp.remoteIP(), dnsUdp.remotePort());
+  dnsUdp.write(r, out);
+  dnsUdp.endPacket();
+}
+
+// Forwarding for the setup network once the clock is on WiFi, so the names above lead
+// somewhere. A browser fetching from GitHub needs a handful of connections: 64 entries
+// (28 bytes each), from the heap the clock's HTTPS no longer needs.
+bool natOn = false;
+void serviceNat() {
+#if STARTER_NAPT
+  if (natOn || WiFi.status() != WL_CONNECTED) return;
+  if (ip_napt_init(64, 1) == ERR_OK && ip_napt_enable_no(SOFTAP_IF, 1) == ERR_OK) natOn = true;
+#endif
+}
+
+// ---- The screen: what to do now.
+String line;   // a status line (connecting, an error)
+bool installing = false;
 void centre(const String& s, int y, uint8_t font, uint16_t colour) {
   tft.setTextColor(colour, TFT_BLACK);
   tft.setTextDatum(MC_DATUM);
@@ -102,10 +181,9 @@ void drawScreen() {
   tft.fillScreen(TFT_BLACK);
   centre(F("AI Agent Monitor"), 24, 4, TFT_WHITE);
   centre(F("Setup"), 50, 2, TFT_LIGHTGREY);
-  if (dl == DL_RUNNING || dl == DL_DONE) {
-    centre(F("Installing"), 100, 4, TFT_WHITE);
-    centre(dlTag, 130, 4, TFT_CYAN);
-    centre(dl == DL_DONE ? String(F("Restarting...")) : String(F("Keep the clock powered")), 200, 2, TFT_YELLOW);
+  if (installing) {
+    centre(F("Installing"), 110, 4, TFT_WHITE);
+    centre(F("Keep the clock powered"), 200, 2, TFT_YELLOW);
     return;
   }
   centre(F("Join WiFi:"), 80, 2, TFT_WHITE);
@@ -113,218 +191,8 @@ void drawScreen() {
   centre(F("Password:"), 124, 2, TFT_WHITE);
   centre(devicePassword, 148, 4, TFT_YELLOW);
   centre(String(F("then open ")) + WiFi.softAPIP().toString(), 178, 2, TFT_WHITE);
-  if (WiFi.status() == WL_CONNECTED) centre(String(F("On WiFi: ")) + WiFi.localIP().toString(), 202, 2, TFT_GREEN);
+  if (WiFi.status() == WL_CONNECTED) centre(String(F("or http://")) + WiFi.localIP().toString(), 202, 2, TFT_GREEN);
   if (line.length()) centre(line, 224, 2, TFT_ORANGE);
-}
-void drawProgress() {
-  int w = dlTotal > 0 ? int(int64_t(dlGot) * 200 / dlTotal) : 0;
-  tft.drawRect(19, 159, 202, 12, TFT_DARKGREY);
-  tft.fillRect(20, 160, w, 10, TFT_CYAN);
-}
-
-// ---- HTTPS to GitHub: BearSSL with the two roots, the time from NTP, HTTP/1.0 (no
-// chunked bodies to undo). GitHub's hosts do not negotiate smaller TLS records, so the
-// full 16 KB receive buffer (RESEARCH.md).
-bool waitForTime() {
-  for (int i = 0; i < 150 && time(nullptr) < 1700000000; ++i) { delay(100); server.handleClient(); }
-  return time(nullptr) >= 1700000000;
-}
-std::unique_ptr<BearSSL::X509List> roots() {
-  std::unique_ptr<BearSSL::X509List> list(new (std::nothrow) BearSSL::X509List);
-  if (!list) return list;
-  // The core parses certificates byte by byte: give it copies in RAM, not flash.
-  for (int i = 0; i < 2; ++i) {
-    const uint8_t* src = i ? ROOT_ISRG_ROOT_X1 : ROOT_USERTRUST_ECC;
-    size_t len = i ? ROOT_ISRG_ROOT_X1_LEN : ROOT_USERTRUST_ECC_LEN;
-    std::unique_ptr<uint8_t[]> der(new (std::nothrow) uint8_t[len]);
-    if (!der) return nullptr;
-    memcpy_P(der.get(), src, len);
-    if (!list->append(der.get(), len)) return nullptr;
-  }
-  return list;
-}
-// Opens url; "" or why not. client must outlive http. The roots are needed for the
-// handshakes only (GET() follows the redirects): freed once it answers, for the heap.
-String httpsGet(HTTPClient& http, BearSSL::WiFiClientSecure& client, const String& url) {
-  if (WiFi.status() != WL_CONNECTED) return F("The clock is not on WiFi");
-  if (!waitForTime()) return F("No time from the internet yet (NTP): try again");
-  std::unique_ptr<BearSSL::X509List> list = roots();
-  if (!list) return F("Not enough memory");
-  client.setTrustAnchors(list.get());
-  client.setX509Time(time(nullptr));
-  client.setBufferSizes(16384, 512);
-  http.useHTTP10(true);
-  http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-  http.setTimeout(20000);
-  http.setUserAgent(F("AIAgentMonitor-starter/" FW_RELEASE));
-  if (!http.begin(client, url)) return F("Bad address");
-  int code = http.GET();
-  client.setTrustAnchors(nullptr);
-  list.reset();
-  if (code == HTTP_CODE_OK) return "";
-  String why = code < 0 ? HTTPClient::errorToString(code) : String(F("GitHub answered ")) + code;
-  char err[64];
-  if (client.getLastSSLError(err, sizeof(err))) why += String(F(" (")) + err + ')';
-  http.end();
-  return why;
-}
-
-// GET /api/update/latest: the latest release, as the clock reads it from GitHub.
-void handleLatest() {
-  if (!requireAuth()) return;
-  if (dl == DL_RUNNING) { server.send(409, F("text/plain"), F("Installing")); return; }
-  JsonDocument out;
-  {
-    BearSSL::WiFiClientSecure client;
-    HTTPClient http;
-    String why = httpsGet(http, client, String(F("https://api.github.com/repos/")) + FPSTR(REPO) + F("/releases/latest"));
-    if (why.length()) {
-      out[F("error")] = why;
-    } else {
-      // Only what is needed of the 10-20 KB answer; not the notes (a few KB more while
-      // TLS holds 30 KB): the page links to the release instead.
-      JsonDocument filter;
-      filter[F("tag_name")] = true;
-      filter[F("html_url")] = true;
-      filter[F("assets")][0][F("name")] = true;
-      filter[F("assets")][0][F("browser_download_url")] = true;
-      filter[F("assets")][0][F("size")] = true;
-      JsonDocument rel;
-      DeserializationError e = deserializeJson(rel, http.getStream(), DeserializationOption::Filter(filter));
-      http.end();
-      if (e) {
-        out[F("error")] = String(F("GitHub's answer could not be read: ")) + e.c_str();
-      } else {
-        dlTag = rel[F("tag_name")] | "";
-        dlUrl = "";
-        // The .update file; a release without one (before spec 048): its .bin.gz, and the
-        // full firmware's setup page then installs the files.
-        for (int pass = 0; pass < 2 && dlUrl.isEmpty(); ++pass)
-          for (JsonObjectConst a : rel[F("assets")].as<JsonArrayConst>()) {
-            const char* name = a[F("name")] | "";
-            size_t n = strlen(name);
-            const char* end = pass ? ".bin.gz" : ".update";
-            size_t e = strlen(end);
-            if (n > e && !strcmp(name + n - e, end) && !strncmp_P(name, PSTR("AIAgentMonitor_v"), 16)) {
-              dlUrl = a[F("browser_download_url")] | "";
-              dlTotal = a[F("size")] | 0;
-            }
-          }
-        if (dlUrl.isEmpty()) out[F("error")] = String(F("Release ")) + dlTag + F(" has no update file");
-        out[F("tag")] = dlTag;
-        out[F("url")] = rel[F("html_url")] | "";
-        out[F("size")] = dlTotal;
-      }
-    }
-  }
-  String s;
-  serializeJson(out, s);
-  server.send(200, F("application/json"), s);
-}
-
-// POST /api/update/github: start installing the release that /api/update/latest found.
-void handleGithub() {
-  if (!requireAuth()) return;
-  if (dl == DL_RUNNING || updateBusy()) { server.send(409, F("text/plain"), F("An update is already running")); return; }
-  if (dlUrl.isEmpty() || server.arg(F("tag")) != dlTag) { server.send(400, F("text/plain"), F("Ask for the latest release first")); return; }
-  dl = DL_PENDING;
-  dlError = ""; dlGot = 0; dlHeapLow = UINT32_MAX;
-  server.send(200, F("text/plain"), F("OK"));
-}
-
-// Runs from loop(), in two steps so TLS (~33 KB with its buffers and stack) and the
-// updater (its 4 KB sector buffer) never hold the heap at the same time: they did not fit
-// together in the starter's ~44 KB (measured in the emulator with the chip's heap).
-//   1. download the .update file to storage (TLS only), serving the page between pieces;
-//   2. close the connection, install from storage with the full firmware's handler.
-// Restarts into the full firmware once it is in.
-const char DOWNLOADED[] = "/download.update";
-
-bool downloadToFile() {
-  FSInfo fs;
-  if (!storageReady || !LittleFS.info(fs)) { dlError = F("Storage is not in use: install the .update file by hand"); return false; }
-  uint32_t need = (dlTotal > 0 ? dlTotal : 600 * 1024) + 64 * 1024;   // and the files it brings, staged later
-  if (fs.totalBytes - fs.usedBytes < need) {
-    dlError = String(F("Storage is too full for the download (")) + ((fs.totalBytes - fs.usedBytes) / 1024) +
-              F(" KB free): format it below, or install the .update file by hand");
-    return false;
-  }
-  File out = LittleFS.open(DOWNLOADED, "w");
-  if (!out) { dlError = F("Could not write to storage"); return false; }
-  BearSSL::WiFiClientSecure client;
-  HTTPClient http;
-  String why = httpsGet(http, client, dlUrl);
-  if (why.length()) { dlError = why; out.close(); return false; }
-  int32_t size = http.getSize();
-  if (size > 0) dlTotal = size;
-  WiFiClient* s = http.getStreamPtr();
-  uint8_t buf[512];
-  uint32_t lastData = millis();
-  int shown = -1;
-  while (dlTotal <= 0 || dlGot < (uint32_t)dlTotal) {
-    size_t n = s->available();
-    if (n) {
-      n = s->readBytes(buf, std::min(n, sizeof(buf)));
-      if (out.write(buf, n) != n) { dlError = F("Could not write to storage"); break; }
-      dlGot += n;
-      lastData = millis();
-      dlHeapLow = std::min<uint32_t>(dlHeapLow, ESP.getFreeHeap());
-      int pct = dlTotal > 0 ? int(int64_t(dlGot) * 100 / dlTotal) : 0;
-      if (pct / 5 != shown) { shown = pct / 5; drawProgress(); }
-    } else if (!http.connected() && !s->available()) {
-      break;
-    } else if (millis() - lastData > 30000) {
-      dlError = F("The download stopped");
-      break;
-    } else {
-      delay(1);
-    }
-    dns.processNextRequest();
-    server.handleClient();
-  }
-  http.end();
-  out.close();
-  if (dlError.isEmpty() && dlTotal > 0 && dlGot != (uint32_t)dlTotal) dlError = F("The download was cut short");
-  return dlError.isEmpty();
-}
-
-bool installFromFile() {
-  File in = LittleFS.open(DOWNLOADED, "r");
-  if (!in) { dlError = F("The download is gone"); return false; }
-  updateBegin();
-  uint8_t buf[512];
-  bool ok = updateBusy();
-  while (ok && in.available()) {
-    size_t n = in.read(buf, sizeof(buf));
-    ok = n && updateFeed(buf, n);
-    dlHeapLow = std::min<uint32_t>(dlHeapLow, ESP.getFreeHeap());
-    server.handleClient();
-  }
-  in.close();
-  ok = ok && updateFinish();
-  if (!ok) dlError = updateError().length() ? updateError() : String(F("Could not install the download"));
-  return ok;
-}
-
-void runDownload() {
-  dl = DL_RUNNING;
-  drawScreen();
-  drawProgress();
-  dlError = "";
-  bool ok = downloadToFile() && installFromFile();
-  LittleFS.remove(DOWNLOADED);
-  if (!ok) {
-    dl = DL_FAILED;
-    updateFail(dlError);
-    line = F("Install failed: see the page");
-    drawScreen();
-    return;
-  }
-  dl = DL_DONE;
-  drawScreen();
-  uint32_t until = millis() + 4000;   // let the page see "done"
-  while ((int32_t)(millis() - until) < 0) { server.handleClient(); delay(10); }
-  safeRestart();
 }
 
 // ---- The web API the setup page uses (web/fallback.html).
@@ -338,7 +206,6 @@ void handleStatus() {
   JsonDocument doc;
   bool linked = WiFi.status() == WL_CONNECTED;
   doc[F("starter")] = true;
-  doc[F("download")] = true;   // the clock downloads releases itself
   doc[F("version")] = FW_RELEASE;
   doc[F("build")] = FW_BUILD;
   doc[F("uptime")] = millis() / 1000;
@@ -354,15 +221,8 @@ void handleStatus() {
   else if (cfg.ssid.length() && WiFi.status() == WL_NO_SSID_AVAIL) doc[F("wifiError")] = F("network not found");
   doc[F("apIp")] = WiFi.softAPIP().toString();
   doc[F("apSsid")] = setupSsid();
+  doc[F("nat")] = natOn;   // the setup network reaches GitHub through the clock
   doc[F("heap")] = ESP.getFreeHeap();
-  if (dl != DL_IDLE) {
-    JsonObject u = doc[F("update")].to<JsonObject>();
-    u[F("got")] = dlGot;
-    u[F("total")] = dlTotal;
-    u[F("done")] = dl == DL_DONE;
-    if (dlHeapLow != UINT32_MAX) u[F("heapLow")] = dlHeapLow;
-    if (dl == DL_FAILED) u[F("error")] = dlError;
-  }
   String out;
   serializeJson(doc, out);
   server.send(200, F("application/json"), out);
@@ -469,9 +329,8 @@ void setup() {
   WiFi.hostname(String(F("agentmonitor-")) + String(ESP.getChipId() & 0xffffff, HEX));
   WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
   WiFi.softAP(setupSsid().c_str(), devicePassword.c_str());
-  dns.start(53, "*", WiFi.softAPIP());
+  dnsUdp.begin(53);
   if (cfg.ssid.length()) WiFi.begin(cfg.ssid.c_str(), cfg.password.c_str());
-  configTime(0, 0, "pool.ntp.org", "time.google.com");
   server.collectHeaders("Cookie");
   server.on(F("/"), sendSetup);
   server.on(F("/setup"), sendSetup);
@@ -482,28 +341,26 @@ void setup() {
   server.on(F("/connect"), HTTP_POST, handleConnect);
   server.on(F("/restart"), HTTP_POST, [] { if (!requireAuth()) return; server.send(200, F("text/plain"), F("Restarting")); safeRestart(); });
   server.on(F("/format_storage"), HTTP_POST, handleFormat);
-  server.on(F("/api/update/latest"), handleLatest);
-  server.on(F("/api/update/github"), HTTP_POST, handleGithub);
-  // An upload while a download runs would replace it: refused.
-  server.on(F("/update_ota"), HTTP_POST,
-            [] { if (dl == DL_RUNNING) { server.send(409, F("text/plain"), F("Installing from GitHub")); return; } finishOta(); },
-            [] { if (dl != DL_RUNNING) handleOtaUpload(); });
+  server.on(F("/update_ota"), HTTP_POST, finishOta, handleOtaUpload);
   server.onNotFound([] {   // the captive portal: everything leads to the setup page
     server.sendHeader(F("Location"), F("/"), true);
     server.send(302, F("text/plain"), "");
   });
-  server.begin();
+  // A short queue of connections not yet served: a phone's burst of them took the heap.
+  server.getServer().begin(80, 4);
   drawScreen();
 }
 
 void loop() {
   static bool linked = false;
-  dns.processNextRequest();
+  serviceDns();
   server.handleClient();
-  if (updateBusy()) { delay(1); return; }   // an upload is staging
+  bool busy = updateBusy();
+  if (busy != installing) { installing = busy; drawScreen(); }
+  if (busy) { delay(1); return; }   // an upload is staging
   bool now = WiFi.status() == WL_CONNECTED;
   if (now != linked) { linked = now; if (now) line = ""; drawScreen(); }
-  if (dl == DL_PENDING) runDownload();
+  serviceNat();
   delay(5);
 }
 #endif  // SMARTCLOCK_STARTER

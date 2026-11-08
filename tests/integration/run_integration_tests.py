@@ -1198,9 +1198,9 @@ def starter(emu):
     st.wait_ready()
     s = st.status()
     if s.get("starter"):
-        check(s["download"] and not s["signedIn"], f"the starter downloads releases itself: {s}")
+        check("nat" in s and not s["signedIn"], f"the starter reports its forwarding for the setup network: {s}")
         check("<title>AI Agent Monitor setup</title>" in html(st.get("/")), "its page is the setup page")
-        expect_error(401, "Sign in", st.get, "/api/update/latest")
+        expect_error(401, "Sign in", st.get, "/scanwifi")
         st.sign_in()
         check(st.status()["signedIn"], "signed in with the device password")
         shot(st, "starter")

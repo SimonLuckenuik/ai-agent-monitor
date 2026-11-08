@@ -11,10 +11,15 @@ versioning. `/version` on the device reports the version it was built as; a
 
 - **The starter** (spec 048): `SDPro_AIAgentMonitor_starter_v<version>.bin`, a small plain
   image the stock update page installs. It shows its setup network and password, joins
-  your WiFi from a step-by-step page, then downloads the latest release from GitHub
-  itself (HTTPS, checked against GitHub's root certificates) and installs it. From the
-  stock firmware to AI Agent Monitor in two steps; it replaces v1.4.0's `_nomqtt.bin` as
-  the first install.
+  your WiFi from a step-by-step page, and the page (in your browser) downloads the latest
+  release from GitHub and sends it to the clock, as the full firmware's page does. On the
+  clock's own network the page still reaches GitHub: the clock answers GitHub's names
+  with their real addresses and forwards their traffic once it is on your WiFi (every
+  other name still leads to the clock). From the stock firmware to AI Agent Monitor in
+  two steps; it replaces v1.4.0's `_nomqtt.bin` as the first install.
+- **The clock's web server keeps fewer waiting connections** (4): a phone on the setup
+  network, whose every name leads to the clock, could open enough of them to run it out
+  of memory.
 - **Install from GitHub**: the settings page's update notice has an **Install** button
   that downloads the release and sends it to the clock; `http://<clock>/setup` always
   opens the setup page (sign in, WiFi, Install, or a file by hand).
