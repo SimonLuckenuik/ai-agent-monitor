@@ -5,8 +5,7 @@ Nothing is built until the owner approves the spec. Each step is measured with
 
 ## Phase 1: the settings page as a file
 
-Steps 1-9 are built (PROGRESS.md has the commits and what was checked); step 10 waits
-for a run on a clock.
+Steps 1-11 are done (PROGRESS.md has the commits and what was checked), in 2.5.0.
 
 1. **Bundle format and tool.** `scripts/make_update.py` (built under that name): header, files, `.bin.gz`;
    called by `scripts/build_options.py` after the `.bin.gz` (`firmware.bundle` beside

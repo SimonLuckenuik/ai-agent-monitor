@@ -21,10 +21,10 @@ approved.
 5. **Check 2.4.0 on the clock** ([046](../../specs/046-setup-network-timeout/SPEC.md)):
    the setup network closes an hour after joining without dropping the WiFi link, the
    heap with it off, it comes back when the router goes away, recovery's WPA2 network.
-6. [048 Read-only data as files that come with the update](../../specs/048-files-with-the-update/SPEC.md):
-   built on branch `feat/048-update-files` (the settings page as a file in an `.update`,
-   a setup page in flash, Install from GitHub, and the starter for stock clocks). Next:
-   the owner runs it on a clock, turns GitHub Pages on, then 2.5.0.
+6. **Check 2.5.0** ([048](../../specs/048-files-with-the-update/SPEC.md)): Install from
+   GitHub on a clock, from the home network and from the clock's own; the Pages job of
+   the release run; a phone left on the setup network. Then 048's phase 2 (weather icons
+   and the Message face as files), if wanted.
 
 ## Waiting
 

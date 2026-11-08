@@ -18,6 +18,18 @@ from a reverse-engineering of the stock firmware; no vendor code is reused.
 > a backup of the original flash, made over that adapter before installing; see
 > [Install](#install)).
 
+> **Installing, in short**
+> 1. **Stock firmware:** install `SDPro_AIAgentMonitor_starter_v<version>.bin` (from the
+>    [latest release](../../releases/latest)) from the clock's own update page.
+> 2. **The starter:** join the WiFi network on the clock's screen (its password is there
+>    too), open http://192.168.4.1, sign in, pick your WiFi, press **Install**: your
+>    browser fetches the latest release from GitHub and sends it to the clock.
+> 3. **The full firmware** runs from then on; later updates are one click (Settings >
+>    Firmware update > Install).
+>
+> On AI Agent Monitor 1.4.0 to 2.4.x: install the `.bin.gz`, then **Install** on the page
+> that comes up. Details below.
+
 ![The clock faces](docs/images/faces.png)
 
 ## What it does

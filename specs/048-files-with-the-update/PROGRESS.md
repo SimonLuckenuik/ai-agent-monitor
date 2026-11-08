@@ -131,3 +131,14 @@ Images built from 0a8d162 (2.5.0-dev), installed by the owner:
   release.yml calls it after publishing (a release made by a workflow starts no other
   workflow). A browser cannot fetch a release download directly (no CORS header; checked
   from a page: the API answers, the download fails), hence the copy.
+
+## 2026-11-08: 2.5.0
+
+- The owner: "Prepare 2.5.0". FW_VERSION 2.5.0, CHANGELOG section with the upgrade paths,
+  the README summary at the top (stock firmware, starter, Install; PLAN step 10).
+- Checked for the release: unit, safety, page and integration tests (below in the
+  commit's run). On the owner's clock: the starter, its GitHub lookup through its own
+  network, the .update installed from it, the settings page from storage.
+- Not checked before the release: Install from GitHub (needs this release and its Pages
+  copy), a phone on the setup network for a while, recovery on 2.5.0; the one upload
+  that stopped at 20% is not explained.

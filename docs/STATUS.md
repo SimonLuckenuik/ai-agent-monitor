@@ -1,14 +1,18 @@
 # Current status and next work
 
-Updated: 2026-11-07. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-08. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest version is **2.4.0** (2026-11-07: the setup network closes an hour after the
-clock joins the WiFi, WPA2 on recovery's network, an unused recovery ends; spec 046),
-tag `v2.4.0`, `AIAgentMonitor_v2.4.0.bin.gz`; not yet on a clock. Before it: **2.3.1**
+The latest version is **2.5.0** (2026-11-08, spec 048: the settings page as a file that
+comes with the update, `.update` files, Install from GitHub, the starter for stock
+clocks; 36 KB of update room), files `AIAgentMonitor_v2.5.0.update`, `.bin.gz` and
+`SDPro_AIAgentMonitor_starter_v2.5.0.bin`. Its 2.5.0-dev build ran on agentmonitor-ade1f0
+(the starter, then the .update from it); Install from GitHub not yet tried. Before it:
+**2.4.0** (2026-11-07: the setup network closes an hour after the clock joins the WiFi,
+WPA2 on recovery's network, an unused recovery ends; spec 046). Before that: **2.3.1**
 (2026-11-06: `clock.help` on the OpenClaw node, spec 045). Before that: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an
 OpenClaw node, flash room without losing a feature, the emulator's OpenClaw panel and an
 OpenClaw skill), published on GitHub as `SimonLuckenuik/ai-agent-monitor` with
@@ -117,8 +121,8 @@ clock: installed and loaded on the real gateway, its `clock.py` saves faces from
 no model was available to try an agent with), all done in 2.3.0; and
 [045](../specs/045-openclaw-help/SPEC.md) (`clock.help`, links to the skill: done in 2.3.1).
 Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session status
-hooks, plugin 0.7.2, seen on the real clock). In progress on branch `feat/048-update-files`:
-[048](../specs/048-files-with-the-update/SPEC.md) (the settings page as a file that comes with the update; the starter). Proposed:
+hooks, plugin 0.7.2, seen on the real clock). Done in 2.5.0:
+[048](../specs/048-files-with-the-update/SPEC.md) (the settings page as a file that comes with the update; the starter; phase 2 open). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
 [040](../specs/040-scrolling-text/SPEC.md) (scrolling text),
 [046](../specs/046-setup-network-timeout/SPEC.md) (the setup network closes an hour after joining the router, WPA2 in recovery, an unused recovery ends; done in 2.4.0, not on a clock yet).
