@@ -279,16 +279,16 @@ extern "C" __attribute__((no_instrument_function)) void __cyg_profile_func_exit(
 // the block from the clock's heap and counting f's frames against it, not the 4 KB stack.
 constexpr size_t STACK_THUNK_SIZE = 6200;
 size_t stackThunkMaxUsed = 0;   // the deepest f went, for GET :8080/stats
-extern "C" bool emuStackThunk(void (*f)()) {
-  void* block = malloc(STACK_THUNK_SIZE);
+extern "C" bool emuStackThunk(void (*f)(), size_t size) {
+  void* block = malloc(size);
   if (!block) return false;
   size_t used = stackTop - reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
   size_t savedSize = stackSize, savedMax = stackMaxUsed;
-  stackSize = used + STACK_THUNK_SIZE;
+  stackSize = used + size;
   stackMaxUsed = used;
   f();
   stackThunkMaxUsed = std::max(stackThunkMaxUsed, stackMaxUsed - used);
-  printf("emulator: stack thunk used %u of %u bytes\n", unsigned(stackMaxUsed - used), unsigned(STACK_THUNK_SIZE));
+  printf("emulator: stack thunk used %u of %u bytes\n", unsigned(stackMaxUsed - used), unsigned(size));
   stackSize = savedSize;
   stackMaxUsed = savedMax;
   free(block);

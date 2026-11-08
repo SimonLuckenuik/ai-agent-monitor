@@ -1368,6 +1368,9 @@ void handleStatus() {
   doc[F("recovery")] = recoveryMode; doc[F("storageReady")] = storageReady;
   doc[F("storageMountFailed")] = storageMountFailed;
   doc[F("files")] = filesState();   // ok, missing, stale, unmounted (spec 048)
+#if SMARTCLOCK_JSONRENDER
+  if (jrStackUsed()) doc[F("jrStack")] = jrStackUsed();   // the compile's deepest stack, of 4,608 B (spec 047)
+#endif
   doc[F("version")] = FW_VERSION; doc[F("build")] = FW_BUILD; doc[F("uptime")] = millis() / 1000; doc[F("heap")] = ESP.getFreeHeap();
   doc[F("heapLow")] = heapLow;   // (getMaxFreeBlockSize() would add 1.6 KB of umm stats)
   doc[F("stackFree")] = ESP.getFreeContStack();   // the least free stack since boot (of 4 KB)

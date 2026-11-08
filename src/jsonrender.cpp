@@ -557,7 +557,7 @@ Sz measure(int i, int avail, int depth = 0);
 // Sizes of the flow children along the main axis, given the container's content box.
 __attribute__((noinline)) Sz measure(int i, int avail, int depth) {
   const Node& n = nodes[i];
-  if (depth > 24) return {0, 0};
+  if (depth > JR_DEPTH_MAX) return {0, 0};
   Lay l = layOf(n);
   int fw = fixedW(n, avail);
   if (!isContainer(n.type)) {
@@ -1080,7 +1080,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
 
 __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int depth) {
   const Node& n = nodes[i];
-  if (depth > 24) return;
+  if (depth > JR_DEPTH_MAX) return;
   String saveVis = vis, saveBg = bgS;
   uint32_t saveHex = bgHex;
   bool saveKnown = bgKnown;
@@ -1248,42 +1248,78 @@ bool jrIsSpec(const String& body) {
 }
 
 namespace {
-String jrCompileHere(const String& body, String& out, String& warnings, String& seedOut);
-// The arguments for the run on the stack thunk (it takes no arguments).
-const String* thBody; String* thOut; String* thWarn; String* thSeed; String thErr;
+String jrCompileHere(const char* path, String& out, String& warnings, String& seedOut);
+// The arguments for the run on the stack of our own (it takes no arguments).
+const char* thPath; String* thOut; String* thWarn; String* thSeed; String thErr;
 }  // namespace
-// Called by name from the thunk's assembly: C linkage, not in the anonymous namespace.
-extern "C" __attribute__((used)) void jrCompileThunked() { thErr = jrCompileHere(*thBody, *thOut, *thWarn, *thSeed); }
+// Called by name from the stack switch's assembly: C linkage, not in the anonymous namespace.
+extern "C" __attribute__((used)) void jrCompileThunked() { thErr = jrCompileHere(thPath, *thOut, *thWarn, *thSeed); }
+
+// Layout recurses as deep as the spec nests (at most JR_DEPTH_MAX): it runs on a stack of
+// its own taken from the heap while compiling, not on the 4 KB one. The core's stack thunk
+// (BearSSL's) is 6.2 KB; the deepest sample used 3.7 KB, so ours is 4.5 KB: the same switch
+// as the core's make_stack_thunk(), with our own stack. It is painted so the deepest use is
+// known (jrStackUsed(): /status jrStack).
+constexpr size_t JR_STACK = 4608;
+uint32_t jrStackDeepest = 0;
+uint32_t jrStackUsed() { return jrStackDeepest; }
 
 #if SMARTCLOCK_EMULATOR
-extern "C" bool emuStackThunk(void (*f)());
+extern "C" bool emuStackThunk(void (*f)(), size_t size);
 #else
-#include <StackThunk.h>
-make_stack_thunk(jrCompileThunked);
+extern "C" {
+uint32_t* jr_stack_ptr = nullptr;   // the stack's lowest word (the canary)
+uint32_t* jr_stack_top = nullptr;   // where it starts (it grows down)
+uint32_t* jr_stack_save = nullptr;  // the caller's stack pointer while it runs
+void jr_stack_smashed() { panic(); }   // overflowed: the heap below it is damaged
+}
+__asm__ (
+  ".text\n.literal_position\n.literal .LC_JR_STACK_VALUE, 0xdeadbeef\n.text\n"
+  ".global thunk_jrCompileThunked\n.type thunk_jrCompileThunked, @function\n.align 4\n"
+  "thunk_jrCompileThunked:\n"
+  "  addi a1, a1, -16\n  s32i a0, a1, 12\n  s32i a15, a1, 8\n"
+  "  movi a15, jr_stack_save\n  s32i a1, a15, 0\n"
+  "  movi a15, jr_stack_top\n  l32i.n a1, a15, 0\n"
+  "  call0 jrCompileThunked\n"
+  "  movi a15, jr_stack_ptr\n  l32i.n a15, a15, 0\n  l32i.n a15, a15, 0\n"
+  "  l32r a0, .LC_JR_STACK_VALUE\n  beq a0, a15, .L1_JR_STACK\n  call0 jr_stack_smashed\n"
+  ".L1_JR_STACK:\n"
+  "  movi a15, jr_stack_save\n  l32i.n a1, a15, 0\n"
+  "  l32i.n a15, a1, 8\n  l32i.n a0, a1, 12\n  addi a1, a1, 16\n  ret\n"
+  ".size thunk_jrCompileThunked, . - thunk_jrCompileThunked\n");
 extern "C" void thunk_jrCompileThunked();
 #endif
 
-// Layout recurses as deep as the spec nests: it runs on a 6.2 KB stack of its own taken
-// from the heap (the core's stack thunk, as BearSSL uses), not on the 4 KB stack.
-String jrCompile(const String& body, String& out, String& warnings, String& seedOut) {
-  thBody = &body; thOut = &out; thWarn = &warnings; thSeed = &seedOut; thErr = "";
+String jrCompile(const char* path, String& out, String& warnings, String& seedOut) {
+  thPath = path; thOut = &out; thWarn = &warnings; thSeed = &seedOut; thErr = "";
 #if SMARTCLOCK_EMULATOR
-  if (!emuStackThunk(jrCompileThunked)) return F("Not enough memory");
+  if (!emuStackThunk(jrCompileThunked, JR_STACK)) return F("Not enough memory");
 #else
-  stack_thunk_add_ref();
-  if (!stack_thunk_get_stack_bot()) { stack_thunk_del_ref(); return F("Not enough memory"); }
+  constexpr size_t words = JR_STACK / 4;
+  jr_stack_ptr = static_cast<uint32_t*>(malloc(JR_STACK));
+  if (!jr_stack_ptr) return F("Not enough memory");
+  for (size_t i = 0; i < words; ++i) jr_stack_ptr[i] = 0xdeadbeef;
+  jr_stack_top = jr_stack_ptr + words - 1;
   thunk_jrCompileThunked();
-  stack_thunk_del_ref();
+  size_t unused = 0;
+  while (unused < words && jr_stack_ptr[unused] == 0xdeadbeef) ++unused;
+  jrStackDeepest = std::max<uint32_t>(jrStackDeepest, (words - unused) * 4);
+  free(jr_stack_ptr);
+  jr_stack_ptr = jr_stack_top = nullptr;
 #endif
   String e = thErr; thErr = "";
   return e;
 }
 
 namespace {
-String jrCompileHere(const String& body, String& out, String& warnings, String& seedOut) {
-  if (body.length() > JR_SOURCE_MAX) return F("The spec is larger than 12 KB");
+// Parses the spec from its file: the request's copy is already freed (storeFace()).
+String jrCompileHere(const char* path, String& out, String& warnings, String& seedOut) {
+  File src = LittleFS.open(path, "r");
+  if (!src) return F("Could not read the spec");
+  if (src.size() > JR_SOURCE_MAX) { src.close(); return F("The spec is larger than 12 KB"); }
   JsonDocument doc;
-  DeserializationError e = parseJson(doc, body);
+  DeserializationError e = parseJson(doc, src);
+  src.close();
   if (e == DeserializationError::NoMemory) return F("Not enough memory");
   if (e) return String(F("Not JSON: ")) + e.c_str();
   JsonObjectConst elements = doc["elements"];
@@ -1345,17 +1381,20 @@ String jrCompileHere(const String& body, String& out, String& warnings, String& 
     if (!bg.length()) bg = ink ? "#000000" : "#ffffff";   // a terminal is dark; the image renderer's frame white
     bgS = bg; bgKnown = hexOf(bg, &bgHex);
     if (!bgKnown) bgHex = 0;
+    // The face's head first, then its items appended in place: the face is never copied
+    // (it was, items into the whole face: twice its size at once).
+    items = "{\"bg\":"; quote(items, bg);
+    for (const char* k : {"when", "duration", "fps", "invert", "palette", "palettes", "maps"}) {
+      if (!frame || rp[k].isNull()) continue;
+      items += ",\""; items += k; items += "\":"; appendJson(rp[k], items);
+    }
+    items += ",\"items\":[";
     if (frame) place(rootI, 0, 0, (int)lroundf(fw * scale), (int)lroundf(fh * scale), 0);
     else {   // the root fills the screen, with a small margin unless it has padding
       int m = rp["padding"].isNull() ? 6 : 0;
       place(rootI, m, m, 240 - 2 * m, 240 - 2 * m, 0);
     }
-    out = "{\"bg\":"; quote(out, bg);
-    for (const char* k : {"when", "duration", "fps", "invert", "palette", "palettes", "maps"}) {
-      if (!frame || rp[k].isNull()) continue;
-      out += ",\""; out += k; out += "\":"; appendJson(rp[k], out);
-    }
-    out += ",\"items\":["; out += items; out += "]";
+    items += "]";
     // The spec's state seeds variables that are not set yet.
     JsonObjectConst st = doc["state"]["vars"].is<JsonObjectConst>() ? doc["state"]["vars"].as<JsonObjectConst>() : doc["state"].as<JsonObjectConst>();
     String seed;
@@ -1365,7 +1404,9 @@ String jrCompileHere(const String& body, String& out, String& warnings, String& 
       quote(seed, kv.key().c_str()); seed += ':'; appendJson(kv.value(), seed);
     }
     seedOut = seed.length() ? "{" + seed + "}" : "";
-    out += "}";
+    items += "}";
+    out = std::move(items);
+    items = String();
     if (overflowItems) err = String(F("The face needs ")) + itemCount + F(" items; at most 64");
     else if (out.length() > JR_FACE_MAX) err = String(F("The face is ")) + out.length() + F(" bytes; at most 8 KB");
   }
@@ -1397,6 +1438,7 @@ void jrSendCatalog(bool prompt) {
 
 #else
 bool jrIsSpec(const String&) { return false; }
-String jrCompile(const String&, String&, String&, String&) { return F("json-render is not in this build"); }
+String jrCompile(const char*, String&, String&, String&) { return F("json-render is not in this build"); }
+uint32_t jrStackUsed() { return 0; }
 void jrSendCatalog(bool) {}
 #endif

@@ -298,14 +298,26 @@ void showFace(const String& name) {
 String jrWarnings;   // what the last json-render spec could not draw exactly (spec 047)
 #endif
 
-String storeFace(const String& name, const String& bodyIn) {
+// bodyIn is taken by value: the HTTP handler moves the request's copy in, so a spec can
+// be written to storage and freed before it is compiled (spec 047: the heap).
+String storeFace(const String& name, String bodyIn) {
 #if SMARTCLOCK_JSONRENDER
-  // A json-render spec is compiled into a face first, then saved like any face.
+  // A json-render spec is kept as it came (/specs/<name>.json) and compiled into a face
+  // from that file, then saved like any face.
   String compiled, seed;
   jrWarnings = "";
   bool spec = jrIsSpec(bodyIn);
   if (spec) {
-    String err = jrCompile(bodyIn, compiled, jrWarnings, seed);
+    if (!storageReady || recoveryMode) return F("Storage unavailable");
+    if (bodyIn.length() > JR_SOURCE_MAX) return F("The spec is larger than 12 KB");
+    if (!LittleFS.exists("/specs")) LittleFS.mkdir("/specs");
+    String src = "/specs/" + name + ".json";
+    File sf = LittleFS.open(src, "w");
+    bool kept = sf && sf.print(bodyIn) == bodyIn.length();
+    if (sf) sf.close();
+    if (!kept) return F("Could not save the spec");
+    bodyIn = String();   // the request's copy: compiled from the file instead
+    String err = jrCompile(src.c_str(), compiled, jrWarnings, seed);
     if (err.length()) return err;
     if (seed.length()) {   // the spec's state, for variables not set yet
       JsonDocument sd;
@@ -322,6 +334,7 @@ String storeFace(const String& name, const String& bodyIn) {
   if (!storageReady || recoveryMode) return F("Storage unavailable");
   if (body.length() == 0 || body == "{}") {
     LittleFS.remove(facePath(name));
+    LittleFS.remove("/specs/" + name + ".json");   // a json-render spec's source (spec 047)
     facesVersion++;
     if (cfg.theme == FACE_CUSTOM && cfg.customFace == name) cfg.theme = FACE_CLASSIC;
     return "";
@@ -367,7 +380,9 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
   if (server.method() == HTTP_POST) {
     String name = faceName(server.arg("name"));
     if (name.isEmpty()) { server.send(400, PSTR("text/plain"), PSTR("name: 1-20 of a-z 0-9 _ -")); return; }
-    String err = storeFace(name, server.arg("plain"));
+    // The request's copy of the body, taken over rather than copied (the web server keeps
+    // it as an argument until the request ends; spec 047: the heap).
+    String err = storeFace(name, std::move(const_cast<String&>(server.arg("plain"))));
     if (err.length()) { server.send(err == F(NO_MEMORY) ? 507 : 400, "text/plain", err); return; }
     if (server.arg("show") == "1") showFace(name);
 #if SMARTCLOCK_JSONRENDER
@@ -607,7 +622,7 @@ void onMqtt(char* topicRaw, byte* payload, unsigned int len) {
     clearMessages(body);
   } else if (cfg.facesApi && topic.startsWith(b + "/custom/")) {
     String name = faceName(topic.substring(b.length() + 8));
-    if (name.length()) storeFace(name, body);
+    if (name.length()) storeFace(name, std::move(body));
   } else if (cfg.facesApi && topic == b + "/vars") {
     JsonDocument d;
     if (!parseJson(d, body) && d.is<JsonObject>()) applyVars(d.as<JsonObject>());
