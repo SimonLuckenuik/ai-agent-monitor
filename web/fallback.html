@@ -80,7 +80,10 @@ function render(){
     unmounted:st.storageMountFailed?'Storage could not be mounted. Updating still works; formatting erases it.':''}[st.files]||'';
   $('why').hidden=!(st.recovery||why);$('why').textContent=st.recovery?'Recovery: the clock started in recovery. Updates and restart work here.':why;
   $('fmt').hidden=!st.storageMountFailed;
-  const signed=!!st.signedIn,linked=!!st.connected,onAp=location.hostname===st.apIp;
+  // On the clock's own network: its address there, or any name (the captive portal answers
+  // them all: Windows opens www.msftconnecttest.com) other than its home-network address.
+  const here=location.hostname,signed=!!st.signedIn,linked=!!st.connected,
+    onAp=here===st.apIp||(linked&&here!==st.ip&&!/^[\d.]+$/.test(here)&&here!==st.host&&here!==st.host+'.local');
   step('s1',1,signed);$('s1in').hidden=signed;if(signed)say($('m1'),'Signed in','ok');
   step('s2',signed,linked);$('s2in').hidden=!signed||linked&&!$('s2').dataset.edit;
   if(linked)say($('m2'),'Connected to '+st.ssid+' as '+st.ip,'ok');
