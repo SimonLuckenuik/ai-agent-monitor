@@ -65,9 +65,10 @@ product as it is, and change with the code; specs describe a piece of work.
   (`scripts/build_options.py` prints both and fails above it). The plain image is over
   the plain-update limit (0x7E000 = 516,096 B) and is not released: new clocks install
   the starter first (`pio run -e starter`, a plain image under that limit, spec 048).
-  The settings page is not in the image but a file that comes with the update
-  (`/sys/index.html.gz` in the `.update`; the image keeps `web/fallback.html`, the setup
-  page), so page changes cost no update room. Flash is still scarce: measure every change with `pio run`; find what grew with a link map
+  The settings page, the Message face (`src/message_face.json`) and the weather icons'
+  polygons are not in the image but files that come with the update (`/sys/` in the
+  `.update`, built by `scripts/sys_files.py`; the image keeps `web/fallback.html`, the
+  setup page, and a robot-less Message face), so changes to them cost no update room. Flash is still scarce: measure every change with `pio run`; find what grew with a link map
   (see Debugging). Things that cost a lot for little: `strtof`/`atof`/`strtod`
   (~9 KB of libc: use `parseNum()` in faces.cpp), `atan2f`/`fmodf`, any `%f`/`%g`
   in printf (also forbidden by the safety tests: float printf is not linked), inlined

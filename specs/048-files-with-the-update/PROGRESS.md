@@ -156,3 +156,23 @@ Images built from 0a8d162 (2.5.0-dev), installed by the owner:
   "Build and test" runs on it are its first with them.
 - Next: Install from GitHub on a clock (from the home network and from the clock's own),
   then phase 2.
+
+## 2026-11-08: phase 2 (branch feat/048-phase2, from dev at 2.5.0)
+
+- The owner: "spec 048 phase 2 + 047 + small loose ends".
+- The Message face's template moved from a string in faces.cpp to `src/message_face.json`
+  (`scripts/gen_robot.py` writes its robot there; its old hard-coded path to the main
+  checkout's faces.cpp is gone), and the weather icons' polygons to
+  `/sys/weather_icons.bin` (WI_ICONS + 1 offsets, then the bytes; written by
+  `scripts/sys_files.py` from weather_icons.h, whose WI_DATA the firmware no longer
+  references). faces.cpp reads `/sys/message.json` when the Message face comes up, and an
+  icon's bytes when it is drawn. Without the files: a robot-less template in flash
+  (MESSAGE_FACE_MIN) and no icon.
+- Measured: 576,672 B and 404,175 B, **56 KB of update room** (2.5.0: 36 KB). The
+  `.update` grows to 440 KB.
+- Tests: unit (436, both templates), face preview (icons and robot drawn from $SYS_DIR,
+  incremental = full), safety (faces.cpp reads those two files only), the integration
+  harness installs this build's files at the start; update_files removes them, shows a
+  message without them, and installs them again.
+- Integration, full suite on 4cfe6aa: 39 cases passed; no existing screen changed (the
+  starter's picks up the files); the new message_without_files shows the robot-less face.

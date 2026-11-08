@@ -143,7 +143,10 @@ Filesystem and vendor binaries are refused. The filename never selects a flash r
 uploads always use `U_FLASH`. The code is `src/update.cpp`, shared by the firmware and
 the starter.
 
-**The settings page is a file** (`/sys/index.html.gz`, since 2.5.0). When `/sys/manifest`
+**The files** (since 2.5.0): the settings page (`/sys/index.html.gz`), and since phase 2
+the Message face's template (`/sys/message.json`; without it the message is drawn without
+the robot) and the weather icons' polygons (`/sys/weather_icons.bin`; without it no icon).
+**The settings page is a file** (`/sys/index.html.gz`). When `/sys/manifest`
 matches the image, `/` serves it; otherwise (files missing after a `.bin.gz` alone or a
 storage format, files from another version, storage not mounted, recovery) `/` serves the
 setup page in flash (`web/fallback.html`): sign in, WiFi, install the latest release or a

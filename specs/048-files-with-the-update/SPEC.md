@@ -1,7 +1,8 @@
 # 048 Read-only data as files that come with the update
 
 Status: Done in 2.5.0 (phase 1 and the starter; approved 2026-11-07: "lets release
-048", "Go, with starter"). Phase 2 (weather icons and the Message face as files) is open.
+048", "Go, with starter"). Phase 2 (weather icons and the Message face as files): built
+on branch `feat/048-phase2` (the owner, 2026-11-08: "spec 048 phase 2 + 047").
 
 ## Problem
 
@@ -236,7 +237,7 @@ LittleFS: about 30 KB for `/sys/`, twice that while an update stages the new fil
    (once after the move from 2.4.x, after a storage format, a storage that does not
    mount, or a `.bin.gz` installed alone, which leaves them stale), so the fallback is
    minimal, not a second copy: no weather icon drawn, a message as plain title and text.
-   Not in the first release (2.5.0): phase 2, once 048's path has run on the clocks.
+   Not in 2.5.0; built 2026-11-08 (PROGRESS.md): 576,672 B and 404,175 B, 56 KB of room.
 4. Release order: 048 alone in a MINOR release, before spec 047 uses it (recommended:
    useful without 047, it changes the update path, which is worth checking on the
    clocks by itself, and 047 does not fit yet), or both in one release? The owner to
