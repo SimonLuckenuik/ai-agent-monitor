@@ -697,6 +697,27 @@ void emuAnalogWrite(uint8_t pin, int value) {
 }
 void emuAnalogWriteRange(uint32_t range) { backlightRange = int(range); }
 
+// The files an update brings (spec 048): a clock gets them from its first .update file;
+// the emulator puts this build's in its storage at start, so the settings page is there.
+// Only when /sys/manifest is not this build's. EMU_SEED_FILES=0 leaves storage as it is
+// (the integration tests of a clock without them, and of installing an .update file).
+#include "emu_sys_files.h"
+void seedSysFiles() {
+  const char* seed = getenv("EMU_SEED_FILES");
+  if (seed && !strcmp(seed, "0")) return;
+  File m = LittleFS.open("/sys/manifest", "r");
+  if (m && m.readString() == EMU_SYS_MANIFEST) return;
+  if (m) m.close();
+  LittleFS.mkdir("/sys");
+  for (const EmuSysFile& f : EMU_SYS_FILES) {
+    File out = LittleFS.open(String("/sys/") + f.name, "w");
+    if (out) { out.write(f.data, f.size); out.close(); }
+  }
+  File w = LittleFS.open("/sys/manifest", "w");
+  if (w) { w.print(EMU_SYS_MANIFEST); w.close(); }
+  printf("emulator: put this build's /sys files in storage (%s)\n", EMU_SYS_MANIFEST);
+}
+
 void setup() {
   // A new emulator starts with a blank flash image. The firmware never formats on its
   // own (a clock coming from stock has a volume to keep), so format it here, as the
@@ -707,6 +728,7 @@ void setup() {
     fsConfig.setAutoFormat(true);
     LittleFS.setConfig(fsConfig);
     LittleFS.begin();
+    seedSysFiles();
     LittleFS.end();
   }
   setvbuf(stdout, nullptr, _IOLBF, 0);   // docker logs: each line as it is written

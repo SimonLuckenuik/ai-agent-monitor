@@ -1016,12 +1016,17 @@ void handlePhotoDelete() {
 // The settings page is a file that comes with the update (/sys/, spec 048), gzipped;
 // every browser accepts gzip. Without it (recovery, storage that did not mount, files
 // missing or from another version) the setup page in flash, which can install them.
+void sendSetup();
 void sendIndex() {
-  server.sendHeader(F("Cache-Control"), F("no-cache"));
   if (filesOk()) {
     File f = LittleFS.open(F("/sys/index.html.gz"), "r");   // streamFile() says gzip (.gz)
-    if (f) { server.streamFile(f, F("text/html")); f.close(); return; }
+    if (f) { server.sendHeader(F("Cache-Control"), F("no-cache")); server.streamFile(f, F("text/html")); f.close(); return; }
   }
+  sendSetup();
+}
+// /setup: the setup page, always (install the latest release from any page).
+void sendSetup() {
+  server.sendHeader(F("Cache-Control"), F("no-cache"));
   server.sendHeader(F("Content-Encoding"), F("gzip"));
   server.send_P(200, "text/html", reinterpret_cast<PGM_P>(FALLBACK_HTML_GZ), FALLBACK_HTML_GZ_LEN);
 }
@@ -1063,6 +1068,7 @@ void handleCrashClear() {
 const Route ROUTES[] PROGMEM = {
   {"/",                    HTTP_ANY,  sendIndex, nullptr},
   {"/index.html",          HTTP_ANY,  sendIndex, nullptr},
+  {"/setup",               HTTP_ANY,  sendSetup, nullptr},
   {"/config",              HTTP_ANY,  []{ server.send(200, "application/json", configJson()); }, nullptr},
   {"/api/set",             HTTP_ANY,  handleApiSet, nullptr},
   {"/scanwifi",            HTTP_ANY,  handleScanWifi, nullptr},

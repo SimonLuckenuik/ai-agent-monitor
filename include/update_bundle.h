@@ -21,7 +21,7 @@
 #endif
 struct BundleReader {
   enum Event : uint8_t { NONE, FILE_START, FILE_DATA, FILE_END, IMAGE, FAILED };
-  static constexpr uint8_t MAX_FILES = 16, NAME_MAX = 31;
+  static constexpr uint8_t MAX_FILES = 16, NAME_LONGEST = 31;
   static constexpr uint32_t FILE_MAX = 256 * 1024;
 
   // The ESP8266 core's crc32() (and elf2bin's): MSB first, 0x04c11db7, no final xor.
@@ -36,7 +36,7 @@ struct BundleReader {
 
   uint32_t hash = 0;          // after the header
   uint8_t count = 0, done = 0;
-  char name[NAME_MAX + 1] = {};
+  char name[NAME_LONGEST + 1] = {};
   uint32_t size = 0;          // the current file's
   const uint8_t* data = nullptr;   // FILE_DATA and IMAGE: the bytes
   size_t len = 0;
@@ -79,7 +79,7 @@ struct BundleReader {
       hash = word(buf + 8);
       state = S_LEN; need = 1;
     } else if (state == S_LEN) {
-      if (!buf[0] || buf[0] > NAME_MAX) return fail(BUNDLE_TEXT("Invalid update file"), ev, take);
+      if (!buf[0] || buf[0] > NAME_LONGEST) return fail(BUNDLE_TEXT("Invalid update file"), ev, take);
       state = S_NAME; need = buf[0];
     } else if (state == S_NAME) {
       for (size_t i = 0; i < need; ++i) {
@@ -106,7 +106,7 @@ struct BundleReader {
  private:
   enum : uint8_t { S_HEAD, S_LEN, S_NAME, S_SIZES, S_DATA, S_IMAGE, S_FAILED };
   uint8_t state = S_HEAD;
-  uint8_t buf[NAME_MAX + 1] = {};
+  uint8_t buf[NAME_LONGEST + 1] = {};
   size_t need = 12, got = 0;
   uint32_t left = 0, crc = 0, expectCrc = 0;
 
