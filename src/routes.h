@@ -35,9 +35,11 @@ class RouteTable : public esp8266webserver::RequestHandler<WiFiServer> {
     r->handle();
     return true;
   }
-  void upload(ESP8266WebServer&, const String& uri, HTTPUpload&) override {
+  void upload(ESP8266WebServer&, const String& uri, HTTPUpload& up) override {
     const Route* r = find(HTTP_POST, uri);
-    if (r && r->upload && hostAllowed()) r->upload();   // refused: the body is dropped, handle() answers 403
+    // The host is checked once per upload, not for each of its hundreds of pieces.
+    if (up.status == UPLOAD_FILE_START) allowed_ = hostAllowed();
+    if (r && r->upload && allowed_) r->upload();   // refused: the body is dropped, handle() answers 403
   }
 
  private:
@@ -50,4 +52,5 @@ class RouteTable : public esp8266webserver::RequestHandler<WiFiServer> {
   }
   const Route* routes_;
   size_t count_;
+  bool allowed_ = false;
 };

@@ -13,6 +13,11 @@ clock's own update page: no cables, soldering or opening the case. It is a fork 
 [SmartClock-OSS](https://github.com/michaeldale/smartclock-oss), written from scratch
 from a reverse-engineering of the stock firmware; no vendor code is reused.
 
+> **One-way over WiFi.** Restoring the original SD Pro firmware over WiFi isn't
+> possible, so going back to stock needs a USB-serial adapter on the board's pads (and
+> a backup of the original flash, made over that adapter before installing; see
+> [Install](#install)).
+
 ![The clock faces](docs/images/faces.png)
 
 ## What it does
@@ -416,9 +421,18 @@ The weather icons are generated from the SVGs by `python scripts/gen_weather_ico
 
 ## Related projects
 
-Two alternative firmwares for GeekMagic's SmallTV (a different board from the SD Pro), and
-what we took from them or might:
+Other firmware for these small ESP8266 and ESP32 screens, and what we took from them or
+might:
 
+- [SmartClock-OSS](https://github.com/michaeldale/smartclock-oss) (GPL-3.0): the open
+  replacement firmware for the SD Pro that this project is a fork of (faces, Open-Meteo
+  weather, installed from the stock update page).
+- [esp-mini_screen](https://github.com/slavka08/esp-mini_screen): sketches for the
+  GeekMagic SmallTV-Ultra (ESP-12F, ST7789 240×240) that turn it into a system monitor
+  for a Mac (RAM, CPU and GPU gauges), with notifications and dashboards.
+- [esphome-geekmagic-smalltv](https://github.com/ViToni/esphome-geekmagic-smalltv):
+  an ESPHome configuration for the GeekMagic SmallTV, so it runs as an ESPHome device in
+  Home Assistant instead of on its vendor firmware.
 - [smalltv-pomodoro](https://github.com/davicorrea0/smalltv-pomodoro) (GPL-3.0): a
   pomodoro timer with installable faces. Its 41 faces are converted into
   [examples/faces/smalltv-pomodoro](examples/faces/smalltv-pomodoro/README.md) (spec 026),

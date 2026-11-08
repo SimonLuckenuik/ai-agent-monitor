@@ -966,8 +966,9 @@ void integrationsRoutes() {
     if (method == F("POST") && url == F("/api/faces")) customRelease();
     return ESP8266WebServer::CLIENT_REQUEST_CAN_CONTINUE;
   });
-  static RouteTable routes(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0]));
-  server.addHandler(&routes);
+  // On the heap, once: the server's destructor deletes its handlers (the emulator's
+  // restart runs it; a static table aborted every restart there).
+  server.addHandler(new RouteTable(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0])));
 }
 
 void integrationsLoop() {

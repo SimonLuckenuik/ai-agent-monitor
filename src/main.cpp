@@ -1138,8 +1138,9 @@ void timeGuardDate(uint32_t t) {   // weather.cpp: the reply's Date header
 }
 
 void setupRoutes() {
-  static RouteTable routes(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0]));
-  server.addHandler(&routes);
+  // On the heap, once: the server's destructor deletes its handlers (the emulator's
+  // restart runs it; a static table aborted every restart there).
+  server.addHandler(new RouteTable(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0])));
   server.collectHeaders("Cookie", "X-Api-Key");   // sessions; the faces API key
   integrationsRoutes();
   server.onNotFound([]{

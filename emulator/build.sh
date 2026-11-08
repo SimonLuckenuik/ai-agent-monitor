@@ -31,14 +31,15 @@ if ! grep -q 'emulator: give up' "$mock"; then
   grep -q 'emulator: give up' "$mock" || { echo "build.sh: could not patch $mock" >&2; exit 1; }
 fi
 # The clock's memory (memory.cpp) replaces the mock's fixed heap and stack numbers, its
-# reset reason and its restart(). Taken out of a pristine copy at each build.
+# reset reason and its restart(); flash.cpp its flash calls, which dropped every write
+# (spec 048: the updater stages an update there). Taken out of a pristine copy at each build.
 git -C /esp8266 checkout -q -- tests/host/common/MockEsp.cpp
 python3 - common/MockEsp.cpp <<'PY'
 import re, sys
 path = sys.argv[1]
 s = open(path).read()
 for name in ("getFreeHeap", "getMaxFreeBlockSize", "getFreeContStack", "getResetReason",
-             "restart", "getHeapStats"):
+             "restart", "getHeapStats", "flashEraseSector", "flashWrite", "flashRead"):
     s, n = re.subn(r"\n[^\n]*EspClass::%s\([^)]*\)\n\{.*?\n\}\n" % name, "\n", s, flags=re.S)
     if not n:
         sys.exit("build.sh: could not take EspClass::%s out of %s" % (name, path))
@@ -60,6 +61,15 @@ s, c = re.subn(r"(uint8 wifi_softap_get_station_num\(void\)\s*\{\s*)return 2;", 
 if (a, b, c) != (1, 2, 1):
     sys.exit("build.sh: could not patch the WiFi mode in %s (%d %d %d)" % (path, a, b, c))
 s = s.replace("#include <user_interface.h>", "#include <user_interface.h>\nstatic uint8 emu_opmode = STATION_MODE;", 1)
+# wifi_get_ip_info() calls getifaddrs() each time and exit()s when it fails once. The
+# firmware asks for the setup network's address on every request (hostAllowed()), so
+# an upload asks hundreds of times and a passing EAGAIN killed the emulator (spec 048's
+# update uploads). Try a few times instead.
+old = 'if (getifaddrs(&ifAddrStruct) != 0)'
+new = 'int tries = 0; while (getifaddrs(&ifAddrStruct) != 0 && ++tries < 20) usleep(2000); if (tries >= 20)'
+if s.count(old) != 1:
+    sys.exit("build.sh: could not patch getifaddrs() in %s" % path)
+s = s.replace(old, new)
 open(path, "w").write(s)
 PY
 # emu_build_flags.h: platformio.ini's build_flags, in every source. F_CPU also goes on
@@ -78,7 +88,7 @@ fi
 # binary's data must sit below 4 GB, as it does on the chip.
 make -j"$(nproc)" FORCE32=$force32 OPTZ=-O1 R=noexec USERLDFLAGS=-no-pie \
   ULIBDIRS=/libs/ArduinoJson:/libs/PubSubClient \
-  USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/emulator/panel.cpp $root/emulator/memory.cpp \
+  USERCXXSOURCES="$root/emulator/emulator.cpp $root/emulator/fw_main.cpp $root/emulator/panel.cpp $root/emulator/memory.cpp $root/emulator/flash.cpp \
                   $root/src/faces.cpp $root/src/update.cpp $root/src/integrations.cpp $root/src/weather.cpp $root/src/json_parse.cpp $root/src/openclaw.cpp $root/src/ed25519.cpp $root/src/openclaw_proto.cpp $root/src/ascii.cpp $root/src/crash.cpp $root/src/mdns.cpp $root/src/mdns_packet.cpp \
                   $work/TFT_eSPI/TFT_eSPI.cpp" \
   USERCSOURCES=/libs/TJpg_Decoder/src/tjpgd.c \
