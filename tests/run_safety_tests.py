@@ -136,7 +136,7 @@ assert "if (!requestAuthorized()) {" in function(update_src, "void handleOtaUplo
 # /sys is written by the update only (spec 048): main.cpp and faces.cpp only read it.
 faces_src = (root / "src/faces.cpp").read_text(encoding="utf-8")
 for f in list((root / "src").glob("*.cpp")):
-    if f.name not in ("update.cpp", "main.cpp", "faces.cpp"):
+    if f.name not in ("update.cpp", "main.cpp", "faces.cpp", "jsonrender.cpp"):
         assert '"/sys' not in f.read_text(encoding="utf-8"), f"{f.name} must not touch /sys (update.cpp owns it)"
 assert sorted(re.findall(r'LittleFS\.open\(F\("/sys/[^"]+"\), "r"\)', faces_src)) == sorted(
     ['LittleFS.open(F("/sys/message.json"), "r")', 'LittleFS.open(F("/sys/weather_icons.bin"), "r")']) \

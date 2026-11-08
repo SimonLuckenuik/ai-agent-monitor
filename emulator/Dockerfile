@@ -29,7 +29,8 @@ FROM deps AS build
 COPY src /app/src
 COPY include /app/include
 COPY web /app/web
-COPY scripts/minify_page.py scripts/sys_files.py scripts/make_update.py /app/scripts/
+COPY scripts/minify_page.py scripts/sys_files.py scripts/make_update.py scripts/gen_jr_catalog.py /app/scripts/
+COPY integrations/json-render /app/integrations/json-render
 # The panel config and F_CPU (emu_build_flags.h, from gen_headers.py).
 COPY platformio.ini /app/platformio.ini
 COPY emulator /app/emulator

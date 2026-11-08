@@ -145,3 +145,27 @@ catalog (npm installs refused here). The OpenClaw `clock.catalog` command is not
 
 Not verified: LTO on a clock; anything json-render on a clock (it does not fit yet); the
 heap problem (unchanged); `validateSpec()`.
+
+## 2026-11-08: on 2.5.0 and spec 048 phase 2 (branch feat/047-json-render)
+
+- The owner: "spec 048 phase 2 + 047". The branch's five 047 commits were cherry-picked
+  onto 2.5.0 plus phase 2 (the 048 draft commits it also carried are in dev in their
+  final form). Conflicts: the index pages (dev's kept; 047's entries to rewrite), the
+  emulator's source list (json-render added, on in the emulator's firmware build), the
+  route table (2.5.0's heap one, with 047's Accept-Encoding header).
+- The catalog and its prompt are now files that come with the update in builds with
+  json-render (/sys/catalog.json.gz, /sys/prompt.md.gz; `gen_jr_catalog.catalog_files()`
+  through scripts/sys_files.py); include/jr_catalog.h is gone. /api/catalog streams them
+  (503 without them).
+- Flash, `pio run` with SMARTCLOCK_JSONRENDER=1: 628,720 B and 442,614 B (36 KB over the
+  update limit) with the catalog in flash; with it as files 621,152 B and 434,805 B,
+  **20 KB over** (it was 80 KB over on 2.4.0). Without json-render the same base has 56 KB
+  of room. LTO measured about 20 KB of room earlier: with it, about at the limit.
+- Heap, in the emulator with the clock's arena (25.6 KB; 18.8 KB free at rest with
+  json-render): specs of 1.3-3.0 KB save; b-meeting (2.8 KB) and b-ci (4.8 KB) fail
+  with 507. The compile holds the request body, the parsed spec (1.5-2 times its text),
+  the core's stack thunk (6.2 KB, 2.9-3.7 KB used) and the compiled face at once.
+- Open, for the owner: LTO (about 20 KB of room for every build; a run on a clock), a
+  size-minded compiler (15-20 KB, estimated), and memory: parse the spec from a file
+  instead of the request body, a smaller stack of our own instead of the core's 6.2 KB
+  thunk, a filtered parse.

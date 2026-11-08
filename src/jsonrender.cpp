@@ -13,7 +13,7 @@
 #include <TFT_eSPI.h>
 #include <ESP8266WebServer.h>
 #include "json_parse.h"
-#include "jr_catalog.h"
+#include <LittleFS.h>
 
 TFT_eSPI& clockDisplay();
 float jrMonoWidth(const char* s);
@@ -1379,14 +1379,20 @@ String jrCompileHere(const String& body, String& out, String& warnings, String& 
 
 // Both are stored gzipped. Every browser, fetch(), requests and curl --compressed take
 // that; a client that does not say so gets a hint rather than binary.
+// The catalog and its prompt are files that come with the update, gzipped (/sys, spec 048:
+// 7.7 KB that cost 15 KB of update room in the image).
 void jrSendCatalog(bool prompt) {
   if (server.header(F("Accept-Encoding")).indexOf(F("gzip")) < 0) {
     server.send(406, PSTR("text/plain"), PSTR("Stored gzipped: send Accept-Encoding: gzip (curl --compressed)\n"));
     return;
   }
-  server.sendHeader(F("Content-Encoding"), F("gzip"));
-  if (prompt) server.send_P(200, PSTR("text/markdown; charset=utf-8"), reinterpret_cast<PGM_P>(JR_PROMPT), JR_PROMPT_LEN);
-  else server.send_P(200, PSTR("application/json"), reinterpret_cast<PGM_P>(JR_CATALOG), JR_CATALOG_LEN);
+  File f = LittleFS.open(prompt ? F("/sys/prompt.md.gz") : F("/sys/catalog.json.gz"), "r");
+  if (!f) {
+    server.send(503, PSTR("text/plain"), PSTR("The catalog comes with the update: install the .update file\n"));
+    return;
+  }
+  server.streamFile(f, prompt ? F("text/markdown; charset=utf-8") : F("application/json"));   // .gz: gzip
+  f.close();
 }
 
 #else

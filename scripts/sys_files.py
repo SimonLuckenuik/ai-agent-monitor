@@ -48,13 +48,17 @@ def write_if_changed(path, content):   # unchanged files keep their timestamps (
             f.write(data)
 
 
-def build(root, generated, sys_dir, extra_head=b""):
+def build(root, generated, sys_dir, extra_head=b"", jsonrender=False):
     """Writes the headers into generated/ and the files into sys_dir/. Returns the files
-    as [(name, bytes)] for the update file, and a line for the build log."""
+    as [(name, bytes)] for the update file, and a line for the build log. jsonrender: the
+    build has json-render (spec 047), whose catalog and prompt are files too."""
     os.makedirs(generated, exist_ok=True)
     os.makedirs(sys_dir, exist_ok=True)
     html, index_gz = page(root, "index.html", extra_head)
     files = [("index.html.gz", index_gz)] + data_files(root)
+    if jsonrender:
+        import gen_jr_catalog
+        files += gen_jr_catalog.catalog_files()
     for name, data in files:
         write_if_changed(os.path.join(sys_dir, name), data)
     write_if_changed(os.path.join(generated, "files_hash.h"),
