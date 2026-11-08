@@ -1,4 +1,5 @@
-// Host stand-in for LittleFS: "/photo" maps to the directory in $PHOTO_DIR.
+// Host stand-in for LittleFS: "/photo" maps to the directory in $PHOTO_DIR, "/faces" to
+// $FACES_DIR, "/sys" (the files an update brings, spec 048) to $SYS_DIR.
 #pragma once
 #include <Arduino.h>
 #include <filesystem>
@@ -37,6 +38,7 @@ struct LittleFSClass {
     std::string s = p.c_str();
     if (s.rfind("/photo", 0) == 0 && !root().empty()) return root() + s.substr(6);
     if (s.rfind("/faces", 0) == 0 && !env("FACES_DIR").empty()) return env("FACES_DIR") + s.substr(6);
+    if (s.rfind("/sys/", 0) == 0 && !env("SYS_DIR").empty()) return env("SYS_DIR") + s.substr(4);
     return std::string();
   }
   File open(const String& path, const char*) { std::string h = host(path); return File(h.empty() ? nullptr : fopen(h.c_str(), "rb")); }

@@ -2,10 +2,15 @@
 scripts/build_options.py (the firmware) and emulator/gen_headers.py (the emulator).
 
 - /sys/index.html.gz: web/index.html minified and gzipped (spec 036), served from storage;
+- /sys/message.json: the Message face's template (src/message_face.json; phase 2);
+- /sys/weather_icons.bin: the Weather Icons' polygons (from src/weather_icons.h; phase 2);
 - web_fallback.h: web/fallback.html, gzipped into flash (FALLBACK_HTML_GZ);
 - files_hash.h: FILES_HASH, which /sys/manifest must match for the firmware to use them.
 """
+import json
 import os
+import re
+import struct
 
 import make_update
 import minify_page
@@ -21,6 +26,21 @@ def page(root, name, extra_head=b""):
     return html, minify_page.gzip_page(html)
 
 
+def data_files(root):
+    """The files faces.cpp reads (phase 2), with no page build: for the firmware's update
+    and for the host tests (face preview, unit tests), which read them from $SYS_DIR."""
+    face = json.loads(open(os.path.join(root, "src", "message_face.json"), encoding="utf-8").read())
+    message = json.dumps(face, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    header = open(os.path.join(root, "src", "weather_icons.h"), encoding="utf-8").read()
+    starts = [int(n) for n in re.search(r"WI_START\[[^\]]*\] PROGMEM = \{([^}]*)\}", header).group(1).split(",")]
+    body = re.search(r"WI_DATA\[\] PROGMEM = \{(.*?)\};", header, re.S).group(1)
+    data = bytes(int(n) for n in re.findall(r"\b\d+\b", re.sub(r"//[^\n]*", "", body)))
+    if starts[-1] != len(data):
+        raise SystemExit("sys_files: weather_icons.h: WI_START ends at %d, WI_DATA has %d bytes" % (starts[-1], len(data)))
+    icons = b"".join(struct.pack("<H", n) for n in starts) + data
+    return [("message.json", message), ("weather_icons.bin", icons)]
+
+
 def write_if_changed(path, content):   # unchanged files keep their timestamps (no rebuild)
     data = content.encode("utf-8") if isinstance(content, str) else content
     if not os.path.isfile(path) or open(path, "rb").read() != data:
@@ -34,7 +54,7 @@ def build(root, generated, sys_dir, extra_head=b""):
     os.makedirs(generated, exist_ok=True)
     os.makedirs(sys_dir, exist_ok=True)
     html, index_gz = page(root, "index.html", extra_head)
-    files = [("index.html.gz", index_gz)]
+    files = [("index.html.gz", index_gz)] + data_files(root)
     for name, data in files:
         write_if_changed(os.path.join(sys_dir, name), data)
     write_if_changed(os.path.join(generated, "files_hash.h"),
@@ -50,6 +70,7 @@ def build(root, generated, sys_dir, extra_head=b""):
         "static const uint8_t FALLBACK_HTML_GZ[] PROGMEM = {",
         ",\n".join("  " + r for r in rows),
         "};", ""]))
-    log = ("web/index.html minified %d bytes -> %d gzipped (a file); web/fallback.html %d -> %d gzipped (flash)"
-           % (len(html), len(index_gz), len(fallback), len(fallback_gz)))
+    log = ("web/index.html minified %d bytes -> %d gzipped (a file); web/fallback.html %d -> %d gzipped (flash); "
+           "files %s" % (len(html), len(index_gz), len(fallback), len(fallback_gz),
+                         ", ".join("%s %d" % (n, len(d)) for n, d in files)))
     return files, log

@@ -64,7 +64,15 @@ subprocess.run([zig, "c++", "-std=c++17", "-O2", "-Wall", "-Wno-nullability-comp
                 str(here / "mock" / "TFT_eSPI.cpp"), str(obj), "-o", str(exe)], check=True, env=env)
 # FACE_PREVIEW_PHOTOS=<dir> renders your own JPEGs (e.g. ones the settings page produced).
 photo_dir = os.environ.get("FACE_PREVIEW_PHOTOS") or str(photos)
-result = subprocess.run([str(exe), str(out)], env=dict(env, PHOTO_DIR=photo_dir))
+# The files faces.cpp reads from /sys (spec 048 phase 2: the Message face, the weather
+# icons), as the update brings them.
+sys.path.insert(0, str(root / "scripts"))
+import sys_files   # noqa: E402
+sys_dir = root / ".pio" / "face-preview-sys"
+sys_dir.mkdir(parents=True, exist_ok=True)
+for name, data in sys_files.data_files(str(root)):
+    (sys_dir / name).write_bytes(data)
+result = subprocess.run([str(exe), str(out)], env=dict(env, PHOTO_DIR=photo_dir, SYS_DIR=str(sys_dir)))
 
 frames = sorted(out.glob("*.raw"))
 tiles = []

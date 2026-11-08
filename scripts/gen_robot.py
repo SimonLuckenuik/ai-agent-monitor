@@ -170,7 +170,7 @@ def parts():
     return out
 
 
-FACES_CPP = Path(r"C:\dev\ai-agent-monitor\src\faces.cpp")
+TEMPLATE = ROOT / "src" / "message_face.json"   # the Message face (spec 048 phase 2: a file)
 S = 3                        # screen pixels per cell
 X0 = 120 - W * S // 2  # the canvas's left edge on screen
 Y0 = 8                       # its top (the antenna starts at row 2)
@@ -202,21 +202,17 @@ items = [
 ]
 
 def write_template():
-    src = FACES_CPP.read_bytes().decode("utf-8")   # bytes: keep its CRLF line endings
-    crlf = "\r\n" in src
-    src = src.replace("\r\n", "\n")
-    lines = src.split("\n")
-    start = next(i for i, l in enumerate(lines) if l.startswith('const char MESSAGE_FACE[] PROGMEM'))
-    end = next(i for i in range(start, len(lines)) if lines[i].endswith(')MF";'))
-    body = [l for l in lines[start:end + 1] if not l.startswith('{"type":"sprite"')]
+    """The robot into the Message face's template: src/message_face.json (a file that
+    comes with the update since spec 048 phase 2; it was a string in faces.cpp)."""
+    src = TEMPLATE.read_bytes().decode("utf-8")
+    lines = src.rstrip("\n").split("\n")
+    body = [l for l in lines if not l.startswith('{"type":"sprite"')]
     # The figure goes right after the icon's path item.
     k = next(i for i, l in enumerate(body) if l.startswith('{"type":"path"'))
     body[k + 1:k + 1] = [i + "," for i in items]
     # maps: add dy (the error slump: one cell lower)
     body = [l.replace('"maps":{"fig"', '"maps":{"dy":{"error":%d,"*":0},"fig"' % S) if '"maps":{"fig"' in l else l for l in body]
-    lines[start:end + 1] = body
-    out = "\n".join(lines)
-    FACES_CPP.write_bytes((out.replace("\n", "\r\n") if crlf else out).encode("utf-8"))
+    TEMPLATE.write_bytes(("\n".join(body) + "\n").encode("utf-8"))
     size = sum(len(l) + 1 for l in body)
     print("template", size, "bytes;", sum(len(i) for i in items), "for the robot")
 

@@ -502,6 +502,12 @@ void handleRequest(WiFiClient& c, const String& head) {
     sendText(c, 200, "application/json", emuTimingJson(queryArg(query, "reset") == "1"));
   } else if (path == "/password") {   // for the screen page's sign-in link
     sendText(c, 200, "text/plain; charset=utf-8", devicePassword);
+  } else if (path == "/sys-files" && method == "POST") {   // removes them: a clock without its files
+    std::vector<String> names;
+    Dir d = LittleFS.openDir("/sys");
+    while (d.next()) names.push_back(d.fileName());
+    for (const String& n : names) LittleFS.remove("/sys/" + n);
+    sendText(c, 200, "text/plain", String(names.size()) + " files removed\n");
   } else if (path == "/sys-files") {   // the integration tests make an .update file of them
     sendText(c, 200, "application/octet-stream", sysFilesUpdate());
   } else if (path == "/fs") {

@@ -4,6 +4,7 @@
 #include "faces.h"
 #include <Arduino.h>
 #include <algorithm>
+#include <memory>
 #include <new>
 #include <LittleFS.h>
 #include <TFT_eSPI.h>
@@ -2169,17 +2170,13 @@ bool faceTurn(const String& name, uint32_t* seconds, bool* hasWhen = nullptr) {
   return visibleField(doc["when"], t);
 }
 
-// ---- The Message face: the message messageShowing() points at, drawn from this
-// template by the custom-face renderer ({msg.*} placeholders, see messageValue).
-const char MESSAGE_FACE[] PROGMEM = R"MF({"bg":"{msg.bg}",
-"invert":"{msg.anim}&&{msg.shown}<4&&{msg.kind:flash}&&{time.ms}>=500",
-"maps":{"dy":{"error":3,"*":0},"fig":{"waiting":1,"done":1,"error":1,"*":0},"flash":{"warning":1,"error":1,"*":0}},"items":[
-{"type":"path","x":120,"y":56,"size":76,"align":"mc","stroke":"{msg.color}","sw":2,"d":"{msg.icon}","show":"!({msg.anim}&&{msg.kind:fig})"},
-{"type":"sprite","x":89,"y":"56-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","rows":[".......kggggk","....kkkkkkkkkkkk","kbbkkwswwwwwswskkbbk","....kwkkkkkkkwsk","....kwkeaaeekwsk","....kwkeaaeekwsk","....kwkkkkkkkwsk","....kwwbwawbwwsk","....kggggggggggk","....kkkkkkkkkkkk",".....kbbk..kbbk",".....kgsk..kgsk","....kwwsk..kwwsk","....kkkkk..kkkkk"]},
-{"type":"sprite","x":80,"y":"35-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","frame":"{msg.kind}==done","frames":[["","","","","","","","","","...kbbk","...kgsk","...kgsk","...kgsk","...kgsk","...kgsk","...kgsk","...kssk","...kbbk","....kk"],[".kk","kbbk","kssk","kgsk","kgsk","kgsk","kgsk","kgsk","kbbk","...kbbk","","","","","","","","",""]]},
-{"type":"sprite","x":137,"y":"35-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","frame":"{msg.kind}==done?1:({msg.shown}<30||{time.sec}%10<3)&&{msg.kind}==waiting?1+({time.ms}>=500):0","frames":[["","","","","","","","","","kbbk","kgsk","kgsk","kgsk","kgsk","kgsk","kgsk","kssk","kbbk",".kk"],["....kk","...kbbk","...kssk","...kgsk","...kgsk","...kgsk","...kgsk","...kgsk","...kbbk","kbbk","","","","","","","","",""],[".....kk","....kbbk","....kssk","....kgsk","....kgsk","....kgsk","...kgsk","...kgsk","...kbbk","kbbk","","","","","","","","",""]]},
-{"type":"sprite","x":86,"y":"14+{msg.kind:dy}-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","rows":["..........aa","..........aa","..........gg","...kkkkkkkkkkkkkkkk","..kwwwwwwwwwwwwwwssk","..kwkkkkkkkkkkkkkksk","..kwkhheeeeeeeeeeksk","kbkwkheeeeeeeeeeekskbk","kbkwkeeeeeeeeeeeekskbk","kbkwkeeeeeeeeeeeekskbk","..kwkeeeeeeeeeeeeksk","..kwkkkkkkkkkkkkkksk","..kssssssssssssssssk","...kkkkkkkkkkkkkkkk"]},
-{"type":"sprite","x":101,"y":"32+{msg.kind:dy}-({msg.shown}<6&&{msg.kind}==done&&{time.ms}>=500)*6","scale":3,"palette":{"k":"#141a26","w":"#eef2f7","s":"#aab6c6","g":"#7d8ca3","b":"#3b82f6","e":"#0f2a40","h":"#2c5578","a":"{msg.color}"},"show":"{msg.anim}&&{msg.kind:fig}","bg":"#0f2a40","frame":"{msg.kind}==done?1:{msg.kind}==error?2:{time.sec}%5==0&&{time.ms}<300?3:0","frames":[["hheeeeeeeeee","heaaeeeeaaee","eeaaeeeeaaee","eeeeeeeeeeee","eeeeeaaeeeee"],["hheaeeeeaeee","heaeaeeaeaee","eeeeeeeeeeee","eeaeeeeeeaee","eeeaaaaaaeee"],["eaeaeeeeaeae","eeaeeeeeeaee","eaeaeeeeaeae","eeeeeeeeeeee","eeeeaaaaeeee"],["hheeeeeeeeee","heeeeeeeeeee","eeaaeeeeaaee","eeeeeeeeeeee","eeeeaaaaeeee"]]},
+// ---- The Message face: the message messageShowing() points at, drawn from a template by
+// the custom-face renderer ({msg.*} placeholders, see messageValue). The template is
+// src/message_face.json, a file that comes with the update (/sys/message.json, spec 048
+// phase 2; scripts/gen_robot.py writes its robot). Without it (the files missing or not
+// mounted) this one: the same message without the robot.
+const char MESSAGE_FACE_MIN[] PROGMEM = R"MF({"bg":"{msg.bg}","items":[
+{"type":"path","x":120,"y":56,"size":76,"align":"mc","stroke":"{msg.color}","sw":2,"d":"{msg.icon}"},
 {"type":"text","x":120,"y":108,"w":228,"lines":1,"text":"{msg.title}","font":4,"align":"tc","color":"{msg.color}"},
 {"type":"text","x":120,"y":142,"w":220,"lines":"{msg.pct}>=0?3:4","text":"{msg.text}","font":2,"align":"tc","color":"#f2f2f7"},
 {"type":"bar","x":40,"y":204,"w":160,"h":8,"value":"{msg.pct}","color":"{msg.color}","track":"#2c2c2e","show":"{msg.pct}>=0"},
@@ -2191,8 +2188,14 @@ void message(const struct tm& t, bool force) {
   static int seenSlot = -1;
   if (customName != MESSAGE_DOC) {
     customDoc.clear();
-    String json = pgmString(MESSAGE_FACE);
-    customLoaded = !parseJson(customDoc, json.c_str());   // copied into the document
+    File f = LittleFS.open(F("/sys/message.json"), "r");
+    customLoaded = f && !parseJson(customDoc, f);
+    if (f) f.close();
+    if (!customLoaded) {   // no file: the message without the robot
+      customDoc.clear();
+      String json = pgmString(MESSAGE_FACE_MIN);
+      customLoaded = !parseJson(customDoc, json.c_str());   // copied into the document
+    }
     customName = MESSAGE_DOC;   // custom() reloads its own face when it is next shown
     force = true;
   }
@@ -2660,15 +2663,31 @@ int wiIndex(const String& name) {
   return pgm_read_byte(&WI_FIRST[base]) + (night && base < WI_BASES - WI_AGNOSTIC ? 1 : 0);
 }
 
+// The icons' polygons are a file that comes with the update (/sys/weather_icons.bin, spec
+// 048 phase 2; scripts/sys_files.py writes it from weather_icons.h): WI_ICONS + 1 offsets
+// (u16, little-endian), then the bytes. One icon's bytes (at most a few hundred) are read
+// when it is drawn; without the file, no icon.
 void weatherIcon(int cx, int cy, int s, const String& icon, uint16_t bg, uint16_t color) {
   int k = wiIndex(icon);
+  if (k < 0) return;
+  File f = LittleFS.open(F("/sys/weather_icons.bin"), "r");
+  if (!f) return;
+  uint8_t at[4];
+  int start = 0, len = 0;
+  if (f.seek(2 * k, SeekSet) && f.read(at, 4) == 4) {
+    start = at[0] | (at[1] << 8);
+    len = (at[2] | (at[3] << 8)) - start;
+  }
+  std::unique_ptr<uint8_t[]> d(len > 0 && len <= 2048 ? new (std::nothrow) uint8_t[len] : nullptr);
+  bool read = d && f.seek(2 * (WI_ICONS + 1) + start, SeekSet) && f.read(d.get(), len) == (size_t)len;
+  f.close();
   Poly P;
-  if (k < 0 || !P.ok()) return;
+  if (!read || !P.ok()) return;
   P.sx = P.sy = s / (30.0f * WI_UNIT); P.ox = cx - s / 2.0f; P.oy = cy - s / 2.0f;
-  for (int i = pgm_read_word(&WI_START[k]), e = pgm_read_word(&WI_START[k + 1]); i < e;) {
-    uint8_t x = pgm_read_byte(&WI_DATA[i++]);
+  for (int i = 0; i < len;) {
+    uint8_t x = d[i++];
     if (x == 0xFF) P.close();
-    else P.add(x, pgm_read_byte(&WI_DATA[i++]));
+    else if (i < len) P.add(x, d[i++]);
   }
   Paint paint;
   paint.c[0] = color;

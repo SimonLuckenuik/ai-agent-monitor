@@ -252,9 +252,16 @@ static void testMessageFace() {
     CHECK(inside);
     CHECK(icon.role >= R_OK && icon.role <= R_INFO);
   }
+  // The Message face: the template the update brings (/sys/message.json, spec 048 phase 2),
+  // and the one in flash for a clock without it.
   JsonDocument face;
-  CHECK(!deserializeJson(face, pgmString(MESSAGE_FACE).c_str()));
+  File mf = LittleFS.open("/sys/message.json", "r");
+  CHECK(mf && !deserializeJson(face, mf));
+  mf.close();
   CHECK(face["items"].size() == 10);   // the icon, the robot in 5 parts (spec 039), title, text, bar, time
+  JsonDocument min;
+  CHECK(!deserializeJson(min, pgmString(MESSAGE_FACE_MIN).c_str()));
+  CHECK(min["items"].size() == 5);     // the icon, title, text, bar, time: no robot
 }
 
 // The Big tiles' font: every glyph inside its slot, digits the full cap height, so

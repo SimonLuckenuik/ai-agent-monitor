@@ -1162,29 +1162,36 @@ def html(body):
 
 @case
 def update_files(emu):
-    """Spec 048: the settings page is a file that comes with the update. This emulator
-    starts without it (EMU_SEED_FILES=0): the setup page, then an .update installs it."""
+    """Spec 048: the files the firmware reads from storage (the settings page, the Message
+    face, the weather icons) come with the update. Without them: the setup page, the
+    message without its robot, no weather icon; then an .update installs them."""
     page = lambda path="/": html(emu.get(path))
+    emu.drop_sys_files()
+    emu.restart()
+    emu.sign_in()
     s = emu.status()
-    if s["files"] == "missing":   # this case runs once per emulator: later runs find it installed
-        check("<title>AI Agent Monitor setup</title>" in page(), "without its files, / is the setup page")
-        files = emu.sys_files()
-        image = stand_in_image()
-        bad = bytearray(files + image)
-        bad[40] ^= 1   # inside the first file: its CRC fails
-        code, reply = emu.upload_update(bytes(bad))
-        check(code == 400 and "CRC" in reply, f"a damaged file is refused: {code} {reply}")
-        check(emu.status()["files"] == "missing", "nothing installed")
-        bad = bytearray(files + image)
-        bad[-100] ^= 1   # inside the image
-        code, reply = emu.upload_update(bytes(bad))
-        check(code == 400, f"a damaged image is refused: {code} {reply}")
-        check(emu.status()["files"] == "missing", "the files wait for the image")
-        code, reply = emu.upload_update(files + image)
-        check(code == 200 and reply == "OK", f"the update file installs: {code} {reply}")
-        emu.wait_restart()
-        emu.sign_in()
-        emu.set("tz", TZ)
+    check(s["files"] == "missing", f"without /sys the files are missing: {s['files']}")
+    check("<title>AI Agent Monitor setup</title>" in page(), "without its files, / is the setup page")
+    emu.message(id="nofiles", title="Deployed", text="The message without its robot", icon="done", show=True)
+    shot(emu, "message_without_files")
+    emu.clear_messages()
+    files = emu.sys_files()
+    image = stand_in_image()
+    bad = bytearray(files + image)
+    bad[40] ^= 1   # inside the first file: its CRC fails
+    code, reply = emu.upload_update(bytes(bad))
+    check(code == 400 and "CRC" in reply, f"a damaged file is refused: {code} {reply}")
+    check(emu.status()["files"] == "missing", "nothing installed")
+    bad = bytearray(files + image)
+    bad[-100] ^= 1   # inside the image
+    code, reply = emu.upload_update(bytes(bad))
+    check(code == 400, f"a damaged image is refused: {code} {reply}")
+    check(emu.status()["files"] == "missing", "the files wait for the image")
+    code, reply = emu.upload_update(files + image)
+    check(code == 200 and reply == "OK", f"the update file installs: {code} {reply}")
+    emu.wait_restart()
+    emu.sign_in()
+    emu.set("tz", TZ)
     check(emu.status()["files"] == "ok", "the files match the firmware")
     check("<title>AI Agent Monitor</title>" in page(), "/ is the settings page again")
     check("<title>AI Agent Monitor setup</title>" in page("/setup"), "/setup is always the setup page")
@@ -1230,6 +1237,10 @@ def main():
     failed = []
     try:
         emu.wait_ready()
+        if emu.status()["files"] != "ok":   # this emulator starts without them (EMU_SEED_FILES=0)
+            emu.sign_in()
+            emu.install_files()
+            emu.wait_ready()
         emu.sign_in()
         emu.set("tz", TZ)
         chosen = [fn for fn in cases if args.k in fn.__name__]

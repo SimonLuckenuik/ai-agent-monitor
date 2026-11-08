@@ -48,7 +48,13 @@ exe = build / "unit_tests.exe"
 subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", "-Wno-nullability-completeness", *inc,
                 str(here / "unit_tests.cpp"), str(build / "ascii.cpp"), str(build / "json_parse.cpp"), str(mock / "TFT_eSPI.cpp"), str(obj),
                 "-o", str(exe)], check=True, env=env)
-faces = subprocess.run([str(exe)]).returncode
+# The files faces.cpp reads from /sys (spec 048 phase 2), as the update brings them.
+sys.path.insert(0, str(root / "scripts"))
+import sys_files   # noqa: E402
+(build / "sys").mkdir(exist_ok=True)
+for name, data in sys_files.data_files(str(root)):
+    (build / "sys" / name).write_bytes(data)
+faces = subprocess.run([str(exe)], env=dict(os.environ, SYS_DIR=str(build / "sys"))).returncode
 # The mDNS packets (spec 027): plain C++, no mocks.
 mdns = build / "mdns_tests.exe"
 subprocess.run([zig, "c++", "-std=c++17", "-O1", "-Wall", str(here / "mdns_tests.cpp"),

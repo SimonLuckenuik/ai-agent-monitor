@@ -133,10 +133,14 @@ for name in ("handleApiSet", "handleConnect", "handleFormatStorage", "handleWeat
              "handleWifiForget", "handleScanWifi"):
     assert "requireAuth()" in function(source, "void " + name + "()"), f"{name} does not require sign-in"
 assert "if (!requestAuthorized()) {" in function(update_src, "void handleOtaUpload()"), "OTA upload must require sign-in"
-# /sys is written by the update only (spec 048): no other source names it.
+# /sys is written by the update only (spec 048): main.cpp and faces.cpp only read it.
+faces_src = (root / "src/faces.cpp").read_text(encoding="utf-8")
 for f in list((root / "src").glob("*.cpp")):
-    if f.name not in ("update.cpp", "main.cpp"):
+    if f.name not in ("update.cpp", "main.cpp", "faces.cpp"):
         assert '"/sys' not in f.read_text(encoding="utf-8"), f"{f.name} must not touch /sys (update.cpp owns it)"
+assert sorted(re.findall(r'LittleFS\.open\(F\("/sys/[^"]+"\), "r"\)', faces_src)) == sorted(
+    ['LittleFS.open(F("/sys/message.json"), "r")', 'LittleFS.open(F("/sys/weather_icons.bin"), "r")']) \
+    and faces_src.count('"/sys/') == 2, "faces.cpp only reads the Message face and the weather icons"
 assert source.count('"/sys/') == 1 and 'LittleFS.open(F("/sys/index.html.gz"), "r")' in source, "main.cpp only reads the page"
 # Photos: signed in, or the stock-compatible /photo/* API while "Home Assistant dashboards" is on.
 access = function(source, "bool photoAccess()")

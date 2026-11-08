@@ -172,8 +172,20 @@ class Emulator:
             return e.code, e.text
 
     def sys_files(self):
-        """This build's settings-page files as the start of an .update (no image yet)."""
+        """This build's files (/sys) as the start of an .update (no image yet)."""
         return self.request("GET", self.screen + "/sys-files")[1]
+
+    def drop_sys_files(self):
+        """Removes /sys (the emulator's screen server): a clock without its files."""
+        self.request("POST", self.screen + "/sys-files", b"")
+
+    def install_files(self):
+        """Installs this build's files with an .update (a stand-in image): restarts."""
+        code, reply = self.upload_update(self.sys_files() + stand_in_image())
+        if code != 200:
+            raise HttpError(code, reply)
+        self.wait_restart()
+        self.jar.clear()
 
     def wait_restart(self, timeout=60):
         """After an update or a restart: until a new boot answers (its uptime starts again)."""
