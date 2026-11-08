@@ -89,13 +89,14 @@ parser costs about 9 KB: parse numbers with the face code's own (`readNumber`). 
 to find are listed in the [footprint](specifications/footprint.md) and the
 [roadmap](plans/roadmap.md).
 
-On `faces-v2`, not released: [spec 042](../specs/042-flash-room-no-loss/SPEC.md) (nothing
-lost): `firmware.bin` 579,008 B, `firmware.bin.gz` 410,558 B, 45,056 B of room. On branch
-`openclaw-native`, with the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md)):
-601,808 B and 427,067 B, 8,192 B of room
+[Spec 042](../specs/042-flash-room-no-loss/SPEC.md) (2.3.0, nothing lost): 579,008 B and
+410,558 B, 45,056 B of room; with the OpenClaw node ([041](../specs/041-openclaw-node/SPEC.md),
+2.3.0): 601,808 B and 427,067 B, 8,192 B of room
 ([decision](decisions/2026-11-05-openclaw-node-flash.md)). 2.3.1 (`clock.help`,
-[045](../specs/045-openclaw-help/SPEC.md)): 602,384 B and 427,337 B, **4,096 B of room**
-(the plain image crossed a sector boundary).
+[045](../specs/045-openclaw-help/SPEC.md)): 602,384 B and 427,337 B, 4,096 B of room (the
+plain image crossed a sector boundary); 2.4.0 the same. **2.5.0**
+([048](../specs/048-files-with-the-update/SPEC.md): the settings page is a file that comes
+with the update): 587,264 B and 410,589 B, **36,864 B of room**.
 
 ## Specs in flight
 
@@ -111,10 +112,9 @@ and confirmed on the clock: [026](../specs/026-face-gallery/SPEC.md),
 Closed 2026-11-03 after the checks on the clock: [018](../specs/018-first-run-on-the-clock/SPEC.md),
 [021](../specs/021-crash-report/SPEC.md), [022](../specs/022-emulator-device-memory/SPEC.md),
 [024](../specs/024-memory-headroom/SPEC.md), [025](../specs/025-ram-mqtt-mdns/SPEC.md).
-On `faces-v2`, not released: [042](../specs/042-flash-room-no-loss/SPEC.md) (flash room,
-nothing lost). In progress on branch `openclaw-native`: [041](../specs/041-openclaw-node/SPEC.md)
-(the clock as an OpenClaw node: built, tested in the emulator against a stand-in gateway
-and the real OpenClaw 2026.11.1 gateway; not yet on the clock),
+[042](../specs/042-flash-room-no-loss/SPEC.md) (flash room, nothing lost),
+[041](../specs/041-openclaw-node/SPEC.md) (the clock as an OpenClaw node: tested in the
+emulator against a stand-in gateway and the real OpenClaw 2026.11.1 gateway),
 [043](../specs/043-emulator-openclaw-panel/SPEC.md) (the emulator's OpenClaw panel) and
 [044](../specs/044-openclaw-skill/SPEC.md) (an OpenClaw skill that teaches the agents the
 clock: installed and loaded on the real gateway, its `clock.py` saves faces from there;

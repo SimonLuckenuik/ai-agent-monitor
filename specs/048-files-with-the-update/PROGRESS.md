@@ -142,3 +142,17 @@ Images built from 0a8d162 (2.5.0-dev), installed by the owner:
 - Not checked before the release: Install from GitHub (needs this release and its Pages
   copy), a phone on the setup network for a while, recovery on 2.5.0; the one upload
   that stopped at 20% is not explained.
+
+## 2026-11-08: 2.5.0 published
+
+- The owner: "Yes, both" (rename faces-v2 to dev, publish). GitHub's branch rename made
+  `faces-v2` `dev`; the release commit (15bdf57) went to `dev` and `main`. The release
+  run passed: the release has the `.update`, the `.bin.gz`, the starter, the `.elf` and
+  the checksums; its pages job deployed `update/AIAgentMonitor_v2.5.0.update` and
+  `latest.json` to https://simonluckenuik.github.io/ai-agent-monitor/, with
+  `Access-Control-Allow-Origin: *` (checked). Before it, the full integration suite on
+  the release commit: 39 cases passed.
+- The CI's actions moved to their latest versions (Node 24) in the same release; the
+  "Build and test" runs on it are its first with them.
+- Next: Install from GitHub on a clock (from the home network and from the clock's own),
+  then phase 2.
