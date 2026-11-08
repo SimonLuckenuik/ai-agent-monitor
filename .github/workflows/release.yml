@@ -15,8 +15,6 @@ concurrency:
 
 permissions:
   contents: write
-  pages: write      # the .update file on GitHub Pages (spec 048)
-  id-token: write
 
 jobs:
   release:
@@ -107,33 +105,17 @@ jobs:
             release/*.update release/*.bin.gz release/*.bin release/*.elf release/SHA256SUMS.txt \
             --title "AI Agent Monitor ${{ steps.version.outputs.version }}" --notes-file notes.md
 
-      # The settings page's Install button downloads the .update from GitHub Pages: a
-      # browser cannot fetch a release download (no CORS header; spec 048's RESEARCH).
-      # Pages must be on, once: Settings > Pages > Source: GitHub Actions.
-      - name: The .update file for GitHub Pages
-        if: steps.version.outputs.new == 'true'
-        run: |
-          mkdir -p site/update
-          cp release/*.update site/update/
-          printf '{"version":"%s","file":"AIAgentMonitor_v%s.update"}\n' \
-            "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.version }}" > site/update/latest.json
-          touch site/.nojekyll
-
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.version.outputs.new == 'true'
-        with:
-          path: site
 
     outputs:
       new: ${{ steps.version.outputs.new }}
 
+  # The Pages site with this release's .update (pages.yml; spec 048): the setup page's
+  # Install downloads it there. Pages must be on: Settings > Pages > Source: GitHub Actions.
   pages:
     needs: release
     if: needs.release.outputs.new == 'true'
-    runs-on: ubuntu-24.04
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

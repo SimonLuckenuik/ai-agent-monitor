@@ -1,0 +1,53 @@
+name: Pages
+
+# The project's GitHub Pages site, https://simonluckenuik.github.io/ai-agent-monitor/
+# (Settings > Pages > Source: GitHub Actions). A deploy replaces the whole site, so this
+# one workflow builds all of it every time:
+#   update/   the latest release's .update file and latest.json: the setup page's Install
+#             downloads it (spec 048; a release download has no CORS header, Pages does)
+#   studio/   AI Agent Monitor Studio, once it exists (a later spec)
+# release.yml calls it after publishing (a release made by a workflow starts no other
+# workflow); run it by hand from the Actions tab to rebuild the site.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: The latest release's .update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p site/update
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "*.update" --dir site/update \
+            || echo "$tag has no .update file (before 2.5.0)"
+          file=$(cd site/update && ls *.update 2>/dev/null | head -1)
+          printf '{"version":"%s","file":"%s"}\n' "${tag#v}" "$file" > site/update/latest.json
+          touch site/.nojekyll
+          ls -la site/update
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

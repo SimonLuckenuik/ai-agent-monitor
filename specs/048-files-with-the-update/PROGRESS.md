@@ -124,3 +124,10 @@ Images built from 0a8d162 (2.5.0-dev), installed by the owner:
 - Not explained: the failed upload (the connection dropped; the clock did not crash).
 - Not tried yet: Install from GitHub (2.4.0 has no .update and GitHub Pages is off), the
   .bin.gz from 2.4.0 then Install, recovery, a phone on the setup network for a while.
+- GitHub Pages: the owner turned it on (Source: GitHub Actions; the user site
+  simonluckenuik.github.io is a separate repository and unaffected). The site is built by
+  `.github/workflows/pages.yml` alone, since a deploy replaces the whole site (the Studio
+  will be added there): `update/` with the latest release's .update and latest.json.
+  release.yml calls it after publishing (a release made by a workflow starts no other
+  workflow). A browser cannot fetch a release download directly (no CORS header; checked
+  from a page: the API answers, the download fails), hence the copy.
