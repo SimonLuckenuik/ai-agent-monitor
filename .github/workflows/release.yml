@@ -20,7 +20,7 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Is FW_VERSION released yet?
         id: version
@@ -36,7 +36,7 @@ jobs:
             echo "new=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.version.outputs.new == 'true'
         with:
           python-version: "3.12"
@@ -45,10 +45,10 @@ jobs:
         if: steps.version.outputs.new == 'true'
         run: pip install platformio==6.2.0 ziglang==0.13.0 pillow zopfli==0.4.3
 
-      - uses: actions/setup-node@v4   # the settings page is minified by terser (spec 036)
+      - uses: actions/setup-node@v7   # the settings page is minified by terser (spec 036)
         if: steps.version.outputs.new == 'true'
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Put Zig on PATH
         if: steps.version.outputs.new == 'true'

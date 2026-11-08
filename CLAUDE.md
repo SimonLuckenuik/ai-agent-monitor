@@ -4,7 +4,8 @@ Firmware for a small ESP8266 desk clock (sold as the "Smart Weather Clock" **SD 
 GeekMagic SmallTV look-alike) that shows time, weather, photos and, above all,
 **messages and screens pushed by AI agents**. A fork of
 [michaeldale/smartclock-oss](https://github.com/michaeldale/smartclock-oss) (GPL-3.0),
-at github.com/SimonLuckenuik/ai-agent-monitor. Development happens on `faces-v2`, and
+at github.com/SimonLuckenuik/ai-agent-monitor. Development happens on `dev` (called
+`faces-v2` until 2026-11-08), work in progress on a branch per item merged into it, and
 `main` is fast-forwarded to it (a push to `main` releases, see below). Upstream is the
 `upstream` remote: no pull requests to it for now.
 
