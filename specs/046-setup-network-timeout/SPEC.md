@@ -1,6 +1,6 @@
 # 046 The setup network closes once the clock is on the router
 
-Status: Approved 2026-11-07 (the owner, in the chat: "Approve, build it", with the 30-minute recovery exit)
+Status: Done in 2.4.0 (approved 2026-11-07, the owner, in the chat: "Approve, build it", with the 30-minute recovery exit)
 
 ## Problem
 
@@ -92,8 +92,9 @@ soldering onto the ESP-12F's pads).
 ## Budget (flash, RAM, draw time)
 
 - Flash: measured on a prototype (PROGRESS.md): +496 B plain, +389 B compressed, 885 B
-  of update room (2.3.1 keeps two whole sectors, 8 KB, of room), plus the settings page
-  field; at ~1.7 KB of update room per KB of code, well under one 4 KB sector of room.
+  of update room, plus the settings page field. Built: +1,008 B plain, +807 B
+  compressed; both images still round to the same sectors, so 2.4.0 keeps 2.3.1's 4 KB
+  of room (PROGRESS.md).
 - Recovery (requirements 9, 10): a few dozen bytes; measured with the rest.
 - RAM: one `int` in `Config`. Turning the AP off should free 1-2 KB of heap (the SDK's
   soft-AP and DHCP server, the DNS socket); to measure on the clock.

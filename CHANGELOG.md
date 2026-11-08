@@ -7,13 +7,24 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.4.0 - 2026-11-07
+
+### Upgrading
+
+Install `AIAgentMonitor_v2.4.0.bin.gz` from the Firmware update card, as for 2.3.1.
+Settings, faces and photos are kept. After the update the clock's setup network closes an
+hour after the clock joins your WiFi (Settings > WiFi > Setup network: Always on keeps
+it as before); unplug the clock and plug it back in to open it again. In recovery, join
+its network with the password the recovery screen shows. This release leaves 4 KB of
+room for updates, as 2.3.1 did.
+
 ### Added
 
 - **The setup network closes once the clock is on your WiFi** (spec 046): the clock's
   own network, AI Agent Monitor XXXXXX, closes an hour after the clock joins the home
   network (Settings > WiFi > Setup network: Always on, 15 min, 1 h, 4 h, 24 h), so it is
   not left for anyone in range to try. It opens again by itself when the clock loses its
-  WiFi, and for the same time after each restart. `/status` has `ap`.
+  WiFi, and for the same time after each restart. `/status` has `ap`. Plugin 0.7.5.
 
 ### Changed
 

@@ -1,18 +1,20 @@
 # Current status and next work
 
-Updated: 2026-11-06. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-07. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest version is **2.3.1** (2026-11-06: `clock.help` on the OpenClaw node, spec
-045), released 2026-11-06 (tag `v2.3.1`, `AIAgentMonitor_v2.3.1.bin.gz`). Before it: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an
+The latest version is **2.4.0** (2026-11-07: the setup network closes an hour after the
+clock joins the WiFi, WPA2 on recovery's network, an unused recovery ends; spec 046),
+tag `v2.4.0`, `AIAgentMonitor_v2.4.0.bin.gz`; not yet on a clock. Before it: **2.3.1**
+(2026-11-06: `clock.help` on the OpenClaw node, spec 045). Before that: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an
 OpenClaw node, flash room without losing a feature, the emulator's OpenClaw panel and an
 OpenClaw skill), published on GitHub as `SimonLuckenuik/ai-agent-monitor` with
 `AIAgentMonitor_v2.3.0.bin.gz`, `AIAgentMonitor_v2.3.0.elf` (for `scripts/decode_crash.py`)
 and `SHA256SUMS.txt`, built and tested by `.github/workflows/release.yml` on the push to
-`main`. The plugin on `main` is 0.7.3. Before it: 2.2.0 (2026-11-04, Moni and animated
+`main`. The plugin on `main` is 0.7.5. Before it: 2.2.0 (2026-11-04, Moni and animated
 messages).
 
 Releases since the fork: 1.4.0 (2026-10-28, the first AI Agent Monitor release and the
@@ -118,7 +120,7 @@ Plugin only, on `main`: [019](../specs/019-claude-code-hooks/SPEC.md) (session s
 hooks, plugin 0.7.2, seen on the real clock). Proposed:
 [037](../specs/037-claude-usage-face/SPEC.md) (a Claude usage face, set aside for now),
 [040](../specs/040-scrolling-text/SPEC.md) (scrolling text),
-[046](../specs/046-setup-network-timeout/SPEC.md) (the setup network closes an hour after joining the router, WPA2 in recovery, an unused recovery ends; approved, built on branch `ap-timeout`, not on the clock).
+[046](../specs/046-setup-network-timeout/SPEC.md) (the setup network closes an hour after joining the router, WPA2 in recovery, an unused recovery ends; done in 2.4.0, not on a clock yet).
 Deferred: [034](../specs/034-face-languages/SPEC.md). Dropped: [020](../specs/020-esp-now/SPEC.md).
 Order: [roadmap](plans/roadmap.md).
 

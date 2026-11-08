@@ -18,7 +18,8 @@
   | prototype | 602,880 B (+496) | 427,721 B (+389) |
 
   885 B of update room; 1 MB less two sectors less both images goes from 10,668 B to
-  9,783 B, still two whole sectors (8,192 B) of room. The settings page's select adds
+  9,783 B (corrected on 2026-11-07: the room is counted with each image rounded up to
+  whole sectors, `scripts/build_options.py`, and stays 4 KB). The settings page's select adds
   perhaps 100-150 B more, in both images.
 - Not done: the emulator and integration runs (the host core's WiFi mock does not model
   the AP; needs step 3 of the plan), and anything on the clock. The key unknown is
@@ -68,13 +69,18 @@
   `recovery_network`.
 - Docs: `updates-and-recovery.md` (also fixes "an open AP"), `settings.md`,
   `integrations-api.md` (`ap`; skill's `face-format.md` regenerated, both skills),
-  `testing.md`, `emulator/README.md`, README's Recovery, CHANGELOG; plugin 0.7.4.
+  `testing.md`, `emulator/README.md`, README's Recovery, CHANGELOG; plugin 0.7.4 (0.7.5 at the release: 0.7.4 was
+  published first by the text `bg` docs).
 
-  | Build | `firmware.bin` | `firmware.bin.gz` | Room (whole sectors) |
+  | Build | `firmware.bin` | `firmware.bin.gz` | Room |
   |---|---|---|---|
-  | 2.3.1 | 602,384 B | 427,332 B | 8,192 B (10,668 B unrounded) |
-  | spec 046 | 603,392 B (+1,008) | 428,139 B (+807) | 8,192 B (8,853 B unrounded) |
-  Less than 700 B of growth is left before the room drops to one sector (4 KB).
+  | 2.3.1 | 602,384 B | 427,332 B | 4,096 B |
+  | spec 046 | 603,392 B (+1,008) | 428,139 B (+807) | 4,096 B |
+
+  Room = 1 MB less two sectors less both images, each rounded up to whole sectors
+  (`scripts/build_options.py`): 606,208 + 430,080 B for both builds. (An earlier entry
+  here said 8 KB, counting the images unrounded: wrong.) The plain image can grow
+  2,816 B more, and the compressed one 1,941 B, before the room is gone.
 - Checked: `pio run`; safety tests; unit tests (all suites, with mDNS, guards and
   OpenClaw); `tests/web` (backup, minified page, time zones); `claude plugin validate .`;
   integration tests, 37 cases pass, `setup_network_timer` and `recovery_network`
@@ -83,3 +89,9 @@
 - Not checked (only the clock can): that the station link survives the AP closing (the
   emulator's WiFi is a mock), the heap the AP frees, the AP reopening on a real link
   drop (the emulator cannot drop the link), joining recovery's WPA2 network from a phone.
+
+## 2026-11-07, released
+
+- Released in 2.4.0 at the owner's request ("Release 2.4.0 first"), before the check on
+  the clock. Still to check on a clock: the station link survives the AP closing, the
+  heap freed, the AP back on a real link drop, joining recovery's WPA2 network.

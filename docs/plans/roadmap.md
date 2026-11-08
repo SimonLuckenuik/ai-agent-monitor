@@ -18,9 +18,9 @@ approved.
    reachable from the IoT VLAN over `ws://`.
 4. [040 Scrolling text](../../specs/040-scrolling-text/SPEC.md): proposed, waiting for
    approval.
-5. [046 The setup network closes once the clock is on the router](../../specs/046-setup-network-timeout/SPEC.md):
-   approved 2026-11-07, built on branch `ap-timeout` (tested in the emulator); next: the
-   clock (the station link survives the switch, heap with the AP off), then 2.4.0.
+5. **Check 2.4.0 on the clock** ([046](../../specs/046-setup-network-timeout/SPEC.md)):
+   the setup network closes an hour after joining without dropping the WiFi link, the
+   heap with it off, it comes back when the router goes away, recovery's WPA2 network.
 
 ## Waiting
 
@@ -38,5 +38,5 @@ approved.
 ## Done
 
 Specs 001-017, released from 1.4.0 to 1.8.0; 021, 023 in 1.9.0; 024 in 1.9.1; 025 in
-2.0.0; 026-033 and 035 in 2.1.0; 036 and 038 in 2.1.1; 039 in 2.2.0; 041-044 in 2.3.0; 045 in 2.3.1; 018, 022 closed on the clock; 019
+2.0.0; 026-033 and 035 in 2.1.0; 036 and 038 in 2.1.1; 039 in 2.2.0; 041-044 in 2.3.0; 045 in 2.3.1; 046 in 2.4.0; 018, 022 closed on the clock; 019
 in the plugin (0.7.2). See [specs/README.md](../../specs/README.md) and `CHANGELOG.md`.
