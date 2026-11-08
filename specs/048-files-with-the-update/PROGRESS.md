@@ -105,3 +105,22 @@ Install against a real release with an `.update` (none published yet).
 
 Not verified: NAT (lwIP on the chip only), and phones' behaviour on the setup network
 with it (whether each sends the browser's traffic through the clock once it is online).
+
+## 2026-11-08: on the owner's clock (agentmonitor-ade1f0, 2.4.0 before)
+
+Images built from 0a8d162 (2.5.0-dev), installed by the owner:
+
+- The starter ran; on its own network (a Windows laptop, the page opened as
+  www.msftconnecttest.com through the captive portal) it signed in, joined the WiFi, and
+  read the latest release and its notes from api.github.com: GitHub's names and the NAT
+  work on the chip.
+- From there the full firmware (2.5.0-dev) came up without its files: the setup page
+  said so. One upload of the .update stopped at about 20% ("Upload failed", no reply,
+  no crash recorded); the next, from http://192.168.4.1, installed it. After it: files
+  ok, the settings page served from storage at the clock's home address, 24.8 KB free
+  heap, no crash.
+- Found: opened as www.msftconnecttest.com, the full firmware's setup page took itself
+  for the home network and gave the generic message; fixed in ab94844.
+- Not explained: the failed upload (the connection dropped; the clock did not crash).
+- Not tried yet: Install from GitHub (2.4.0 has no .update and GitHub Pages is off), the
+  .bin.gz from 2.4.0 then Install, recovery, a phone on the setup network for a while.
