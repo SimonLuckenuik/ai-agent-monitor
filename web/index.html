@@ -374,12 +374,12 @@ a{color:var(--accent)}
 
   <section class="card">
     <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Firmware update</h2>
-    <div class="drop" id="drop"><strong>Choose a firmware .bin or .bin.gz</strong><br><span id="fwName">or drop it here</span></div>
-    <input type="file" id="fw" accept=".bin,.gz" hidden>
+    <div class="drop" id="drop"><strong>Choose an .update or .bin.gz file</strong><br><span id="fwName">or drop it here</span></div>
+    <input type="file" id="fw" accept=".update,.bin,.gz" hidden>
     <div class="progress" id="prog"><i></i></div>
     <div class="msg" id="fwMsg"></div>
     <div class="btns"><button class="btn primary" id="fwBtn" onclick="ota()" disabled>Install update</button></div>
-    <p class="note">Only AI Agent Monitor (SmartClock-OSS) firmware images are accepted; the image is checked before anything is written. Keep the clock powered until it restarts.</p>
+    <p class="note">Or <a href="/setup">install the latest release from GitHub</a> in one step. Only AI Agent Monitor (SmartClock-OSS) files are accepted; they are checked before anything is written. Keep the clock powered until it restarts.</p>
   </section>
 
   <section class="card">
@@ -537,7 +537,7 @@ async function checkUpdate(current){
     const j=await r.json();rel={tag:j.tag_name,url:j.html_url};try{localStorage.setItem('scRel',JSON.stringify({at:Date.now(),rel}))}catch(e){}}catch(e){return}}
   const b=$('updBanner');
   if(rel&&newer(rel.tag,current)){b.hidden=false;b.innerHTML='<strong>Update available:</strong> '+rel.tag.replace(/</g,'')+
-    ' (you have '+current+'). <a href="'+encodeURI(rel.url)+'" target="_blank" rel="noopener">Download it</a>, then install it from the Firmware update card.'}
+    ' (you have '+current+'). <a href="/setup">Install it</a>, or <a href="'+encodeURI(rel.url)+'" target="_blank" rel="noopener">see the release</a>.'}
   else b.hidden=true}
 const form=o=>({method:'POST',body:new URLSearchParams(o)});
 async function set(key,value){
@@ -882,7 +882,7 @@ function ota(){
   const fd=new FormData();fd.append('update',fwFile,fwFile.name);
   const x=new XMLHttpRequest();x.open('POST','/update_ota');
   x.upload.onprogress=e=>{if(e.lengthComputable){const v=Math.round(e.loaded/e.total*100);bar.style.width=v+'%';m.textContent=v<100?`Uploading… ${v}%`:'Verifying…'}};
-  x.onload=()=>{if(x.status===200&&x.responseText==='OK'){m.className='msg ok';m.textContent='Verified. Installing…';waitForReboot('Installing update','Keep the clock powered. This takes about 30 seconds.')}
+  x.onload=()=>{if(x.status===200&&/^OK/.test(x.responseText)){m.className='msg ok';m.textContent=x.responseText.replace(/^OK:? ?/,'')||'Verified. Installing…';waitForReboot('Installing update','Keep the clock powered. This takes about 30 seconds.')}
     else{m.className='msg bad';m.textContent=x.responseText||'Update rejected';btn.disabled=false}};
   x.onerror=()=>{m.className='msg bad';m.textContent='Upload failed';btn.disabled=false};
   x.send(fd)}

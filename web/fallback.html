@@ -62,7 +62,7 @@ a{color:var(--accent)}
   <div class="bar" id="b4" hidden><i></i></div><div class="msg" id="m4"></div></section>
 
 <p class="note"><button class="plain" onclick="post('/restart').then(()=>wait('Restarting'))">Restart</button>
-<button class="plain" id="fmt" hidden onclick="if(confirm('Erase the whole storage area? Photos and settings are lost.'))post('/format_storage?confirm=erase').then(()=>wait('Formatting'))">Format storage</button></p>
+<button class="plain" id="fmt" hidden onclick="formatFs()">Format storage</button></p>
 </main>
 <script>
 const REPO='SimonLuckenuik/ai-agent-monitor',PAGES='https://simonluckenuik.github.io/ai-agent-monitor/update/';
@@ -88,6 +88,7 @@ function render(){
   if(signed&&!linked&&$('ssids').options.length<2&&!scan.done)scan();
   step('s3',signed&&linked,0);step('s4',signed,0);
   if(signed&&linked&&!busy)latest(onAp)}
+function formatFs(){if(confirm('Erase the whole storage area? Photos and settings are lost.'))post('/format_storage?confirm=erase').then(()=>wait('Formatting'),e=>alert(e.message))}
 async function signIn(){try{await post('/api/auth/login',{password:$('pw').value});status()}catch(e){say($('m1'),e.message,'bad')}}
 async function reveal(){try{await post('/api/auth/reveal');say($('m1'),'On the clock for a minute')}catch(e){say($('m1'),e.message,'bad')}}
 async function scan(){scan.done=1;try{const l=await(await fetch('/scanwifi?detail=1')).json(),s=$('ssids');
