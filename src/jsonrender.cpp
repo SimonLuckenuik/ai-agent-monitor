@@ -34,13 +34,18 @@ enum Type : uint8_t {
   T_NEWLINE, T_PROGRESSBAR, T_BARCHART, T_LIST, T_LISTITEM, T_KEYVALUE, T_LINK, T_STATUSLINE,
   T_METRIC, T_CALLOUT, T_TIMELINE, T_MARKDOWN,
   T_UNKNOWN };
-const char* const TYPE_NAMES[] = {
-  "Frame", "Box", "Row", "Column", "Stack", "Card", "Grid",
-  "Heading", "Text", "Clock", "Badge", "Button", "Alert", "Progress", "Ring", "Sparkline",
-  "WeatherIcon", "Icon", "Image", "Divider", "Separator", "Spacer", "Avatar", "Skeleton",
-  "Spinner", "Table",
-  "Newline", "ProgressBar", "BarChart", "List", "ListItem", "KeyValue", "Link", "StatusLine",
-  "Metric", "Callout", "Timeline", "Markdown" };
+// The names, each ended by \0 (and the list by an empty one): in flash, not RAM.
+const char TYPE_NAMES[] PROGMEM =
+  "Frame\0Box\0Row\0Column\0Stack\0Card\0Grid\0Heading\0Text\0Clock\0Badge\0Button\0Alert\0"
+  "Progress\0Ring\0Sparkline\0WeatherIcon\0Icon\0Image\0Divider\0Separator\0Spacer\0Avatar\0"
+  "Skeleton\0Spinner\0Table\0Newline\0ProgressBar\0BarChart\0List\0ListItem\0KeyValue\0"
+  "Link\0StatusLine\0Metric\0Callout\0Timeline\0Markdown\0";
+// A name's index in such a list, or -1; and the name at an index.
+int nameIndex(PGM_P list, const char* s) {
+  for (int i = 0; pgm_read_byte(list); ++i, list += strlen_P(list) + 1) if (!strcmp_P(s, list)) return i;
+  return -1;
+}
+String nameAt(PGM_P list, int i) { while (i-- > 0) list += strlen_P(list) + 1; return FPSTR(list); }
 bool isContainer(uint8_t t) { return t <= T_GRID; }
 
 struct Node {
@@ -89,8 +94,8 @@ void fStr(const char* k, const String& v) { items += ",\""; items += k; items +=
 void itemEnd() { if (vis.length()) fStr("show", vis); items += '}'; }
 
 // --- Values -----------------------------------------------------------------------------
-const char* const CLOCK_GROUPS[] = {"time", "date", "now", "day0", "day1", "day2", "day3", "day4",
-  "sun", "moon", "units", "loc", "theme", "msg", "net", "sys", "age"};
+const char CLOCK_GROUPS[] PROGMEM = "time\0date\0now\0day0\0day1\0day2\0day3\0day4\0"
+  "sun\0moon\0units\0loc\0theme\0msg\0net\0sys\0age\0";
 
 // A state path as a placeholder name: /vars/build and /build -> build; /now/temp -> now.temp;
 // /days/2/high -> day2.high.
@@ -101,8 +106,8 @@ String placeholder(const char* path) {
   else if (p.startsWith("days/") && p.length() > 6) p = "day" + p.substring(5, 6) + p.substring(6);
   int slash = p.indexOf('/');
   String head = slash < 0 ? p : p.substring(0, slash);
-  for (const char* g : CLOCK_GROUPS) if (head == g) { p.replace('/', '.'); return p; }
-  if (slash >= 0) { warnOnce("state path /" + p + ": variables are one level (/vars/name)"); p = p.substring(slash + 1); p.replace("/", ""); }
+  if (nameIndex(CLOCK_GROUPS, head.c_str()) >= 0) { p.replace('/', '.'); return p; }
+  if (slash >= 0) { warnOnce(String(F("state path /")) + p + F(": variables are one level (/vars/name)")); p = p.substring(slash + 1); p.replace("/", ""); }
   return p;
 }
 
@@ -124,7 +129,7 @@ String condition(JsonVariantConst c) {
     for (JsonVariantConst x : o[op].as<JsonArrayConst>()) { if (s.length()) s += op[2] == 'a' ? "&&" : "||"; s += "(" + condition(x) + ")"; }
     return s;
   }
-  if (o["$item"] || o["$index"]) { warnOnce("$item/$index: repeat is not supported yet"); return "1"; }
+  if (o["$item"] || o["$index"]) { warnOnce(F("$item/$index: repeat is not supported yet")); return "1"; }
   String v = "{" + placeholder(o["$state"]) + "}";
   bool no = o["not"] | false;
   if (!o["eq"].isNull()) return v + (no ? "!=" : "==") + o["eq"].as<String>();
@@ -137,21 +142,27 @@ String condition(JsonVariantConst c) {
 }
 
 // CSS colours.
-struct Named { const char* n; uint32_t c; };
-const Named NAMED[] = {
-  {"black", 0x000000}, {"white", 0xffffff}, {"red", 0xff0000}, {"green", 0x008000}, {"blue", 0x0000ff},
-  {"yellow", 0xffff00}, {"orange", 0xffa500}, {"purple", 0x800080}, {"pink", 0xffc0cb}, {"gray", 0x808080},
-  {"grey", 0x808080}, {"silver", 0xc0c0c0}, {"maroon", 0x800000}, {"navy", 0x000080}, {"teal", 0x008080},
-  {"olive", 0x808000}, {"lime", 0x00ff00}, {"aqua", 0x00ffff}, {"cyan", 0x00ffff}, {"magenta", 0xff00ff},
-  {"fuchsia", 0xff00ff}, {"brown", 0xa52a2a}, {"gold", 0xffd700}, {"indigo", 0x4b0082}, {"violet", 0xee82ee},
-  {"coral", 0xff7f50}, {"salmon", 0xfa8072}, {"tomato", 0xff6347}, {"crimson", 0xdc143c},
-  {"darkgray", 0xa9a9a9}, {"darkgrey", 0xa9a9a9}, {"lightgray", 0xd3d3d3}, {"lightgrey", 0xd3d3d3},
-  {"gainsboro", 0xdcdcdc}, {"whitesmoke", 0xf5f5f5}, {"slategray", 0x708090}, {"skyblue", 0x87ceeb},
-  {"steelblue", 0x4682b4}, {"royalblue", 0x4169e1}, {"dodgerblue", 0x1e90ff}, {"darkblue", 0x00008b},
-  {"darkgreen", 0x006400}, {"limegreen", 0x32cd32}, {"seagreen", 0x2e8b57}, {"turquoise", 0x40e0d0},
-  {"orangered", 0xff4500}, {"darkorange", 0xff8c00}, {"khaki", 0xf0e68c}, {"beige", 0xf5f5dc},
-  {"ivory", 0xfffff0}, {"lavender", 0xe6e6fa}, {"plum", 0xdda0dd}, {"orchid", 0xda70d6}, {"tan", 0xd2b48c},
-  {"chocolate", 0xd2691e}, {"firebrick", 0xb22222}, {"midnightblue", 0x191970}};
+// CSS colour names and their values (in flash); ANSI: the terminal's, in the clock's own shades.
+const char ANSI_N[] PROGMEM =
+  "black\0red\0green\0yellow\0blue\0magenta\0cyan\0white\0gray\0grey\0";
+const uint32_t ANSI_C[] PROGMEM = {
+  0x000000, 0xff453a, 0x30d158, 0xffd60a, 0x0a84ff, 0xbf5af2, 0x64d2ff, 0xe5e5ea, 0x8e8e93,
+  0x8e8e93};
+const char NAMED_N[] PROGMEM =
+  "black\0white\0red\0green\0blue\0yellow\0orange\0purple\0pink\0gray\0grey\0silver\0"
+  "maroon\0navy\0teal\0olive\0lime\0aqua\0cyan\0magenta\0fuchsia\0brown\0gold\0indigo\0"
+  "violet\0coral\0salmon\0tomato\0crimson\0darkgray\0darkgrey\0lightgray\0lightgrey\0"
+  "gainsboro\0whitesmoke\0slategray\0skyblue\0steelblue\0royalblue\0dodgerblue\0darkblue\0"
+  "darkgreen\0limegreen\0seagreen\0turquoise\0orangered\0darkorange\0khaki\0beige\0ivory\0"
+  "lavender\0plum\0orchid\0tan\0chocolate\0firebrick\0midnightblue\0";
+const uint32_t NAMED_C[] PROGMEM = {
+  0x000000, 0xffffff, 0xff0000, 0x008000, 0x0000ff, 0xffff00, 0xffa500, 0x800080, 0xffc0cb,
+  0x808080, 0x808080, 0xc0c0c0, 0x800000, 0x000080, 0x008080, 0x808000, 0x00ff00, 0x00ffff,
+  0x00ffff, 0xff00ff, 0xff00ff, 0xa52a2a, 0xffd700, 0x4b0082, 0xee82ee, 0xff7f50, 0xfa8072,
+  0xff6347, 0xdc143c, 0xa9a9a9, 0xa9a9a9, 0xd3d3d3, 0xd3d3d3, 0xdcdcdc, 0xf5f5f5, 0x708090,
+  0x87ceeb, 0x4682b4, 0x4169e1, 0x1e90ff, 0x00008b, 0x006400, 0x32cd32, 0x2e8b57, 0x40e0d0,
+  0xff4500, 0xff8c00, 0xf0e68c, 0xf5f5dc, 0xfffff0, 0xe6e6fa, 0xdda0dd, 0xda70d6, 0xd2b48c,
+  0xd2691e, 0xb22222, 0x191970};
 
 bool noPaint(JsonVariantConst v) {
   if (v.is<bool>()) return !v.as<bool>();
@@ -198,17 +209,17 @@ String colourLiteral(String s) {
       if (*p != ',' && *p != '/') break;
     }
     c = ((uint32_t)constrain((int)v[0], 0, 255) << 16) | ((uint32_t)constrain((int)v[1], 0, 255) << 8) | constrain((int)v[2], 0, 255);
-    if (v[3] < 1) { if (!bgKnown) warnOnce("rgba() over a changing background: blended with " + hex(bgHex)); c = blend(c, bgHex, v[3]); }
+    if (v[3] < 1) { if (!bgKnown) warnOnce(String(F("rgba() over a changing background: blended with ")) + hex(bgHex)); c = blend(c, bgHex, v[3]); }
     return hex(c);
   }
   if (ink) {   // the terminal's colours, in the clock's own shades
     bool bright = l.endsWith("bright");
     String b = bright ? l.substring(0, l.length() - 6) : l;
-    static const Named ANSI[] = {{"black", 0x000000}, {"red", 0xff453a}, {"green", 0x30d158}, {"yellow", 0xffd60a},
-      {"blue", 0x0a84ff}, {"magenta", 0xbf5af2}, {"cyan", 0x64d2ff}, {"white", 0xe5e5ea}, {"gray", 0x8e8e93}, {"grey", 0x8e8e93}};
-    for (const Named& n : ANSI) if (b == n.n) return hex(bright ? blend(n.c, 0xffffff, 0.7f) : n.c);
+    int i = nameIndex(ANSI_N, b.c_str());
+    if (i >= 0) { uint32_t c = pgm_read_dword(ANSI_C + i); return hex(bright ? blend(c, 0xffffff, 0.7f) : c); }
   }
-  for (const Named& n : NAMED) if (l == n.n) return hex(n.c);
+  int i = nameIndex(NAMED_N, l.c_str());
+  if (i >= 0) return hex(pgm_read_dword(NAMED_C + i));
   return s;   // "@role", a placeholder, or something the clock reads itself
 }
 
@@ -241,10 +252,10 @@ String value(JsonVariantConst v, Kind k) {
       String e = condition(o["$cond"]) + "?" + value(o["$then"], k) + ":" + value(o["$else"], k);
       return k == K_TEXT ? "{" + e + "}" : e;
     }
-    if (!o["$computed"].isNull()) { warnOnce("$computed is not supported: " + o["$computed"].as<String>()); return ""; }
-    if (!o["$item"].isNull() || !o["$index"].isNull()) { warnOnce("$item/$index: repeat is not supported yet"); return ""; }
+    if (!o["$computed"].isNull()) { warnOnce(String(F("$computed is not supported: ")) + o["$computed"].as<String>()); return ""; }
+    if (!o["$item"].isNull() || !o["$index"].isNull()) { warnOnce(F("$item/$index: repeat is not supported yet")); return ""; }
     if (!o["$bindState"].isNull()) return "{" + placeholder(o["$bindState"]) + "}";   // shown, never written
-    warnOnce("unsupported dynamic value");
+    warnOnce(F("unsupported dynamic value"));
     return "";
   }
   String s = v.as<String>();
@@ -420,13 +431,13 @@ String textOf(const Node& n) {
   JsonObjectConst p = n.p;
   if (n.type == T_CLOCK) {
     String f = str(p, "format", "hm");
-    if (f == "hm") return "{time.hm}";
-    if (f == "hms") return "{time.hm}:{time.sec}";
-    if (f == "date") return "{date.text}";
-    if (f == "wday") return "{date.wday}";
-    if (f == "wday3") return "{date.wday3}";
-    if (f == "dmy") return "{date.day} {date.month3} {date.year}";
-    if (f == "ampm") return "{time.hm} {time.ampm}";
+    if (f == "hm") return F("{time.hm}");
+    if (f == "hms") return F("{time.hm}:{time.sec}");
+    if (f == "date") return F("{date.text}");
+    if (f == "wday") return F("{date.wday}");
+    if (f == "wday3") return F("{date.wday3}");
+    if (f == "dmy") return F("{date.day} {date.month3} {date.year}");
+    if (f == "ampm") return F("{time.hm} {time.ampm}");
     return value(p["format"], K_TEXT);   // a template of its own ("{date.wday:u}")
   }
   return value(p["text"].isNull() ? p["label"] : p["text"], K_TEXT);
@@ -449,7 +460,7 @@ float cssSize(const Node& n) {
 Font textFont(const Node& n) {
   bool asked = is(n.p, "fontWeight", "bold") || (n.p["bold"] | false);
   bool bold = asked || (n.type == T_HEADING) || (n.type == T_CLOCK);
-  if (asked && cssSize(n) * scale <= 31 && !n.p["font"].is<const char*>()) warnOnce("bold: only the large (line font) sizes have a bold");
+  if (asked && cssSize(n) * scale <= 31 && !n.p["font"].is<const char*>()) warnOnce(F("bold: only the large (line font) sizes have a bold"));
   return fontFor(cssSize(n), n.p["font"].is<int>() ? (n.p["font"].as<int>() == 4 ? "4" : "2") : n.p["font"].as<const char*>(), bold);
 }
 float lineHeight(const Node& n) { return num(n.p, "lineHeight", n.type == T_HEADING || n.type == T_CLOCK ? 1.2f : 1.4f); }
@@ -461,7 +472,7 @@ int lineH(const Node& n, const Font& f) {
 int textW(const Node& n, const Font& f, const String& t) {
   int w = widthOf(sample(t), f);
   int mc = n.p["maxChars"] | 0;
-  if (mc) w = max(w, widthOf(String("00000000000000000000000000000000").substring(0, min(mc, 32)), f));
+  if (mc) { String z; for (int i = min(mc, 32); i > 0; --i) z += '0'; w = max(w, widthOf(z, f)); }
   return w;
 }
 
@@ -622,7 +633,7 @@ void emitText(const String& t, const Font& f, const String& colour, int x, int y
   }
   fStr("text", t);
   if (f.font) fNum("font", f.font);
-  else { fStr("font", f.name); fNum("size", f.size); if (f.weight > 1) items += ",\"weight\":1.7"; }
+  else { fStr("font", f.name); fNum("size", f.size); if (f.weight > 1) items += F(",\"weight\":1.7"); }
   if (!f.font && widthOf(sample(t), f) > w) fNum("w", w);   // the line font shrinks to fit
   if (colour.length()) fStr("color", colour);
   // No "bg" on text: it is drawn over whatever is under it (a ring, a box, an icon). When
@@ -648,7 +659,7 @@ void emitRect(int x, int y, int w, int h, int r, const String& fill, const Strin
   itemStart("rect");
   fNum("x", x); fNum("y", y); fNum("w", w); fNum("h", h);
   if (r) fNum("r", min(r, min(w, h) / 2));
-  if (fill.length()) fStr("color", fill); else items += ",\"fill\":false";
+  if (fill.length()) fStr("color", fill); else items += F(",\"fill\":false");
   if (border.length() && bw > 0) { fStr("border", border); fNum("bw", bw); }
   if (!fill.length() && border.length()) fStr("color", border);
   itemEnd();
@@ -745,9 +756,10 @@ __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h
       uint32_t c = st == "success" || st == "tip" ? 0x30d158 : st == "warning" ? 0xff9f0a : st == "error" || st == "important" ? 0xff453a : 0x0a84ff;
       Font f = fontFor(14, nullptr, false);
       if (n.type == T_STATUSLINE) {
-        static const char* const GLYPH[] = {"M20 6 9 17l-5-5", "M18 6 6 18M6 6l12 12", "M12 3 2 21h20zM12 10v4M12 17.5v.5", "M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0M12 11v6M12 7.5v.5"};
+        static const char GLYPH[] PROGMEM = "M20 6 9 17l-5-5\0M18 6 6 18M6 6l12 12\0M12 3 2 21h20zM12 10v4M12 17.5v.5\0"
+          "M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0M12 11v6M12 7.5v.5\0";
         int g = st == "success" ? 0 : st == "error" ? 1 : st == "warning" ? 2 : 3;
-        itemStart("path"); fNum("x", x); fNum("y", y + (h - 16) / 2); fNum("size", 16); fStr("d", GLYPH[g]); fStr("stroke", hex(c)); items += ",\"sw\":2.5"; itemEnd();
+        itemStart("path"); fNum("x", x); fNum("y", y + (h - 16) / 2); fNum("size", 16); fStr("d", nameAt(GLYPH, g)); fStr("stroke", hex(c)); items += F(",\"sw\":2.5"); itemEnd();
         emitText(value(p["text"], K_TEXT), f, colour.length() ? colour : inkOn(), x + 22, y, w - 22, h, A_START, h, 1, nullptr);
         return;
       }
@@ -838,8 +850,8 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
         return;
       }
       if (p["wrap"].is<const char*>() && strncmp(p["wrap"], "truncate", 8) == 0) lines = 1;
-      if ((p["italic"] | false) || p["fontStyle"] == "italic") warnOnce("italic is not drawn");
-      if (!p["letterSpacing"].isNull()) warnOnce("letterSpacing is not drawn");
+      if ((p["italic"] | false) || p["fontStyle"] == "italic") warnOnce(F("italic is not drawn"));
+      if (!p["letterSpacing"].isNull()) warnOnce(F("letterSpacing is not drawn"));
       emitText(t, f, colour, x, y, w, h, alignOf(p["align"], A_START), lh, lines, &n);
       return;
     }
@@ -932,7 +944,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
         fNum("x", x); fNum("y", y); fNum("w", w); fNum("h", h);
         String vb = "0 0 "; vb += w; vb += ' '; vb += h; fStr("vb", vb);
         fStr("d", path); fStr("stroke", colour.length() ? colour : String("#64d2ff"));
-        items += ",\"sw\":2"; itemEnd();
+        items += F(",\"sw\":2"); itemEnd();
         return;
       }
       itemStart("spark");
@@ -963,7 +975,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
         for (JsonVariantConst q : p["paths"].as<JsonArrayConst>()) {
           itemStart("path");
           fNum("x", x); fNum("y", y); fNum("size", min(w, h));
-          if (q["d"].is<JsonArrayConst>()) { items += ",\"d\":"; appendJson(q["d"], items); } else fStr("d", q["d"] | "");
+          if (q["d"].is<JsonArrayConst>()) { items += F(",\"d\":"); appendJson(q["d"], items); } else fStr("d", q["d"] | "");
           if (!p["viewBox"].isNull()) fStr("vb", str(p, "viewBox"));
           String fill = noPaint(q["fill"]) ? String() : value(q["fill"], K_COLOUR), stroke = value(q["stroke"], K_COLOUR);
           if (!fill.length() && !stroke.length()) stroke = colour.length() ? colour : inkOn();
@@ -977,7 +989,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       }
       itemStart("path");
       fNum("x", x); fNum("y", y); fNum("size", min(w, h));
-      if (p["d"].is<JsonArrayConst>()) { items += ",\"d\":"; appendJson(p["d"], items); }
+      if (p["d"].is<JsonArrayConst>()) { items += F(",\"d\":"); appendJson(p["d"], items); }
       else fStr("d", str(p, "d"));
       if (!p["viewBox"].isNull()) fStr("vb", str(p, "viewBox"));
       String fill = noPaint(p["fill"]) ? String() : value(p["fill"], K_COLOUR), stroke = value(p["stroke"], K_COLOUR);
@@ -991,7 +1003,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
     case T_IMAGE: {
       String src = str(p, "src");
       if (src.startsWith("http") || src.isEmpty()) {
-        warnOnce("Image: the clock cannot fetch URLs; send the photo to the clock and give its file name");
+        warnOnce(F("Image: the clock cannot fetch URLs; send the photo to the clock and give its file name"));
         emitRect(x, y, w, h, px(p, "borderRadius", 0), panelOn(), "", 0);
         emitText(str(p, "alt", "image"), fontFor(14, nullptr, false), mutedOn(), x, y, w, h, A_CENTER, h, 1, nullptr);
         return;
@@ -1035,7 +1047,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       String s = str(p, "size", "md");
       int d = s == "sm" ? 16 : s == "lg" ? 40 : 24;
       itemStart("ring"); fNum("x", x + d / 2); fNum("y", y + h / 2); fNum("r", d / 2); fNum("w", max(2, d / 8));
-      fStr("value", "{time.sec}%4*25+25"); fStr("color", colour.length() ? colour : String("#0a84ff")); fStr("track", panelOn()); itemEnd();
+      fStr("value", F("{time.sec}%4*25+25")); fStr("color", colour.length() ? colour : String("#0a84ff")); fStr("track", panelOn()); itemEnd();
       if (!p["label"].isNull()) emitText(value(p["label"], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x + d + 6, y, w - d - 6, h, A_START, h, 1, nullptr);
       return;
     }
@@ -1071,7 +1083,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       leafInk(n, x, y, w, h);
       return;
     default: {
-      warnOnce(String("unknown component ") + str(n.e, "type") + ": drawn as a box");
+      warnOnce(String(F("unknown component ")) + str(n.e, "type") + F(": drawn as a box"));
       emitRect(x, y, w, h, 4, "", "#8e8e93", 1);
       emitText(str(n.e, "type"), fontFor(14, nullptr, false), "#8e8e93", x, y, w, h, A_CENTER, h, 1, nullptr);
     }
@@ -1088,8 +1100,8 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
     String c = condition(n.e["visible"]);
     vis = vis.length() ? "(" + vis + ")&&(" + c + ")" : c;
   }
-  for (const char* k : {"on", "watch"}) if (!n.e[k].isNull()) warnOnce(String(k) + ": the clock has no input; ignored");
-  if (!n.e["repeat"].isNull()) warnOnce("repeat is not supported yet: drawn once");
+  for (const char* k : {"on", "watch"}) if (!n.e[k].isNull()) warnOnce(String(k) + F(": the clock has no input; ignored"));
+  if (!n.e["repeat"].isNull()) warnOnce(F("repeat is not supported yet: drawn once"));
   if (!isContainer(n.type)) { leaf(n, x, y, w, h); vis = saveVis; return; }
 
   JsonObjectConst p = n.p;
@@ -1110,7 +1122,7 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
     bgKnown = hexOf(fill, &c);
     if (bgKnown) bgHex = c;
   }
-  if (!is(p, "overflow", "visible") && !p["overflow"].isNull()) warnOnce("overflow: hidden cannot clip on the clock");
+  if (!is(p, "overflow", "visible") && !p["overflow"].isNull()) warnOnce(F("overflow: hidden cannot clip on the clock"));
 
   int ix = x + l.pad[3], iy = y + l.pad[0], iw = w - l.pad[1] - l.pad[3], ih = h - l.pad[0] - l.pad[2];
   if (n.type == T_CARD) {   // title and description
@@ -1124,7 +1136,7 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
   int MAXK = 0;
   for (int c = n.first; c >= 0; c = nodes[c].next) MAXK++;
   int* kid = new (std::nothrow) int[3 * max(1, MAXK)];
-  if (!kid) { warnOnce("not enough memory for a container"); vis = saveVis; bgS = saveBg; bgHex = saveHex; bgKnown = saveKnown; return; }
+  if (!kid) { warnOnce(F("not enough memory for a container")); vis = saveVis; bgS = saveBg; bgHex = saveHex; bgKnown = saveKnown; return; }
   int* mainS = kid + MAXK;
   int* crossS = kid + 2 * MAXK;
   int k = 0;
@@ -1191,7 +1203,7 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
         }
         room += take - left;
       }
-      if (room < 0) warnOnce(String("a ") + TYPE_NAMES[n.type] + " overflows its box by " + (-room) + " px");
+      if (room < 0) warnOnce(String(F("a ")) + nameAt(TYPE_NAMES, n.type) + F(" overflows its box by ") + (-room) + F(" px"));
     }
     if (grow > 0 && room > 0) {
       for (int j = start; j < end; ++j) { float g = growIn(nodes[kid[j]], l.row); if (g > 0) mainS[j] += (int)(room * g / grow); }
@@ -1340,7 +1352,8 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
     n.p = n.e["props"].as<JsonObjectConst>();
     const char* t = n.e["type"] | "";
     n.type = T_UNKNOWN;
-    for (int k = 0; k < T_UNKNOWN; ++k) if (!strcmp(t, TYPE_NAMES[k])) n.type = k;
+    int k = nameIndex(TYPE_NAMES, t);
+    n.type = k < 0 ? T_UNKNOWN : k;
   }
   String err;
   warn = ""; items = ""; vis = ""; itemCount = 0; overflowItems = false;
@@ -1360,14 +1373,14 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
       int prev = -1;
       for (JsonVariantConst c : nodes[i].e["children"].as<JsonArrayConst>()) {
         int ci = indexOf(elements, c | "");
-        if (ci < 0) { warnOnce(String("child ") + (c | "?") + " of " + nodes[i].id + " does not exist"); continue; }
+        if (ci < 0) { warnOnce(String(F("child ")) + (c | "?") + F(" of ") + nodes[i].id + F(" does not exist")); continue; }
         if (seen[ci]) { err = String(F("element ")) + nodes[ci].id + F(" is used twice or in a loop"); break; }
         seen[ci] = 1;
         if (prev < 0) nodes[i].first = ci; else nodes[prev].next = ci;
         prev = ci;
         if (sp < count) stack[sp++] = ci;
       }
-      if (prev >= 0 && !isContainer(nodes[i].type)) warnOnce(String(TYPE_NAMES[min((int)nodes[i].type, (int)T_UNKNOWN - 1)]) + " has no children: they are not drawn");
+      if (prev >= 0 && !isContainer(nodes[i].type)) warnOnce(nameAt(TYPE_NAMES, min((int)nodes[i].type, (int)T_UNKNOWN - 1)) + F(" has no children: they are not drawn"));
     }
     delete[] stack;
     }
@@ -1378,7 +1391,7 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
     bool frame = r.type == T_FRAME;
     float fw = frame ? num(rp, "width", 240) : 240, fh = frame ? num(rp, "height", 240) : 240;
     scale = 1;
-    if (fw > 0 && fh > 0 && (fw != 240 || fh != 240)) { scale = min(240 / fw, 240 / fh); warnOnce(String("Frame ") + (int)fw + "x" + (int)fh + " scaled to the 240x240 screen"); }
+    if (fw > 0 && fh > 0 && (fw != 240 || fh != 240)) { scale = min(240 / fw, 240 / fh); warnOnce(String(F("Frame ")) + (int)fw + F("x") + (int)fh + F(" scaled to the 240x240 screen")); }
     ink = !frame;   // an Ink spec: rooted at a Box (or any other component)
     String bg = value(rp["backgroundColor"].isNull() ? rp["background"] : rp["backgroundColor"], K_COLOUR);
     if (!bg.length()) bg = ink ? "#000000" : "#ffffff";   // a terminal is dark; the image renderer's frame white
@@ -1391,7 +1404,7 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
       if (!frame || rp[k].isNull()) continue;
       items += ",\""; items += k; items += "\":"; appendJson(rp[k], items);
     }
-    items += ",\"items\":[";
+    items += F(",\"items\":[");
     if (frame) place(rootI, 0, 0, (int)lroundf(fw * scale), (int)lroundf(fh * scale), 0);
     else {   // the root fills the screen, with a small margin unless it has padding
       int m = rp["padding"].isNull() ? 6 : 0;

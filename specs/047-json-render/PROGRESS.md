@@ -197,3 +197,37 @@ heap problem (unchanged); `validateSpec()`.
 - Flash: unchanged by this (the json-render build is still 20 KB over the update limit).
 - Not verified: the stack on the chip (Xtensa frames are not the emulator's x86 ones; the
   clock's /status jrStack will tell).
+
+## 2026-11-08: link-time optimisation and RAM (the owner: "try lto and leaner compiler after")
+
+- **LTO, measured on this branch** (`scripts/lto_options.py`, still not in `platformio.ini`):
+
+  | Build | Image | `.bin.gz` | Update limit |
+  |---|---|---|---|
+  | Standard, no LTO | 576,768 | 404,515 | 56 KB of room |
+  | Standard, LTO on src/ | 566,608 | 397,843 | 68 KB of room |
+  | Standard, LTO on src/ and libraries | 563,344 | 396,109 | **78 KB of room** |
+  | json-render, no LTO | 621,712 | 435,613 | 20 KB over |
+  | json-render, LTO on src/ | 609,840 | 427,906 | fits, 0.5 KB to spare |
+  | json-render, LTO on src/ and libraries | **606,592** | **426,109** | **fits, 3.7 KB to spare** |
+
+- LTO dropped the symbols only json-render's stack-switch asm uses: they are now marked
+  `used, externally_visible` (92ec3fa). LTO over the libraries needs `gcc-ar` for their
+  archives and leaves ESP8266WiFi out (it lost `SigningVerifier_verify`, used only by the
+  core's Updater; forcing it in added 27 KB of BearSSL).
+- Checked on the LTO images: IRAM unchanged (28,831 B), RAM +60-280 B, the safety tests'
+  update, unpack and layout cases pass, `addr2line` names functions in a crash address
+  (with a DWARF warning). **The RAM-string check fails** under LTO: it counts 5,015 B of our
+  literals in RAM for the standard build (4,709 B without LTO; limit 4,864), because LTO
+  places some strings differently; the json-render build counts 6,269 B (its JSON keys:
+  `p["flexDirection"]`...). Adopting LTO means moving about 150 B of literals to flash
+  first, or raising the limit.
+- **json-render's RAM:** its name tables (components, CSS and ANSI colours, clock groups)
+  were pointer arrays and strings in RAM, and its warnings, Clock formats and glyphs were
+  RAM literals: 2.5 KB of RAM, all moved to flash (packed PROGMEM names, `F()`). Faces and
+  warnings are byte-identical for every sample spec and for a spec made to trigger each
+  warning, colour name and Clock format (emulator, old binary against new).
+- **Tried and reverted:** a `noinline` member lookup for the 259 `p["key"]` reads: +352 B
+  under LTO (GCC already shares them).
+- Not verified: an LTO image on a clock (timing, a day of use); the standard build's
+  integration tests on an LTO image (the emulator is a host build, no LTO).
