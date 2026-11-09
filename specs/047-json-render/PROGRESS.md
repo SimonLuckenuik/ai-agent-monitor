@@ -231,3 +231,27 @@ heap problem (unchanged); `validateSpec()`.
   under LTO (GCC already shares them).
 - Not verified: an LTO image on a clock (timing, a day of use); the standard build's
   integration tests on an LTO image (the emulator is a host build, no LTO).
+
+- **Adopted** (the owner: "Yes, wire it in"): `platformio.ini` runs `scripts/lto_options.py`
+  for the firmware (not the starter); decision record
+  [2026-11-08 link-time optimisation](../../docs/decisions/2026-11-08-link-time-optimisation.md).
+  The RAM-string check's 5,015 B was one literal: the default palettes (386 B), a C++17
+  `inline` PROGMEM variable in config.h, which LTO put in RAM; `static` now, and the check
+  counts 4,629 B (4,709 B without LTO). Safety, unit and web tests pass; the starter is
+  unchanged (381,600 B). The json-render build still counts more literals than the limit
+  (its JSON keys): to fix before json-render ships.
+
+## 2026-11-09: json-render's literals under the RAM limit (the owner: "continue fixing")
+
+- The json-render build now passes the safety tests' RAM-string check: **4,837 B** of our
+  literals in RAM (limit 4,864; it was 5,883 B with LTO), so about 1 KB more heap.
+- How: the 127 JSON keys json-render reads are one PROGMEM copy each (`K_<key>`, looked up
+  with `FPSTR`; the `num`/`px`/`str`/`is` helpers take a flash key); `is()` compares with a
+  flash value; String comparisons go through `eq(s, PSTR(...))` (`strcmp_P`), not
+  `String == F()`, which builds a String each time (+560 B of flash for the same saving);
+  default colours, the face head, the `#%06x` format and some fragments are `F()`.
+- Flash: +368 B (606,960 B, 3.3 KB under the update limit).
+- Tried and reverted: `== F("...")` on JSON values too (-199 B of RAM for +976 B of flash).
+- Checked: faces and warnings byte-identical for every sample spec and the spec that
+  triggers each warning (emulator, old binary against new); every sample saves on the
+  25.6 KB arena; safety tests pass on both images, unit tests pass.

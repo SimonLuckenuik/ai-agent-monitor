@@ -24,6 +24,138 @@ extern ESP8266WebServer server;
 
 namespace {
 
+// JSON keys, one copy each in flash (as RAM literals they cost about 1 KB of RAM).
+typedef const __FlashStringHelper* Key;
+// A String equal to a text in flash (String == F() would build a String to compare).
+__attribute__((noinline)) bool eq(const String& s, PGM_P t) { return !strcmp_P(s.c_str(), t); }
+const char K_S_bindState[] PROGMEM = "$bindState";
+const char K_S_computed[] PROGMEM = "$computed";
+const char K_S_cond[] PROGMEM = "$cond";
+const char K_S_else[] PROGMEM = "$else";
+const char K_S_index[] PROGMEM = "$index";
+const char K_S_item[] PROGMEM = "$item";
+const char K_S_state[] PROGMEM = "$state";
+const char K_S_template[] PROGMEM = "$template";
+const char K_S_then[] PROGMEM = "$then";
+const char K_align[] PROGMEM = "align";
+const char K_alignItems[] PROGMEM = "alignItems";
+const char K_alignSelf[] PROGMEM = "alignSelf";
+const char K_alt[] PROGMEM = "alt";
+const char K_background[] PROGMEM = "background";
+const char K_backgroundColor[] PROGMEM = "backgroundColor";
+const char K_bold[] PROGMEM = "bold";
+const char K_border[] PROGMEM = "border";
+const char K_borderColor[] PROGMEM = "borderColor";
+const char K_borderRadius[] PROGMEM = "borderRadius";
+const char K_borderWidth[] PROGMEM = "borderWidth";
+const char K_bottom[] PROGMEM = "bottom";
+const char K_children[] PROGMEM = "children";
+const char K_color[] PROGMEM = "color";
+const char K_columnGap[] PROGMEM = "columnGap";
+const char K_columns[] PROGMEM = "columns";
+const char K_content[] PROGMEM = "content";
+const char K_count[] PROGMEM = "count";
+const char K_d[] PROGMEM = "d";
+const char K_data[] PROGMEM = "data";
+const char K_date[] PROGMEM = "date";
+const char K_description[] PROGMEM = "description";
+const char K_detail[] PROGMEM = "detail";
+const char K_dimColor[] PROGMEM = "dimColor";
+const char K_direction[] PROGMEM = "direction";
+const char K_elements[] PROGMEM = "elements";
+const char K_fallback[] PROGMEM = "fallback";
+const char K_fill[] PROGMEM = "fill";
+const char K_flex[] PROGMEM = "flex";
+const char K_flexDirection[] PROGMEM = "flexDirection";
+const char K_flexGrow[] PROGMEM = "flexGrow";
+const char K_flexWrap[] PROGMEM = "flexWrap";
+const char K_font[] PROGMEM = "font";
+const char K_fontSize[] PROGMEM = "fontSize";
+const char K_fontStyle[] PROGMEM = "fontStyle";
+const char K_fontWeight[] PROGMEM = "fontWeight";
+const char K_format[] PROGMEM = "format";
+const char K_gap[] PROGMEM = "gap";
+const char K_grow[] PROGMEM = "grow";
+const char K_gte[] PROGMEM = "gte";
+const char K_header[] PROGMEM = "header";
+const char K_headerColor[] PROGMEM = "headerColor";
+const char K_height[] PROGMEM = "height";
+const char K_inverse[] PROGMEM = "inverse";
+const char K_italic[] PROGMEM = "italic";
+const char K_items[] PROGMEM = "items";
+const char K_justify[] PROGMEM = "justify";
+const char K_justifyContent[] PROGMEM = "justifyContent";
+const char K_key[] PROGMEM = "key";
+const char K_label[] PROGMEM = "label";
+const char K_labelColor[] PROGMEM = "labelColor";
+const char K_labelFont[] PROGMEM = "labelFont";
+const char K_labelSize[] PROGMEM = "labelSize";
+const char K_leading[] PROGMEM = "leading";
+const char K_left[] PROGMEM = "left";
+const char K_letterSpacing[] PROGMEM = "letterSpacing";
+const char K_level[] PROGMEM = "level";
+const char K_lineHeight[] PROGMEM = "lineHeight";
+const char K_lte[] PROGMEM = "lte";
+const char K_margin[] PROGMEM = "margin";
+const char K_marginBottom[] PROGMEM = "marginBottom";
+const char K_marginTop[] PROGMEM = "marginTop";
+const char K_max[] PROGMEM = "max";
+const char K_maxChars[] PROGMEM = "maxChars";
+const char K_message[] PROGMEM = "message";
+const char K_min[] PROGMEM = "min";
+const char K_name[] PROGMEM = "name";
+const char K_neq[] PROGMEM = "neq";
+const char K_not[] PROGMEM = "not";
+const char K_ordered[] PROGMEM = "ordered";
+const char K_orientation[] PROGMEM = "orientation";
+const char K_overflow[] PROGMEM = "overflow";
+const char K_padding[] PROGMEM = "padding";
+const char K_paddingBottom[] PROGMEM = "paddingBottom";
+const char K_paddingLeft[] PROGMEM = "paddingLeft";
+const char K_paddingRight[] PROGMEM = "paddingRight";
+const char K_paddingTop[] PROGMEM = "paddingTop";
+const char K_paths[] PROGMEM = "paths";
+const char K_position[] PROGMEM = "position";
+const char K_progress[] PROGMEM = "progress";
+const char K_props[] PROGMEM = "props";
+const char K_radius[] PROGMEM = "radius";
+const char K_repeat[] PROGMEM = "repeat";
+const char K_right[] PROGMEM = "right";
+const char K_root[] PROGMEM = "root";
+const char K_rounded[] PROGMEM = "rounded";
+const char K_rowGap[] PROGMEM = "rowGap";
+const char K_rows[] PROGMEM = "rows";
+const char K_rule[] PROGMEM = "rule";
+const char K_showPercentage[] PROGMEM = "showPercentage";
+const char K_showValues[] PROGMEM = "showValues";
+const char K_size[] PROGMEM = "size";
+const char K_spacing[] PROGMEM = "spacing";
+const char K_src[] PROGMEM = "src";
+const char K_state[] PROGMEM = "state";
+const char K_status[] PROGMEM = "status";
+const char K_strikethrough[] PROGMEM = "strikethrough";
+const char K_stroke[] PROGMEM = "stroke";
+const char K_strokeWidth[] PROGMEM = "strokeWidth";
+const char K_subtitle[] PROGMEM = "subtitle";
+const char K_text[] PROGMEM = "text";
+const char K_textDecoration[] PROGMEM = "textDecoration";
+const char K_thickness[] PROGMEM = "thickness";
+const char K_title[] PROGMEM = "title";
+const char K_top[] PROGMEM = "top";
+const char K_track[] PROGMEM = "track";
+const char K_trailing[] PROGMEM = "trailing";
+const char K_trend[] PROGMEM = "trend";
+const char K_type[] PROGMEM = "type";
+const char K_underline[] PROGMEM = "underline";
+const char K_url[] PROGMEM = "url";
+const char K_value[] PROGMEM = "value";
+const char K_var[] PROGMEM = "var";
+const char K_variant[] PROGMEM = "variant";
+const char K_viewBox[] PROGMEM = "viewBox";
+const char K_visible[] PROGMEM = "visible";
+const char K_width[] PROGMEM = "width";
+const char K_wrap[] PROGMEM = "wrap";
+
 // --- Catalog ----------------------------------------------------------------------------
 enum Type : uint8_t {
   T_FRAME, T_BOX, T_ROW, T_COLUMN, T_STACK, T_CARD, T_GRID,   // containers
@@ -102,8 +234,8 @@ const char CLOCK_GROUPS[] PROGMEM = "time\0date\0now\0day0\0day1\0day2\0day3\0da
 String placeholder(const char* path) {
   String p = path ? path : "";
   if (p.startsWith("/")) p.remove(0, 1);
-  if (p.startsWith("vars/")) p.remove(0, 5);
-  else if (p.startsWith("days/") && p.length() > 6) p = "day" + p.substring(5, 6) + p.substring(6);
+  if (p.startsWith(F("vars/"))) p.remove(0, 5);
+  else if (p.startsWith(F("days/")) && p.length() > 6) p = "day" + p.substring(5, 6) + p.substring(6);
   int slash = p.indexOf('/');
   String head = slash < 0 ? p : p.substring(0, slash);
   if (nameIndex(CLOCK_GROUPS, head.c_str()) >= 0) { p.replace('/', '.'); return p; }
@@ -129,15 +261,15 @@ String condition(JsonVariantConst c) {
     for (JsonVariantConst x : o[op].as<JsonArrayConst>()) { if (s.length()) s += op[2] == 'a' ? "&&" : "||"; s += "(" + condition(x) + ")"; }
     return s;
   }
-  if (o["$item"] || o["$index"]) { warnOnce(F("$item/$index: repeat is not supported yet")); return "1"; }
-  String v = "{" + placeholder(o["$state"]) + "}";
-  bool no = o["not"] | false;
+  if (o[FPSTR(K_S_item)] || o[FPSTR(K_S_index)]) { warnOnce(F("$item/$index: repeat is not supported yet")); return "1"; }
+  String v = "{" + placeholder(o[FPSTR(K_S_state)]) + "}";
+  bool no = o[FPSTR(K_not)] | false;
   if (!o["eq"].isNull()) return v + (no ? "!=" : "==") + o["eq"].as<String>();
-  if (!o["neq"].isNull()) return v + (no ? "==" : "!=") + o["neq"].as<String>();
+  if (!o[FPSTR(K_neq)].isNull()) return v + (no ? "==" : "!=") + o[FPSTR(K_neq)].as<String>();
   if (!o["gt"].isNull()) return v + ">" + o["gt"].as<String>();
-  if (!o["gte"].isNull()) return v + ">=" + o["gte"].as<String>();
+  if (!o[FPSTR(K_gte)].isNull()) return v + ">=" + o[FPSTR(K_gte)].as<String>();
   if (!o["lt"].isNull()) return v + "<" + o["lt"].as<String>();
-  if (!o["lte"].isNull()) return v + "<=" + o["lte"].as<String>();
+  if (!o[FPSTR(K_lte)].isNull()) return v + "<=" + o[FPSTR(K_lte)].as<String>();
   return no ? "!" + v : v;
 }
 
@@ -169,7 +301,7 @@ bool noPaint(JsonVariantConst v) {
   const char* s = v.as<const char*>();
   return s && (!strcmp(s, "none") || !strcmp(s, "transparent"));
 }
-String hex(uint32_t c) { char b[8]; snprintf(b, sizeof b, "#%06x", (unsigned)(c & 0xffffff)); return b; }
+String hex(uint32_t c) { char b[8]; snprintf_P(b, sizeof b, PSTR("#%06x"), (unsigned)(c & 0xffffff)); return b; }
 uint32_t blend(uint32_t fg, uint32_t bg, float a) {
   uint32_t r = 0;
   for (int s = 0; s <= 16; s += 8) {
@@ -194,7 +326,7 @@ String colourLiteral(String s) {
   String l = s; l.toLowerCase();
   uint32_t c;
   if (hexOf(l, &c)) return hex(c);
-  if (l == "transparent") return bgS.length() ? bgS : hex(bgHex);
+  if (eq(l, PSTR("transparent"))) return bgS.length() ? bgS : hex(bgHex);
   if (l.startsWith("rgb")) {   // rgb(r, g, b) / rgba(r, g, b, a)
     const char* p = strchr(l.c_str(), '(');
     float v[4] = {0, 0, 0, 1};
@@ -227,12 +359,12 @@ String value(JsonVariantConst v, Kind k) {
   if (v.isNull()) return "";
   if (v.is<JsonObjectConst>()) {
     JsonObjectConst o = v.as<JsonObjectConst>();
-    if (!o["$state"].isNull()) {
-      String s = "{" + placeholder(o["$state"]) + (o["fallback"].isNull() ? "" : "|" + o["fallback"].as<String>()) + "}";
+    if (!o[FPSTR(K_S_state)].isNull()) {
+      String s = "{" + placeholder(o[FPSTR(K_S_state)]) + (o[FPSTR(K_fallback)].isNull() ? "" : "|" + o[FPSTR(K_fallback)].as<String>()) + "}";
       return s;
     }
-    if (!o["$template"].isNull()) {   // "Hi ${/user/name}" -> "Hi {user}"
-      String t = o["$template"].as<String>(), r;
+    if (!o[FPSTR(K_S_template)].isNull()) {   // "Hi ${/user/name}" -> "Hi {user}"
+      String t = o[FPSTR(K_S_template)].as<String>(), r;
       int i = 0;
       while (true) {
         int a = t.indexOf("${", i);
@@ -248,13 +380,13 @@ String value(JsonVariantConst v, Kind k) {
       }
       return r;
     }
-    if (o.containsKey("$cond")) {
-      String e = condition(o["$cond"]) + "?" + value(o["$then"], k) + ":" + value(o["$else"], k);
+    if (o.containsKey(FPSTR(K_S_cond))) {
+      String e = condition(o[FPSTR(K_S_cond)]) + "?" + value(o[FPSTR(K_S_then)], k) + ":" + value(o[FPSTR(K_S_else)], k);
       return k == K_TEXT ? "{" + e + "}" : e;
     }
-    if (!o["$computed"].isNull()) { warnOnce(String(F("$computed is not supported: ")) + o["$computed"].as<String>()); return ""; }
-    if (!o["$item"].isNull() || !o["$index"].isNull()) { warnOnce(F("$item/$index: repeat is not supported yet")); return ""; }
-    if (!o["$bindState"].isNull()) return "{" + placeholder(o["$bindState"]) + "}";   // shown, never written
+    if (!o[FPSTR(K_S_computed)].isNull()) { warnOnce(String(F("$computed is not supported: ")) + o[FPSTR(K_S_computed)].as<String>()); return ""; }
+    if (!o[FPSTR(K_S_item)].isNull() || !o[FPSTR(K_S_index)].isNull()) { warnOnce(F("$item/$index: repeat is not supported yet")); return ""; }
+    if (!o[FPSTR(K_S_bindState)].isNull()) return "{" + placeholder(o[FPSTR(K_S_bindState)]) + "}";   // shown, never written
     warnOnce(F("unsupported dynamic value"));
     return "";
   }
@@ -307,16 +439,16 @@ int lineCount(const String& s, const Font& f, int w) {
 }
 
 // --- Props ------------------------------------------------------------------------------
-float num(JsonObjectConst p, const char* k, float d) { JsonVariantConst v = p[k]; return v.is<float>() ? v.as<float>() : d; }
+float num(JsonObjectConst p, Key k, float d) { JsonVariantConst v = p[k]; return v.is<float>() ? v.as<float>() : d; }
 // Ink measures in character cells: a cell is 6 px across (40 columns fill the screen), a row 16 px.
 constexpr int INK_COL = 6, INK_ROW = 16;
 // A length from the spec (scaled, in cells for Ink); d, in pixels, when it is not given.
-int px(JsonObjectConst p, const char* k, float d) {
+int px(JsonObjectConst p, Key k, float d) {
   JsonVariantConst v = p[k];
   return v.is<float>() ? (int)lroundf(v.as<float>() * scale * (ink ? INK_COL : 1)) : (int)lroundf(d);
 }
 // A vertical length (Ink: rows of 16 px).
-int pxRow(JsonObjectConst p, const char* k, float d) {
+int pxRow(JsonObjectConst p, Key k, float d) {
   JsonVariantConst v = p[k];
   return v.is<float>() ? (int)lroundf(v.as<float>() * scale * (ink ? INK_ROW : 1)) : (int)lroundf(d);
 }
@@ -331,17 +463,17 @@ int size(JsonVariantConst v, int base, int cell = INK_COL) {
   }
   return -1;
 }
-const char* str(JsonObjectConst p, const char* k, const char* d = "") { const char* s = p[k]; return s ? s : d; }
-bool is(JsonObjectConst p, const char* k, const char* v) { const char* s = p[k]; return s && !strcmp(s, v); }
+const char* str(JsonObjectConst p, Key k, const char* d = "") { const char* s = p[k]; return s ? s : d; }
+bool is(JsonObjectConst p, Key k, PGM_P v) { const char* s = p[k]; return s && !strcmp_P(s, v); }
 
 enum Align : uint8_t { A_START, A_CENTER, A_END, A_STRETCH, A_BETWEEN, A_AROUND };
 uint8_t alignOf(const char* s, uint8_t d) {
   if (!s) return d;
   String a = s;
-  if (a.endsWith("start") || a == "left" || a == "top") return A_START;
-  if (a == "center") return A_CENTER;
-  if (a.endsWith("end") || a == "right" || a == "bottom") return A_END;
-  if (a == "stretch") return A_STRETCH;
+  if (a.endsWith("start") || eq(a, PSTR("left")) || eq(a, PSTR("top"))) return A_START;
+  if (eq(a, PSTR("center"))) return A_CENTER;
+  if (a.endsWith("end") || eq(a, PSTR("right")) || eq(a, PSTR("bottom"))) return A_END;
+  if (eq(a, PSTR("stretch"))) return A_STRETCH;
   if (a.endsWith("between")) return A_BETWEEN;
   if (a.endsWith("around") || a.endsWith("evenly")) return A_AROUND;
   return d;
@@ -350,7 +482,7 @@ uint8_t alignOf(const char* s, uint8_t d) {
 int stackGap(const char* g) {   // shadcn's sizes
   if (!g) return 8;
   String s = g;
-  return s == "none" ? 0 : s == "sm" ? 4 : s == "md" ? 8 : s == "lg" ? 12 : s == "xl" ? 16 : 8;
+  return eq(s, PSTR("none")) ? 0 : s == "sm" ? 4 : s == "md" ? 8 : s == "lg" ? 12 : s == "xl" ? 16 : 8;
 }
 
 struct Lay {
@@ -362,41 +494,41 @@ struct Lay {
 Lay layOf(const Node& n) {
   Lay l;
   JsonObjectConst p = n.p;
-  int P = px(p, "padding", 0);
+  int P = px(p, FPSTR(K_padding), 0);
   for (int16_t& v : l.pad) v = P;
-  if (!p["paddingTop"].isNull()) l.pad[0] = px(p, "paddingTop", 0);
-  if (!p["paddingRight"].isNull()) l.pad[1] = px(p, "paddingRight", 0);
-  if (!p["paddingBottom"].isNull()) l.pad[2] = px(p, "paddingBottom", 0);
-  if (!p["paddingLeft"].isNull()) l.pad[3] = px(p, "paddingLeft", 0);
-  int M = px(p, "margin", 0);
+  if (!p[FPSTR(K_paddingTop)].isNull()) l.pad[0] = px(p, FPSTR(K_paddingTop), 0);
+  if (!p[FPSTR(K_paddingRight)].isNull()) l.pad[1] = px(p, FPSTR(K_paddingRight), 0);
+  if (!p[FPSTR(K_paddingBottom)].isNull()) l.pad[2] = px(p, FPSTR(K_paddingBottom), 0);
+  if (!p[FPSTR(K_paddingLeft)].isNull()) l.pad[3] = px(p, FPSTR(K_paddingLeft), 0);
+  int M = px(p, FPSTR(K_margin), 0);
   for (int16_t& v : l.mar) v = M;
-  if (!p["marginTop"].isNull()) l.mar[0] = px(p, "marginTop", 0);
-  if (!p["marginBottom"].isNull()) l.mar[2] = px(p, "marginBottom", 0);
-  l.grow = num(p, "flex", num(p, "grow", 0));
-  l.gap = px(p, "gap", 0);
-  l.abs = is(p, "position", "absolute");
-  l.align = alignOf(p["alignItems"] | p["align"].as<const char*>(), A_STRETCH);
-  l.justify = alignOf(p["justifyContent"] | p["justify"].as<const char*>(), A_START);
+  if (!p[FPSTR(K_marginTop)].isNull()) l.mar[0] = px(p, FPSTR(K_marginTop), 0);
+  if (!p[FPSTR(K_marginBottom)].isNull()) l.mar[2] = px(p, FPSTR(K_marginBottom), 0);
+  l.grow = num(p, FPSTR(K_flex), num(p, FPSTR(K_grow), 0));
+  l.gap = px(p, FPSTR(K_gap), 0);
+  l.abs = is(p, FPSTR(K_position), PSTR("absolute"));
+  l.align = alignOf(p[FPSTR(K_alignItems)] | p[FPSTR(K_align)].as<const char*>(), A_STRETCH);
+  l.justify = alignOf(p[FPSTR(K_justifyContent)] | p[FPSTR(K_justify)].as<const char*>(), A_START);
   switch (n.type) {
-    case T_FRAME: l.row = is(p, "flexDirection", "row"); break;
+    case T_FRAME: l.row = is(p, FPSTR(K_flexDirection), PSTR("row")); break;
     case T_BOX: {   // Ink's Box is a row by default, the image renderer's a column
-      const char* d = p["flexDirection"];
+      const char* d = p[FPSTR(K_flexDirection)];
       l.row = d ? !strncmp(d, "row", 3) : ink;
-      if (ink) { l.wrap = is(p, "flexWrap", "wrap"); if (p["gap"].isNull()) l.gap = px(p, l.row ? "columnGap" : "rowGap", 0); }
-      if (!p["flexGrow"].isNull()) l.grow = num(p, "flexGrow", 0);
+      if (ink) { l.wrap = is(p, FPSTR(K_flexWrap), PSTR("wrap")); if (p[FPSTR(K_gap)].isNull()) l.gap = px(p, l.row ? FPSTR(K_columnGap) : FPSTR(K_rowGap), 0); }
+      if (!p[FPSTR(K_flexGrow)].isNull()) l.grow = num(p, FPSTR(K_flexGrow), 0);
       break;
     }
-    case T_ROW: l.row = true; l.wrap = p["wrap"] | false; break;
+    case T_ROW: l.row = true; l.wrap = p[FPSTR(K_wrap)] | false; break;
     case T_COLUMN: break;
-    case T_STACK: l.row = is(p, "direction", "horizontal"); l.gap = stackGap(p["gap"]); break;
+    case T_STACK: l.row = is(p, FPSTR(K_direction), PSTR("horizontal")); l.gap = stackGap(p[FPSTR(K_gap)]); break;
     case T_CARD:
-      if (p["padding"].isNull()) for (int16_t& v : l.pad) v = 10;
+      if (p[FPSTR(K_padding)].isNull()) for (int16_t& v : l.pad) v = 10;
       else if (ink) for (int16_t& v : l.pad) v = max<int16_t>(v, 6);
-      if (p["gap"].isNull()) l.gap = 6;
+      if (p[FPSTR(K_gap)].isNull()) l.gap = 6;
       break;
-    case T_GRID: l.row = true; l.wrap = true; l.cols = max(1, (int)num(p, "columns", 2)); l.gap = p["gap"].is<const char*>() ? stackGap(p["gap"]) : px(p, "gap", 8); break;
+    case T_GRID: l.row = true; l.wrap = true; l.cols = max(1, (int)num(p, FPSTR(K_columns), 2)); l.gap = p[FPSTR(K_gap)].is<const char*>() ? stackGap(p[FPSTR(K_gap)]) : px(p, FPSTR(K_gap), 8); break;
     case T_DIVIDER:
-      if (!ink) { l.mar[0] = px(p, "marginTop", 8); l.mar[2] = px(p, "marginBottom", 8); }
+      if (!ink) { l.mar[0] = px(p, FPSTR(K_marginTop), 8); l.mar[2] = px(p, FPSTR(K_marginBottom), 8); }
       else { l.mar[0] = l.mar[2] = 3; }
       break;
     case T_SPACER: if (ink && p.size() == 0) l.grow = 1; break;   // Ink's Spacer fills the line
@@ -413,7 +545,7 @@ bool fills(const Node& n) {
     case T_ALERT: case T_PROGRESS: case T_SPARK: case T_TABLE: case T_PROGRESSBAR: case T_BARCHART:
     case T_LIST: case T_LISTITEM: case T_KEYVALUE: case T_STATUSLINE: case T_METRIC: case T_CALLOUT:
     case T_TIMELINE: case T_MARKDOWN: case T_DIVIDER: case T_SEPARATOR: case T_SKELETON:
-      return n.p["width"].isNull();
+      return n.p[FPSTR(K_width)].isNull();
     default: return false;
   }
 }
@@ -421,7 +553,7 @@ bool fills(const Node& n) {
 bool shrinks(const Node& n, bool row) {
   switch (n.type) {
     case T_ICON: case T_WICON: case T_RING: case T_AVATAR: case T_SPINNER: case T_BADGE: case T_BUTTON: return false;
-    default: return (row ? n.p["width"] : n.p["height"]).isNull() && !(n.type == T_SPACER && !row);
+    default: return (row ? n.p[FPSTR(K_width)] : n.p[FPSTR(K_height)]).isNull() && !(n.type == T_SPACER && !row);
   }
 }
 // Its flex grow in a row: its own, or 1 for a leaf that fills its line.
@@ -430,40 +562,40 @@ float growIn(const Node& n, bool row) { float g = layOf(n).grow; return g > 0 ? 
 String textOf(const Node& n) {
   JsonObjectConst p = n.p;
   if (n.type == T_CLOCK) {
-    String f = str(p, "format", "hm");
+    String f = str(p, FPSTR(K_format), "hm");
     if (f == "hm") return F("{time.hm}");
-    if (f == "hms") return F("{time.hm}:{time.sec}");
-    if (f == "date") return F("{date.text}");
-    if (f == "wday") return F("{date.wday}");
-    if (f == "wday3") return F("{date.wday3}");
-    if (f == "dmy") return F("{date.day} {date.month3} {date.year}");
-    if (f == "ampm") return F("{time.hm} {time.ampm}");
-    return value(p["format"], K_TEXT);   // a template of its own ("{date.wday:u}")
+    if (eq(f, PSTR("hms"))) return F("{time.hm}:{time.sec}");
+    if (eq(f, PSTR("date"))) return F("{date.text}");
+    if (eq(f, PSTR("wday"))) return F("{date.wday}");
+    if (eq(f, PSTR("wday3"))) return F("{date.wday3}");
+    if (eq(f, PSTR("dmy"))) return F("{date.day} {date.month3} {date.year}");
+    if (eq(f, PSTR("ampm"))) return F("{time.hm} {time.ampm}");
+    return value(p[FPSTR(K_format)], K_TEXT);   // a template of its own ("{date.wday:u}")
   }
-  return value(p["text"].isNull() ? p["label"] : p["text"], K_TEXT);
+  return value(p[FPSTR(K_text)].isNull() ? p[FPSTR(K_label)] : p[FPSTR(K_text)], K_TEXT);
 }
 float cssSize(const Node& n) {
   JsonObjectConst p = n.p;
   if (n.type == T_HEADING) {
-    String l = str(p, "level", "h2");
+    String l = str(p, FPSTR(K_level), "h2");
     if (ink) return l == "h1" ? 34 : l == "h2" ? 26 : l == "h3" ? 22 : 16;
     return l == "h1" ? 48 : l == "h3" ? 28 : l == "h4" ? 22 : 36;
   }
-  if (n.type == T_CLOCK) return num(p, "fontSize", 64);
+  if (n.type == T_CLOCK) return num(p, FPSTR(K_fontSize), 64);
   if (n.type == T_TEXT) {
-    String v = str(p, "variant", "");
-    if (v == "lead") return num(p, "fontSize", 20);
-    if (v == "caption" || v == "muted") return num(p, "fontSize", 14);
+    String v = str(p, FPSTR(K_variant), "");
+    if (eq(v, PSTR("lead"))) return num(p, FPSTR(K_fontSize), 20);
+    if (eq(v, PSTR("caption")) || eq(v, PSTR("muted"))) return num(p, FPSTR(K_fontSize), 14);
   }
-  return num(p, "fontSize", 16);
+  return num(p, FPSTR(K_fontSize), 16);
 }
 Font textFont(const Node& n) {
-  bool asked = is(n.p, "fontWeight", "bold") || (n.p["bold"] | false);
+  bool asked = is(n.p, FPSTR(K_fontWeight), PSTR("bold")) || (n.p[FPSTR(K_bold)] | false);
   bool bold = asked || (n.type == T_HEADING) || (n.type == T_CLOCK);
-  if (asked && cssSize(n) * scale <= 31 && !n.p["font"].is<const char*>()) warnOnce(F("bold: only the large (line font) sizes have a bold"));
-  return fontFor(cssSize(n), n.p["font"].is<int>() ? (n.p["font"].as<int>() == 4 ? "4" : "2") : n.p["font"].as<const char*>(), bold);
+  if (asked && cssSize(n) * scale <= 31 && !n.p[FPSTR(K_font)].is<const char*>()) warnOnce(F("bold: only the large (line font) sizes have a bold"));
+  return fontFor(cssSize(n), n.p[FPSTR(K_font)].is<int>() ? (n.p[FPSTR(K_font)].as<int>() == 4 ? "4" : "2") : n.p[FPSTR(K_font)].as<const char*>(), bold);
 }
-float lineHeight(const Node& n) { return num(n.p, "lineHeight", n.type == T_HEADING || n.type == T_CLOCK ? 1.2f : 1.4f); }
+float lineHeight(const Node& n) { return num(n.p, FPSTR(K_lineHeight), n.type == T_HEADING || n.type == T_CLOCK ? 1.2f : 1.4f); }
 int lineH(const Node& n, const Font& f) {
   float css = (f.font ? f.h : cssSize(n) * scale);
   return max(f.h, (int)lroundf(css * lineHeight(n) * (f.font ? 1.0f : 1.0f)) - (f.font ? (int)lroundf(f.h * (lineHeight(n) - 1) / 2) : 0));
@@ -471,7 +603,7 @@ int lineH(const Node& n, const Font& f) {
 
 int textW(const Node& n, const Font& f, const String& t) {
   int w = widthOf(sample(t), f);
-  int mc = n.p["maxChars"] | 0;
+  int mc = n.p[FPSTR(K_maxChars)] | 0;
   if (mc) { String z; for (int i = min(mc, 32); i > 0; --i) z += '0'; w = max(w, widthOf(z, f)); }
   return w;
 }
@@ -492,48 +624,48 @@ Sz leafSize(const Node& n, int avail) {
     }
     case T_ALERT: {
       Font f = fontFor(14, nullptr, false);
-      String m = value(p["message"], K_TEXT);
+      String m = value(p[FPSTR(K_message)], K_TEXT);
       int lines = m.length() ? (live(m) ? 1 : lineCount(sample(m), f, avail - 20)) : 0;
       return {avail, 12 + 18 + lines * 18 + (lines ? 2 : 0)};
     }
-    case T_PROGRESS: return {size(p["width"], avail) > 0 ? size(p["width"], avail) : avail, px(p, "height", 8) + (p["label"].isNull() ? 0 : 20)};
-    case T_RING: { int d = px(p, "size", 64); return {d, d}; }
-    case T_WICON: case T_ICON: { int d = px(p, "size", n.type == T_ICON ? 24 : 48); return {d, d}; }
-    case T_IMAGE: return {size(p["width"], avail) > 0 ? size(p["width"], avail) : 80, size(p["height"], 240, INK_ROW) > 0 ? size(p["height"], 240, INK_ROW) : 60};
+    case T_PROGRESS: return {size(p[FPSTR(K_width)], avail) > 0 ? size(p[FPSTR(K_width)], avail) : avail, px(p, FPSTR(K_height), 8) + (p[FPSTR(K_label)].isNull() ? 0 : 20)};
+    case T_RING: { int d = px(p, FPSTR(K_size), 64); return {d, d}; }
+    case T_WICON: case T_ICON: { int d = px(p, FPSTR(K_size), n.type == T_ICON ? 24 : 48); return {d, d}; }
+    case T_IMAGE: return {size(p[FPSTR(K_width)], avail) > 0 ? size(p[FPSTR(K_width)], avail) : 80, size(p[FPSTR(K_height)], 240, INK_ROW) > 0 ? size(p[FPSTR(K_height)], 240, INK_ROW) : 60};
     case T_DIVIDER: case T_SEPARATOR: {
-      int t = px(p, "thickness", 1);
-      if (is(p, "orientation", "vertical")) return {t, 0};
-      return {avail, n.type == T_SEPARATOR ? t + 8 : p["title"].isNull() ? t : 16};
+      int t = px(p, FPSTR(K_thickness), 1);
+      if (is(p, FPSTR(K_orientation), PSTR("vertical"))) return {t, 0};
+      return {avail, n.type == T_SEPARATOR ? t + 8 : p[FPSTR(K_title)].isNull() ? t : 16};
     }
-    case T_SPACER: { int h = px(p, "height", 20); int w = px(p, "width", 0); return {w, h}; }
-    case T_AVATAR: { String s = str(p, "size", "md"); int d = s == "sm" ? 24 : s == "lg" ? 48 : 36; return {d, d}; }
-    case T_SKELETON: return {size(p["width"], avail) > 0 ? size(p["width"], avail) : avail, size(p["height"], 240, INK_ROW) > 0 ? size(p["height"], 240, INK_ROW) : 16};
-    case T_SPINNER: { String s = str(p, "size", "md"); int d = s == "sm" ? 16 : s == "lg" ? 40 : 24; return {d + (p["label"].isNull() ? 0 : 60), d}; }
+    case T_SPACER: { int h = px(p, FPSTR(K_height), 20); int w = px(p, FPSTR(K_width), 0); return {w, h}; }
+    case T_AVATAR: { String s = str(p, FPSTR(K_size), "md"); int d = s == "sm" ? 24 : s == "lg" ? 48 : 36; return {d, d}; }
+    case T_SKELETON: return {size(p[FPSTR(K_width)], avail) > 0 ? size(p[FPSTR(K_width)], avail) : avail, size(p[FPSTR(K_height)], 240, INK_ROW) > 0 ? size(p[FPSTR(K_height)], 240, INK_ROW) : 16};
+    case T_SPINNER: { String s = str(p, FPSTR(K_size), "md"); int d = s == "sm" ? 16 : s == "lg" ? 40 : 24; return {d + (p[FPSTR(K_label)].isNull() ? 0 : 60), d}; }
     case T_TABLE: {
-      JsonArrayConst rows = p["rows"];
+      JsonArrayConst rows = p[FPSTR(K_rows)];
       return {avail, 20 * ((int)rows.size() + 1) + 2};
     }
-    case T_NEWLINE: return {0, 16 * max(1, (int)num(p, "count", 1))};
-    case T_PROGRESSBAR: return {size(p["width"], avail) > 0 ? min(avail, size(p["width"], avail)) : avail, 8 + (p["label"].isNull() ? 0 : 20)};
-    case T_BARCHART: return {avail, 20 * (int)p["data"].as<JsonArrayConst>().size()};
-    case T_LIST: { int sp = px(p, "spacing", 0); int k = p["items"].as<JsonArrayConst>().size(); return {avail, k * 18 + max(0, k - 1) * sp}; }
-    case T_LISTITEM: return {avail, p["subtitle"].isNull() ? 22 : 38};
+    case T_NEWLINE: return {0, 16 * max(1, (int)num(p, FPSTR(K_count), 1))};
+    case T_PROGRESSBAR: return {size(p[FPSTR(K_width)], avail) > 0 ? min(avail, size(p[FPSTR(K_width)], avail)) : avail, 8 + (p[FPSTR(K_label)].isNull() ? 0 : 20)};
+    case T_BARCHART: return {avail, 20 * (int)p[FPSTR(K_data)].as<JsonArrayConst>().size()};
+    case T_LIST: { int sp = px(p, FPSTR(K_spacing), 0); int k = p[FPSTR(K_items)].as<JsonArrayConst>().size(); return {avail, k * 18 + max(0, k - 1) * sp}; }
+    case T_LISTITEM: return {avail, p[FPSTR(K_subtitle)].isNull() ? 22 : 38};
     case T_KEYVALUE: case T_LINK: case T_STATUSLINE: return {avail, 20};
-    case T_METRIC: return {avail, 18 + 40 + (p["detail"].isNull() ? 0 : 18)};
+    case T_METRIC: return {avail, 18 + 40 + (p[FPSTR(K_detail)].isNull() ? 0 : 18)};
     case T_CALLOUT: {
       Font f = fontFor(14, nullptr, false);
-      String c = value(p["content"], K_TEXT);
+      String c = value(p[FPSTR(K_content)], K_TEXT);
       int lines = c.length() ? (live(c) ? 1 : lineCount(sample(c), f, avail - 14)) : 0;
-      return {avail, 8 + (p["title"].isNull() ? 0 : 18) + lines * 18 + 4};
+      return {avail, 8 + (p[FPSTR(K_title)].isNull() ? 0 : 18) + lines * 18 + 4};
     }
     case T_TIMELINE: {
       int h = 0;
-      for (JsonVariantConst it : p["items"].as<JsonArrayConst>()) h += 22 + (it["description"].isNull() ? 0 : 18);
+      for (JsonVariantConst it : p[FPSTR(K_items)].as<JsonArrayConst>()) h += 22 + (it[FPSTR(K_description)].isNull() ? 0 : 18);
       return {avail, h};
     }
     case T_MARKDOWN: {
       Font f = fontFor(14, nullptr, false);
-      String t = value(p["text"], K_TEXT);
+      String t = value(p[FPSTR(K_text)], K_TEXT);
       int h = 0, a = 0;
       while (a <= (int)t.length()) {
         int b = t.indexOf('\n', a); if (b < 0) b = t.length();
@@ -546,20 +678,20 @@ Sz leafSize(const Node& n, int avail) {
       return {avail, h};
     }
     case T_SPARK:
-      if (p["data"].is<JsonArrayConst>()) return {size(p["width"], avail) > 0 ? min(avail, size(p["width"], avail)) : avail, 32 + (p["label"].isNull() ? 0 : 18)};
-      return {size(p["width"], avail) > 0 ? size(p["width"], avail) : avail, size(p["height"], 240, INK_ROW) > 0 ? size(p["height"], 240, INK_ROW) : 40};
+      if (p[FPSTR(K_data)].is<JsonArrayConst>()) return {size(p[FPSTR(K_width)], avail) > 0 ? min(avail, size(p[FPSTR(K_width)], avail)) : avail, 32 + (p[FPSTR(K_label)].isNull() ? 0 : 18)};
+      return {size(p[FPSTR(K_width)], avail) > 0 ? size(p[FPSTR(K_width)], avail) : avail, size(p[FPSTR(K_height)], 240, INK_ROW) > 0 ? size(p[FPSTR(K_height)], 240, INK_ROW) : 40};
     default: return {min(avail, 100), 30};
   }
 }
 
 // --- Layout -----------------------------------------------------------------------------
-int fixedW(const Node& n, int base) { return size(n.p["width"], base); }
-int fixedH(const Node& n, int base) { return isContainer(n.type) || n.type == T_SPACER ? size(n.p["height"], base, INK_ROW) : -1; }
+int fixedW(const Node& n, int base) { return size(n.p[FPSTR(K_width)], base); }
+int fixedH(const Node& n, int base) { return isContainer(n.type) || n.type == T_SPACER ? size(n.p[FPSTR(K_height)], base, INK_ROW) : -1; }
 int headerH(const Node& n) {
   if (n.type != T_CARD) return 0;
   int h = 0;
-  if (!n.p["title"].isNull()) h += 26;
-  if (!n.p["description"].isNull()) h += 18;
+  if (!n.p[FPSTR(K_title)].isNull()) h += 26;
+  if (!n.p[FPSTR(K_description)].isNull()) h += 18;
   return h ? h + 4 : 0;
 }
 
@@ -614,8 +746,8 @@ void place(int i, int x, int y, int w, int h, int depth);
 // --- Emitting ---------------------------------------------------------------------------
 uint32_t luminanceOk(uint32_t c) { return ((c >> 16 & 255) * 3 + (c >> 8 & 255) * 6 + (c & 255)) / 10; }
 String inkOn() { return bgKnown && luminanceOk(bgHex) < 128 ? "#ffffff" : "#000000"; }
-String mutedOn() { return bgKnown && luminanceOk(bgHex) < 128 ? "#8e8e93" : "#6b7280"; }
-String panelOn() { return bgKnown && luminanceOk(bgHex) < 128 ? "#2c2c2e" : "#e5e7eb"; }
+String mutedOn() { return bgKnown && luminanceOk(bgHex) < 128 ? F("#8e8e93") : F("#6b7280"); }
+String panelOn() { return bgKnown && luminanceOk(bgHex) < 128 ? F("#2c2c2e") : F("#e5e7eb"); }
 
 void emitText(const String& t, const Font& f, const String& colour, int x, int y, int w, int h, uint8_t al, int lh, int lines, const Node* n) {
   itemStart("text");
@@ -642,9 +774,9 @@ void emitText(const String& t, const Font& f, const String& colour, int x, int y
   // under the text is wiped by a background box.
   itemEnd();
   if (n && lines <= 1 && !live(t)) {
-    const char* deco = n->p["textDecoration"];
-    if (n->p["underline"] | false) deco = "underline";
-    if (n->p["strikethrough"] | false) deco = "line-through";
+    const char* deco = n->p[FPSTR(K_textDecoration)];
+    if (n->p[FPSTR(K_underline)] | false) deco = "underline";
+    if (n->p[FPSTR(K_strikethrough)] | false) deco = "line-through";
     if (deco && strcmp(deco, "none")) {
       int tw = widthOf(t, f), lx = ax - (al == A_CENTER ? tw / 2 : al == A_END ? tw : 0);
       int ly = !strcmp(deco, "underline") ? y + h / 2 + f.h / 2 - 1 : y + h / 2;
@@ -667,36 +799,36 @@ void emitRect(int x, int y, int w, int h, int r, const String& fill, const Strin
 
 __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h) {
   JsonObjectConst p = n.p;
-  String colour = value(p["color"], K_COLOUR);
+  String colour = value(p[FPSTR(K_color)], K_COLOUR);
   switch (n.type) {
     case T_NEWLINE: return;
     case T_PROGRESSBAR: {
       int by = y;
-      if (!p["label"].isNull()) { emitText(value(p["label"], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr); by += 20; }
-      String v = value(p["progress"], K_NUM);
+      if (!p[FPSTR(K_label)].isNull()) { emitText(value(p[FPSTR(K_label)], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr); by += 20; }
+      String v = value(p[FPSTR(K_progress)], K_NUM);
       itemStart("bar"); fNum("x", x); fNum("y", by); fNum("w", w); fNum("h", 8);
-      fStr("value", p["progress"].is<float>() ? String((int)lroundf(p["progress"].as<float>() * 100)) : "(" + v + ")*100");
-      fStr("color", colour.length() ? colour : String("#30d158")); fStr("track", panelOn()); itemEnd();
+      fStr("value", p[FPSTR(K_progress)].is<float>() ? String((int)lroundf(p[FPSTR(K_progress)].as<float>() * 100)) : String('(') + v + F(")*100"));
+      fStr("color", colour.length() ? colour : String(F("#30d158"))); fStr("track", panelOn()); itemEnd();
       return;
     }
     case T_BARCHART: {
-      JsonArrayConst d = p["data"];
+      JsonArrayConst d = p[FPSTR(K_data)];
       float hi = 0, total = 0;
-      for (JsonVariantConst r : d) { hi = max(hi, r["value"].as<float>()); total += r["value"].as<float>(); }
+      for (JsonVariantConst r : d) { hi = max(hi, r[FPSTR(K_value)].as<float>()); total += r[FPSTR(K_value)].as<float>(); }
       if (hi <= 0) hi = 1;
       Font f = fontFor(14, nullptr, false);
       int lw = 0;
-      for (JsonVariantConst r : d) lw = max(lw, widthOf(r["label"].as<String>(), f));
+      for (JsonVariantConst r : d) lw = max(lw, widthOf(r[FPSTR(K_label)].as<String>(), f));
       lw = min(lw + 6, w / 3);
-      bool showV = p["showValues"] | true, showP = p["showPercentage"] | false;
+      bool showV = p[FPSTR(K_showValues)] | true, showP = p[FPSTR(K_showPercentage)] | false;
       int vw = showV || showP ? 40 : 0, row = 0;
       static const uint32_t PAL[] = {0x0a84ff, 0x30d158, 0xff9f0a, 0xbf5af2, 0x64d2ff, 0xff453a};
       for (JsonVariantConst r : d) {
         int ry = y + row * 20;
-        emitText(r["label"].as<String>(), f, mutedOn(), x, ry, lw - 4, 20, A_START, 20, 1, nullptr);
-        float v = r["value"].as<float>();
+        emitText(r[FPSTR(K_label)].as<String>(), f, mutedOn(), x, ry, lw - 4, 20, A_START, 20, 1, nullptr);
+        float v = r[FPSTR(K_value)].as<float>();
         int bw = max(1, (int)((w - lw - vw) * v / hi));
-        String c = value(r["color"], K_COLOUR);
+        String c = value(r[FPSTR(K_color)], K_COLOUR);
         emitRect(x + lw, ry + 5, bw, 10, 2, c.length() ? c : hex(PAL[row % 6]), "", 0);
         if (vw) {
           String t = showP && total > 0 ? String((int)lroundf(v * 100 / total)) + "%" : String((int)lroundf(v));
@@ -708,9 +840,9 @@ __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h
     }
     case T_LIST: {
       Font f = fontFor(14, nullptr, false);
-      int sp = px(p, "spacing", 0), i = 0;
-      bool ordered = p["ordered"] | false;
-      for (JsonVariantConst it : p["items"].as<JsonArrayConst>()) {
+      int sp = px(p, FPSTR(K_spacing), 0), i = 0;
+      bool ordered = p[FPSTR(K_ordered)] | false;
+      for (JsonVariantConst it : p[FPSTR(K_items)].as<JsonArrayConst>()) {
         int ly = y + i * (18 + sp);
         if (ordered) emitText(String(i + 1) + ".", f, mutedOn(), x, ly, 18, 18, A_END, 18, 1, nullptr);
         else { itemStart("circle"); fNum("x", x + 8); fNum("y", ly + 9); fNum("r", 2); fStr("color", mutedOn()); itemEnd(); }
@@ -722,21 +854,21 @@ __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h
     case T_LISTITEM: {
       Font f = fontFor(14, nullptr, false);
       int lx = x;
-      if (!p["leading"].isNull()) { emitText(value(p["leading"], K_TEXT), f, mutedOn(), x, y, 18, 20, A_START, 20, 1, nullptr); lx += 22; }
-      String tr = value(p["trailing"], K_TEXT);
+      if (!p[FPSTR(K_leading)].isNull()) { emitText(value(p[FPSTR(K_leading)], K_TEXT), f, mutedOn(), x, y, 18, 20, A_START, 20, 1, nullptr); lx += 22; }
+      String tr = value(p[FPSTR(K_trailing)], K_TEXT);
       int tw = tr.length() ? min(w / 2, widthOf(sample(tr), f) + 4) : 0;
-      emitText(value(p["title"], K_TEXT), f, colour.length() ? colour : inkOn(), lx, y, w - (lx - x) - tw, 20, A_START, 20, 1, nullptr);
+      emitText(value(p[FPSTR(K_title)], K_TEXT), f, colour.length() ? colour : inkOn(), lx, y, w - (lx - x) - tw, 20, A_START, 20, 1, nullptr);
       if (tw) emitText(tr, f, mutedOn(), x + w - tw, y, tw, 20, A_END, 20, 1, nullptr);
-      if (!p["subtitle"].isNull()) emitText(value(p["subtitle"], K_TEXT), f, mutedOn(), lx, y + 18, w - (lx - x), 18, A_START, 18, 1, nullptr);
+      if (!p[FPSTR(K_subtitle)].isNull()) emitText(value(p[FPSTR(K_subtitle)], K_TEXT), f, mutedOn(), lx, y + 18, w - (lx - x), 18, A_START, 18, 1, nullptr);
       return;
     }
     case T_KEYVALUE: {
       Font f = fontFor(14, nullptr, false);
-      String lc = value(p["labelColor"], K_COLOUR);
-      String label = value(p["label"], K_TEXT);
+      String lc = value(p[FPSTR(K_labelColor)], K_COLOUR);
+      String label = value(p[FPSTR(K_label)], K_TEXT);
       String v;
-      if (p["value"].is<JsonArrayConst>()) { for (JsonVariantConst q : p["value"].as<JsonArrayConst>()) { if (v.length()) v += ", "; v += q.as<String>(); } }
-      else v = value(p["value"], K_TEXT);
+      if (p[FPSTR(K_value)].is<JsonArrayConst>()) { for (JsonVariantConst q : p[FPSTR(K_value)].as<JsonArrayConst>()) { if (v.length()) v += ", "; v += q.as<String>(); } }
+      else v = value(p[FPSTR(K_value)], K_TEXT);
       int lw = min(w / 2, widthOf(sample(label), f) + 8);
       emitText(label, f, lc.length() ? lc : mutedOn(), x, y, lw, h, A_START, h, 1, nullptr);
       emitText(v, f, colour.length() ? colour : inkOn(), x + lw, y, w - lw, h, A_END, h, 1, nullptr);
@@ -744,29 +876,29 @@ __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h
     }
     case T_LINK: {
       Font f = fontFor(14, nullptr, false);
-      String t = value(p["label"].isNull() ? p["url"] : p["label"], K_TEXT);
-      String c = colour.length() ? colour : String("#64d2ff");
+      String t = value(p[FPSTR(K_label)].isNull() ? p[FPSTR(K_url)] : p[FPSTR(K_label)], K_TEXT);
+      String c = colour.length() ? colour : String(F("#64d2ff"));
       emitText(t, f, c, x, y, w, h, A_START, h, 1, nullptr);
       int tw = min(w, widthOf(sample(t), f));
       itemStart("line"); fNum("x", x); fNum("y", y + h / 2 + 7); fNum("x2", x + tw); fNum("y2", y + h / 2 + 7); fNum("w", 1); fStr("color", c); itemEnd();
       return;
     }
     case T_STATUSLINE: case T_CALLOUT: {
-      String st = str(p, n.type == T_STATUSLINE ? "status" : "type", "info");
-      uint32_t c = st == "success" || st == "tip" ? 0x30d158 : st == "warning" ? 0xff9f0a : st == "error" || st == "important" ? 0xff453a : 0x0a84ff;
+      String st = str(p, n.type == T_STATUSLINE ? FPSTR(K_status) : FPSTR(K_type), "info");
+      uint32_t c = eq(st, PSTR("success")) || eq(st, PSTR("tip")) ? 0x30d158 : eq(st, PSTR("warning")) ? 0xff9f0a : eq(st, PSTR("error")) || eq(st, PSTR("important")) ? 0xff453a : 0x0a84ff;
       Font f = fontFor(14, nullptr, false);
       if (n.type == T_STATUSLINE) {
         static const char GLYPH[] PROGMEM = "M20 6 9 17l-5-5\0M18 6 6 18M6 6l12 12\0M12 3 2 21h20zM12 10v4M12 17.5v.5\0"
           "M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0M12 11v6M12 7.5v.5\0";
-        int g = st == "success" ? 0 : st == "error" ? 1 : st == "warning" ? 2 : 3;
+        int g = eq(st, PSTR("success")) ? 0 : eq(st, PSTR("error")) ? 1 : eq(st, PSTR("warning")) ? 2 : 3;
         itemStart("path"); fNum("x", x); fNum("y", y + (h - 16) / 2); fNum("size", 16); fStr("d", nameAt(GLYPH, g)); fStr("stroke", hex(c)); items += F(",\"sw\":2.5"); itemEnd();
-        emitText(value(p["text"], K_TEXT), f, colour.length() ? colour : inkOn(), x + 22, y, w - 22, h, A_START, h, 1, nullptr);
+        emitText(value(p[FPSTR(K_text)], K_TEXT), f, colour.length() ? colour : inkOn(), x + 22, y, w - 22, h, A_START, h, 1, nullptr);
         return;
       }
       emitRect(x, y, 3, h, 0, hex(c), "", 0);
       int ty = y + 4;
-      if (!p["title"].isNull()) { emitText(value(p["title"], K_TEXT), f, hex(c), x + 10, ty, w - 12, 18, A_START, 18, 1, nullptr); ty += 18; }
-      String m = value(p["content"], K_TEXT);
+      if (!p[FPSTR(K_title)].isNull()) { emitText(value(p[FPSTR(K_title)], K_TEXT), f, hex(c), x + 10, ty, w - 12, 18, A_START, 18, 1, nullptr); ty += 18; }
+      String m = value(p[FPSTR(K_content)], K_TEXT);
       if (m.length()) {
         int lines = live(m) ? 1 : lineCount(sample(m), f, w - 14);
         emitText(m, f, inkOn(), x + 10, ty, w - 14, 18 * lines, A_START, 18, lines, nullptr);
@@ -775,37 +907,37 @@ __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h
     }
     case T_METRIC: {
       Font f = fontFor(14, nullptr, false);
-      emitText(value(p["label"], K_TEXT), f, mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr);
-      String tr = str(p, "trend", "");
-      int aw = tr == "up" || tr == "down" ? 30 : 0;
+      emitText(value(p[FPSTR(K_label)], K_TEXT), f, mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr);
+      String tr = str(p, FPSTR(K_trend), "");
+      int aw = tr == "up" || eq(tr, PSTR("down")) ? 30 : 0;
       Font big = fontFor(48, nullptr, true);
-      emitText(value(p["value"], K_TEXT), big, colour.length() ? colour : inkOn(), x, y + 18, w - aw, 40, A_START, 40, 1, nullptr);
+      emitText(value(p[FPSTR(K_value)], K_TEXT), big, colour.length() ? colour : inkOn(), x, y + 18, w - aw, 40, A_START, 40, 1, nullptr);
       if (aw) emitText(tr == "up" ? "↑" : "↓", fontFor(36, "big", true), tr == "up" ? "#30d158" : "#ff453a", x + w - aw, y + 18, aw, 40, A_END, 40, 1, nullptr);
-      if (!p["detail"].isNull()) emitText(value(p["detail"], K_TEXT), f, mutedOn(), x, y + 58, w, 18, A_START, 18, 1, nullptr);
+      if (!p[FPSTR(K_detail)].isNull()) emitText(value(p[FPSTR(K_detail)], K_TEXT), f, mutedOn(), x, y + 58, w, 18, A_START, 18, 1, nullptr);
       return;
     }
     case T_TIMELINE: {
       Font f = fontFor(14, nullptr, false);
-      JsonArrayConst its = p["items"];
+      JsonArrayConst its = p[FPSTR(K_items)];
       int ty = y, k = 0, count = its.size();
       for (JsonVariantConst it : its) {
-        String st = it["status"] | "upcoming";
-        String c = st == "completed" ? "#30d158" : st == "current" ? "#0a84ff" : mutedOn();
-        int ih = 22 + (it["description"].isNull() ? 0 : 18);
+        String st = it[FPSTR(K_status)] | "upcoming";
+        String c = eq(st, PSTR("completed")) ? "#30d158" : eq(st, PSTR("current")) ? "#0a84ff" : mutedOn();
+        int ih = 22 + (it[FPSTR(K_description)].isNull() ? 0 : 18);
         if (k < count - 1) emitRect(x + 6, ty + 14, 2, ih - 6, 0, panelOn(), "", 0);
         itemStart("circle"); fNum("x", x + 7); fNum("y", ty + 9); fNum("r", 5); fStr("color", c); if (bgS.length()) fStr("under", bgS); itemEnd();
-        String date = value(it["date"], K_TEXT);
+        String date = value(it[FPSTR(K_date)], K_TEXT);
         int dw = date.length() ? min(w / 3, widthOf(date, f) + 4) : 0;
-        emitText(value(it["title"], K_TEXT), f, st == "upcoming" ? mutedOn() : inkOn(), x + 20, ty, w - 20 - dw, 18, A_START, 18, 1, nullptr);
+        emitText(value(it[FPSTR(K_title)], K_TEXT), f, eq(st, PSTR("upcoming")) ? mutedOn() : inkOn(), x + 20, ty, w - 20 - dw, 18, A_START, 18, 1, nullptr);
         if (dw) emitText(date, f, mutedOn(), x + w - dw, ty, dw, 18, A_END, 18, 1, nullptr);
-        if (!it["description"].isNull()) emitText(value(it["description"], K_TEXT), f, mutedOn(), x + 20, ty + 18, w - 20, 18, A_START, 18, 1, nullptr);
+        if (!it[FPSTR(K_description)].isNull()) emitText(value(it[FPSTR(K_description)], K_TEXT), f, mutedOn(), x + 20, ty + 18, w - 20, 18, A_START, 18, 1, nullptr);
         ty += ih; k++;
       }
       return;
     }
     case T_MARKDOWN: {   // plain text with headings and bullets; inline markup removed
       Font f = fontFor(14, nullptr, false);
-      String t = value(p["text"], K_TEXT);
+      String t = value(p[FPSTR(K_text)], K_TEXT);
       t.replace("**", ""); t.replace("__", ""); t.replace("`", "");
       int ty = y, a = 0;
       while (a <= (int)t.length()) {
@@ -829,19 +961,19 @@ __attribute__((noinline)) void leafInk(const Node& n, int x, int y, int w, int h
 
 __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
   JsonObjectConst p = n.p;
-  String colour = value(p["color"], K_COLOUR);
+  String colour = value(p[FPSTR(K_color)], K_COLOUR);
   switch (n.type) {
     case T_HEADING: case T_TEXT: case T_CLOCK: {
       Font f = textFont(n);
       String t = textOf(n);
       int lh = lineH(n, f);
       int lines = live(t) ? 1 : lineCount(sample(t), f, w);
-      if (!colour.length()) colour = is(p, "variant", "muted") || is(p, "variant", "caption") ? mutedOn() : inkOn();
-      if (p["dimColor"] | false) { uint32_t c; if (hexOf(colour, &c)) colour = hex(blend(c, bgHex, 0.55f)); }
-      String tbg = value(p["backgroundColor"], K_COLOUR);
-      if (p["inverse"] | false) { tbg = colour; colour = bgS.length() ? bgS : hex(bgHex); }
+      if (!colour.length()) colour = is(p, FPSTR(K_variant), PSTR("muted")) || is(p, FPSTR(K_variant), PSTR("caption")) ? mutedOn() : inkOn();
+      if (p[FPSTR(K_dimColor)] | false) { uint32_t c; if (hexOf(colour, &c)) colour = hex(blend(c, bgHex, 0.55f)); }
+      String tbg = value(p[FPSTR(K_backgroundColor)], K_COLOUR);
+      if (p[FPSTR(K_inverse)] | false) { tbg = colour; colour = bgS.length() ? bgS : hex(bgHex); }
       if (tbg.length()) {   // a highlight behind the text (Ink)
-        int tw = min(w, textW(n, f, t) + 6), al = alignOf(p["align"], A_START);
+        int tw = min(w, textW(n, f, t) + 6), al = alignOf(p[FPSTR(K_align)], A_START);
         int bx = al == A_CENTER ? x + (w - tw) / 2 : al == A_END ? x + w - tw : x;
         emitRect(bx, y, tw, h, 2, tbg, "", 0);
         String save = bgS; bgS = tbg;
@@ -849,23 +981,23 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
         bgS = save;
         return;
       }
-      if (p["wrap"].is<const char*>() && strncmp(p["wrap"], "truncate", 8) == 0) lines = 1;
-      if ((p["italic"] | false) || p["fontStyle"] == "italic") warnOnce(F("italic is not drawn"));
-      if (!p["letterSpacing"].isNull()) warnOnce(F("letterSpacing is not drawn"));
-      emitText(t, f, colour, x, y, w, h, alignOf(p["align"], A_START), lh, lines, &n);
+      if (p[FPSTR(K_wrap)].is<const char*>() && strncmp(p[FPSTR(K_wrap)], "truncate", 8) == 0) lines = 1;
+      if ((p[FPSTR(K_italic)] | false) || p[FPSTR(K_fontStyle)] == "italic") warnOnce(F("italic is not drawn"));
+      if (!p[FPSTR(K_letterSpacing)].isNull()) warnOnce(F("letterSpacing is not drawn"));
+      emitText(t, f, colour, x, y, w, h, alignOf(p[FPSTR(K_align)], A_START), lh, lines, &n);
       return;
     }
     case T_BADGE: case T_BUTTON: {
-      String v = str(p, "variant", "default");
-      String fill = value(p["background"], K_COLOUR), border;
+      String v = str(p, FPSTR(K_variant), "default");
+      String fill = value(p[FPSTR(K_background)], K_COLOUR), border;
       if (!fill.length()) {
-        if (v == "destructive" || v == "danger" || v == "error") fill = "#ff453a";
-        else if (v == "success") fill = "#30d158";
-        else if (v == "warning") fill = "#ff9f0a";
-        else if (v == "info") fill = "#0a84ff";
-        else if (v == "primary") fill = "#0a84ff";
-        else if (v == "outline") border = inkOn();
-        else if (v == "secondary") fill = panelOn();
+        if (eq(v, PSTR("destructive")) || eq(v, PSTR("danger")) || eq(v, PSTR("error"))) fill = "#ff453a";
+        else if (eq(v, PSTR("success"))) fill = "#30d158";
+        else if (eq(v, PSTR("warning"))) fill = "#ff9f0a";
+        else if (eq(v, PSTR("info"))) fill = "#0a84ff";
+        else if (eq(v, PSTR("primary"))) fill = "#0a84ff";
+        else if (eq(v, PSTR("outline"))) border = inkOn();
+        else if (eq(v, PSTR("secondary"))) fill = panelOn();
         else fill = n.type == T_BUTTON ? "#0a84ff" : inkOn();
       }
       uint32_t fh = 0;
@@ -879,14 +1011,14 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       return;
     }
     case T_ALERT: {
-      String t = str(p, "type", "info");
-      uint32_t c = t == "success" ? 0x30d158 : t == "warning" ? 0xff9f0a : t == "error" ? 0xff453a : 0x0a84ff;
+      String t = str(p, FPSTR(K_type), "info");
+      uint32_t c = eq(t, PSTR("success")) ? 0x30d158 : eq(t, PSTR("warning")) ? 0xff9f0a : eq(t, PSTR("error")) ? 0xff453a : 0x0a84ff;
       String fill = hex(blend(c, bgHex, 0.18f));
       emitRect(x, y, w, h, 8, fill, hex(c), 1);
       String save = bgS; bgS = fill;
       Font f = fontFor(14, nullptr, false);
-      emitText(value(p["title"], K_TEXT), f, hex(c), x + 10, y + 6, w - 20, 18, A_START, 18, 1, nullptr);
-      String m = value(p["message"], K_TEXT);
+      emitText(value(p[FPSTR(K_title)], K_TEXT), f, hex(c), x + 10, y + 6, w - 20, 18, A_START, 18, 1, nullptr);
+      String m = value(p[FPSTR(K_message)], K_TEXT);
       if (m.length()) {
         int lines = live(m) ? 1 : lineCount(sample(m), f, w - 20);
         emitText(m, f, luminanceOk(blend(c, bgHex, 0.18f)) < 128 ? "#ffffff" : "#000000", x + 10, y + 26, w - 20, 18 * lines, A_START, 18, lines, nullptr);
@@ -895,17 +1027,17 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       return;
     }
     case T_PROGRESS: {
-      int bh = px(p, "height", 8), by = y;
-      if (!p["label"].isNull()) {
-        emitText(value(p["label"], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr);
+      int bh = px(p, FPSTR(K_height), 8), by = y;
+      if (!p[FPSTR(K_label)].isNull()) {
+        emitText(value(p[FPSTR(K_label)], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr);
         by += 20;
       }
       itemStart("bar");
       fNum("x", x); fNum("y", by); fNum("w", w); fNum("h", bh);
-      fStr("value", value(p["value"], K_NUM));
-      if (!p["max"].isNull()) fStr("max", value(p["max"], K_NUM));
-      fStr("color", colour.length() ? colour : String("#0a84ff"));
-      String tr = value(p["track"], K_COLOUR);
+      fStr("value", value(p[FPSTR(K_value)], K_NUM));
+      if (!p[FPSTR(K_max)].isNull()) fStr("max", value(p[FPSTR(K_max)], K_NUM));
+      fStr("color", colour.length() ? colour : String(F("#0a84ff")));
+      String tr = value(p[FPSTR(K_track)], K_COLOUR);
       fStr("track", tr.length() ? tr : panelOn());
       itemEnd();
       return;
@@ -913,25 +1045,25 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
     case T_RING: {
       int d = min(w, h);
       itemStart("ring");
-      fNum("x", x + w / 2); fNum("y", y + h / 2); fNum("r", d / 2); fNum("w", px(p, "thickness", 6));
-      fStr("value", value(p["value"], K_NUM));
-      if (!p["max"].isNull()) fStr("max", value(p["max"], K_NUM));
-      fStr("color", colour.length() ? colour : String("#0a84ff"));
-      String tr = value(p["track"], K_COLOUR);
+      fNum("x", x + w / 2); fNum("y", y + h / 2); fNum("r", d / 2); fNum("w", px(p, FPSTR(K_thickness), 6));
+      fStr("value", value(p[FPSTR(K_value)], K_NUM));
+      if (!p[FPSTR(K_max)].isNull()) fStr("max", value(p[FPSTR(K_max)], K_NUM));
+      fStr("color", colour.length() ? colour : String(F("#0a84ff")));
+      String tr = value(p[FPSTR(K_track)], K_COLOUR);
       fStr("track", tr.length() ? tr : panelOn());
       itemEnd();
-      if (!p["label"].isNull()) emitText(value(p["label"], K_TEXT), fontFor(num(p, "labelSize", 16), p["labelFont"], true), inkOn(), x, y, w, h, A_CENTER, h, 1, nullptr);
+      if (!p[FPSTR(K_label)].isNull()) emitText(value(p[FPSTR(K_label)], K_TEXT), fontFor(num(p, FPSTR(K_labelSize), 16), p[FPSTR(K_labelFont)], true), inkOn(), x, y, w, h, A_CENTER, h, 1, nullptr);
       return;
     }
     case T_SPARK: {
-      if (p["data"].is<JsonArrayConst>()) {   // Ink: the values themselves, drawn as a path
+      if (p[FPSTR(K_data)].is<JsonArrayConst>()) {   // Ink: the values themselves, drawn as a path
         int top = y;
-        if (!p["label"].isNull()) { emitText(value(p["label"], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr); top += 18; }
-        JsonArrayConst d = p["data"];
+        if (!p[FPSTR(K_label)].isNull()) { emitText(value(p[FPSTR(K_label)], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x, y, w, 18, A_START, 18, 1, nullptr); top += 18; }
+        JsonArrayConst d = p[FPSTR(K_data)];
         float lo = 1e9f, hi = -1e9f;
         for (JsonVariantConst v : d) { float f = v.as<float>(); lo = min(lo, f); hi = max(hi, f); }
-        if (!p["min"].isNull()) lo = num(p, "min", lo);
-        if (!p["max"].isNull()) hi = num(p, "max", hi);
+        if (!p[FPSTR(K_min)].isNull()) lo = num(p, FPSTR(K_min), lo);
+        if (!p[FPSTR(K_max)].isNull()) hi = num(p, FPSTR(K_max), hi);
         if (hi <= lo) hi = lo + 1;
         int k = d.size(), ph = y + h - top - 2;
         String path;
@@ -943,19 +1075,19 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
         itemStart("path");
         fNum("x", x); fNum("y", y); fNum("w", w); fNum("h", h);
         String vb = "0 0 "; vb += w; vb += ' '; vb += h; fStr("vb", vb);
-        fStr("d", path); fStr("stroke", colour.length() ? colour : String("#64d2ff"));
+        fStr("d", path); fStr("stroke", colour.length() ? colour : String(F("#64d2ff")));
         items += F(",\"sw\":2"); itemEnd();
         return;
       }
       itemStart("spark");
       fNum("x", x); fNum("y", y); fNum("w", w); fNum("h", h);
-      const char* st = p["state"] | p["var"].as<const char*>();
+      const char* st = p[FPSTR(K_state)] | p[FPSTR(K_var)].as<const char*>();
       fStr("var", placeholder(st));
-      fStr("color", colour.length() ? colour : String("#0a84ff"));
-      String fill = value(p["fill"], K_COLOUR);
+      fStr("color", colour.length() ? colour : String(F("#0a84ff")));
+      String fill = value(p[FPSTR(K_fill)], K_COLOUR);
       if (fill.length()) fStr("fill", fill);
-      if (!p["min"].isNull()) fNum("min", (long)num(p, "min", 0));
-      if (!p["max"].isNull()) fNum("max", (long)num(p, "max", 0));
+      if (!p[FPSTR(K_min)].isNull()) fNum("min", (long)num(p, FPSTR(K_min), 0));
+      if (!p[FPSTR(K_max)].isNull()) fNum("max", (long)num(p, FPSTR(K_max), 0));
       if (bgS.length()) fStr("bg", bgS);
       itemEnd();
       return;
@@ -963,7 +1095,7 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
     case T_WICON: {
       itemStart("icon");
       fNum("x", x + w / 2); fNum("y", y + h / 2); fNum("size", min(w, h));
-      String nm = value(p["name"], K_TEXT);
+      String nm = value(p[FPSTR(K_name)], K_TEXT);
       fStr("icon", nm.length() ? nm : String("{now.icon}"));
       if (colour.length()) fStr("color", colour);
       if (bgS.length()) fStr("bg", bgS);
@@ -971,18 +1103,18 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       return;
     }
     case T_ICON: {
-      if (p["paths"].is<JsonArrayConst>()) {   // several paths, each with its own colours
-        for (JsonVariantConst q : p["paths"].as<JsonArrayConst>()) {
+      if (p[FPSTR(K_paths)].is<JsonArrayConst>()) {   // several paths, each with its own colours
+        for (JsonVariantConst q : p[FPSTR(K_paths)].as<JsonArrayConst>()) {
           itemStart("path");
           fNum("x", x); fNum("y", y); fNum("size", min(w, h));
           if (q["d"].is<JsonArrayConst>()) { items += F(",\"d\":"); appendJson(q["d"], items); } else fStr("d", q["d"] | "");
-          if (!p["viewBox"].isNull()) fStr("vb", str(p, "viewBox"));
-          String fill = noPaint(q["fill"]) ? String() : value(q["fill"], K_COLOUR), stroke = value(q["stroke"], K_COLOUR);
+          if (!p[FPSTR(K_viewBox)].isNull()) fStr("vb", str(p, FPSTR(K_viewBox)));
+          String fill = noPaint(q[FPSTR(K_fill)]) ? String() : value(q[FPSTR(K_fill)], K_COLOUR), stroke = value(q[FPSTR(K_stroke)], K_COLOUR);
           if (!fill.length() && !stroke.length()) stroke = colour.length() ? colour : inkOn();
           if (fill.length()) fStr("fill", fill);
           if (stroke.length()) fStr("stroke", stroke);
-          if (!q["strokeWidth"].isNull() || !p["strokeWidth"].isNull()) fNum("sw", (long)(q["strokeWidth"] | p["strokeWidth"] | 2));
-          if (q["rule"].is<const char*>()) fStr("rule", q["rule"].as<const char*>());
+          if (!q[FPSTR(K_strokeWidth)].isNull() || !p[FPSTR(K_strokeWidth)].isNull()) fNum("sw", (long)(q[FPSTR(K_strokeWidth)] | p[FPSTR(K_strokeWidth)] | 2));
+          if (q[FPSTR(K_rule)].is<const char*>()) fStr("rule", q[FPSTR(K_rule)].as<const char*>());
           itemEnd();
         }
         return;
@@ -990,36 +1122,36 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       itemStart("path");
       fNum("x", x); fNum("y", y); fNum("size", min(w, h));
       if (p["d"].is<JsonArrayConst>()) { items += F(",\"d\":"); appendJson(p["d"], items); }
-      else fStr("d", str(p, "d"));
-      if (!p["viewBox"].isNull()) fStr("vb", str(p, "viewBox"));
-      String fill = noPaint(p["fill"]) ? String() : value(p["fill"], K_COLOUR), stroke = value(p["stroke"], K_COLOUR);
+      else fStr("d", str(p, FPSTR(K_d)));
+      if (!p[FPSTR(K_viewBox)].isNull()) fStr("vb", str(p, FPSTR(K_viewBox)));
+      String fill = noPaint(p[FPSTR(K_fill)]) ? String() : value(p[FPSTR(K_fill)], K_COLOUR), stroke = value(p[FPSTR(K_stroke)], K_COLOUR);
       if (!fill.length() && !stroke.length()) stroke = colour.length() ? colour : inkOn();
       if (fill.length()) fStr("fill", fill);
       if (stroke.length()) fStr("stroke", stroke);
-      if (!p["strokeWidth"].isNull()) fNum("sw", (long)num(p, "strokeWidth", 2));
+      if (!p[FPSTR(K_strokeWidth)].isNull()) fNum("sw", (long)num(p, FPSTR(K_strokeWidth), 2));
       itemEnd();
       return;
     }
     case T_IMAGE: {
-      String src = str(p, "src");
+      String src = str(p, FPSTR(K_src));
       if (src.startsWith("http") || src.isEmpty()) {
         warnOnce(F("Image: the clock cannot fetch URLs; send the photo to the clock and give its file name"));
-        emitRect(x, y, w, h, px(p, "borderRadius", 0), panelOn(), "", 0);
-        emitText(str(p, "alt", "image"), fontFor(14, nullptr, false), mutedOn(), x, y, w, h, A_CENTER, h, 1, nullptr);
+        emitRect(x, y, w, h, px(p, FPSTR(K_borderRadius), 0), panelOn(), "", 0);
+        emitText(str(p, FPSTR(K_alt), "image"), fontFor(14, nullptr, false), mutedOn(), x, y, w, h, A_CENTER, h, 1, nullptr);
         return;
       }
       itemStart("image"); fNum("x", x); fNum("y", y); fStr("src", src); itemEnd();
       return;
     }
     case T_DIVIDER: case T_SEPARATOR: {
-      int t = max(1, px(p, "thickness", 1));
-      String c = colour.length() ? colour : String(n.type == T_DIVIDER ? "#e5e7eb" : "") ;
+      int t = max(1, px(p, FPSTR(K_thickness), 1));
+      String c = colour.length() ? colour : (n.type == T_DIVIDER ? String(F("#e5e7eb")) : String());
       if (!c.length()) c = panelOn();
-      if (is(p, "orientation", "vertical")) { emitRect(x, y, t, h, 0, c, "", 0); return; }
-      if (p["dimColor"] | false) { uint32_t cc; if (hexOf(c, &cc)) c = hex(blend(cc, bgHex, 0.5f)); }
-      if (!p["title"].isNull()) {
+      if (is(p, FPSTR(K_orientation), PSTR("vertical"))) { emitRect(x, y, t, h, 0, c, "", 0); return; }
+      if (p[FPSTR(K_dimColor)] | false) { uint32_t cc; if (hexOf(c, &cc)) c = hex(blend(cc, bgHex, 0.5f)); }
+      if (!p[FPSTR(K_title)].isNull()) {
         Font f = fontFor(14, nullptr, false);
-        String tt = value(p["title"], K_TEXT);
+        String tt = value(p[FPSTR(K_title)], K_TEXT);
         int tw = widthOf(sample(tt), f) + 12, side = max(0, (w - tw) / 2);
         emitRect(x, y + (h - t) / 2, side, t, 0, c, "", 0);
         emitRect(x + w - side, y + (h - t) / 2, side, t, 0, c, "", 0);
@@ -1032,34 +1164,34 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
     case T_SPACER: return;
     case T_AVATAR: {
       int d = min(w, h);
-      String fill = value(p["background"], K_COLOUR);
+      String fill = value(p[FPSTR(K_background)], K_COLOUR);
       itemStart("circle"); fNum("x", x + d / 2); fNum("y", y + d / 2); fNum("r", d / 2);
-      fStr("color", fill.length() ? fill : String("#5e5ce6")); if (bgS.length()) fStr("under", bgS); itemEnd();
-      String nm = str(p, "name"), ini;
+      fStr("color", fill.length() ? fill : String(F("#5e5ce6"))); if (bgS.length()) fStr("under", bgS); itemEnd();
+      String nm = str(p, FPSTR(K_name)), ini;
       for (unsigned k = 0; k < nm.length() && ini.length() < 2; ++k) if (k == 0 || nm[k - 1] == ' ') ini += (char)toupper(nm[k]);
       String save = bgS; bgS = "";
       emitText(ini, fontFor(d >= 40 ? 22 : 14, nullptr, false), "#ffffff", x, y, d, d, A_CENTER, d, 1, nullptr);
       bgS = save;
       return;
     }
-    case T_SKELETON: emitRect(x, y, w, h, (p["rounded"] | false) ? h / 2 : 4, panelOn(), "", 0); return;
+    case T_SKELETON: emitRect(x, y, w, h, (p[FPSTR(K_rounded)] | false) ? h / 2 : 4, panelOn(), "", 0); return;
     case T_SPINNER: {
-      String s = str(p, "size", "md");
+      String s = str(p, FPSTR(K_size), "md");
       int d = s == "sm" ? 16 : s == "lg" ? 40 : 24;
       itemStart("ring"); fNum("x", x + d / 2); fNum("y", y + h / 2); fNum("r", d / 2); fNum("w", max(2, d / 8));
-      fStr("value", F("{time.sec}%4*25+25")); fStr("color", colour.length() ? colour : String("#0a84ff")); fStr("track", panelOn()); itemEnd();
-      if (!p["label"].isNull()) emitText(value(p["label"], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x + d + 6, y, w - d - 6, h, A_START, h, 1, nullptr);
+      fStr("value", F("{time.sec}%4*25+25")); fStr("color", colour.length() ? colour : String(F("#0a84ff"))); fStr("track", panelOn()); itemEnd();
+      if (!p[FPSTR(K_label)].isNull()) emitText(value(p[FPSTR(K_label)], K_TEXT), fontFor(14, nullptr, false), mutedOn(), x + d + 6, y, w - d - 6, h, A_START, h, 1, nullptr);
       return;
     }
     case T_TABLE: {
-      JsonArrayConst cols = p["columns"], rows = p["rows"];
+      JsonArrayConst cols = p[FPSTR(K_columns)], rows = p[FPSTR(K_rows)];
       int nc = max(1, (int)cols.size()), cw = w / nc;
       Font f = fontFor(14, nullptr, false);
       int c = 0;
       bool objs = cols[0].is<JsonObjectConst>();
-      String hc = value(p["headerColor"], K_COLOUR);
+      String hc = value(p[FPSTR(K_headerColor)], K_COLOUR);
       for (JsonVariantConst h1 : cols) {
-        emitText(objs ? h1["header"].as<String>() : h1.as<String>(), f, hc.length() ? hc : mutedOn(), x + c * cw + 2, y, cw - 4, 20, objs ? alignOf(h1["align"], A_START) : A_START, 20, 1, nullptr);
+        emitText(objs ? h1[FPSTR(K_header)].as<String>() : h1.as<String>(), f, hc.length() ? hc : mutedOn(), x + c * cw + 2, y, cw - 4, 20, objs ? alignOf(h1[FPSTR(K_align)], A_START) : A_START, 20, 1, nullptr);
         c++;
       }
       emitRect(x, y + 20, w, 1, 0, panelOn(), "", 0);
@@ -1067,11 +1199,11 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       for (JsonVariantConst row : rows) {
         c = 0;
         for (int ci = 0; ci < nc; ++ci) {
-          JsonVariantConst cell = objs ? row[cols[ci]["key"] | ""] : row[ci];
+          JsonVariantConst cell = objs ? row[cols[ci][FPSTR(K_key)] | ""] : row[ci];
           if (!objs && cell.isNull()) break;
           String s = value(cell, K_TEXT);
           while (s.length() > 1 && !live(s) && widthOf(s, f) > cw - 4) s.remove(s.length() - 1);
-          emitText(s, f, inkOn(), x + c * cw + 2, y + 22 + r * 20, cw - 4, 20, objs ? alignOf(cols[ci]["align"], A_START) : A_START, 20, 1, nullptr);
+          emitText(s, f, inkOn(), x + c * cw + 2, y + 22 + r * 20, cw - 4, 20, objs ? alignOf(cols[ci][FPSTR(K_align)], A_START) : A_START, 20, 1, nullptr);
           c++;
         }
         r++;
@@ -1083,9 +1215,9 @@ __attribute__((noinline)) void leaf(const Node& n, int x, int y, int w, int h) {
       leafInk(n, x, y, w, h);
       return;
     default: {
-      warnOnce(String(F("unknown component ")) + str(n.e, "type") + F(": drawn as a box"));
+      warnOnce(String(F("unknown component ")) + str(n.e, FPSTR(K_type)) + F(": drawn as a box"));
       emitRect(x, y, w, h, 4, "", "#8e8e93", 1);
-      emitText(str(n.e, "type"), fontFor(14, nullptr, false), "#8e8e93", x, y, w, h, A_CENTER, h, 1, nullptr);
+      emitText(str(n.e, FPSTR(K_type)), fontFor(14, nullptr, false), "#8e8e93", x, y, w, h, A_CENTER, h, 1, nullptr);
     }
   }
 }
@@ -1096,24 +1228,24 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
   String saveVis = vis, saveBg = bgS;
   uint32_t saveHex = bgHex;
   bool saveKnown = bgKnown;
-  if (!n.e["visible"].isNull()) {
-    String c = condition(n.e["visible"]);
-    vis = vis.length() ? "(" + vis + ")&&(" + c + ")" : c;
+  if (!n.e[FPSTR(K_visible)].isNull()) {
+    String c = condition(n.e[FPSTR(K_visible)]);
+    vis = vis.length() ? String('(') + vis + F(")&&(") + c + ')' : c;
   }
   for (const char* k : {"on", "watch"}) if (!n.e[k].isNull()) warnOnce(String(k) + F(": the clock has no input; ignored"));
-  if (!n.e["repeat"].isNull()) warnOnce(F("repeat is not supported yet: drawn once"));
+  if (!n.e[FPSTR(K_repeat)].isNull()) warnOnce(F("repeat is not supported yet: drawn once"));
   if (!isContainer(n.type)) { leaf(n, x, y, w, h); vis = saveVis; return; }
 
   JsonObjectConst p = n.p;
   Lay l = layOf(n);
   // The box itself.
-  String fill = value(p["backgroundColor"].isNull() ? p["background"] : p["backgroundColor"], K_COLOUR);
-  String border = value(p["borderColor"].isNull() ? p["border"] : p["borderColor"], K_COLOUR);
-  int bw = px(p, "borderWidth", border.length() ? 1 : 0), radius = px(p, "borderRadius", px(p, "radius", 0));
+  String fill = value(p[FPSTR(K_backgroundColor)].isNull() ? p[FPSTR(K_background)] : p[FPSTR(K_backgroundColor)], K_COLOUR);
+  String border = value(p[FPSTR(K_borderColor)].isNull() ? p[FPSTR(K_border)] : p[FPSTR(K_borderColor)], K_COLOUR);
+  int bw = px(p, FPSTR(K_borderWidth), border.length() ? 1 : 0), radius = px(p, FPSTR(K_borderRadius), px(p, FPSTR(K_radius), 0));
   if (n.type == T_CARD) {
-    if (!fill.length()) fill = bgKnown && luminanceOk(bgHex) < 128 ? "#1c1c1e" : "#ffffff";
+    if (!fill.length()) fill = bgKnown && luminanceOk(bgHex) < 128 ? F("#1c1c1e") : F("#ffffff");
     if (!border.length()) { border = panelOn(); bw = max(bw, 1); }
-    if (p["borderRadius"].isNull() && p["radius"].isNull()) radius = 10;
+    if (p[FPSTR(K_borderRadius)].isNull() && p[FPSTR(K_radius)].isNull()) radius = 10;
   }
   if (n.type != T_FRAME && (fill.length() || (border.length() && bw > 0))) emitRect(x, y, w, h, radius, fill, border, bw);
   if (fill.length()) {
@@ -1122,12 +1254,12 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
     bgKnown = hexOf(fill, &c);
     if (bgKnown) bgHex = c;
   }
-  if (!is(p, "overflow", "visible") && !p["overflow"].isNull()) warnOnce(F("overflow: hidden cannot clip on the clock"));
+  if (!is(p, FPSTR(K_overflow), PSTR("visible")) && !p[FPSTR(K_overflow)].isNull()) warnOnce(F("overflow: hidden cannot clip on the clock"));
 
   int ix = x + l.pad[3], iy = y + l.pad[0], iw = w - l.pad[1] - l.pad[3], ih = h - l.pad[0] - l.pad[2];
   if (n.type == T_CARD) {   // title and description
-    if (!p["title"].isNull()) { emitText(value(p["title"], K_TEXT), fontFor(22, nullptr, false), inkOn(), ix, iy, iw, 26, A_START, 26, 1, nullptr); iy += 26; ih -= 26; }
-    if (!p["description"].isNull()) { emitText(value(p["description"], K_TEXT), fontFor(14, nullptr, false), mutedOn(), ix, iy, iw, 18, A_START, 18, 1, nullptr); iy += 18; ih -= 18; }
+    if (!p[FPSTR(K_title)].isNull()) { emitText(value(p[FPSTR(K_title)], K_TEXT), fontFor(22, nullptr, false), inkOn(), ix, iy, iw, 26, A_START, 26, 1, nullptr); iy += 26; ih -= 26; }
+    if (!p[FPSTR(K_description)].isNull()) { emitText(value(p[FPSTR(K_description)], K_TEXT), fontFor(14, nullptr, false), mutedOn(), ix, iy, iw, 18, A_START, 18, 1, nullptr); iy += 18; ih -= 18; }
     if (headerH(n)) { iy += 4; ih -= 4; }
   }
 
@@ -1144,15 +1276,15 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
     Lay cl = layOf(nodes[c]);
     if (cl.abs) {   // absolutely placed, inside the padding box
       Sz s = measure(c, iw, depth + 1);
-      int fwc = fixedW(nodes[c], iw), fhc = size(nodes[c].p["height"], ih, INK_ROW);
+      int fwc = fixedW(nodes[c], iw), fhc = size(nodes[c].p[FPSTR(K_height)], ih, INK_ROW);
       if (fwc > 0) s.w = fwc;
       if (fhc > 0) s.h = fhc;
       JsonObjectConst cp = nodes[c].p;
       // Both sides given (and no size): it stretches between them, as in CSS.
-      if (fwc <= 0 && !cp["left"].isNull() && !cp["right"].isNull()) s.w = w - px(cp, "left", 0) - px(cp, "right", 0);
-      if (fhc <= 0 && !cp["top"].isNull() && !cp["bottom"].isNull()) s.h = h - pxRow(cp, "top", 0) - pxRow(cp, "bottom", 0);
-      int cx = !cp["left"].isNull() ? x + px(cp, "left", 0) : !cp["right"].isNull() ? x + w - px(cp, "right", 0) - s.w : ix;
-      int cy = !cp["top"].isNull() ? y + pxRow(cp, "top", 0) : !cp["bottom"].isNull() ? y + h - pxRow(cp, "bottom", 0) - s.h : iy;
+      if (fwc <= 0 && !cp[FPSTR(K_left)].isNull() && !cp[FPSTR(K_right)].isNull()) s.w = w - px(cp, FPSTR(K_left), 0) - px(cp, FPSTR(K_right), 0);
+      if (fhc <= 0 && !cp[FPSTR(K_top)].isNull() && !cp[FPSTR(K_bottom)].isNull()) s.h = h - pxRow(cp, FPSTR(K_top), 0) - pxRow(cp, FPSTR(K_bottom), 0);
+      int cx = !cp[FPSTR(K_left)].isNull() ? x + px(cp, FPSTR(K_left), 0) : !cp[FPSTR(K_right)].isNull() ? x + w - px(cp, FPSTR(K_right), 0) - s.w : ix;
+      int cy = !cp[FPSTR(K_top)].isNull() ? y + pxRow(cp, FPSTR(K_top), 0) : !cp[FPSTR(K_bottom)].isNull() ? y + h - pxRow(cp, FPSTR(K_bottom), 0) - s.h : iy;
       place(c, cx, cy, s.w, s.h, depth + 1);
       continue;
     }
@@ -1173,14 +1305,14 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
         int avail = l.cols ? (iw - l.gap * (l.cols - 1)) / l.cols : iw;
         Sz s = measure(kid[end], avail, depth + 1);
         m = l.cols ? avail : fills(cn) ? 0 : s.w; cr = s.h;
-        int fh2 = size(cn.p["height"], ih, INK_ROW); if (fh2 > 0) cr = fh2;
+        int fh2 = size(cn.p[FPSTR(K_height)], ih, INK_ROW); if (fh2 > 0) cr = fh2;
         m += cl.mar[1] + cl.mar[3];
         cr += cl.mar[0] + cl.mar[2];
       } else {
         Sz s = measure(kid[end], availCross, depth + 1);
         int fw2 = fixedW(cn, iw);
         cr = (fw2 > 0 ? fw2 : s.w) + cl.mar[1] + cl.mar[3];
-        int fh2 = size(cn.p["height"], ih, INK_ROW);
+        int fh2 = size(cn.p[FPSTR(K_height)], ih, INK_ROW);
         m = (fh2 > 0 ? fh2 : s.h) + cl.mar[0] + cl.mar[2];
       }
       if (l.wrap && end > start && used + l.gap + m > iw) break;
@@ -1221,8 +1353,8 @@ __attribute__((noinline)) void place(int i, int x, int y, int w, int h, int dept
     for (int j = start; j < end; ++j) {
       const Node& cn = nodes[kid[j]];
       Lay cl = layOf(cn);
-      uint8_t al = alignOf(cn.p["alignSelf"], l.align);
-      int crossIn = crossS[j], fixedCross = l.row ? size(cn.p["height"], ih, INK_ROW) : fixedW(cn, iw);
+      uint8_t al = alignOf(cn.p[FPSTR(K_alignSelf)], l.align);
+      int crossIn = crossS[j], fixedCross = l.row ? size(cn.p[FPSTR(K_height)], ih, INK_ROW) : fixedW(cn, iw);
       bool stretch = al == A_STRETCH && fixedCross < 0 && !(cn.type == T_RING || cn.type == T_WICON || cn.type == T_ICON || cn.type == T_AVATAR || cn.type == T_BADGE || cn.type == T_BUTTON || cn.type == T_SPINNER || cn.type == T_IMAGE);
       if (stretch) crossIn = lineSpan;
       int off = al == A_CENTER ? (lineSpan - crossIn) / 2 : al == A_END ? lineSpan - crossIn : 0;
@@ -1256,7 +1388,7 @@ int indexOf(JsonObjectConst elements, const char* id) {
 }  // namespace
 
 bool jrIsSpec(const String& body) {
-  return body.indexOf("\"elements\"") >= 0 && body.indexOf("\"root\"") >= 0;
+  return body.indexOf(F("\"elements\"")) >= 0 && body.indexOf(F("\"root\"")) >= 0;
 }
 
 namespace {
@@ -1337,8 +1469,8 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
   src.close();
   if (e == DeserializationError::NoMemory) return F("Not enough memory");
   if (e) return String(F("Not JSON: ")) + e.c_str();
-  JsonObjectConst elements = doc["elements"];
-  const char* root = doc["root"];
+  JsonObjectConst elements = doc[FPSTR(K_elements)];
+  const char* root = doc[FPSTR(K_root)];
   if (elements.isNull() || !root) return F("A spec has \"root\" and \"elements\"");
   int count = elements.size();
   if (count > JR_ELEMENTS_MAX) return F("At most 96 elements");
@@ -1349,8 +1481,8 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
     Node& n = nodes[nodeCount++];
     n.id = kv.key().c_str();
     n.e = kv.value().as<JsonObjectConst>();
-    n.p = n.e["props"].as<JsonObjectConst>();
-    const char* t = n.e["type"] | "";
+    n.p = n.e[FPSTR(K_props)].as<JsonObjectConst>();
+    const char* t = n.e[FPSTR(K_type)] | "";
     n.type = T_UNKNOWN;
     int k = nameIndex(TYPE_NAMES, t);
     n.type = k < 0 ? T_UNKNOWN : k;
@@ -1371,7 +1503,7 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
     while (stack && sp && err.isEmpty()) {
       int i = stack[--sp];
       int prev = -1;
-      for (JsonVariantConst c : nodes[i].e["children"].as<JsonArrayConst>()) {
+      for (JsonVariantConst c : nodes[i].e[FPSTR(K_children)].as<JsonArrayConst>()) {
         int ci = indexOf(elements, c | "");
         if (ci < 0) { warnOnce(String(F("child ")) + (c | "?") + F(" of ") + nodes[i].id + F(" does not exist")); continue; }
         if (seen[ci]) { err = String(F("element ")) + nodes[ci].id + F(" is used twice or in a loop"); break; }
@@ -1389,17 +1521,17 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
     const Node& r = nodes[rootI];
     JsonObjectConst rp = r.p;
     bool frame = r.type == T_FRAME;
-    float fw = frame ? num(rp, "width", 240) : 240, fh = frame ? num(rp, "height", 240) : 240;
+    float fw = frame ? num(rp, FPSTR(K_width), 240) : 240, fh = frame ? num(rp, FPSTR(K_height), 240) : 240;
     scale = 1;
     if (fw > 0 && fh > 0 && (fw != 240 || fh != 240)) { scale = min(240 / fw, 240 / fh); warnOnce(String(F("Frame ")) + (int)fw + F("x") + (int)fh + F(" scaled to the 240x240 screen")); }
     ink = !frame;   // an Ink spec: rooted at a Box (or any other component)
-    String bg = value(rp["backgroundColor"].isNull() ? rp["background"] : rp["backgroundColor"], K_COLOUR);
+    String bg = value(rp[FPSTR(K_backgroundColor)].isNull() ? rp[FPSTR(K_background)] : rp[FPSTR(K_backgroundColor)], K_COLOUR);
     if (!bg.length()) bg = ink ? "#000000" : "#ffffff";   // a terminal is dark; the image renderer's frame white
     bgS = bg; bgKnown = hexOf(bg, &bgHex);
     if (!bgKnown) bgHex = 0;
     // The face's head first, then its items appended in place: the face is never copied
     // (it was, items into the whole face: twice its size at once).
-    items = "{\"bg\":"; quote(items, bg);
+    items = F("{\"bg\":"); quote(items, bg);
     for (const char* k : {"when", "duration", "fps", "invert", "palette", "palettes", "maps"}) {
       if (!frame || rp[k].isNull()) continue;
       items += ",\""; items += k; items += "\":"; appendJson(rp[k], items);
@@ -1407,12 +1539,12 @@ String jrCompileHere(const char* path, String& out, String& warnings, String& se
     items += F(",\"items\":[");
     if (frame) place(rootI, 0, 0, (int)lroundf(fw * scale), (int)lroundf(fh * scale), 0);
     else {   // the root fills the screen, with a small margin unless it has padding
-      int m = rp["padding"].isNull() ? 6 : 0;
+      int m = rp[FPSTR(K_padding)].isNull() ? 6 : 0;
       place(rootI, m, m, 240 - 2 * m, 240 - 2 * m, 0);
     }
     items += "]";
     // The spec's state seeds variables that are not set yet.
-    JsonObjectConst st = doc["state"]["vars"].is<JsonObjectConst>() ? doc["state"]["vars"].as<JsonObjectConst>() : doc["state"].as<JsonObjectConst>();
+    JsonObjectConst st = doc[FPSTR(K_state)]["vars"].is<JsonObjectConst>() ? doc[FPSTR(K_state)]["vars"].as<JsonObjectConst>() : doc[FPSTR(K_state)].as<JsonObjectConst>();
     String seed;
     for (JsonPairConst kv : st) {
       if (kv.value().is<JsonObjectConst>() || kv.value().is<JsonArrayConst>()) continue;
