@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-11-09. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-11-10. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
@@ -46,6 +46,39 @@ approved.
   page). Opened from the clock, it would get what it needs to send the face to that clock.
 - Hardware scrolling and the panel's idle (8-colour) mode (spec 014 research).
 - A way back to stock over WiFi (upstream idea).
+- **Visual and animation ideas** (2026-11-10, asked for by the owner). The firmware ones
+  compete for about 3 KB of update room once json-render ships, so each needs its own
+  room found (more data as files that come with the update, spec 048) or a trade; the
+  face-only ones cost nothing on the clock.
+  - **Transitions between faces** (firmware): a wipe or slide when rotation changes face,
+    the new face drawn into a growing viewport (no frame buffer needed); off at night and
+    with a setting.
+  - **Animated values** (firmware): an item's value, position or colour eases to its new
+    value over a few hundred ms when a variable changes, instead of jumping (bars, rings,
+    gauges; `"ease": 400`), drawn with the existing repaint boxes.
+  - **Scrolling text** (firmware): a `marquee` text item, clipped to a width, for titles
+    longer than the screen (now playing, news, a long agent message).
+  - **Split-flap text** (firmware): changed characters flip into place (monoDiff already
+    knows which changed); for departure boards, scores, counters.
+  - **Weather ambience** (firmware): a few drifting particles over the weather faces from
+    the current weather: rain streaks, snowflakes, stars on clear nights. Small dots
+    redrawn over a known background, no frame buffer.
+  - **Celebrations** (firmware): a message kind, or a `celebrate` call, that bursts
+    confetti over the current face for a few seconds: a build fixed, a goal reached, a
+    birthday at midnight.
+- **Non-agent scenarios** (2026-11-10), mostly faces and recipes, no firmware:
+  - **Home energy flow** (face + Home Assistant recipe over MQTT): sun, battery, house and
+    grid, with dots running along the lines at the speed of the power (expressions on
+    `time.ms`, possible today).
+  - **Now playing** (face + Home Assistant or a script): title and artist, progress, an
+    animated equaliser; best with scrolling text above.
+  - **Transit departures** (face + a small GTFS script): the next buses or trains with
+    countdowns; best with split-flap text above.
+  - **Air quality and pollen** (firmware: Open-Meteo's air-quality API, same provider as
+    the weather): `air.*` placeholders (AQI, PM2.5, pollen by kind) and a face; costs flash
+    and a little heap for one more request.
+  - **Habits and goals**: a streak calendar fed by a phone shortcut or Home Assistant
+    (steps, water, reading), with a celebration when a goal is met.
 - [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
 
 ## Done
