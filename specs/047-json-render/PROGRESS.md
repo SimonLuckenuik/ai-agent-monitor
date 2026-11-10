@@ -299,3 +299,8 @@ API key (`clock.py`).
 - No crash records, no restart.
 - Not checked: the screens by eye (the clock has no screenshot; jr-ci was left showing), a
   day's run.
+
+- The owner, looking at the clock: the specs look as in the emulator, but Home lab
+  flickered while the limit tests ran. Cause: every face save or delete redrew the face on
+  screen (since 1.2.0); now only a save of that face does
+  (docs/issues/2026-11-10-face-save-redrew-shown-face.md). +48 B (607,200 B).

@@ -952,6 +952,25 @@ def json_render(emu):
     emu.delete_face("jr-keep")
     mid = {"root": "r", "elements": {"r": {"type": "Text", "props": {"text": "x" * 6200}, "children": []}}}
     expect_error(400, "larger than 6 KB", emu.push_face, "jr-mid", mid)
+    # Saving or deleting another face leaves the one on screen alone; saving it redraws it
+    # (every save used to redraw the face on screen: it flickered while an agent pushed).
+    def full_draws():
+        draws = json.loads(emu.request("GET", emu.screen + "/timing")[1])["draws"]
+        return sum(1 for d in draws if d["calls"] > 200)
+    still = {"root": "r", "elements": {"r": {"type": "Card", "props": {"title": "Still"}, "children": ["t"]},
+                                       "t": {"type": "Text", "props": {"text": "nothing moves"}, "children": []}}}
+    emu.push_face("jr-still", still, show=True)
+    time.sleep(2)
+    emu.request("GET", emu.screen + "/timing?reset=1")
+    for i in range(3):
+        emu.push_face(f"jr-other{i}", still)
+        emu.delete_face(f"jr-other{i}")
+    time.sleep(1.5)
+    check(full_draws() == 0, "other faces saved: the face on screen not redrawn")
+    emu.push_face("jr-still", still)
+    time.sleep(1.5)
+    check(full_draws() >= 1, "the face on screen saved again: redrawn")
+    emu.delete_face("jr-still")
 
 
 @case

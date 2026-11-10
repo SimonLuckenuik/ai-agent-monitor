@@ -21,6 +21,11 @@ versioning. `/version` on the device reports the version it was built as; a
 - The Claude Code skill (plugin 0.8.0) and the OpenClaw skill know json-render specs:
   `clock.py push` sends one, `clock.py catalog [--prompt]` reads the catalog.
 
+### Fixed
+
+- Saving or deleting a custom face no longer redraws the one on screen unless it is that
+  face: an agent updating several faces made the shown one flicker.
+
 ## 2.6.0 - 2026-11-09
 
 ### Upgrading

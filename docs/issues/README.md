@@ -12,6 +12,7 @@ here from Open to Closed when it is fixed or explained.
 
 ## Closed/explained
 
+- [2026-11-10 Saving any custom face redrew the one on screen (flicker): fixed for 2.7.0, not released](2026-11-10-face-save-redrew-shown-face.md)
 - [2026-11-10 A face body too big for the web server arrived empty and deleted the face: fixed for 2.7.0 (spec 047), not released](2026-11-10-large-face-body-arrives-empty.md)
 - [2026-11-07 Text with a `bg` wipes the items under it (a ring cut by its own label): fixed for json-render (spec 047) and in the face-format guidance (plugin 0.7.4)](2026-11-07-text-bg-wipes-items-under-it.md)
 - [2026-10-29 A new face variable was dropped silently when the table was full: fixed after 2.0.0](2026-10-29-new-variable-dropped-when-table-full.md)

@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
 #endif
   auto writeFace = [&](const char* name, const char* json) {
     FILE* f = fopen((facesDir + "/" + name + ".json").c_str(), "wb");
-    fputs(json, f); fclose(f); facesVer++;
+    fputs(json, f); fclose(f); facesVer++; customFaceChanged(name);
   };
   writeFace("example", R"({"bg":"#000000","items":[
     {"type":"text","x":120,"y":24,"text":"{date.wday} {date.day} {date.month3}","font":2,"color":"#9aa0a6","align":"mc","bg":"#000000","pad":200},

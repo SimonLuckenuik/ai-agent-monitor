@@ -528,7 +528,8 @@ void photo(const struct tm& t, bool force) {
 JsonDocument customDoc;
 String customName;
 String customWanted;   // the custom face to draw: cfg.customFace, or the night face
-uint32_t customVer = 0, customEvalAt = 0;
+uint32_t customEvalAt = 0;
+bool customStale = false;   // the face on screen was saved again: load and draw it again
 bool customLoaded = false;
 constexpr size_t CUSTOM_ITEMS = SMARTCLOCK_JSONRENDER ? JR_ITEMS_MAX : 32;   // json-render faces may have more (spec 047)
 uint32_t customHash[CUSTOM_ITEMS], customGeo[CUSTOM_ITEMS];
@@ -2031,9 +2032,9 @@ void drawItem(JsonObjectConst it, const struct tm& t, uint16_t faceBg) {
 void renderItems(const struct tm& t, bool force);
 
 void custom(const struct tm& t, bool force) {
-  if (customName != customWanted || customVer != customFacesVersion()) {
+  if (customName != customWanted || customStale) {
     customName = customWanted;
-    customVer = customFacesVersion();
+    customStale = false;
     customDoc.clear();
     File f = LittleFS.open("/faces/" + customName + ".json", "r");
     customLoaded = f && !parseJson(customDoc, f) && customDoc["items"].is<JsonArray>();
@@ -2950,6 +2951,10 @@ void agents(const struct tm& t, bool force) {
 }
 
 }  // namespace
+
+// Only a change to the face on screen redraws it: saving or deleting another one does not
+// (it used to, and an agent updating its faces made the shown one flicker).
+void customFaceChanged(const char* name) { if (customName == name) customStale = true; }
 
 #if SMARTCLOCK_JSONRENDER   // for the json-render compiler (spec 047)
 String jrResolve(const char* tpl, const struct tm& t) { return resolve(tpl, t); }

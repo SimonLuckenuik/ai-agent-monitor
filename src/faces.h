@@ -22,6 +22,7 @@ inline int dayOfFace(int face) {
 // customFace: the custom face to draw for FACE_CUSTOM (null: cfg.customFace).
 void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFace = nullptr);
 void faceInvalidate();            // something else drew on the panel, or settings changed
+void customFaceChanged(const char* name);   // a face saved or deleted: redrawn if on screen
 void customRelease();             // frees the custom face's document; loaded again when drawn
 bool faceAvailable(int face);     // has something to show (weather, forecast, photos)
 void facePhotosChanged();         // a photo was added or removed

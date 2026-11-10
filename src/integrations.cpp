@@ -336,6 +336,7 @@ String storeFace(const String& name, String bodyIn) {
     LittleFS.remove(facePath(name));
     LittleFS.remove("/specs/" + name + ".json");   // a json-render spec's source (spec 047)
     facesVersion++;
+    customFaceChanged(name.c_str());
     if (cfg.theme == FACE_CUSTOM && cfg.customFace == name) cfg.theme = FACE_CLASSIC;
     return "";
   }
@@ -356,6 +357,7 @@ String storeFace(const String& name, String bodyIn) {
   f.close();
   if (!ok) return F("Could not save the face");
   facesVersion++;
+  customFaceChanged(name.c_str());
   if (doc[F("show")] | false) showFace(name);
   return "";
 }
