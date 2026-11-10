@@ -56,9 +56,9 @@ Next free number: **050**.
 | [044 An OpenClaw skill for the clock](044-openclaw-skill/SPEC.md) | Done in 2.3.0 |
 | [045 A help command on the OpenClaw node](045-openclaw-help/SPEC.md) | Done in 2.3.1 |
 | [046 The setup network closes once the clock is on the router](046-setup-network-timeout/SPEC.md) | Done in 2.4.0 |
-| [047 json-render on the clock](047-json-render/SPEC.md) | Approved 2026-11-09, in progress (2.7.0) |
+| [047 json-render on the clock](047-json-render/SPEC.md) | Done in 2.7.0 (phase 2 not done) |
 | [048 Read-only data as files that come with the update](048-files-with-the-update/SPEC.md) | Done in 2.5.0, phase 2 in 2.6.0 |
-| [049 The gallery knows firmware versions, and json-render faces in it](049-gallery-versions-and-json-render-faces/SPEC.md) | Draft |
+| [049 The gallery knows firmware versions, and json-render faces in it](049-gallery-versions-and-json-render-faces/SPEC.md) | First set done in 2.7.0, six faces later |
 
 ## Templates
 

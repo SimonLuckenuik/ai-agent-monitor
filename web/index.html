@@ -911,12 +911,15 @@ async function loadFaces(){try{const d=JSON.parse(await req('/api/faces')),box=$
 // The face gallery (spec 026): examples/faces/marketplace.json on GitHub, as the update check reads releases.
 async function loadGallery(){const box=$('gallery');box.hidden=false;box.textContent='Loading the gallery...';
   try{const r=await fetch('https://raw.githubusercontent.com/'+REPO+'/main/examples/faces/marketplace.json');if(!r.ok)throw Error('HTTP '+r.status);
-    const g=await r.json(),have=JSON.parse(await req('/api/faces')).faces;let cat='';box.innerHTML='';
-    $('galNote').textContent=g.faces.length+' faces; '+have.length+' of the clock’s 40 places used';
-    g.faces.forEach(f=>{if(f.category!==cat){cat=f.category;const h=document.createElement('div');h.className='galcat';h.textContent=cat;box.appendChild(h)}
+    // json-render specs (spec 049) are a list of their own: pages before 2.7.0 read only faces.
+    // Each entry names the oldest firmware that draws it; a newer one is not offered.
+    const g=await r.json(),have=JSON.parse(await req('/api/faces')).faces,list=g.faces.concat(g.specs||[]),ver=st.version||'0';let cat='';box.innerHTML='';
+    $('galNote').textContent=list.length+' faces; '+have.length+' of the clock’s 40 places used';
+    list.forEach(f=>{if(f.category!==cat){cat=f.category;const h=document.createElement('div');h.className='galcat';h.textContent=cat;box.appendChild(h)}
       const fig=document.createElement('figure'),img=new Image(),cap=document.createElement('figcaption'),b=document.createElement('button');
       img.loading='lazy';img.src=f.preview;img.alt=f.title;cap.innerHTML='<b></b><span></span>';cap.firstChild.textContent=f.title;cap.lastChild.textContent=f.description;
-      const on=have.includes(f.name);b.className='btn'+(on?'':' primary');b.textContent=on?'Installed':'Install';b.disabled=on;
+      const on=have.includes(f.name),old=f.firmware&&newer(f.firmware,ver);b.className='btn'+(on||old?'':' primary');b.textContent=on?'Installed':old?'Needs '+f.firmware:'Install';b.disabled=on||old;
+      if(old&&!on)b.title='This clock runs '+ver+': update it (System > Firmware update) to install this face';
       b.onclick=async()=>{b.disabled=true;b.textContent='Installing...';
         try{const face=await(await fetch(f.json)).json();await req('/api/faces?name='+f.name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(face)});
           b.className='btn';b.textContent='Installed';toast('Installed '+f.title+(f.variables.length?'. It reads: '+f.variables.join(', '):''));loadFaces()}

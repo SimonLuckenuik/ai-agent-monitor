@@ -1,12 +1,17 @@
 # Current status and next work
 
-Updated: 2026-11-09. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-10. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest version is **2.6.0** (2026-11-09: the Message face and the weather icons as
+The latest version is **2.7.0** (2026-11-10: json-render specs compiled on the clock,
+spec 047; the face gallery's firmware versions and six json-render faces, spec 049; a
+face upload no longer redraws the face on screen; about 3 KB of update room). Its
+2.7.0-dev build ran on agentmonitor-ade1f0: six specs saved, `jrStack` 4,084 B of 5,632,
+21 KB free with a spec on screen, no crash; the face-redraw fix and the gallery faces not
+yet seen on a clock. Before it: **2.6.0** (2026-11-09: the Message face and the weather icons as
 files that come with the update, spec 048 phase 2; the firmware built with link-time
 optimisation, [decision](decisions/2026-11-08-link-time-optimisation.md); 78 KB of update
 room). Its 2.6.0-dev build runs on agentmonitor-ade1f0 (192.168.66.224, installed by the
@@ -103,15 +108,17 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 plain image crossed a sector boundary); 2.4.0 the same. **2.5.0**
 ([048](../specs/048-files-with-the-update/SPEC.md): the settings page is a file that comes
 with the update): 587,264 B and 410,589 B, **36,864 B of room**. **2.6.0** (048 phase 2,
-link-time optimisation): 563,248 B and 396,406 B, **78 KB of room**.
+link-time optimisation): 563,248 B and 396,406 B, **78 KB of room**. **2.7.0** (047,
+json-render in the firmware): 607,424 B and 426,711 B, **about 3 KB of room**: the next
+feature that costs flash needs room found first.
 
 ## Specs in flight
 
-**In progress:** [047](../specs/047-json-render/SPEC.md) (json-render specs compiled on the
-clock), approved 2026-11-09, on branch `feat/047-json-render` for 2.7.0: in the firmware
-build, 3.3 KB of update room. On agentmonitor-ade1f0 since 2026-11-10 (2.7.0-dev): the
-six examples saved, `jrStack` 4,084 B of 5,632, heap 21 KB with a spec on screen, the
-size limits as in the emulator, no crash; a day's run and a look at the screens to come.
+Done in 2.7.0: [047](../specs/047-json-render/SPEC.md) (json-render specs compiled on the
+clock; on agentmonitor-ade1f0 as 2.7.0-dev: the six examples saved, `jrStack` 4,084 B of
+5,632, heap 21 KB with a spec on screen, the size limits as in the emulator, no crash; the
+owner saw the screens match the emulator) and [049](../specs/049-gallery-versions-and-json-render-faces/SPEC.md)'s
+first set (the gallery's firmware versions, six json-render faces; the other six later).
 
 Done in 2.2.0, not yet seen on the clock: [039](../specs/039-animated-messages/SPEC.md)
 (Moni and animated messages). Done in 2.1.1:

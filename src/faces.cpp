@@ -530,6 +530,7 @@ String customName;
 String customWanted;   // the custom face to draw: cfg.customFace, or the night face
 uint32_t customEvalAt = 0;
 bool customStale = false;   // the face on screen was saved again: load and draw it again
+String customKept;   // the face customRelease() let go of: still on the panel as it was drawn
 bool customLoaded = false;
 constexpr size_t CUSTOM_ITEMS = SMARTCLOCK_JSONRENDER ? JR_ITEMS_MAX : 32;   // json-render faces may have more (spec 047)
 uint32_t customHash[CUSTOM_ITEMS], customGeo[CUSTOM_ITEMS];
@@ -2033,13 +2034,18 @@ void renderItems(const struct tm& t, bool force);
 
 void custom(const struct tm& t, bool force) {
   if (customName != customWanted || customStale) {
+    // Loaded again after customRelease() (a face upload or the weather needed the memory)
+    // with the face unchanged and still on the panel: compared with what is drawn, as on
+    // any tick, instead of drawn again in full (that flickered while faces were uploaded).
+    bool resume = !force && !customStale && customWanted == customKept;
+    customKept = "";
     customName = customWanted;
     customStale = false;
     customDoc.clear();
     File f = LittleFS.open("/faces/" + customName + ".json", "r");
     customLoaded = f && !parseJson(customDoc, f) && customDoc["items"].is<JsonArray>();
     if (f) f.close();
-    force = true;
+    force = !resume || !customLoaded;
   }
   if (!customLoaded) {
     if (force) { D().fillScreen(BG); placeholder(92, tr("Face not found", "Cadran introuvable"), customName.c_str(), nullptr); }
@@ -2954,7 +2960,7 @@ void agents(const struct tm& t, bool force) {
 
 // Only a change to the face on screen redraws it: saving or deleting another one does not
 // (it used to, and an agent updating its faces made the shown one flicker).
-void customFaceChanged(const char* name) { if (customName == name) customStale = true; }
+void customFaceChanged(const char* name) { if (customName == name || customKept == name) customStale = true; }
 
 #if SMARTCLOCK_JSONRENDER   // for the json-render compiler (spec 047)
 String jrResolve(const char* tpl, const struct tm& t) { return resolve(tpl, t); }
@@ -3044,6 +3050,7 @@ void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFa
 }
 
 void customRelease() {
+  if (customName != MESSAGE_DOC) customKept = customName;
   customDoc.clear();   // ArduinoJson 7: gives the memory back
   customName = "";     // custom() and message() load again when next drawn
   customLoaded = false;

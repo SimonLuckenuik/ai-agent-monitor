@@ -24,7 +24,7 @@ the same request:
 |---|---|
 | `"$ttl": <seconds>` | The variables expire after that long, and read as empty again (`{status\|idle}` then shows `idle`). Use it for anything that goes stale when its sender stops |
 | `"$persist": true` | Kept across restarts (written to flash at most once a minute). Without it, variables live in RAM and are lost on restart |
-| `"$history": true` | Numeric values are also appended to the variable's history (the last 32 values; 4 variables at most), drawn by `spark` items |
+| `"$history": true` | Numeric values are also appended to the variable's history (the last 32 values; 4 variables at most), drawn by `spark` items. Deleting the variable (`null`) clears its history |
 | `"$add": true` | Whole numbers are added to the current value instead of replacing it: a counter several agents can share |
 
 `{age.<name>}` is the number of seconds since `<name>` was last pushed (empty if it
@@ -428,6 +428,21 @@ repository, `integrations/json-render/catalog.json` and `prompt.md`.
   (the face of that name is left as it was).
 - **Storage:** the spec is kept as `/specs/<name>.json`; `GET /api/faces/get` returns the
   compiled face. Deleting the face deletes both.
+
+## The face gallery
+
+`examples/faces/marketplace.json` in the project's repository (on GitHub,
+`raw.githubusercontent.com/SimonLuckenuik/ai-agent-monitor/main/...`) lists the faces to
+install: `{"format": 1, "repo", "about", "faces": [...], "specs": [...]}`. `faces` are
+custom faces, `specs` json-render specs (spec 049; a list of its own, so settings pages
+before 2.7.0, which read only `faces`, never offer one). Each entry has `name`, `title`,
+`description`, `category`, `author`, `source`, `license`, `size` (bytes, minified),
+`variables` (the names it reads), `firmware`, `json` and `preview` (links), `path` and
+`previewPath` (in the repository); a spec also has `"format": "json-render"`.
+`firmware` is the oldest firmware that draws the entry: the settings page shows
+"Needs <version>" instead of Install on an older clock, and `clock.py install` refuses it
+(`--force` installs anyway). Install one by sending its JSON, minified, to
+`POST /api/faces?name=<name>`.
 
 ## Device status and crashes
 

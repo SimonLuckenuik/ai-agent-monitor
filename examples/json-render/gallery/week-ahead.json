@@ -1,0 +1,384 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 0,
+    "backgroundColor": "#06090f"
+   },
+   "children": [
+    "head",
+    "rule",
+    "d0",
+    "d1",
+    "d2",
+    "d3",
+    "d4"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center"
+   },
+   "children": [
+    "title",
+    "sp",
+    "city"
+   ]
+  },
+  "title": {
+   "type": "Text",
+   "props": {
+    "text": "Forecast",
+    "fontSize": 26,
+    "color": "#ffffff",
+    "wrap": "truncate"
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "city": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/loc/city",
+     "fallback": ""
+    },
+    "color": "@muted",
+    "align": "right",
+    "maxChars": 14,
+    "wrap": "truncate"
+   }
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {
+    "color": "#1d2633"
+   }
+  },
+  "d0": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "height": 2
+   },
+   "children": [
+    "n0",
+    "i0",
+    "t0",
+    "r0"
+   ]
+  },
+  "n0": {
+   "type": "Text",
+   "props": {
+    "text": "Today",
+    "color": "@accent1",
+    "width": 8,
+    "maxChars": 5
+   }
+  },
+  "i0": {
+   "type": "WeatherIcon",
+   "props": {
+    "name": {
+     "$state": "/days/0/icon"
+    },
+    "size": 4
+   }
+  },
+  "t0": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/0/high} / ${/days/0/low}"
+    },
+    "color": "#ffffff",
+    "align": "center",
+    "width": 12,
+    "maxChars": 9
+   }
+  },
+  "r0": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/0/rain}%"
+    },
+    "align": "right",
+    "flexGrow": 1,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/days/0/rain",
+      "gte": 50
+     },
+     "$then": "#5ab4ff",
+     "$else": "#4a5566"
+    }
+   }
+  },
+  "d1": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "height": 2
+   },
+   "children": [
+    "n1",
+    "i1",
+    "t1",
+    "r1"
+   ]
+  },
+  "n1": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/days/1/wday3"
+    },
+    "color": "#c9d3e0",
+    "width": 8,
+    "maxChars": 5
+   }
+  },
+  "i1": {
+   "type": "WeatherIcon",
+   "props": {
+    "name": {
+     "$state": "/days/1/icon"
+    },
+    "size": 4
+   }
+  },
+  "t1": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/1/high} / ${/days/1/low}"
+    },
+    "color": "#ffffff",
+    "align": "center",
+    "width": 12,
+    "maxChars": 9
+   }
+  },
+  "r1": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/1/rain}%"
+    },
+    "align": "right",
+    "flexGrow": 1,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/days/1/rain",
+      "gte": 50
+     },
+     "$then": "#5ab4ff",
+     "$else": "#4a5566"
+    }
+   }
+  },
+  "d2": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "height": 2
+   },
+   "children": [
+    "n2",
+    "i2",
+    "t2",
+    "r2"
+   ]
+  },
+  "n2": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/days/2/wday3"
+    },
+    "color": "#c9d3e0",
+    "width": 8,
+    "maxChars": 5
+   }
+  },
+  "i2": {
+   "type": "WeatherIcon",
+   "props": {
+    "name": {
+     "$state": "/days/2/icon"
+    },
+    "size": 4
+   }
+  },
+  "t2": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/2/high} / ${/days/2/low}"
+    },
+    "color": "#ffffff",
+    "align": "center",
+    "width": 12,
+    "maxChars": 9
+   }
+  },
+  "r2": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/2/rain}%"
+    },
+    "align": "right",
+    "flexGrow": 1,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/days/2/rain",
+      "gte": 50
+     },
+     "$then": "#5ab4ff",
+     "$else": "#4a5566"
+    }
+   }
+  },
+  "d3": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "height": 2
+   },
+   "children": [
+    "n3",
+    "i3",
+    "t3",
+    "r3"
+   ]
+  },
+  "n3": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/days/3/wday3"
+    },
+    "color": "#c9d3e0",
+    "width": 8,
+    "maxChars": 5
+   }
+  },
+  "i3": {
+   "type": "WeatherIcon",
+   "props": {
+    "name": {
+     "$state": "/days/3/icon"
+    },
+    "size": 4
+   }
+  },
+  "t3": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/3/high} / ${/days/3/low}"
+    },
+    "color": "#ffffff",
+    "align": "center",
+    "width": 12,
+    "maxChars": 9
+   }
+  },
+  "r3": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/3/rain}%"
+    },
+    "align": "right",
+    "flexGrow": 1,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/days/3/rain",
+      "gte": 50
+     },
+     "$then": "#5ab4ff",
+     "$else": "#4a5566"
+    }
+   }
+  },
+  "d4": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "height": 2
+   },
+   "children": [
+    "n4",
+    "i4",
+    "t4",
+    "r4"
+   ]
+  },
+  "n4": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/days/4/wday3"
+    },
+    "color": "#c9d3e0",
+    "width": 8,
+    "maxChars": 5
+   }
+  },
+  "i4": {
+   "type": "WeatherIcon",
+   "props": {
+    "name": {
+     "$state": "/days/4/icon"
+    },
+    "size": 4
+   }
+  },
+  "t4": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/4/high} / ${/days/4/low}"
+    },
+    "color": "#ffffff",
+    "align": "center",
+    "width": 12,
+    "maxChars": 9
+   }
+  },
+  "r4": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/4/rain}%"
+    },
+    "align": "right",
+    "flexGrow": 1,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/days/4/rain",
+      "gte": 50
+     },
+     "$then": "#5ab4ff",
+     "$else": "#4a5566"
+    }
+   }
+  }
+ }
+}

@@ -130,6 +130,9 @@ jobs:
       - name: The minified settings page keeps every handler (spec 036)
         run: node tests/web/minified_page.test.js
 
+      - name: The gallery offers a face only to a clock new enough for it (spec 049)
+        run: node tests/web/gallery_versions.test.js
+
       - name: Local time without newlib's tzset, against glibc (spec 036)
         run: |
           node tests/tz/zone_rules.js > tz_rules.txt

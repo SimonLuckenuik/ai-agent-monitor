@@ -1,0 +1,239 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#0b0b0d"
+   },
+   "children": [
+    "head",
+    "file",
+    "main",
+    "sp",
+    "temps"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "hi",
+    "hn",
+    "hsp",
+    "hc"
+   ]
+  },
+  "hi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M6 9V2h12v7",
+     "M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2",
+     "M6 14h12v8H6z"
+    ],
+    "size": 3,
+    "color": "#ff8a3d",
+    "fill": "none"
+   }
+  },
+  "hn": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/printer",
+     "fallback": "Printer"
+    },
+    "color": "#ffffff",
+    "maxChars": 18,
+    "wrap": "truncate"
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "hc": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "fontSize": 16,
+    "color": "@muted",
+    "align": "right"
+   }
+  },
+  "file": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/file",
+     "fallback": ""
+    },
+    "color": "@muted",
+    "maxChars": 38,
+    "wrap": "truncate"
+   }
+  },
+  "main": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 2
+   },
+   "children": [
+    "ring",
+    "info"
+   ]
+  },
+  "ring": {
+   "type": "Ring",
+   "props": {
+    "value": {
+     "$state": "/vars/pct",
+     "fallback": "0"
+    },
+    "max": 100,
+    "size": 13,
+    "thickness": 2,
+    "color": {
+     "$cond": {
+      "$state": "/vars/state",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": "#ff8a3d"
+    },
+    "track": "#22201f",
+    "label": {
+     "$template": "${/vars/pct|0}%"
+    }
+   }
+  },
+  "info": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "gap": 1,
+    "flexGrow": 1
+   },
+   "children": [
+    "layer",
+    "left",
+    "st"
+   ]
+  },
+  "layer": {
+   "type": "KeyValue",
+   "props": {
+    "label": "Layer",
+    "value": {
+     "$template": "${/vars/layer|0}/${/vars/layers|0}"
+    },
+    "color": "#ffffff"
+   }
+  },
+  "left": {
+   "type": "KeyValue",
+   "props": {
+    "label": "Left",
+    "value": {
+     "$state": "/vars/left",
+     "fallback": "-"
+    },
+    "color": "#ffffff"
+   }
+  },
+  "st": {
+   "type": "Box",
+   "props": {
+    "height": 1
+   },
+   "children": [
+    "run",
+    "ok"
+   ]
+  },
+  "run": {
+   "type": "Spinner",
+   "props": {
+    "label": "printing",
+    "color": "#ff8a3d",
+    "position": "absolute",
+    "top": 0,
+    "left": 0
+   },
+   "visible": {
+    "$state": "/vars/state",
+    "eq": "printing"
+   }
+  },
+  "ok": {
+   "type": "StatusLine",
+   "props": {
+    "status": "success",
+    "text": "Done: take it off",
+    "position": "absolute",
+    "top": 0,
+    "left": 0
+   },
+   "visible": {
+    "$state": "/vars/state",
+    "eq": "done"
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "temps": {
+   "type": "Box",
+   "props": {
+    "justifyContent": "space-between"
+   },
+   "children": [
+    "nz",
+    "bed"
+   ]
+  },
+  "nz": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "Nozzle ${/vars/nozzle|0}°"
+    },
+    "color": "#ffb38a",
+    "maxChars": 12
+   }
+  },
+  "bed": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "Bed ${/vars/bed|0}°"
+    },
+    "color": "#8ab4ff",
+    "align": "right",
+    "maxChars": 10
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "printer": "Prusa MK4",
+   "file": "planter_v3.gcode",
+   "state": "printing",
+   "pct": 63,
+   "layer": 142,
+   "layers": 225,
+   "left": "1 h 12 min",
+   "nozzle": 215,
+   "bed": 60
+  }
+ }
+}

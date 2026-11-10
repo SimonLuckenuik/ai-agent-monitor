@@ -21,3 +21,6 @@ in [integrations/json-render/](../../integrations/json-render/).
 | `status.json` | Status lines and a timeline | none |
 
 `samples.json` holds the values the integration tests push with each one.
+
+These six exercise the compiler (one component of each kind). Faces made for a use, with
+demo values, are in [gallery/](gallery/README.md) and in the face gallery.

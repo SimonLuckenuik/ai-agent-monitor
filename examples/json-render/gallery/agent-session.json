@@ -1,0 +1,427 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#0c0a09"
+   },
+   "children": [
+    "head",
+    "task",
+    "rule",
+    "todo",
+    "sp",
+    "foot"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "hi",
+    "ha",
+    "hsp",
+    "spin"
+   ]
+  },
+  "hi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "m4 17 6-6-6-6",
+     "M12 19h8"
+    ],
+    "size": 3,
+    "color": "#d97757",
+    "fill": "none",
+    "strokeWidth": 2.5
+   }
+  },
+  "ha": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/agent",
+     "fallback": "Claude Code"
+    },
+    "color": "#d97757",
+    "maxChars": 18,
+    "wrap": "truncate"
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "spin": {
+   "type": "Spinner",
+   "props": {
+    "label": {
+     "$state": "/vars/state",
+     "fallback": "idle"
+    },
+    "color": "#d97757"
+   },
+   "visible": {
+    "$state": "/vars/state",
+    "eq": "working"
+   }
+  },
+  "task": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/task",
+     "fallback": "Waiting for a task"
+    },
+    "color": "#ffffff",
+    "maxChars": 76,
+    "wrap": "wrap"
+   }
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {
+    "title": {
+     "$template": "${/vars/done|0} of 4 done"
+    },
+    "color": "#3a2f2a"
+   }
+  },
+  "todo": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "t1",
+    "t2",
+    "t3",
+    "t4"
+   ]
+  },
+  "t1": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "t1i",
+    "t1t"
+   ]
+  },
+  "t1i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M20 6 9 17l-5-5"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 1
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 0
+      },
+      "$then": "#d97757",
+      "$else": "#3a3330"
+     }
+    },
+    "fill": "none",
+    "strokeWidth": 3
+   }
+  },
+  "t1t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/todo1",
+     "fallback": ""
+    },
+    "maxChars": 34,
+    "wrap": "truncate",
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 1
+     },
+     "$then": "#6b625d",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 0
+      },
+      "$then": "#ffffff",
+      "$else": "#a8a29e"
+     }
+    }
+   }
+  },
+  "t2": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "t2i",
+    "t2t"
+   ]
+  },
+  "t2i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M20 6 9 17l-5-5"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 2
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 1
+      },
+      "$then": "#d97757",
+      "$else": "#3a3330"
+     }
+    },
+    "fill": "none",
+    "strokeWidth": 3
+   }
+  },
+  "t2t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/todo2",
+     "fallback": ""
+    },
+    "maxChars": 34,
+    "wrap": "truncate",
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 2
+     },
+     "$then": "#6b625d",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 1
+      },
+      "$then": "#ffffff",
+      "$else": "#a8a29e"
+     }
+    }
+   }
+  },
+  "t3": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "t3i",
+    "t3t"
+   ]
+  },
+  "t3i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M20 6 9 17l-5-5"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 3
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 2
+      },
+      "$then": "#d97757",
+      "$else": "#3a3330"
+     }
+    },
+    "fill": "none",
+    "strokeWidth": 3
+   }
+  },
+  "t3t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/todo3",
+     "fallback": ""
+    },
+    "maxChars": 34,
+    "wrap": "truncate",
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 3
+     },
+     "$then": "#6b625d",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 2
+      },
+      "$then": "#ffffff",
+      "$else": "#a8a29e"
+     }
+    }
+   }
+  },
+  "t4": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "t4i",
+    "t4t"
+   ]
+  },
+  "t4i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M20 6 9 17l-5-5"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 4
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 3
+      },
+      "$then": "#d97757",
+      "$else": "#3a3330"
+     }
+    },
+    "fill": "none",
+    "strokeWidth": 3
+   }
+  },
+  "t4t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/todo4",
+     "fallback": ""
+    },
+    "maxChars": 34,
+    "wrap": "truncate",
+    "color": {
+     "$cond": {
+      "$state": "/vars/done",
+      "gte": 4
+     },
+     "$then": "#6b625d",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/done",
+       "eq": 3
+      },
+      "$then": "#ffffff",
+      "$else": "#a8a29e"
+     }
+    }
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "foot": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "fi",
+    "ft"
+   ]
+  },
+  "fi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": {
+     "$cond": {
+      "$state": "/vars/failed",
+      "gt": 0
+     },
+     "$then": "#ff5a5a",
+     "$else": "#3ddc84"
+    },
+    "fill": "none"
+   }
+  },
+  "ft": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/vars/passed|0} passed, ${/vars/failed|0} failed"
+    },
+    "maxChars": 30,
+    "color": {
+     "$cond": {
+      "$state": "/vars/failed",
+      "gt": 0
+     },
+     "$then": "#ff8a80",
+     "$else": "#8fe3b0"
+    }
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "agent": "Claude Code",
+   "state": "working",
+   "task": "Add dark mode to the settings page",
+   "done": 2,
+   "todo1": "Read the page's styles",
+   "todo2": "Add the colour tokens",
+   "todo3": "Switch on prefers-color-scheme",
+   "todo4": "Run the web tests",
+   "passed": 41,
+   "failed": 0
+  }
+ }
+}

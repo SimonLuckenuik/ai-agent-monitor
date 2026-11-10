@@ -13,8 +13,10 @@
     python clock.py delete NAME
     python clock.py vars name=value [name=value ...] [--ttl S] [--persist] [--history] [--add]
     python clock.py screenshot OUT.png        (emulator only)
-    python clock.py gallery [WORD]            the face gallery on GitHub (names matching WORD)
-    python clock.py install NAME [--show]     a gallery face, onto the clock
+    python clock.py gallery [WORD]            the face gallery on GitHub (names matching WORD),
+                                              with the firmware each one needs
+    python clock.py install NAME [--show] [--force]   a gallery face, onto the clock (refused when
+                                              the clock is older than the face's firmware)
 
 check validates faces against reference/face.schema.json (with the jsonschema package
 when it is installed, else the main rules) and flags unknown placeholder names. push
@@ -114,13 +116,13 @@ FIELDS = {
              "weather high low rain sun ok warn error info",
     "net": "ip host ssid rssi mqtt",
     "sys": "version uptime heap lang",
-    "msg": "title text icon color bg pct ttl id count",
+    "msg": "title text icon color bg pct ttl id count kind shown anim",
 }
 DAY = "wday wday3 low high feels rain wind hum rise set icon"
 for d in range(5):
     FIELDS[f"day{d}"] = DAY
 FIELDS = {g: set(f.split()) for g, f in FIELDS.items()}
-IT = {"days": set(DAY.split()), "msgs": FIELDS["msg"] - {"count"}}
+IT = {"days": set(DAY.split()), "msgs": FIELDS["msg"] - {"count", "kind", "shown", "anim"}}
 
 
 def placeholders(value):
@@ -253,8 +255,15 @@ def screenshot(out):
 
 
 def gallery():
+    """Every gallery entry: faces, then json-render specs (spec 049)."""
     with urllib.request.urlopen(GALLERY, timeout=20) as r:
-        return json.load(r)["faces"]
+        g = json.load(r)
+    return g["faces"] + g.get("specs", [])
+
+
+def version_key(v):
+    """2.7.0-dev -> (2, 7, 0): a development build counts as its release."""
+    return tuple(int(x) if x.isdigit() else 0 for x in (v or "0").lstrip("v").split("-")[0].split("."))
 
 
 def main(argv):
@@ -343,11 +352,15 @@ def main(argv):
         for f in gallery():
             if word in (f["name"] + " " + f["title"] + " " + f["description"] + " " + f["category"]).lower():
                 reads = f"  reads: {', '.join(f['variables'])}" if f["variables"] else ""
-                print(f"{f['name']:18} {f['category']:24} {f['description']}{reads}")
+                print(f"{f['name']:18} {f.get('firmware', ''):7} {f['category']:24} {f['description']}{reads}")
     elif cmd == "install" and args:
         f = next((f for f in gallery() if f["name"] == args[0]), None)
         if not f:
             raise SystemExit(f"No face {args[0]!r} in the gallery: python clock.py gallery")
+        clock = json.loads(call("GET", "/status")).get("version", "0")
+        if version_key(f.get("firmware")) > version_key(clock) and "--force" not in args[1:]:
+            raise SystemExit(f"{f['name']} needs firmware {f['firmware']} (the clock runs {clock}): "
+                             "update the clock first, or --force")
         with urllib.request.urlopen(f["json"], timeout=20) as r:
             face = json.load(r)
         sign_in()

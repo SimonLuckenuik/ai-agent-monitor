@@ -925,6 +925,24 @@ def json_render(emu):
         check(reply.startswith("OK"), f"jr-{name}: {reply}")
         shot(emu, f"json_render_{name}")
         emu.delete_face(f"jr-{name}")
+    # Deleting a variable clears its history: a chart pushed again starts empty (spec 049).
+    for v in (1, 2, 3):
+        emu.post("/api/faces/vars", {"hx": v, "$history": True})
+    emu.vars(hx=None)
+    emu.post("/api/faces/vars", {"hx": 9, "$history": True})
+    check(emu.emu_vars()["vars"]["hx"].get("history") == [9], "a deleted variable's history is gone")
+    emu.vars(hx=None)
+    # The gallery's json-render faces (spec 049), with their demo values (the spec's state,
+    # so nothing set before) and samples: compiled without a warning, drawn, captured.
+    gallery = JR_EXAMPLES / "gallery"
+    for name, sample in json.loads((gallery / "samples.json").read_text(encoding="utf-8")).items():
+        emu.clear_vars()
+        emu.apply_sample(sample)
+        reply = emu.push_face(name, json.loads((gallery / f"{name}.json").read_text(encoding="utf-8")), show=True)
+        check(reply == "OK", f"gallery {name}: {reply}")
+        shot(emu, f"json_render_{name}")
+        emu.delete_face(name)
+    emu.clear_vars()
     # What the clock cannot draw is drawn approximately and listed in the reply.
     spec = {"root": "r", "elements": {
         "r": {"type": "Box", "props": {"flexDirection": "column"}, "children": ["a", "b", "c"]},

@@ -1,6 +1,9 @@
 # 049 The gallery knows firmware versions, and json-render faces in it
 
-Status: Draft (2026-11-10). From the owner, after the 2.7.0-dev run: "should we add those
+Status: First set done in 2.7.0 (approved 2026-11-10, the owner: "Approve, first six":
+sky, week-ahead, today, home-energy, agent-session, printer); the other six (pr-queue,
+on-call, now-playing, departures, activity-rings, laundry) later. Drafted
+2026-11-10. From the owner, after the 2.7.0-dev run: "should we add those
 json-render to the gallery ? or maybe create new fancy one instead with a specific usage
 so that users can try them", then "should the items in the gallery expose the minimum
 version so that they are used with the right version ?", then "go".
@@ -134,8 +137,8 @@ None on the clock: no firmware change. The settings page grows by a few hundred 
 
 ## Open questions
 
-1. Release: with 2.7.0 (the specs need it anyway), or after it? The version work alone
-   could go first.
+1. Release: with 2.7.0, on the same branch (decided 2026-11-10: the settings page's check
+   comes with an update, and the specs need 2.7.0 anyway).
 2. Twelve faces is a lot for one piece of work: all of them, or a first set (proposed:
    sky, week-ahead, today, home-energy, agent-session, printer: two that need no data,
    two everyday, one agent, one Home Assistant) and the rest later?

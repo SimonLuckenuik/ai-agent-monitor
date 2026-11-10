@@ -1,0 +1,383 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "justifyContent": "space-between",
+    "backgroundColor": "#070b18"
+   },
+   "children": [
+    "time",
+    "date",
+    "rule",
+    "row",
+    "state"
+   ]
+  },
+  "time": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "font": "big",
+    "fontSize": 56,
+    "color": {
+     "$cond": {
+      "$state": "/sun/up",
+      "eq": 1
+     },
+     "$then": "#ffd36b",
+     "$else": "#a9b8ff"
+    },
+    "align": "center"
+   }
+  },
+  "date": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/date/wday} ${/date/text}"
+    },
+    "color": "@muted",
+    "align": "center",
+    "maxChars": 22
+   }
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {
+    "color": "#1c2440"
+   }
+  },
+  "row": {
+   "type": "Box",
+   "props": {
+    "justifyContent": "space-around",
+    "alignItems": "center"
+   },
+   "children": [
+    "sun",
+    "moon"
+   ]
+  },
+  "sun": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "gap": 1
+   },
+   "children": [
+    "rise",
+    "set"
+   ]
+  },
+  "rise": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "riseI",
+    "riseT"
+   ]
+  },
+  "riseI": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M12 2v8",
+     "m4.93 10.93 1.41 1.41",
+     "M2 18h2",
+     "M20 18h2",
+     "m19.07 10.93-1.41 1.41",
+     "M22 22H2",
+     "m8 6 4-4 4 4",
+     "M16 18a4 4 0 0 0-8 0"
+    ],
+    "size": 4,
+    "color": "#ffb347",
+    "fill": "none"
+   }
+  },
+  "riseT": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/sun/rise"
+    },
+    "fontSize": 26,
+    "color": "#ffe2a8",
+    "maxChars": 5
+   }
+  },
+  "set": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "setI",
+    "setT"
+   ]
+  },
+  "setI": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M12 10V2",
+     "m4.93 10.93 1.41 1.41",
+     "M2 18h2",
+     "M20 18h2",
+     "m19.07 10.93-1.41 1.41",
+     "M22 22H2",
+     "m16 6-4 4-4-4",
+     "M16 18a4 4 0 0 0-8 0"
+    ],
+    "size": 4,
+    "color": "#ff7a59",
+    "fill": "none"
+   }
+  },
+  "setT": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/sun/set"
+    },
+    "fontSize": 26,
+    "color": "#ffc2b0",
+    "maxChars": 5
+   }
+  },
+  "moon": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "alignItems": "center"
+   },
+   "children": [
+    "ring",
+    "phase"
+   ]
+  },
+  "ring": {
+   "type": "Ring",
+   "props": {
+    "value": {
+     "$state": "/moon/lit",
+     "fallback": "0"
+    },
+    "max": 100,
+    "size": 11,
+    "thickness": 1,
+    "color": "#dfe4ff",
+    "track": "#1c2440",
+    "label": {
+     "$template": "${/moon/lit|0}%"
+    }
+   }
+  },
+  "phase": {
+   "type": "Box",
+   "props": {
+    "width": 12,
+    "height": 1
+   },
+   "children": [
+    "p0",
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "p6",
+    "p7"
+   ]
+  },
+  "p0": {
+   "type": "Text",
+   "props": {
+    "text": "New moon",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 0
+   }
+  },
+  "p1": {
+   "type": "Text",
+   "props": {
+    "text": "Crescent",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 1
+   }
+  },
+  "p2": {
+   "type": "Text",
+   "props": {
+    "text": "First qtr",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 2
+   }
+  },
+  "p3": {
+   "type": "Text",
+   "props": {
+    "text": "Gibbous",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 3
+   }
+  },
+  "p4": {
+   "type": "Text",
+   "props": {
+    "text": "Full moon",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 4
+   }
+  },
+  "p5": {
+   "type": "Text",
+   "props": {
+    "text": "Gibbous",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 5
+   }
+  },
+  "p6": {
+   "type": "Text",
+   "props": {
+    "text": "Last qtr",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 6
+   }
+  },
+  "p7": {
+   "type": "Text",
+   "props": {
+    "text": "Crescent",
+    "color": "#a9b8ff",
+    "align": "center",
+    "position": "absolute",
+    "top": 0,
+    "left": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/moon/phase",
+    "eq": 7
+   }
+  },
+  "state": {
+   "type": "Box",
+   "props": {
+    "justifyContent": "center",
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "stI",
+    "stT"
+   ]
+  },
+  "stI": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z",
+     "M12 2v2",
+     "M12 20v2",
+     "m4.93 4.93 1.41 1.41",
+     "m17.66 17.66 1.41 1.41",
+     "M2 12h2",
+     "M20 12h2",
+     "m6.34 17.66-1.41 1.41",
+     "m19.07 4.93-1.41 1.41"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/sun/up",
+      "eq": 1
+     },
+     "$then": "#ffd36b",
+     "$else": "#3a4470"
+    },
+    "fill": "none"
+   }
+  },
+  "stT": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$cond": {
+      "$state": "/sun/up",
+      "eq": 1
+     },
+     "$then": "Daylight",
+     "$else": "Night"
+    },
+    "color": "@muted",
+    "maxChars": 8
+   }
+  }
+ }
+}

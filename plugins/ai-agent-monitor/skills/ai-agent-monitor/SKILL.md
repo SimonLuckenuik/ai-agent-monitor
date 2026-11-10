@@ -106,8 +106,10 @@ is the JSON Schema of a face.
 1. **Pick or write a face.** `examples/` has `attention`, `progress`, `done` and
    `error`. The project's face gallery has about 80 more (clocks, weather, build status,
    pixel art, games, charts): `python scripts/clock.py gallery [word]` lists them with the
-   variables each reads, and `python scripts/clock.py install <name> --show` puts one on
-   the clock. Adapt one, or design a new face with `reference/face-format.md`.
+   variables each reads and the firmware each needs, and
+   `python scripts/clock.py install <name> --show` puts one on the clock (it refuses a face
+   the clock is too old for). Adapt one, or design a new face with
+   `reference/face-format.md`.
 2. **Check it:** `python scripts/clock.py check face.json` validates it against the
    schema and flags unknown placeholders (the clock ignores what it does not know,
    silently). `push` checks too.
@@ -152,7 +154,10 @@ followed by one line for anything drawn approximately (fix those). Update it wit
 `clock.py vars pct=40`, as for any face. Lengths are character cells (40 × 15 on the
 screen); give live text `maxChars`. At most 6 KB, 96 elements, 8 levels of nesting.
 Use a custom face instead for animation, gradients, pictures, sprites or exact pixels.
-Tested examples: the repository's `examples/json-render/`.
+Tested examples: the repository's `examples/json-render/`. Ready-made ones are in the
+gallery's json-render category (2.7.0 on): `sky`, `week-ahead`, `today`, `home-energy`,
+`agent-session` and `printer`; each shows demo values until you push your own. Install
+one (`clock.py install home-energy --show`), then change it.
 
 ## Rules of the screen
 

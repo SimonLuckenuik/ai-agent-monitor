@@ -304,3 +304,9 @@ API key (`clock.py`).
   flickered while the limit tests ran. Cause: every face save or delete redrew the face on
   screen (since 1.2.0); now only a save of that face does
   (docs/issues/2026-11-10-face-save-redrew-shown-face.md). +48 B (607,200 B).
+
+## 2026-11-10: released in 2.7.0
+
+- Released on the owner's word ("if working, commit, push and release new version"), with
+  spec 049's first set and the face-redraw fixes. Not seen on a clock in its final build:
+  the redraw fixes; the 2.7.0-dev run above is the clock check.

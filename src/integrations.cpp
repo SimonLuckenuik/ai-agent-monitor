@@ -140,7 +140,12 @@ bool setVar(const String& key, JsonVariant raw, const VarOptions& o) {
   if (!v) v = freeVar();
   if (!v) return false;
   if (o.add && v->key.length()) value = String(v->value.toInt() + value.toInt());
-  if (raw.isNull()) { if (v->keep) varsDirty = true; *v = Var(); return true; }   // null deletes
+  if (raw.isNull()) {   // null deletes, with its history (spec 049: a new chart starts empty)
+    if (v->keep) varsDirty = true;
+    *v = Var();
+    for (History& e : histories) if (e.key == key) e = History();
+    return true;
+  }
   v->key = key; v->value = value;
   v->at = epochNow();
   v->until = o.ttl && v->at ? v->at + o.ttl : 0;

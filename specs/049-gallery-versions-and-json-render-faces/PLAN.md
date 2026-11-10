@@ -1,6 +1,7 @@
 # 049 Plan
 
-Status: Draft, waiting for approval.
+Status: Approved 2026-11-10; first set: sky, week-ahead, today, home-energy,
+agent-session, printer.
 
 1. **The version table.** Read the CHANGELOG from 2.0.0 to 2.7.0 for every face-format
    addition (item types, fields, fonts, placeholder groups and names); write the table

@@ -1,0 +1,347 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#0a0a12"
+   },
+   "children": [
+    "top",
+    "next",
+    "agenda",
+    "sp",
+    "wx"
+   ]
+  },
+  "top": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 2
+   },
+   "children": [
+    "time",
+    "dcol"
+   ]
+  },
+  "time": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "font": "big",
+    "fontSize": 44,
+    "color": "@time"
+   }
+  },
+  "dcol": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "wday",
+    "date"
+   ]
+  },
+  "wday": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/date/wday"
+    },
+    "color": "#ffffff",
+    "maxChars": 9
+   }
+  },
+  "date": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/date/text"
+    },
+    "color": "@muted",
+    "maxChars": 12
+   }
+  },
+  "next": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "borderStyle": "round",
+    "borderColor": {
+     "$cond": {
+      "$state": "/vars/mins",
+      "lte": 5
+     },
+     "$then": "#ff5a5a",
+     "$else": "#2c3550"
+    },
+    "paddingLeft": 1,
+    "paddingRight": 1
+   },
+   "children": [
+    "mt",
+    "mrow"
+   ]
+  },
+  "mt": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/meeting",
+     "fallback": "Nothing planned"
+    },
+    "fontSize": 26,
+    "color": "#ffffff",
+    "maxChars": 18,
+    "wrap": "truncate"
+   }
+  },
+  "mrow": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "mi",
+    "mm",
+    "msp",
+    "mr"
+   ]
+  },
+  "mi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M8 2v4",
+     "M16 2v4",
+     "M3 10h18",
+     "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/vars/mins",
+      "lte": 5
+     },
+     "$then": "#ff5a5a",
+     "$else": "#7aa2ff"
+    },
+    "fill": "none"
+   }
+  },
+  "mm": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "in ${/vars/mins|-} min"
+    },
+    "color": {
+     "$cond": {
+      "$state": "/vars/mins",
+      "lte": 5
+     },
+     "$then": "#ff5a5a",
+     "$else": "#7aa2ff"
+    },
+    "maxChars": 11
+   }
+  },
+  "msp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "mr": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/room",
+     "fallback": ""
+    },
+    "color": "@muted",
+    "align": "right",
+    "maxChars": 10
+   }
+  },
+  "agenda": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "a1",
+    "a2",
+    "a3"
+   ]
+  },
+  "a1": {
+   "type": "Box",
+   "props": {
+    "gap": 1
+   },
+   "children": [
+    "a1t",
+    "a1x"
+   ]
+  },
+  "a1t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/at1",
+     "fallback": ""
+    },
+    "color": "#7aa2ff",
+    "width": 6,
+    "maxChars": 5
+   }
+  },
+  "a1x": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/a1",
+     "fallback": ""
+    },
+    "color": "#e6e6ee",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "a2": {
+   "type": "Box",
+   "props": {
+    "gap": 1
+   },
+   "children": [
+    "a2t",
+    "a2x"
+   ]
+  },
+  "a2t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/at2",
+     "fallback": ""
+    },
+    "color": "#7aa2ff",
+    "width": 6,
+    "maxChars": 5
+   }
+  },
+  "a2x": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/a2",
+     "fallback": ""
+    },
+    "color": "#e6e6ee",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "a3": {
+   "type": "Box",
+   "props": {
+    "gap": 1
+   },
+   "children": [
+    "a3t",
+    "a3x"
+   ]
+  },
+  "a3t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/at3",
+     "fallback": ""
+    },
+    "color": "#7aa2ff",
+    "width": 6,
+    "maxChars": 5
+   }
+  },
+  "a3x": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/a3",
+     "fallback": ""
+    },
+    "color": "#e6e6ee",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "wx": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "wi",
+    "wt",
+    "wsp",
+    "whl"
+   ]
+  },
+  "wi": {
+   "type": "WeatherIcon",
+   "props": {
+    "size": 3
+   }
+  },
+  "wt": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/now/temp}${/units/temp} ${/now/text}"
+    },
+    "color": "#9fc4ff",
+    "maxChars": 20,
+    "wrap": "truncate"
+   }
+  },
+  "wsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "whl": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/days/0/high}/${/days/0/low}"
+    },
+    "color": "@muted",
+    "align": "right",
+    "maxChars": 7
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "meeting": "Design review",
+   "room": "Lab 2",
+   "mins": 25,
+   "at1": "11:30",
+   "a1": "Lunch with Sam",
+   "at2": "14:00",
+   "a2": "1:1 with Alex",
+   "at3": "16:30",
+   "a3": "Pick up the kids"
+  }
+ }
+}

@@ -96,6 +96,18 @@ def clock_images(emu):
     emu.clear_messages()
     sheet(shots, 6, IMAGES / "custom-faces.png", labels=labels)
 
+    # The json-render gallery faces (spec 049): their previews, with their sample values.
+    gallery = EXAMPLES.parent / "json-render" / "gallery"
+    jr_samples = json.loads((gallery / "samples.json").read_text(encoding="utf-8"))
+    for name, sample in jr_samples.items():
+        emu.clear_vars()
+        emu.apply_sample(sample)
+        emu.push_face(name, json.loads((gallery / f"{name}.json").read_text(encoding="utf-8")), show=True)
+        take(name)
+        shots[-1].save(IMAGES / "faces" / f"{name}.png", optimize=True)
+        emu.delete_face(name)
+    emu.clear_vars()
+
     # Agent screens: message layouts, the Agents board, the skill's example faces.
     shots, labels = [], []
     emu.clear_messages()

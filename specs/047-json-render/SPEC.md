@@ -1,7 +1,8 @@
 # 047 json-render on the clock
 
-Status: Approved 2026-11-09 (the owner: "lets do the json-render"), in progress: in the
-firmware build on branch `feat/047-json-render`, for 2.7.0. Before that: an emulator
+Status: Done in 2.7.0 (approved 2026-11-09, the owner: "lets do the json-render"; phase 2,
+run-time relayout, and `repeat` not done). Was in the firmware build on branch
+`feat/047-json-render`. Before that: an emulator
 prototype (2026-11-07), the room found by spec 048 (files with the update) and link-time
 optimisation (2.6.0), the memory work (2026-11-08).
 
