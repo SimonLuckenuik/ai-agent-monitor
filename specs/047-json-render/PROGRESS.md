@@ -280,3 +280,22 @@ heap problem (unchanged); `validateSpec()`.
   skill (SKILL.md, api.md; `clock.py push` takes a spec, `check` checks its shape,
   `catalog [--prompt]`; plugin 0.8.0), the OpenClaw skill and bridge (6 KB), CHANGELOG,
   CLAUDE.md. Version 2.7.0-dev.
+
+## 2026-11-10: on a clock (agentmonitor-ade1f0, 2.7.0-dev, build 846fdd2+)
+
+The owner installed `AIAgentMonitor_v2.7.0-dev-jr.update`; the specs were pushed with the
+API key (`clock.py`).
+
+- After the update: files `ok`, heap 24,192 B (low 23,208), stackFree 984 B, the catalog
+  and prompt served (3,743 B and 3,939 B gzipped), draw times as 2.6.0.
+- The six examples (1.3 to 4.8 KB) all saved (`OK`, no warnings). `jrStack` 4,084 B of
+  5,632 after them; heap 23,928 B at rest.
+- Shown one after the other: the custom face's slowest draw 230 ms (the full redraw), the
+  others about 100 ms; heap 21.0 KB with a spec face on screen, low 19.2 KB; stackFree
+  592 B (the core's stack, lowest since boot; 984 B before any custom face was shown).
+- Limits as in the emulator: a 13 KB body 507, the face of that name kept; 6.3 KB 400
+  ("larger than 6 KB"); 5.9 KB saved; 13 levels of Box saved with the depth warning,
+  `jrStack` 5,172 B (460 B to spare: the 8-level cap is what keeps it there).
+- No crash records, no restart.
+- Not checked: the screens by eye (the clock has no screenshot; jr-ci was left showing), a
+  day's run.

@@ -109,7 +109,9 @@ link-time optimisation): 563,248 B and 396,406 B, **78 KB of room**.
 
 **In progress:** [047](../specs/047-json-render/SPEC.md) (json-render specs compiled on the
 clock), approved 2026-11-09, on branch `feat/047-json-render` for 2.7.0: in the firmware
-build, 3.3 KB of update room.
+build, 3.3 KB of update room. On agentmonitor-ade1f0 since 2026-11-10 (2.7.0-dev): the
+six examples saved, `jrStack` 4,084 B of 5,632, heap 21 KB with a spec on screen, the
+size limits as in the emulator, no crash; a day's run and a look at the screens to come.
 
 Done in 2.2.0, not yet seen on the clock: [039](../specs/039-animated-messages/SPEC.md)
 (Moni and animated messages). Done in 2.1.1:
