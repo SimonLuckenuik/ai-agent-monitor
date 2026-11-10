@@ -10,7 +10,7 @@ approved.
    2026-11-09): in the firmware build for 2.7.0; a 2.7.0-dev image on a clock first.
 0. **Gallery versions and json-render faces** ([049](../../specs/049-gallery-versions-and-json-render-faces/SPEC.md),
    draft): each entry's minimum firmware, checked by the settings page and `clock.py`;
-   four json-render faces for the gallery.
+   json-render faces for the gallery, agent and everyday ones, with demo values.
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
 2. **Check 2.3.1 on the clock**: the update installs (4 KB of room left); pair the clock
@@ -66,20 +66,10 @@ approved.
   - **Celebrations** (firmware): a message kind, or a `celebrate` call, that bursts
     confetti over the current face for a few seconds: a build fixed, a goal reached, a
     birthday at midnight.
-- **Non-agent scenarios** (2026-11-10), mostly faces and recipes, no firmware:
-  - **Home energy flow** (face + Home Assistant recipe over MQTT): sun, battery, house and
-    grid, with dots running along the lines at the speed of the power (expressions on
-    `time.ms`, possible today).
-  - **Now playing** (face + Home Assistant or a script): title and artist, progress, an
-    animated equaliser; best with scrolling text above.
-  - **Transit departures** (face + a small GTFS script): the next buses or trains with
-    countdowns; best with split-flap text above.
-  - **Air quality and pollen** (firmware: Open-Meteo's air-quality API, same provider as
-    the weather): `air.*` placeholders (AQI, PM2.5, pollen by kind) and a face; costs flash
-    and a little heap for one more request.
-  - **Habits and goals**: a streak calendar fed by a phone shortcut or Home Assistant
-    (steps, water, reading), with a celebration when a goal is met.
-- [020 ESP-NOW between clocks](../../specs/020-esp-now/SPEC.md): dropped for now (2026-10-31).
+- **Air quality and pollen** (firmware: Open-Meteo's air-quality API, same provider as the
+  weather): `air.*` placeholders (AQI, PM2.5, pollen by kind) and a face; costs flash and
+  a little heap for one more request. (The other everyday scenarios, energy, music,
+  departures, activity, are json-render faces in spec 049.)
 
 ## Done
 

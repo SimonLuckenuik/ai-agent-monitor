@@ -15,7 +15,7 @@ Status: Draft, waiting for approval.
    test for the comparison (`-dev` included); the page in the emulator with the gallery
    served from the branch; screenshots at an old and a new version.
 4. **`clock.py`** `gallery` and `install` (R5).
-5. **The four faces** (R7, R9): written against the catalog, checked in the emulator one
+5. **The faces** (R7, R7a, R9), the first set first: written against the catalog, checked in the emulator one
    by one (`clock.py push`, screenshot), values in `samples.json`. Check: no warnings,
    under 6 KB, looked at on screen; the owner looks at them on the clock.
 6. **Integration and previews** (R10): the `json_render` case and `scripts/screenshots.py`.
