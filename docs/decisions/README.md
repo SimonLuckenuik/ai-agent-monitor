@@ -21,6 +21,7 @@ it belongs to ([specs](../../specs/README.md)).
 - [2026-10-31 The crash log is a binary file the API serves as it is](2026-10-31-crash-log-as-a-binary-file.md)
 - [2026-11-05 The clocks become native OpenClaw nodes, not bridged ones](2026-11-05-openclaw-native-node.md)
 - [2026-11-05 The OpenClaw node takes 22.7 KB of flash, leaving 8 KB of update room](2026-11-05-openclaw-node-flash.md)
+- [2026-11-08 The firmware is built with link-time optimisation](2026-11-08-link-time-optimisation.md)
 
 ## SmartClock-OSS (upstream, before the fork)
 

@@ -74,6 +74,10 @@ product as it is, and change with the code; specs describe a piece of work.
   in printf (also forbidden by the safety tests: float printf is not linked), inlined
   ArduinoJson lookups (go through the `noinline` helpers `js()`, `num()`, `colorOf()`).
   mDNS (`SMARTCLOCK_MDNS`, ~21 KB); the emulator leaves it out (no multicast).
+  The firmware is built with LTO (`scripts/lto_options.py`: src/ and the libraries, not
+  ESP8266WiFi, the core or the SDK): symbols only asm uses need
+  `__attribute__((used, externally_visible))`, and PROGMEM data in a header is `static`,
+  not `inline` (an inline variable lands in RAM).
 - **RAM.** ~24 KB free heap at run time. No frame buffer (240×240×2 = 115 KB): faces
   redraw only what changed, text needs a `bg`/`pad` to overwrite itself, and anything
   that moves is drawn again around its old and new places (`itemBox`, `repaintBox`:

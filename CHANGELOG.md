@@ -13,6 +13,8 @@ versioning. `/version` on the device reports the version it was built as; a
   048 phase 2), like the settings page: 56 KB of room for future updates (2.5.0: 36 KB).
   A clock without them (after a `.bin.gz` alone, or a storage format) draws messages
   without the robot and no weather icon until the `.update` is installed.
+- **The firmware is built with link-time optimisation:** 13 KB smaller. With the files
+  above, 78 KB of room for future updates (2.5.0: 36 KB).
 
 ## 2.5.0 - 2026-11-08
 

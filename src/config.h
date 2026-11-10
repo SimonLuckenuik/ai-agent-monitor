@@ -14,7 +14,8 @@
 
 // Persistent configuration. Mirrors the stock /config JSON keys so the existing
 // web UI (and expectations) line up. Stored at /config.json in LittleFS.
-inline const char DEFAULT_PALETTES_P[] PROGMEM = DEFAULT_PALETTES;
+// static, not inline: under LTO an inline variable loses its PROGMEM section (RAM).
+static const char DEFAULT_PALETTES_P[] PROGMEM = DEFAULT_PALETTES;
 
 struct Config {
   String ssid;
