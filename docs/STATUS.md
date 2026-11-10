@@ -1,12 +1,17 @@
 # Current status and next work
 
-Updated: 2026-11-08. Update this page when a release, a device result, a spec's state or
+Updated: 2026-11-09. Update this page when a release, a device result, a spec's state or
 the next step changes; the history is in the [decision records](decisions/README.md),
 the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest version is **2.5.0** (2026-11-08, spec 048: the settings page as a file that
+The latest version is **2.6.0** (2026-11-09: the Message face and the weather icons as
+files that come with the update, spec 048 phase 2; the firmware built with link-time
+optimisation, [decision](decisions/2026-11-08-link-time-optimisation.md); 78 KB of update
+room). Its 2.6.0-dev build runs on agentmonitor-ade1f0 (192.168.66.224, installed by the
+owner 2026-11-09): files ok, draw times as on 2.3.1, 24.9-26.3 KB free, no crash in its
+first minutes; a day of running not yet seen. Before it: **2.5.0** (2026-11-08, spec 048: the settings page as a file that
 comes with the update, `.update` files, Install from GitHub, the starter for stock
 clocks; 36 KB of update room), files `AIAgentMonitor_v2.5.0.update`, `.bin.gz` and
 `SDPro_AIAgentMonitor_starter_v2.5.0.bin`. Its 2.5.0-dev build ran on agentmonitor-ade1f0
@@ -36,7 +41,8 @@ the time zone (035). None of it has run on the clock yet: the owner installs it 
 
 ## The clock
 
-**Three clocks** are on the IoT VLAN (2026-11-06, found by reading `/status` across
+**Four clocks** since 2026-11-09: `agentmonitor-ade1f0` (192.168.66.224) is the test
+clock for dev builds (2.6.0-dev). **Three clocks** were on the IoT VLAN (2026-11-06, found by reading `/status` across
 192.168.66.x; `.local` names do not resolve from the development machine):
 `agentmonitor-ade9c0` (192.168.66.79) runs **2.3.1**, installed by the owner on
 2026-11-06: 26.6 KB free and 25.5 KB at the lowest four minutes after the start, the Day
@@ -96,7 +102,8 @@ to find are listed in the [footprint](specifications/footprint.md) and the
 [045](../specs/045-openclaw-help/SPEC.md)): 602,384 B and 427,337 B, 4,096 B of room (the
 plain image crossed a sector boundary); 2.4.0 the same. **2.5.0**
 ([048](../specs/048-files-with-the-update/SPEC.md): the settings page is a file that comes
-with the update): 587,264 B and 410,589 B, **36,864 B of room**.
+with the update): 587,264 B and 410,589 B, **36,864 B of room**. **2.6.0** (048 phase 2,
+link-time optimisation): 563,248 B and 396,406 B, **78 KB of room**.
 
 ## Specs in flight
 

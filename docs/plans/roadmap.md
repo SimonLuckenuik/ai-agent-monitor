@@ -23,8 +23,8 @@ approved.
    heap with it off, it comes back when the router goes away, recovery's WPA2 network.
 6. **Check 2.5.0** ([048](../../specs/048-files-with-the-update/SPEC.md)): Install from
    GitHub on a clock, from the home network and from the clock's own; the Pages job of
-   the release run; a phone left on the setup network. Then 048's phase 2 (weather icons
-   and the Message face as files), if wanted.
+   the release run; a phone left on the setup network. 048's phase 2 shipped in 2.6.0
+   with link-time optimisation: a day of 2.6.0 on a clock (lowest heap, crashes).
 
 ## Waiting
 

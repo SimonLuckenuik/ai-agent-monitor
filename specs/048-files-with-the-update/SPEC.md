@@ -1,8 +1,8 @@
 # 048 Read-only data as files that come with the update
 
 Status: Done in 2.5.0 (phase 1 and the starter; approved 2026-11-07: "lets release
-048", "Go, with starter"). Phase 2 (weather icons and the Message face as files): built
-on branch `feat/048-phase2` (the owner, 2026-11-08: "spec 048 phase 2 + 047").
+048", "Go, with starter"); phase 2 (weather icons and the Message face as files; the
+owner, 2026-11-08: "spec 048 phase 2 + 047") done in 2.6.0.
 
 ## Problem
 

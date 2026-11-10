@@ -36,7 +36,7 @@
 #include "tz_rule.h"
 
 
-#define FW_VERSION "2.6.0-dev"   // see CHANGELOG.md
+#define FW_VERSION "2.6.0"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 

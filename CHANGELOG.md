@@ -7,6 +7,18 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.6.0 - 2026-11-09
+
+### Upgrading
+
+- **From 2.5.0:** Settings > Firmware update > **Install**, or install
+  `AIAgentMonitor_v2.6.0.update`. Settings, faces and photos are kept.
+- **From 1.4.0 to 2.4.x:** install `AIAgentMonitor_v2.6.0.bin.gz`, then press **Install**
+  on the setup page the clock comes back with (or install the `.update`).
+- **From the stock firmware:** install `SDPro_AIAgentMonitor_starter_v2.6.0.bin` from the
+  clock's own update page, join its setup network, and follow the steps.
+- This release leaves 78 KB of room for updates (2.5.0: 36 KB).
+
 ### Changed
 
 - **The Message face and the weather icons are files that come with the update** (spec

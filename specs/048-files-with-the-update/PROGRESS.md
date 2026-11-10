@@ -176,3 +176,12 @@ Images built from 0a8d162 (2.5.0-dev), installed by the owner:
   message without them, and installs them again.
 - Integration, full suite on 4cfe6aa: 39 cases passed; no existing screen changed (the
   starter's picks up the files); the new message_without_files shows the robot-less face.
+
+## 2026-11-09: phase 2 released in 2.6.0
+
+- With link-time optimisation (spec 047's work, decision record 2026-11-08): 563,248 B and
+  396,406 B, **78 KB of update room**. A 2.6.0-dev build of it ran on agentmonitor-ade1f0
+  (installed by the owner from the `.update`): files ok, draw times as on 2.3.1 (Big date
+  88 ms, Big time 113 ms, Day tiles 119-132 ms), 24.9-26.3 KB free, no crash in its first
+  minutes. The owner: "we can ship 2.6.0 now".
+- Not verified: a day of running on 2.6.0; Install from GitHub on a clock.
