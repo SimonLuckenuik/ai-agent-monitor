@@ -7,6 +7,18 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.7.0 - 2026-11-10
+
+### Upgrading
+
+- **From 2.5.0:** Settings > Firmware update > **Install**, or install
+  `AIAgentMonitor_v2.7.0.update`. Settings, faces and photos are kept.
+- **From 1.4.0 to 2.4.x:** install `AIAgentMonitor_v2.7.0.bin.gz`, then press **Install**
+  on the setup page the clock comes back with (or install the `.update`).
+- **From the stock firmware:** install `SDPro_AIAgentMonitor_starter_v2.7.0.bin` from the
+  clock's own update page, join its setup network, and follow the steps.
+- This release leaves about 3 KB of room for updates: json-render took most of 2.6.0's.
+
 ### Added
 
 - **json-render specs** (spec 047): the clock takes a
@@ -20,11 +32,20 @@ versioning. `/version` on the device reports the version it was built as; a
   in `examples/json-render/`.
 - The Claude Code skill (plugin 0.8.0) and the OpenClaw skill know json-render specs:
   `clock.py push` sends one, `clock.py catalog [--prompt]` reads the catalog.
+- **json-render faces in the gallery** (spec 049): sky, week-ahead, today, home-energy,
+  agent-session and printer, under their own category. Each shows demo values as soon as
+  it is installed; push your own to replace them (`examples/json-render/gallery/`).
+- **The gallery knows firmware versions** (spec 049): each entry's `firmware` is the
+  oldest firmware that draws it, worked out from what it uses. The settings page shows
+  "Needs 2.7.0" instead of Install on an older clock; `clock.py gallery` shows it and
+  `clock.py install` refuses (`--force` installs anyway).
 
 ### Fixed
 
 - Saving or deleting a custom face no longer redraws the one on screen unless it is that
   face: an agent updating several faces made the shown one flicker.
+- Deleting a variable also clears its history, so a sparkline pushed again starts empty.
+- `clock.py check` knows `{msg.kind}`, `{msg.shown}` and `{msg.anim}` (2.2.0).
 
 ## 2.6.0 - 2026-11-09
 
