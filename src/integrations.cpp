@@ -309,7 +309,7 @@ String storeFace(const String& name, String bodyIn) {
   bool spec = jrIsSpec(bodyIn);
   if (spec) {
     if (!storageReady || recoveryMode) return F("Storage unavailable");
-    if (bodyIn.length() > JR_SOURCE_MAX) return F("The spec is larger than 12 KB");
+    if (bodyIn.length() > JR_SOURCE_MAX) return F("The spec is larger than 6 KB");
     if (!LittleFS.exists("/specs")) LittleFS.mkdir("/specs");
     String src = "/specs/" + name + ".json";
     File sf = LittleFS.open(src, "w");
@@ -380,6 +380,14 @@ void handleFaces() {   // GET: list; POST ?name=: save (empty body deletes)
   if (server.method() == HTTP_POST) {
     String name = faceName(server.arg("name"));
     if (name.isEmpty()) { server.send(400, PSTR("text/plain"), PSTR("name: 1-20 of a-z 0-9 _ -")); return; }
+#if SMARTCLOCK_JSONRENDER
+    // The web server holds a body twice while it reads it; when the second copy does not
+    // fit, the body arrives empty, which would delete the face (spec 047).
+    if (server.arg("plain").isEmpty() && server.header(F("Content-Length")).toInt() > 0) {
+      server.send(507, PSTR("text/plain"), PSTR("Not enough memory for a body that size: send a smaller spec"));
+      return;
+    }
+#endif
     // The request's copy of the body, taken over rather than copied (the web server keeps
     // it as an argument until the request ends; spec 047: the heap).
     String err = storeFace(name, std::move(const_cast<String&>(server.arg("plain"))));

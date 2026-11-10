@@ -1,9 +1,31 @@
 # 047 json-render on the clock
 
-Status: In progress: an emulator prototype (the owner, 2026-11-07: "can we start by
-implementing with the emulator and adjust the space accordingly in the emulator just to
-see it in action and then you do the test you propose"). The spec as a whole is not
-approved; the device build is unchanged.
+Status: Approved 2026-11-09 (the owner: "lets do the json-render"), in progress: in the
+firmware build on branch `feat/047-json-render`, for 2.7.0. Before that: an emulator
+prototype (2026-11-07), the room found by spec 048 (files with the update) and link-time
+optimisation (2.6.0), the memory work (2026-11-08).
+
+## What ships (2026-11-09)
+
+What is true now, where the sections below (written before the work) differ:
+
+- **One firmware.** `-D SMARTCLOCK_JSONRENDER=1` in `platformio.ini` (not the starter):
+  606,960 B and 426,493 B, 3.3 KB of update room. The catalog and prompt are files that
+  come with the update (`/sys/catalog.json.gz`, `/sys/prompt.md.gz`), served gzipped
+  (406 without `Accept-Encoding: gzip`).
+- **Memory:** a spec is written to `/specs/<name>.json` and compiled from the file; the
+  face is built in place; layout runs on a 5.5 KB stack of its own taken from the heap
+  (not the core's thunk), nesting at most 8 levels (deeper elements left out, warned);
+  `/status` `jrStack` has the deepest use. Its literals are in flash (RAM-string check:
+  4,837 B of 4,864).
+- **Limits:** 6 KB of spec, 96 elements, 8 levels, a compiled face of 64 items and 8 KB.
+  The spec limit was 12 KB until the integration case found larger bodies arriving empty:
+  the web server holds a body twice while reading it, and 8 KB found no room (6 KB did).
+  An empty body would have deleted the face of that name; such a request now gets 507.
+- **Phase 2 (run-time relayout) and `repeat`:** not in this release.
+- **Checked by:** the `json_render` integration case (the examples, the catalog routes,
+  warnings, depth, errors), the emulator comparisons in PROGRESS.md; a clock run before
+  the release.
 
 ## Scope decided on the way (2026-11-07, the owner in the chat)
 

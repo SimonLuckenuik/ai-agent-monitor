@@ -58,3 +58,17 @@ resting state. Same checks; each component gets an example.
 
 Run-time relayout for `visible` and growing text. SpecStream patches
 (`POST /api/faces/patch`, RFC 6902) if agents need incremental edits beyond variables.
+
+## Shipping (approved 2026-11-09)
+
+1. Branch rebuilt on 2.6.0 (`feat/047-json-render`; the earlier one kept as
+   `feat/047-json-render-old`).
+2. `SMARTCLOCK_JSONRENDER=1` in the firmware's build flags, not the starter's; the build
+   adds the catalog files only for the firmware.
+3. `examples/json-render/` (six specs and `samples.json`) and the `json_render` integration
+   case.
+4. Docs: the API reference's json-render section (and the skill's face-format.md from it),
+   the skill (SKILL.md, api.md, `clock.py push`/`check`/`catalog`, plugin 0.8.0), the
+   OpenClaw skill copy, CHANGELOG, CLAUDE.md.
+5. Unit, safety, web and integration tests; a 2.7.0-dev image on agentmonitor-ade1f0 (the
+   owner installs it); then the release, 2.7.0.

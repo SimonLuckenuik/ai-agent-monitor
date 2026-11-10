@@ -37,7 +37,7 @@
 #include "tz_rule.h"
 
 
-#define FW_VERSION "2.6.0"   // see CHANGELOG.md
+#define FW_VERSION "2.7.0-dev"   // see CHANGELOG.md
 #include "build_info.h"   // FW_BUILD: commit, "+" if uncommitted changes, build time
 const char* firmwareVersion() { return FW_VERSION; }
 
@@ -1132,7 +1132,8 @@ void setupRoutes() {
   // restart runs it; a static table aborted every restart there).
   server.addHandler(new RouteTable(ROUTES, sizeof(ROUTES) / sizeof(ROUTES[0])));
 #if SMARTCLOCK_JSONRENDER   // and whether the client takes the catalog gzipped (spec 047)
-  server.collectHeaders("Cookie", "X-Api-Key", "Accept-Encoding");
+  // Content-Length: a face body the web server could not hold arrives empty (spec 047).
+  server.collectHeaders("Cookie", "X-Api-Key", "Accept-Encoding", "Content-Length");
 #else
   server.collectHeaders("Cookie", "X-Api-Key");   // sessions; the faces API key
 #endif

@@ -70,9 +70,10 @@ import make_update
 import sys_files
 
 sys_dir = os.path.join(env.subst("$BUILD_DIR"), "sys")
-# Builds with json-render (spec 047) bring its catalog and prompt as files too.
-jsonrender = "SMARTCLOCK_JSONRENDER=1" in " ".join(map(str, env.get("BUILD_FLAGS", []))) + " " + \
-    os.environ.get("PLATFORMIO_BUILD_FLAGS", "")
+# Builds with json-render (spec 047: the firmware, not the starter) bring its catalog and
+# prompt as files too.
+_flags = " ".join(map(str, env.get("BUILD_FLAGS", []))) + " " + os.environ.get("PLATFORMIO_BUILD_FLAGS", "")
+jsonrender = "SMARTCLOCK_JSONRENDER=1" in _flags and "-USMARTCLOCK_JSONRENDER" not in _flags
 update_files, line = sys_files.build(env.subst("$PROJECT_DIR"), generated, sys_dir, jsonrender=jsonrender)
 print("build_options: " + line)
 env.Append(CPPPATH=[generated])

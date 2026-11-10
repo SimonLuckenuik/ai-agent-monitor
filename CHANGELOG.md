@@ -7,6 +7,20 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Added
+
+- **json-render specs** (spec 047): the clock takes a
+  [json-render](https://github.com/vercel-labs/json-render) spec as a custom face
+  (`POST /api/faces`, the body with `"root"` and `"elements"`), lays it out and compiles it
+  into a face itself: Ink's display components (Box, Text, Heading, StatusLine,
+  ProgressBar, Metric, Table, Timeline …) and the clock's own (Clock, Icon, WeatherIcon,
+  Ring), with live values from variables and the clock (`$state`, `$template`, `$cond`).
+  The reply lists what it drew approximately. Its catalog and a prompt for models are
+  `GET /api/catalog` and `/api/catalog/prompt` (files that come with the update); examples
+  in `examples/json-render/`.
+- The Claude Code skill (plugin 0.8.0) and the OpenClaw skill know json-render specs:
+  `clock.py push` sends one, `clock.py catalog [--prompt]` reads the catalog.
+
 ## 2.6.0 - 2026-11-09
 
 ### Upgrading

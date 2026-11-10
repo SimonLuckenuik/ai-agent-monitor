@@ -1,0 +1,23 @@
+{
+ "ci": {
+  "repo": "ai-agent-monitor",
+  "branch": "dev",
+  "build": "running",
+  "pct": 64,
+  "passed": 402,
+  "failed": 0
+ },
+ "meeting": {
+  "meeting": "Design review",
+  "room": "Lab 2",
+  "mins": 12
+ },
+ "weather": {},
+ "build": {
+  "branch": "dev",
+  "build": "passing",
+  "progress": 72
+ },
+ "metrics": {},
+ "status": {}
+}

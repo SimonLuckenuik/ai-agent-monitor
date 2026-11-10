@@ -383,6 +383,52 @@ cover the gradient in a box.
 Gradients cost more to draw than solid colours: keep them off items that change
 several times a second.
 
+## json-render specs
+
+The clock also takes a [json-render](https://github.com/vercel-labs/json-render) spec
+(2.7.0 on): a flat map of components that it lays out and compiles into a face when it is
+saved. A model writes one from the clock's **catalog**, with no pixel coordinates; the
+result is a custom face like any other (rotation, `show`, variables, the night face).
+
+```json
+{"root": "screen", "elements": {
+  "screen": {"type": "Box", "props": {"flexDirection": "column", "padding": 1}, "children": ["title", "build"]},
+  "title": {"type": "Heading", "props": {"text": "CI"}, "children": []},
+  "build": {"type": "StatusLine", "props": {"status": "success", "text": {"$state": "/vars/build", "fallback": "idle"}}, "children": []}},
+ "state": {"vars": {"build": "passing"}}}
+```
+
+| Method and path | Does |
+|---|---|
+| `GET /api/catalog` | The catalog: every component with its props, the state paths, colours and rules (JSON) |
+| `GET /api/catalog/prompt` | The same as a prompt for a model (Markdown) |
+| `POST /api/faces?name=<name>` | A body with `"root"` and `"elements"` is a spec: saved as it came, compiled, and shown with `&show=1`. The reply is `OK`, then one line for each thing drawn approximately or left out |
+
+Both catalog routes need no sign-in and are sent gzipped: a client that does not send
+`Accept-Encoding: gzip` gets 406 (`curl --compressed`). The same files are in the
+repository, `integrations/json-render/catalog.json` and `prompt.md`.
+
+- **Components:** `@json-render/ink`'s display components (Box, Text, Heading, Newline,
+  Spacer, Divider, Badge, Spinner, ProgressBar, Sparkline, BarChart, Table, List,
+  ListItem, Card, KeyValue, Link, StatusLine, Metric, Callout, Timeline, Markdown) and
+  the clock's own (Clock, Icon with SVG path data, WeatherIcon, Ring). Lengths are
+  character cells: 6 px across (40 columns), 16 px down (15 rows). Specs written for
+  `@json-render/image` (Frame, Row, Column, lengths in px) and shadcn's display
+  components also draw; input components, actions, `on`, `watch`, `$computed`, `repeat`
+  and `Image` do not (listed in the reply).
+- **Live values:** `{"$state": "/vars/<name>"}` reads a variable (set with
+  `POST /api/faces/vars`), `/time/hm`, `/date/text`, `/now/temp`, `/days/1/high` and the
+  other clock fields read the clock (the catalog lists them). `$template`, `$cond` and
+  `visible` work; a spec's `state.vars` sets variables that are not set yet. A hidden
+  element keeps its space; live text sizes its box by `maxChars`.
+- **Limits:** a spec up to 6 KB (the clock holds the request twice while it receives it),
+  96 elements, 8 levels of nesting (deeper elements are left out, with a line in the
+  reply), and a compiled face of 64 items and 8 KB. 400 with the reason for a spec that
+  cannot be drawn, 507 when the clock is short of memory or could not hold the request
+  (the face of that name is left as it was).
+- **Storage:** the spec is kept as `/specs/<name>.json`; `GET /api/faces/get` returns the
+  compiled face. Deleting the face deletes both.
+
 ## Device status and crashes
 
 `GET /status` (no sign-in) describes the clock: version and build, uptime, `heap` and

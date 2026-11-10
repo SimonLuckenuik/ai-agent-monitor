@@ -16,6 +16,7 @@ Needs Docker and Pillow.
 """
 import argparse
 import base64
+import gzip
 import json
 import re
 import sys
@@ -31,6 +32,7 @@ from emulator import (FIXED_TIME, ROOT, TZ, Emulator, HttpError, digest, epoch, 
 OUT = ROOT / ".pio" / "integration"
 EXAMPLES = ROOT / "examples" / "faces"
 SKILL_EXAMPLES = ROOT / "plugins" / "ai-agent-monitor" / "skills" / "ai-agent-monitor" / "examples"
+JR_EXAMPLES = ROOT / "examples" / "json-render"   # json-render specs (spec 047)
 POMODORO = EXAMPLES / "smalltv-pomodoro"   # converted from smalltv-pomodoro (spec 026)
 POMODORO_SAMPLE = {"vars": {"done": 5, "goal": 8, "streak": 3}}
 
@@ -896,6 +898,60 @@ def agent_faces(emu):
         emu.push_face(f"agent-{name}", face, show=True)
         shot(emu, f"agent_{name}")
         emu.delete_face(f"agent-{name}")
+
+
+@case
+def json_render(emu):
+    """json-render specs compiled on the clock (spec 047): the examples, the catalog, warnings, limits."""
+    emu.set("facesapi", 1)
+    # The catalog and its prompt are served gzipped, and refused to a client that cannot take it.
+    for path in ("/api/catalog", "/api/catalog/prompt"):
+        expect_error(406, "gzip", emu.get, path)
+        req = urllib.request.Request(emu.api + path, headers={"Accept-Encoding": "gzip"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            check(r.headers.get("Content-Encoding") == "gzip", f"{path}: gzipped")
+            body = gzip.decompress(r.read()).decode()
+        if path == "/api/catalog":
+            cat = json.loads(body)
+            check({"Box", "Text", "Clock", "Icon"} <= set(cat["components"]), "catalog components")
+        else:
+            check("json-render" in body and "### Box" in body, "catalog prompt")
+    # Every example, with the values an agent would push.
+    samples = json.loads((JR_EXAMPLES / "samples.json").read_text(encoding="utf-8"))
+    for name, values in samples.items():
+        if values:
+            emu.vars(**values)
+        reply = emu.push_face(f"jr-{name}", (JR_EXAMPLES / f"{name}.json").read_bytes(), show=True)
+        check(reply.startswith("OK"), f"jr-{name}: {reply}")
+        shot(emu, f"json_render_{name}")
+        emu.delete_face(f"jr-{name}")
+    # What the clock cannot draw is drawn approximately and listed in the reply.
+    spec = {"root": "r", "elements": {
+        "r": {"type": "Box", "props": {"flexDirection": "column"}, "children": ["a", "b", "c"]},
+        "a": {"type": "Text", "props": {"text": "Hello", "italic": True}, "children": []},
+        "b": {"type": "Gizmo", "props": {}, "children": []},
+        "c": {"type": "Text", "props": {"text": {"$state": "/vars/who"}}, "children": ["nope"]}}}
+    reply = emu.push_face("jr-warn", spec, show=True)
+    for w in ("italic is not drawn", "unknown component Gizmo", "child nope of c does not exist"):
+        check(w in reply, f"warning: {w}")
+    shot(emu, "json_render_warnings", min_lit=100)
+    emu.delete_face("jr-warn")
+    # Nesting past the limit leaves the deeper elements out, with a warning, not a crash.
+    els = {f"b{i}": {"type": "Box", "props": {}, "children": [f"b{i + 1}"]} for i in range(11)}
+    els["b11"] = {"type": "Text", "props": {"text": "deep"}, "children": []}
+    reply = emu.push_face("jr-deep", {"root": "b0", "elements": els})
+    check("nested deeper than" in reply, "depth warning")
+    emu.delete_face("jr-deep")
+    # A spec that cannot be drawn at all, and one over the size limit.
+    expect_error(400, "A spec has", emu.push_face, "jr-bad", {"root": "r", "elements": None})
+    # A body too big for the web server to hold arrives empty: 507, and the face is kept.
+    emu.push_face("jr-keep", {"root": "r", "elements": {"r": {"type": "Text", "props": {"text": "kept"}, "children": []}}})
+    big = {"root": "r", "elements": {"r": {"type": "Text", "props": {"text": "x" * 13000}, "children": []}}}
+    expect_error(507, "memory", emu.push_face, "jr-keep", big)
+    check("jr-keep" in emu.faces()["faces"], "a lost body kept the face")
+    emu.delete_face("jr-keep")
+    mid = {"root": "r", "elements": {"r": {"type": "Text", "props": {"text": "x" * 6200}, "children": []}}}
+    expect_error(400, "larger than 6 KB", emu.push_face, "jr-mid", mid)
 
 
 @case

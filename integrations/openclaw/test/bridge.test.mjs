@@ -212,7 +212,7 @@ test("device.info, device.status and clock.help are read-only summaries of /stat
   assert.ok(r.fc.requests.slice(before).every((q) => q.method === "GET"));
 });
 
-test("clock.catalog returns the json-render prompt; clock.face.save takes a spec up to 12 KB", async (t) => {
+test("clock.catalog returns the json-render prompt; clock.face.save takes a spec up to 6 KB", async (t) => {
   const r = await rig();
   t.after(r.close);
   const { conn, identity } = r.start();

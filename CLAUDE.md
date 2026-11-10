@@ -119,6 +119,7 @@ product as it is, and change with the code; specs describe a piece of work.
 | `src/starter.cpp` | The starter: setup page, WiFi, GitHub's names and NAT for the setup network (`[env:starter]` only) |
 | `src/faces.cpp` | Every face; the custom-face renderer (expressions, SVG paths, gradients, wrapping); the Message face; the Big tiles and their monoline font; weather icons |
 | `src/integrations.cpp` | Custom faces API, agent messages, geekmagic-hacs compatibility, MQTT |
+| `src/jsonrender.cpp` | json-render specs compiled into custom faces: layout, colours, the catalog's components (spec 047) |
 | `src/routes.h` | The web server's routes as tables in flash, answered by one handler (no heap per route) |
 | `src/crash.cpp` | Crash records (RTC memory, then `/crashes.bin`), crash-loop protection and safe mode |
 | `src/weather.cpp` | Open-Meteo, WMO words in English and French |
@@ -320,6 +321,14 @@ change.
   `docs/specifications/settings.md`; keep it, `applySetting()`, `configJson()` and the
   settings page in step. Role names live in `ROLE_NAMES` (`src/faces.cpp`), in the
   page's `ROLES`, and in `clock.py`'s `FIELDS["theme"]`.
+- json-render (spec 047): the catalog is `integrations/json-render/catalog.json`;
+  `python scripts/gen_jr_catalog.py` writes `prompt.md` from it, and the build makes the
+  clock's gzipped copies (`/sys/catalog.json.gz`, `/sys/prompt.md.gz`). A component or
+  prop the compiler gains or loses goes in the catalog, the API reference's json-render
+  section and an example (`examples/json-render/`, values in its `samples.json`; the
+  `json_render` integration case pushes each one). Its JSON keys are PROGMEM (`K_<key>`,
+  added by hand) and String comparisons use `eq(s, PSTR(...))`: the RAM-string check
+  fails otherwise.
 - Example faces (`examples/faces/`): at most 4 KB minified and 32 items each, valid
   for `clock.py check`. `samples.json` holds the variables, histories and messages
   each one is shown with (`"@+N"`: N seconds after the test time; `"@age N value"`:

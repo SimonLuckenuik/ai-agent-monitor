@@ -7,7 +7,8 @@
     python clock.py status
     python clock.py faces
     python clock.py check FACE.json [FACE.json ...]
-    python clock.py push NAME FACE.json [--show] [--force]
+    python clock.py push NAME FACE.json [--show] [--force]   (a face, or a json-render spec)
+    python clock.py catalog [--prompt]        the clock's json-render catalog (or its prompt)
     python clock.py show NAME
     python clock.py delete NAME
     python clock.py vars name=value [name=value ...] [--ttl S] [--persist] [--history] [--add]
@@ -17,7 +18,9 @@
 
 check validates faces against reference/face.schema.json (with the jsonschema package
 when it is installed, else the main rules) and flags unknown placeholder names. push
-checks first; --force pushes anyway. vars sends numbers as numbers, "null" deletes.
+checks first; --force pushes anyway. A json-render spec ("root" and "elements") is
+compiled by the clock: check only looks at its shape, and the clock's reply lists what it
+drew approximately. vars sends numbers as numbers, "null" deletes.
 
 The gallery is examples/faces/marketplace.json in the project's repo: every example face
 with its preview and the variables it reads.
@@ -35,6 +38,7 @@ Configuration, from the environment:
 
 Standard library only.
 """
+import gzip
 import http.cookiejar
 import json
 import os
@@ -124,7 +128,34 @@ def placeholders(value):
     return re.findall(r"\{([A-Za-z0-9_.]+)(?=[}:|])", value) if isinstance(value, str) else []
 
 
+def is_spec(doc):
+    """A json-render spec (spec 047), which the clock compiles into a face."""
+    return isinstance(doc, dict) and "root" in doc and "elements" in doc
+
+
+def check_spec(spec):
+    """The shape of a json-render spec; the clock checks the rest when it compiles it."""
+    els = spec.get("elements")
+    if not isinstance(els, dict) or not els:
+        return ["elements: an object of elements by id"]
+    problems = []
+    if spec.get("root") not in els:
+        problems.append(f"root: {spec.get('root')!r} is not an element")
+    if len(els) > 96:
+        problems.append(f"{len(els)} elements: at most 96")
+    for eid, e in els.items():
+        if not isinstance(e, dict) or not isinstance(e.get("type"), str):
+            problems.append(f"{eid}: needs a type")
+            continue
+        for c in e.get("children") or []:
+            if c not in els:
+                problems.append(f"{eid}: child {c!r} does not exist")
+    return problems
+
+
 def check_face(face):
+    if is_spec(face):
+        return check_spec(face)
     """Problems in a face (a list of strings; empty when it is fine)."""
     with open(SCHEMA, encoding="utf-8") as f:
         schema = json.load(f)
@@ -273,10 +304,20 @@ def main(argv):
             raise SystemExit("Not pushed (--force to push anyway):\n  " + "\n  ".join(problems))
         sign_in()
         body = json.dumps(face, separators=(",", ":"))
-        if len(body) > 4096:
-            raise SystemExit(f"Face is {len(body)} bytes once minified; the clock takes at most 4096")
+        limit = 6144 if is_spec(face) else 4096
+        if len(body) > limit:
+            raise SystemExit(f"{'Spec' if is_spec(face) else 'Face'} is {len(body)} bytes once minified; "
+                             f"the clock takes at most {limit}")
         show = "&show=1" if "--show" in args[2:] else ""
         print(call("POST", f"/api/faces?name={face_name(args[0])}{show}", body).decode())
+    elif cmd == "catalog":
+        path = "/api/catalog/prompt" if "--prompt" in args else "/api/catalog"
+        req = urllib.request.Request(CLOCK + path, headers={"Accept-Encoding": "gzip"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read()
+            if r.headers.get("Content-Encoding") == "gzip":
+                data = gzip.decompress(data)
+        print(data.decode())
     elif cmd in ("show", "delete") and len(args) == 1:
         sign_in()
         print(call("POST", f"/api/faces/{cmd}?name={face_name(args[0])}", "").decode())

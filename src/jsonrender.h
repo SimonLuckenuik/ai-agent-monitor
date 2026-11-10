@@ -1,6 +1,6 @@
 // json-render specs (https://github.com/vercel-labs/json-render) compiled on the clock
-// into a custom face (spec 047). Only in builds with SMARTCLOCK_JSONRENDER=1 (for now the
-// emulator): the device build compiles none of it.
+// into a custom face (spec 047). In builds with SMARTCLOCK_JSONRENDER=1: the firmware
+// (platformio.ini) and the emulator; not the starter.
 #pragma once
 #include <Arduino.h>
 
@@ -8,7 +8,9 @@
 #define SMARTCLOCK_JSONRENDER 0
 #endif
 
-constexpr size_t JR_SOURCE_MAX = 12288;   // the spec as sent
+// The spec as sent: the web server needs it twice in one piece while it reads it, which
+// a larger one does not find in the clock's heap (measured: 6 KB arrive, 8 KB do not).
+constexpr size_t JR_SOURCE_MAX = 6144;
 constexpr size_t JR_FACE_MAX = 8192;      // the face it compiles to
 constexpr int JR_ITEMS_MAX = 64;          // the face's items
 constexpr int JR_ELEMENTS_MAX = 96;

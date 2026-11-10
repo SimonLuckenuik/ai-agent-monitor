@@ -12,6 +12,9 @@ firmware (a fork of SmartClock-OSS). There are two ways to put something on it:
    by the clock's built-in Message face. One call, no key, nothing to design.
 2. **Custom faces**: your own JSON layouts (text, shapes, SVG icons, gradients, live
    values) when a message is not enough. These need the clock's API key.
+3. **json-render specs** (firmware 2.7.0 on): a layout of components (Box, Text,
+   StatusLine, ProgressBar, Metric, Table …) that the clock lays out and turns into a
+   custom face itself. No pixel coordinates; the same API key.
 
 `scripts/clock.py` (Python standard library only) wraps the HTTP API; run it from
 this skill's directory, or call the API directly (`reference/api.md`).
@@ -130,6 +133,27 @@ top-level items; 40 custom faces in all; names are 1–20 of `a-z 0-9 _ -`. At m
 variables, names 1–15 of `A-Z a-z 0-9 _`, values up to 160 characters; a new one beyond
 that answers 507 "No room for variable" (delete some with `null`).
 
+## json-render specs
+
+A [json-render](https://github.com/vercel-labs/json-render) spec is the quickest way to a
+tidy screen of text, status and numbers: you describe components, the clock does the
+layout. Read the clock's catalog first, `python scripts/clock.py catalog --prompt` (the
+components, their props, the live values and the rules); then write one JSON object:
+
+```json
+{"root": "s", "elements": {
+  "s": {"type": "Box", "props": {"flexDirection": "column", "padding": 1}, "children": ["h", "b"]},
+  "h": {"type": "Heading", "props": {"text": "Deploy"}, "children": []},
+  "b": {"type": "ProgressBar", "props": {"value": {"$state": "/vars/pct", "fallback": 0}}, "children": []}}}
+```
+
+Push it like a face (`clock.py push deploy deploy.json --show`); the reply is `OK`
+followed by one line for anything drawn approximately (fix those). Update it with
+`clock.py vars pct=40`, as for any face. Lengths are character cells (40 × 15 on the
+screen); give live text `maxChars`. At most 6 KB, 96 elements, 8 levels of nesting.
+Use a custom face instead for animation, gradients, pictures, sprites or exact pixels.
+Tested examples: the repository's `examples/json-render/`.
+
 ## Rules of the screen
 
 - **Text is ASCII.** Font `2` (16 px) and `4` (26 px) are text; `6` (48 px) is
@@ -164,7 +188,8 @@ changing anything: `python scripts/clock.py screenshot shot.png`, then view the 
 
 ## References
 
-- `reference/api.md`: messages, custom faces, MQTT and the emulator's extras.
+- `reference/api.md`: messages, custom faces, json-render specs, MQTT and the emulator's
+  extras.
 - `reference/face-format.md`: every item type, placeholder, modifier, expression,
   map, palette, repeat, sprite, sparkline, path and gradient, with examples.
 - `reference/face.schema.json`: the JSON Schema of a face (`clock.py check` uses it).

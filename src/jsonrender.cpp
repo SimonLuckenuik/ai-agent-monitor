@@ -1463,7 +1463,7 @@ namespace {
 String jrCompileHere(const char* path, String& out, String& warnings, String& seedOut) {
   File src = LittleFS.open(path, "r");
   if (!src) return F("Could not read the spec");
-  if (src.size() > JR_SOURCE_MAX) { src.close(); return F("The spec is larger than 12 KB"); }
+  if (src.size() > JR_SOURCE_MAX) { src.close(); return F("The spec is larger than 6 KB"); }
   JsonDocument doc;
   DeserializationError e = parseJson(doc, src);
   src.close();

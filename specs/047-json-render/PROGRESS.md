@@ -255,3 +255,28 @@ heap problem (unchanged); `validateSpec()`.
 - Checked: faces and warnings byte-identical for every sample spec and the spec that
   triggers each warning (emulator, old binary against new); every sample saves on the
   25.6 KB arena; safety tests pass on both images, unit tests pass.
+
+## 2026-11-09/10: approved, in the firmware build (the owner: "lets do the json-render")
+
+- Branch rebuilt on 2.6.0: the json-render commits cherry-picked onto `dev` (the earlier
+  branch, based on phase 2 before release, is `feat/047-json-render-old`); its LTO and
+  docs-restore commits were already in 2.6.0.
+- `-D SMARTCLOCK_JSONRENDER=1` in the firmware's build flags (`-U` in the starter's);
+  `build_options.py` adds the catalog files only for the firmware. 607,168 B and
+  426,501 B: 3.1 KB of update room. The starter is unchanged (381,600 B).
+- `examples/json-render/`: six specs (ci, meeting, weather, build, metrics, status) and
+  `samples.json`. New integration case `json_render`: the catalog routes (406 without gzip,
+  the JSON and the prompt), every example pushed and captured, the warnings in the reply,
+  the depth warning, a malformed spec, the size limit.
+- **Defect found by it:** bodies of 8 KB and more arrived empty (the web server holds a
+  body twice), the clock answered OK and deleted the face of that name. Fixed: 507 when a
+  body was sent but did not arrive; the spec limit is 6 KB
+  (docs/issues/2026-11-10-large-face-body-arrives-empty.md). The 12 KB limit set in the
+  prototype was never reached through HTTP; the memory work's 9.9 KB stress spec was sent
+  on a fresher heap.
+- `/status` `jrStack` is measured on the chip only (the emulator runs the compile on its
+  own stack model and logs its use): not checked in the integration case.
+- Docs: the API reference's json-render section (the skill's face-format.md from it), the
+  skill (SKILL.md, api.md; `clock.py push` takes a spec, `check` checks its shape,
+  `catalog [--prompt]`; plugin 0.8.0), the OpenClaw skill and bridge (6 KB), CHANGELOG,
+  CLAUDE.md. Version 2.7.0-dev.

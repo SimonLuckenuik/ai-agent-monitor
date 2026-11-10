@@ -107,6 +107,10 @@ link-time optimisation): 563,248 B and 396,406 B, **78 KB of room**.
 
 ## Specs in flight
 
+**In progress:** [047](../specs/047-json-render/SPEC.md) (json-render specs compiled on the
+clock), approved 2026-11-09, on branch `feat/047-json-render` for 2.7.0: in the firmware
+build, 3.3 KB of update room.
+
 Done in 2.2.0, not yet seen on the clock: [039](../specs/039-animated-messages/SPEC.md)
 (Moni and animated messages). Done in 2.1.1:
 [036](../specs/036-flash-room/SPEC.md) (flash room), [038](../specs/038-fifth-forecast-day/SPEC.md)

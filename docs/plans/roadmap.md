@@ -1,11 +1,13 @@
 # Roadmap
 
-Updated: 2026-11-06. The order of work. Each line is a spec in [specs/](../../specs/README.md)
+Updated: 2026-11-09. The order of work. Each line is a spec in [specs/](../../specs/README.md)
 or an idea that becomes one when work on it starts; nothing is built before its spec is
 approved.
 
 ## Next
 
+0. **json-render on the clock** ([047](../../specs/047-json-render/SPEC.md), approved
+   2026-11-09): in the firmware build for 2.7.0; a 2.7.0-dev image on a clock first.
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
 2. **Check 2.3.1 on the clock**: the update installs (4 KB of room left); pair the clock
