@@ -1,0 +1,466 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#0d1117"
+   },
+   "children": [
+    "head",
+    "rule",
+    "rows",
+    "sp",
+    "fc"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "hi",
+    "ht",
+    "hsp",
+    "hb"
+   ]
+  },
+  "hi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M18 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+     "M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+     "M13 6h3a2 2 0 0 1 2 2v7",
+     "M6 9v12"
+    ],
+    "size": 3,
+    "color": "#a371f7",
+    "fill": "none",
+    "strokeWidth": 2.5
+   }
+  },
+  "ht": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/repo",
+     "fallback": "Pull requests"
+    },
+    "fontSize": 26,
+    "color": "#ffffff",
+    "maxChars": 12,
+    "wrap": "truncate"
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "hb": {
+   "type": "Badge",
+   "props": {
+    "label": {
+     "$template": "${/vars/mine|0} on you"
+    },
+    "background": {
+     "$cond": {
+      "$state": "/vars/mine",
+      "gt": 0
+     },
+     "$then": "#d29922",
+     "$else": "#238636"
+    },
+    "color": "#0d1117",
+    "maxChars": 8
+   }
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {
+    "title": {
+     "$template": "${/vars/prs|0} open"
+    },
+    "color": "#30363d"
+   }
+  },
+  "rows": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "gap": 1
+   },
+   "children": [
+    "r1",
+    "r2",
+    "r3",
+    "r4"
+   ]
+  },
+  "r1": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "r1c",
+    "r1r",
+    "r1t"
+   ]
+  },
+  "r1t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/pr1",
+     "fallback": ""
+    },
+    "color": "#e6edf3",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "r1r": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/rev1",
+     "fallback": ""
+    },
+    "width": 4,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/vars/rev1",
+      "eq": "ok"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/rev1",
+       "eq": "fix"
+      },
+      "$then": "#f85149",
+      "$else": "#d29922"
+     }
+    }
+   }
+  },
+  "r1c": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0d1117",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/ci1",
+      "eq": "pass"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/ci1",
+       "eq": "fail"
+      },
+      "$then": "#f85149",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/ci1",
+        "eq": "run"
+       },
+       "$then": "#d29922",
+       "$else": "#0d1117"
+      }
+     }
+    }
+   }
+  },
+  "r2": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "r2c",
+    "r2r",
+    "r2t"
+   ]
+  },
+  "r2t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/pr2",
+     "fallback": ""
+    },
+    "color": "#e6edf3",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "r2r": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/rev2",
+     "fallback": ""
+    },
+    "width": 4,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/vars/rev2",
+      "eq": "ok"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/rev2",
+       "eq": "fix"
+      },
+      "$then": "#f85149",
+      "$else": "#d29922"
+     }
+    }
+   }
+  },
+  "r2c": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0d1117",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/ci2",
+      "eq": "pass"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/ci2",
+       "eq": "fail"
+      },
+      "$then": "#f85149",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/ci2",
+        "eq": "run"
+       },
+       "$then": "#d29922",
+       "$else": "#0d1117"
+      }
+     }
+    }
+   }
+  },
+  "r3": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "r3c",
+    "r3r",
+    "r3t"
+   ]
+  },
+  "r3t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/pr3",
+     "fallback": ""
+    },
+    "color": "#e6edf3",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "r3r": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/rev3",
+     "fallback": ""
+    },
+    "width": 4,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/vars/rev3",
+      "eq": "ok"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/rev3",
+       "eq": "fix"
+      },
+      "$then": "#f85149",
+      "$else": "#d29922"
+     }
+    }
+   }
+  },
+  "r3c": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0d1117",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/ci3",
+      "eq": "pass"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/ci3",
+       "eq": "fail"
+      },
+      "$then": "#f85149",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/ci3",
+        "eq": "run"
+       },
+       "$then": "#d29922",
+       "$else": "#0d1117"
+      }
+     }
+    }
+   }
+  },
+  "r4": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "r4c",
+    "r4r",
+    "r4t"
+   ]
+  },
+  "r4t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/pr4",
+     "fallback": ""
+    },
+    "color": "#e6edf3",
+    "maxChars": 30,
+    "wrap": "truncate"
+   }
+  },
+  "r4r": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/rev4",
+     "fallback": ""
+    },
+    "width": 4,
+    "maxChars": 4,
+    "color": {
+     "$cond": {
+      "$state": "/vars/rev4",
+      "eq": "ok"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/rev4",
+       "eq": "fix"
+      },
+      "$then": "#f85149",
+      "$else": "#d29922"
+     }
+    }
+   }
+  },
+  "r4c": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0d1117",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/ci4",
+      "eq": "pass"
+     },
+     "$then": "#3fb950",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/ci4",
+       "eq": "fail"
+      },
+      "$then": "#f85149",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/ci4",
+        "eq": "run"
+       },
+       "$then": "#d29922",
+       "$else": "#0d1117"
+      }
+     }
+    }
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "fc": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "fontSize": 16,
+    "color": "#7d8590",
+    "align": "right"
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "repo": "web-app",
+   "prs": 7,
+   "mine": 2,
+   "pr1": "#482 Fix login redirect loop",
+   "rev1": "you",
+   "ci1": "pass",
+   "pr2": "#479 Dark mode for settings",
+   "rev2": "you",
+   "ci2": "run",
+   "pr3": "#476 Bump the image library",
+   "rev3": "ok",
+   "ci3": "pass",
+   "pr4": "#471 Cache the user avatars",
+   "rev4": "fix",
+   "ci4": "fail"
+  }
+ }
+}

@@ -7,6 +7,14 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Added
+
+- **Six more json-render faces in the gallery** (spec 049): pr-queue (pull requests, their
+  review and CI), on-call (alerts by severity, who is paged), now-playing (music from Home
+  Assistant), departures (the next buses or trains), activity-rings (move, steps and water
+  against goals) and laundry (washer and dryer). Like the first six, they show demo values
+  as soon as they are installed, and need 2.7.0. The skill (plugin 0.8.1) lists them.
+
 ## 2.7.0 - 2026-11-10
 
 ### Upgrading

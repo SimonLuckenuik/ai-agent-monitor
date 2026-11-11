@@ -1,0 +1,261 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#08111c"
+   },
+   "children": [
+    "head",
+    "first",
+    "rule",
+    "tab"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "hi",
+    "ht",
+    "hsp",
+    "hc"
+   ]
+  },
+  "hi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M5 3h14a2 2 0 0 1 2 2v12H3V5a2 2 0 0 1 2-2z",
+     "M3 11h18",
+     "M12 3v8",
+     "M7 17v3",
+     "M17 17v3"
+    ],
+    "size": 3,
+    "color": "#ffcc00",
+    "fill": "none",
+    "strokeWidth": 2.5
+   }
+  },
+  "ht": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/stop",
+     "fallback": "My stop"
+    },
+    "color": "#ffffff",
+    "maxChars": 22,
+    "wrap": "truncate"
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "hc": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "fontSize": 16,
+    "color": "@muted",
+    "align": "right"
+   }
+  },
+  "first": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1,
+    "borderStyle": "round",
+    "borderColor": {
+     "$cond": {
+      "$state": "/vars/min1",
+      "lte": 2
+     },
+     "$then": "#ff5a5a",
+     "$else": "#1f3550"
+    },
+    "paddingLeft": 1,
+    "paddingRight": 1
+   },
+   "children": [
+    "fl",
+    "fcol",
+    "fsp",
+    "fm",
+    "fu"
+   ]
+  },
+  "fl": {
+   "type": "Badge",
+   "props": {
+    "label": {
+     "$state": "/vars/line1",
+     "fallback": "-"
+    },
+    "background": "#ffcc00",
+    "color": "#000000",
+    "maxChars": 3
+   }
+  },
+  "fcol": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "fn",
+    "fd"
+   ]
+  },
+  "fn": {
+   "type": "Text",
+   "props": {
+    "text": "Next",
+    "color": "@muted"
+   }
+  },
+  "fd": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/to1",
+     "fallback": ""
+    },
+    "color": "#ffffff",
+    "maxChars": 14,
+    "wrap": "truncate"
+   }
+  },
+  "fsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "fm": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/min1",
+     "fallback": "-"
+    },
+    "font": "big",
+    "fontSize": 40,
+    "align": "right",
+    "maxChars": 2,
+    "color": {
+     "$cond": {
+      "$state": "/vars/min1",
+      "lte": 2
+     },
+     "$then": "#ff5a5a",
+     "$else": "#ffcc00"
+    }
+   }
+  },
+  "fu": {
+   "type": "Text",
+   "props": {
+    "text": "min",
+    "color": "@muted"
+   }
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {
+    "title": "Then",
+    "color": "#1f3550"
+   }
+  },
+  "tab": {
+   "type": "Table",
+   "props": {
+    "headerColor": "#5d7a99",
+    "columns": [
+     {
+      "header": "Line",
+      "key": "l"
+     },
+     {
+      "header": "To",
+      "key": "d"
+     },
+     {
+      "header": "Min",
+      "key": "m",
+      "align": "right"
+     }
+    ],
+    "rows": [
+     {
+      "l": {
+       "$state": "/vars/line2",
+       "fallback": ""
+      },
+      "d": {
+       "$state": "/vars/to2",
+       "fallback": ""
+      },
+      "m": {
+       "$state": "/vars/min2",
+       "fallback": ""
+      }
+     },
+     {
+      "l": {
+       "$state": "/vars/line3",
+       "fallback": ""
+      },
+      "d": {
+       "$state": "/vars/to3",
+       "fallback": ""
+      },
+      "m": {
+       "$state": "/vars/min3",
+       "fallback": ""
+      }
+     },
+     {
+      "l": {
+       "$state": "/vars/line4",
+       "fallback": ""
+      },
+      "d": {
+       "$state": "/vars/to4",
+       "fallback": ""
+      },
+      "m": {
+       "$state": "/vars/min4",
+       "fallback": ""
+      }
+     }
+    ]
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "stop": "Main St & 5th",
+   "line1": "42",
+   "to1": "Downtown",
+   "min1": 3,
+   "line2": "17",
+   "to2": "Airport",
+   "min2": 8,
+   "line3": "42",
+   "to3": "Downtown",
+   "min3": 14,
+   "line4": "9",
+   "to4": "Harbour",
+   "min4": 21
+  }
+ }
+}

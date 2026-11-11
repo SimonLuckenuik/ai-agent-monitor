@@ -1,0 +1,233 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#000000"
+   },
+   "children": [
+    "top",
+    "bottom"
+   ]
+  },
+  "top": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 2
+   },
+   "children": [
+    "rings",
+    "legend"
+   ]
+  },
+  "rings": {
+   "type": "Box",
+   "props": {
+    "width": 20,
+    "height": 7.5
+   },
+   "children": [
+    "rm",
+    "rs",
+    "rw"
+   ]
+  },
+  "rm": {
+   "type": "Ring",
+   "props": {
+    "value": {
+     "$state": "/vars/move",
+     "fallback": "0"
+    },
+    "max": 600,
+    "size": 20,
+    "thickness": 2,
+    "color": "#ff2d55",
+    "track": "#1c1c1e",
+    "position": "absolute",
+    "top": 0.0,
+    "left": 0.0
+   }
+  },
+  "rs": {
+   "type": "Ring",
+   "props": {
+    "value": {
+     "$state": "/vars/steps",
+     "fallback": "0"
+    },
+    "max": 10000,
+    "size": 15,
+    "thickness": 2,
+    "color": "#a3f53c",
+    "track": "#1c1c1e",
+    "position": "absolute",
+    "top": 0.9375,
+    "left": 2.5
+   }
+  },
+  "rw": {
+   "type": "Ring",
+   "props": {
+    "value": {
+     "$state": "/vars/water",
+     "fallback": "0"
+    },
+    "max": 8,
+    "size": 10,
+    "thickness": 2,
+    "color": "#2ad4ff",
+    "track": "#1c1c1e",
+    "position": "absolute",
+    "top": 1.875,
+    "left": 5.0
+   }
+  },
+  "legend": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "gap": 1,
+    "flexGrow": 1
+   },
+   "children": [
+    "lm",
+    "ls",
+    "lw"
+   ]
+  },
+  "lm": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "lml",
+    "lmv"
+   ]
+  },
+  "lml": {
+   "type": "Text",
+   "props": {
+    "text": "Move",
+    "color": "@muted"
+   }
+  },
+  "lmv": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/vars/move|0}/600"
+    },
+    "fontSize": 26,
+    "color": "#ff2d55",
+    "maxChars": 7
+   }
+  },
+  "ls": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "lsl",
+    "lsv"
+   ]
+  },
+  "lsl": {
+   "type": "Text",
+   "props": {
+    "text": "Steps",
+    "color": "@muted"
+   }
+  },
+  "lsv": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/vars/steps|0}"
+    },
+    "fontSize": 26,
+    "color": "#a3f53c",
+    "maxChars": 7
+   }
+  },
+  "lw": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "lwl",
+    "lwv"
+   ]
+  },
+  "lwl": {
+   "type": "Text",
+   "props": {
+    "text": "Water",
+    "color": "@muted"
+   }
+  },
+  "lwv": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$template": "${/vars/water|0}/8"
+    },
+    "fontSize": 26,
+    "color": "#2ad4ff",
+    "maxChars": 7
+   }
+  },
+  "bottom": {
+   "type": "Box",
+   "props": {
+    "gap": 2,
+    "alignItems": "end"
+   },
+   "children": [
+    "streak",
+    "week"
+   ]
+  },
+  "streak": {
+   "type": "Metric",
+   "props": {
+    "label": "Streak, days",
+    "value": {
+     "$state": "/vars/streak",
+     "fallback": "0"
+    },
+    "trend": "up",
+    "color": "#ffffff",
+    "width": 15
+   }
+  },
+  "week": {
+   "type": "Sparkline",
+   "props": {
+    "state": "/vars/daily",
+    "label": "Steps, past days",
+    "color": "#a3f53c",
+    "min": 0,
+    "height": 3,
+    "flexGrow": 1
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "move": 430,
+   "steps": 7840,
+   "water": 5,
+   "streak": 12,
+   "daily": 7840
+  }
+ }
+}

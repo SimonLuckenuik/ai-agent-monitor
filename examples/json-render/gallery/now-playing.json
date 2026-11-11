@@ -1,0 +1,217 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#120a1a"
+   },
+   "children": [
+    "head",
+    "art",
+    "song",
+    "artist",
+    "album",
+    "sp",
+    "bar",
+    "times"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "src",
+    "hsp",
+    "spin",
+    "paused"
+   ]
+  },
+  "src": {
+   "type": "Badge",
+   "props": {
+    "label": {
+     "$state": "/vars/source",
+     "fallback": "Speaker"
+    },
+    "background": "#1db954",
+    "color": "#000000",
+    "maxChars": 12
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "spin": {
+   "type": "Spinner",
+   "props": {
+    "label": "playing",
+    "color": "#e879f9"
+   },
+   "visible": {
+    "$state": "/vars/player",
+    "eq": "playing"
+   }
+  },
+  "paused": {
+   "type": "Text",
+   "props": {
+    "text": "paused",
+    "color": "@muted",
+    "position": "absolute",
+    "top": 0,
+    "right": 0
+   },
+   "visible": {
+    "$state": "/vars/player",
+    "neq": "playing"
+   }
+  },
+  "art": {
+   "type": "Box",
+   "props": {
+    "justifyContent": "center"
+   },
+   "children": [
+    "ai"
+   ]
+  },
+  "ai": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M9 18V5l12-2v13",
+     "M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
+     "M21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
+    ],
+    "size": 9,
+    "color": {
+     "$cond": {
+      "$state": "/vars/player",
+      "eq": "playing"
+     },
+     "$then": "#e879f9",
+     "$else": "#5b4a66"
+    },
+    "fill": "none",
+    "strokeWidth": 1.5
+   }
+  },
+  "song": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/song",
+     "fallback": "Nothing playing"
+    },
+    "fontSize": 26,
+    "color": "#ffffff",
+    "align": "center",
+    "maxChars": 18,
+    "wrap": "truncate"
+   }
+  },
+  "artist": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/artist",
+     "fallback": ""
+    },
+    "color": "#e879f9",
+    "align": "center",
+    "maxChars": 34,
+    "wrap": "truncate"
+   }
+  },
+  "album": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/album",
+     "fallback": ""
+    },
+    "color": "@muted",
+    "align": "center",
+    "maxChars": 34,
+    "wrap": "truncate"
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "bar": {
+   "type": "ProgressBar",
+   "props": {
+    "progress": {
+     "$state": "/vars/played",
+     "fallback": "0"
+    },
+    "color": {
+     "$cond": {
+      "$state": "/vars/player",
+      "eq": "playing"
+     },
+     "$then": "#e879f9",
+     "$else": "#5b4a66"
+    }
+   }
+  },
+  "times": {
+   "type": "Box",
+   "props": {},
+   "children": [
+    "pos",
+    "tsp",
+    "len"
+   ]
+  },
+  "pos": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/pos",
+     "fallback": "0:00"
+    },
+    "color": "@muted",
+    "maxChars": 6
+   }
+  },
+  "tsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "len": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/len",
+     "fallback": "0:00"
+    },
+    "color": "@muted",
+    "align": "right",
+    "maxChars": 6
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "source": "Living room",
+   "player": "playing",
+   "song": "Northern Lights",
+   "artist": "The Quiet Hours",
+   "album": "Long Way Home",
+   "played": 0.42,
+   "pos": "1:41",
+   "len": "4:02"
+  }
+ }
+}

@@ -1,0 +1,377 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "backgroundColor": "#0b0d10"
+   },
+   "children": [
+    "head",
+    "pg",
+    "rule",
+    "alerts",
+    "sp",
+    "since"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "hi",
+    "ht",
+    "hsp",
+    "hc"
+   ]
+  },
+  "hi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9",
+     "M10.3 21a1.94 1.94 0 0 0 3.4 0"
+    ],
+    "size": 3,
+    "color": {
+     "$cond": {
+      "$state": "/vars/alerts",
+      "eq": 0
+     },
+     "$then": "#3fb950",
+     "$else": "#ff5a5a"
+    },
+    "fill": "none",
+    "strokeWidth": 2.5
+   }
+  },
+  "ht": {
+   "type": "Text",
+   "props": {
+    "text": "On call",
+    "fontSize": 26,
+    "color": "#ffffff"
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "hc": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "fontSize": 16,
+    "color": "@muted",
+    "align": "right"
+   }
+  },
+  "pg": {
+   "type": "KeyValue",
+   "props": {
+    "label": "Paged",
+    "value": {
+     "$state": "/vars/paged",
+     "fallback": "nobody"
+    },
+    "color": "#ffffff"
+   }
+  },
+  "rule": {
+   "type": "Divider",
+   "props": {
+    "title": {
+     "$template": "${/vars/alerts|0} open"
+    },
+    "color": "#262b33"
+   }
+  },
+  "alerts": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column"
+   },
+   "children": [
+    "ok",
+    "a1",
+    "a2",
+    "a3"
+   ]
+  },
+  "ok": {
+   "type": "StatusLine",
+   "props": {
+    "status": "success",
+    "text": "All quiet"
+   },
+   "visible": {
+    "$state": "/vars/alerts",
+    "eq": 0
+   }
+  },
+  "a1": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "a1i",
+    "a1t"
+   ]
+  },
+  "a1i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0b0d10",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/sev1",
+      "eq": "crit"
+     },
+     "$then": "#ff5a5a",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/sev1",
+       "eq": "warn"
+      },
+      "$then": "#ffb020",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/sev1",
+        "eq": "info"
+       },
+       "$then": "#5ab4ff",
+       "$else": "#0b0d10"
+      }
+     }
+    }
+   }
+  },
+  "a1t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/alert1",
+     "fallback": ""
+    },
+    "color": {
+     "$cond": {
+      "$state": "/vars/sev1",
+      "eq": "crit"
+     },
+     "$then": "#ff5a5a",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/sev1",
+       "eq": "warn"
+      },
+      "$then": "#ffb020",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/sev1",
+        "eq": "info"
+       },
+       "$then": "#5ab4ff",
+       "$else": "#0b0d10"
+      }
+     }
+    },
+    "maxChars": 34,
+    "wrap": "truncate"
+   }
+  },
+  "a2": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "a2i",
+    "a2t"
+   ]
+  },
+  "a2i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0b0d10",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/sev2",
+      "eq": "crit"
+     },
+     "$then": "#ff5a5a",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/sev2",
+       "eq": "warn"
+      },
+      "$then": "#ffb020",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/sev2",
+        "eq": "info"
+       },
+       "$then": "#5ab4ff",
+       "$else": "#0b0d10"
+      }
+     }
+    }
+   }
+  },
+  "a2t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/alert2",
+     "fallback": ""
+    },
+    "color": {
+     "$cond": {
+      "$state": "/vars/sev2",
+      "eq": "crit"
+     },
+     "$then": "#ff5a5a",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/sev2",
+       "eq": "warn"
+      },
+      "$then": "#ffb020",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/sev2",
+        "eq": "info"
+       },
+       "$then": "#5ab4ff",
+       "$else": "#0b0d10"
+      }
+     }
+    },
+    "maxChars": 34,
+    "wrap": "truncate"
+   }
+  },
+  "a3": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center",
+    "gap": 1
+   },
+   "children": [
+    "a3i",
+    "a3t"
+   ]
+  },
+  "a3i": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"
+    ],
+    "size": 2,
+    "color": "#0b0d10",
+    "fill": {
+     "$cond": {
+      "$state": "/vars/sev3",
+      "eq": "crit"
+     },
+     "$then": "#ff5a5a",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/sev3",
+       "eq": "warn"
+      },
+      "$then": "#ffb020",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/sev3",
+        "eq": "info"
+       },
+       "$then": "#5ab4ff",
+       "$else": "#0b0d10"
+      }
+     }
+    }
+   }
+  },
+  "a3t": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/alert3",
+     "fallback": ""
+    },
+    "color": {
+     "$cond": {
+      "$state": "/vars/sev3",
+      "eq": "crit"
+     },
+     "$then": "#ff5a5a",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/sev3",
+       "eq": "warn"
+      },
+      "$then": "#ffb020",
+      "$else": {
+       "$cond": {
+        "$state": "/vars/sev3",
+        "eq": "info"
+       },
+       "$then": "#5ab4ff",
+       "$else": "#0b0d10"
+      }
+     }
+    },
+    "maxChars": 34,
+    "wrap": "truncate"
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "since": {
+   "type": "Metric",
+   "props": {
+    "label": "Days since an incident",
+    "value": {
+     "$state": "/vars/since",
+     "fallback": "-"
+    },
+    "detail": {
+     "$state": "/vars/incident",
+     "fallback": ""
+    },
+    "color": "#ffffff"
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "paged": "Sam (primary)",
+   "alerts": 2,
+   "sev1": "crit",
+   "alert1": "api: error rate 7% (4 min)",
+   "sev2": "warn",
+   "alert2": "db-2: disk 86% full (38 min)",
+   "since": 12,
+   "incident": "Payments queue stalled"
+  }
+ }
+}

@@ -1,7 +1,9 @@
 # 049 Plan
 
-Status: Approved 2026-11-10; first set: sky, week-ahead, today, home-energy,
-agent-session, printer.
+Status: Done. First set (sky, week-ahead, today, home-energy, agent-session, printer) in
+2.7.0; the second (pr-queue, on-call, now-playing, departures, activity-rings, laundry)
+after it, as gallery files: step 5 again, then 6 and 7 (README rows, previews,
+`marketplace.json`, SKILL.md, CHANGELOG, plugin 0.8.1). No firmware change, no release.
 
 1. **The version table.** Read the CHANGELOG from 2.0.0 to 2.7.0 for every face-format
    addition (item types, fields, fonts, placeholder groups and names); write the table

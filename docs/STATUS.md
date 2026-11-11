@@ -117,8 +117,10 @@ feature that costs flash needs room found first.
 Done in 2.7.0: [047](../specs/047-json-render/SPEC.md) (json-render specs compiled on the
 clock; on agentmonitor-ade1f0 as 2.7.0-dev: the six examples saved, `jrStack` 4,084 B of
 5,632, heap 21 KB with a spec on screen, the size limits as in the emulator, no crash; the
-owner saw the screens match the emulator) and [049](../specs/049-gallery-versions-and-json-render-faces/SPEC.md)'s
-first set (the gallery's firmware versions, six json-render faces; the other six later).
+owner saw the screens match the emulator) and [049](../specs/049-gallery-versions-and-json-render-faces/SPEC.md)
+(the gallery's firmware versions, six json-render faces; the other six, pr-queue, on-call,
+now-playing, departures, activity-rings and laundry, added after the release: gallery
+files only, offered once `main` has them, not yet seen on a clock).
 
 Done in 2.2.0, not yet seen on the clock: [039](../specs/039-animated-messages/SPEC.md)
 (Moni and animated messages). Done in 2.1.1:

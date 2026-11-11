@@ -9,8 +9,6 @@ approved.
 0. **Check 2.7.0 on the clock**: json-render specs saved and shown (2.7.0-dev seen on
    agentmonitor-ade1f0, 2026-11-10), the gallery's json-render faces installed from the
    settings page, "Needs 2.7.0" on an older clock, a day of running.
-0. **The other six json-render gallery faces** ([049](../../specs/049-gallery-versions-and-json-render-faces/SPEC.md)):
-   pr-queue, on-call, now-playing, departures, activity-rings, laundry.
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
 2. **Check 2.3.1 on the clock**: the update installs (4 KB of room left); pair the clock
@@ -85,5 +83,5 @@ approved.
 ## Done
 
 Specs 001-017, released from 1.4.0 to 1.8.0; 021, 023 in 1.9.0; 024 in 1.9.1; 025 in
-2.0.0; 026-033 and 035 in 2.1.0; 036 and 038 in 2.1.1; 039 in 2.2.0; 041-044 in 2.3.0; 045 in 2.3.1; 046 in 2.4.0; 048 in 2.5.0/2.6.0; 047 and 049's first set in 2.7.0; 018, 022 closed on the clock; 019
+2.0.0; 026-033 and 035 in 2.1.0; 036 and 038 in 2.1.1; 039 in 2.2.0; 041-044 in 2.3.0; 045 in 2.3.1; 046 in 2.4.0; 048 in 2.5.0/2.6.0; 047 and 049 in 2.7.0 (049's second six faces after it, gallery only); 018, 022 closed on the clock; 019
 in the plugin (0.7.2). See [specs/README.md](../../specs/README.md) and `CHANGELOG.md`.

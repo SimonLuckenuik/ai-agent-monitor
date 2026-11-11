@@ -1,0 +1,370 @@
+{
+ "root": "s",
+ "elements": {
+  "s": {
+   "type": "Box",
+   "props": {
+    "flexDirection": "column",
+    "padding": 1,
+    "gap": 1,
+    "backgroundColor": "#0a0f14"
+   },
+   "children": [
+    "head",
+    "cards",
+    "sp",
+    "foot"
+   ]
+  },
+  "head": {
+   "type": "Box",
+   "props": {
+    "alignItems": "center"
+   },
+   "children": [
+    "ht",
+    "hsp",
+    "hc"
+   ]
+  },
+  "ht": {
+   "type": "Text",
+   "props": {
+    "text": "Laundry",
+    "fontSize": 26,
+    "color": "#ffffff"
+   }
+  },
+  "hsp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "hc": {
+   "type": "Clock",
+   "props": {
+    "format": "hm",
+    "fontSize": 16,
+    "color": "@muted",
+    "align": "right"
+   }
+  },
+  "cards": {
+   "type": "Box",
+   "props": {
+    "gap": 1
+   },
+   "children": [
+    "cw",
+    "cd"
+   ]
+  },
+  "cw": {
+   "type": "Card",
+   "props": {
+    "title": "Washer",
+    "flexGrow": 1,
+    "padding": 1,
+    "backgroundColor": "#121a22",
+    "borderColor": {
+     "$cond": {
+      "$state": "/vars/washer",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/washer",
+       "eq": "running"
+      },
+      "$then": "#5ab4ff",
+      "$else": "#26313d"
+     }
+    }
+   },
+   "children": [
+    "cwi",
+    "cwl",
+    "cwu",
+    "cwst"
+   ]
+  },
+  "cwi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z",
+     "M17 13a5 5 0 1 1-10 0 5 5 0 0 1 10 0z",
+     "M6 6h1",
+     "M10 6h1"
+    ],
+    "size": 6,
+    "color": {
+     "$cond": {
+      "$state": "/vars/washer",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/washer",
+       "eq": "running"
+      },
+      "$then": "#5ab4ff",
+      "$else": "#3b4856"
+     }
+    },
+    "fill": "none",
+    "strokeWidth": 1.5
+   }
+  },
+  "cwl": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$cond": {
+      "$state": "/vars/washer",
+      "eq": "done"
+     },
+     "$then": "Done",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/washer",
+       "eq": "running"
+      },
+      "$then": {
+       "$template": "${/vars/washerleft|0}"
+      },
+      "$else": "Off"
+     }
+    },
+    "font": "big",
+    "fontSize": 30,
+    "color": {
+     "$cond": {
+      "$state": "/vars/washer",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/washer",
+       "eq": "running"
+      },
+      "$then": "#ffffff",
+      "$else": "#3b4856"
+     }
+    },
+    "maxChars": 4
+   }
+  },
+  "cwu": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$cond": {
+      "$state": "/vars/washer",
+      "eq": "running"
+     },
+     "$then": "min left",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/washer",
+       "eq": "done"
+      },
+      "$then": "empty it",
+      "$else": ""
+     }
+    },
+    "color": "@muted",
+    "maxChars": 8
+   }
+  },
+  "cwst": {
+   "type": "Box",
+   "props": {
+    "height": 1
+   },
+   "children": [
+    "cwsp"
+   ]
+  },
+  "cwsp": {
+   "type": "Spinner",
+   "props": {
+    "label": "running",
+    "color": "#5ab4ff"
+   },
+   "visible": {
+    "$state": "/vars/washer",
+    "eq": "running"
+   }
+  },
+  "cd": {
+   "type": "Card",
+   "props": {
+    "title": "Dryer",
+    "flexGrow": 1,
+    "padding": 1,
+    "backgroundColor": "#121a22",
+    "borderColor": {
+     "$cond": {
+      "$state": "/vars/dryer",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/dryer",
+       "eq": "running"
+      },
+      "$then": "#ffb020",
+      "$else": "#26313d"
+     }
+    }
+   },
+   "children": [
+    "cdi",
+    "cdl",
+    "cdu",
+    "cdst"
+   ]
+  },
+  "cdi": {
+   "type": "Icon",
+   "props": {
+    "d": [
+     "M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z",
+     "M17 13a5 5 0 1 1-10 0 5 5 0 0 1 10 0z",
+     "M10 11c1 1 1 3 0 4",
+     "M14 11c1 1 1 3 0 4"
+    ],
+    "size": 6,
+    "color": {
+     "$cond": {
+      "$state": "/vars/dryer",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/dryer",
+       "eq": "running"
+      },
+      "$then": "#ffb020",
+      "$else": "#3b4856"
+     }
+    },
+    "fill": "none",
+    "strokeWidth": 1.5
+   }
+  },
+  "cdl": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$cond": {
+      "$state": "/vars/dryer",
+      "eq": "done"
+     },
+     "$then": "Done",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/dryer",
+       "eq": "running"
+      },
+      "$then": {
+       "$template": "${/vars/dryerleft|0}"
+      },
+      "$else": "Off"
+     }
+    },
+    "font": "big",
+    "fontSize": 30,
+    "color": {
+     "$cond": {
+      "$state": "/vars/dryer",
+      "eq": "done"
+     },
+     "$then": "#3ddc84",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/dryer",
+       "eq": "running"
+      },
+      "$then": "#ffffff",
+      "$else": "#3b4856"
+     }
+    },
+    "maxChars": 4
+   }
+  },
+  "cdu": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$cond": {
+      "$state": "/vars/dryer",
+      "eq": "running"
+     },
+     "$then": "min left",
+     "$else": {
+      "$cond": {
+       "$state": "/vars/dryer",
+       "eq": "done"
+      },
+      "$then": "empty it",
+      "$else": ""
+     }
+    },
+    "color": "@muted",
+    "maxChars": 8
+   }
+  },
+  "cdst": {
+   "type": "Box",
+   "props": {
+    "height": 1
+   },
+   "children": [
+    "cdsp"
+   ]
+  },
+  "cdsp": {
+   "type": "Spinner",
+   "props": {
+    "label": "running",
+    "color": "#ffb020"
+   },
+   "visible": {
+    "$state": "/vars/dryer",
+    "eq": "running"
+   }
+  },
+  "sp": {
+   "type": "Spacer",
+   "props": {}
+  },
+  "foot": {
+   "type": "Text",
+   "props": {
+    "text": {
+     "$state": "/vars/note",
+     "fallback": ""
+    },
+    "color": "@muted",
+    "align": "center",
+    "maxChars": 38,
+    "wrap": "truncate"
+   }
+  }
+ },
+ "state": {
+  "vars": {
+   "washer": "running",
+   "washerleft": 23,
+   "dryer": "done",
+   "dryerleft": 0,
+   "note": "Towels in the dryer since 14:10"
+  }
+ }
+}

@@ -156,7 +156,8 @@ screen); give live text `maxChars`. At most 6 KB, 96 elements, 8 levels of nesti
 Use a custom face instead for animation, gradients, pictures, sprites or exact pixels.
 Tested examples: the repository's `examples/json-render/`. Ready-made ones are in the
 gallery's json-render category (2.7.0 on): `sky`, `week-ahead`, `today`, `home-energy`,
-`agent-session` and `printer`; each shows demo values until you push your own. Install
+`agent-session`, `printer`, `pr-queue`, `on-call`, `now-playing`, `departures`,
+`activity-rings` and `laundry`; each shows demo values until you push your own. Install
 one (`clock.py install home-energy --show`), then change it.
 
 ## Rules of the screen

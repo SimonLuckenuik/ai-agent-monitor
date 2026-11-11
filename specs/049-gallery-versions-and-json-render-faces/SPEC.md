@@ -1,8 +1,9 @@
 # 049 The gallery knows firmware versions, and json-render faces in it
 
-Status: First set done in 2.7.0 (approved 2026-11-10, the owner: "Approve, first six":
-sky, week-ahead, today, home-energy, agent-session, printer); the other six (pr-queue,
-on-call, now-playing, departures, activity-rings, laundry) later. Drafted
+Status: Done in 2.7.0 (approved 2026-11-10, the owner: "Approve, first six": sky,
+week-ahead, today, home-energy, agent-session, printer); the other six (pr-queue, on-call,
+now-playing, departures, activity-rings, laundry) done 2026-11-10 after the release (the
+owner: "The other six faces"): gallery files only, in the gallery once on `main`. Drafted
 2026-11-10. From the owner, after the 2.7.0-dev run: "should we add those
 json-render to the gallery ? or maybe create new fancy one instead with a specific usage
 so that users can try them", then "should the items in the gallery expose the minimum
@@ -110,6 +111,10 @@ version so that they are used with the right version ?", then "go".
 - R7a. Every face looks complete right after Install, before anything sends it a value:
   plausible demo values in the spec's `state` (applied only to variables not set yet),
   so trying one needs no setup.
+- R7b. (Added 2026-11-10, with the second set.) A face reads at most 15 variables (the
+  clock holds 40 at once, shared by every face), and the second set's names differ from
+  the first set's (`state`, `title` and the like would collide: a face installed later
+  keeps the other face's value, since `state` seeds only variables not set yet).
 - R8. They are listed in `marketplace.json` under a new key, `"specs"`, with the fields of
   `"faces"` plus `"format": "json-render"`. Settings pages before this spec read only
   `"faces"`, so they never offer a spec. The new page lists both, the specs under their
