@@ -6,7 +6,7 @@ approved.
 
 ## Next
 
-0. **Check 2.7.1 on the clocks** (installed on all three 2026-11-21; json-render specs seen
+0. **Check 2.7.1 on the clocks** (installed on all four 2026-11-21; json-render specs seen
    on agentmonitor-ade1f0 as 2.7.0-dev): the gallery's json-render faces installed from
    the settings page, no redraw of the face on screen while others are saved, a day of
    running; agentmonitor-adec8a's panic (decode its crash log).
