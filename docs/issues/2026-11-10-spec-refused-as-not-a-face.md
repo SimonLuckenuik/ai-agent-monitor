@@ -2,7 +2,7 @@
 
 Date: 2026-11-10
 
-Status: Fixed in the source (2026-11-21, `feat/047-json-render`), not released: a spec the clock lacks the memory to
+Status: Fixed in 2.7.1 (2026-11-21): a spec the clock lacks the memory to
 compile answers 507, not 400. Reproduced and checked in the emulator, not on a clock.
 
 ## Symptom

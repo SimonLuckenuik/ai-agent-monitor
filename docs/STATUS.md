@@ -6,7 +6,9 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest version is **2.7.0** (2026-11-10: json-render specs compiled on the clock,
+The latest version is **2.7.1** (2026-11-21: a json-render spec short of memory answers
+507 instead of 400; the gallery's other six json-render faces came with it, on `main`;
+not yet on a clock). Before it: **2.7.0** (2026-11-10: json-render specs compiled on the clock,
 spec 047; the face gallery's firmware versions and six json-render faces, spec 049; a
 face upload no longer redraws the face on screen; about 3 KB of update room). Its
 2.7.0-dev build ran on agentmonitor-ade1f0: six specs saved, `jrStack` 4,084 B of 5,632,
@@ -154,4 +156,4 @@ Order: [roadmap](plans/roadmap.md).
 ## Open issues
 
 See [issues](issues/README.md): the old setup network name after a reboot. A json-render
-spec short of memory answered 400 instead of 507: fixed in the source 2026-11-21, not released.
+spec short of memory answered 400 instead of 507: fixed in 2.7.1.
