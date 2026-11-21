@@ -2,7 +2,7 @@
 
 Date: 2026-11-21
 
-Status: Fixed on `feat/047-json-render` (for the next release), not released: 304 B more
+Status: Fixed in 2.7.2: 304 B more
 stack under every face's drawing. Measured on the chip build; not yet seen on a clock.
 
 ## Symptom

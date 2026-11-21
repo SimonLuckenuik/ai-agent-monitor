@@ -7,7 +7,7 @@ here from Open to Closed when it is fixed or explained.
 
 ## Open
 
-- [2026-11-21 Drawing a message left the clock 224 B of stack: fixed on the branch (304 B more), not released](2026-11-21-message-face-left-224-bytes-of-stack.md)
+- [2026-11-21 Drawing a message left the clock 224 B of stack: fixed in 2.7.2 (304 B more)](2026-11-21-message-face-left-224-bytes-of-stack.md)
 - [2026-11-10 A valid json-render spec was refused as "not a face" (400) when memory was short: fixed in 2.7.1 (507)](2026-11-10-spec-refused-as-not-a-face.md)
 - [2026-11-07 Text with a `bg` wipes the items under it (a ring cut by its own label): fixed for json-render, face-format guidance open](2026-11-07-text-bg-wipes-items-under-it.md)
 - [2026-10-25 After a reboot the clock showed the old setup network name](2026-10-25-setup-network-kept-old-name-after-reboot.md)

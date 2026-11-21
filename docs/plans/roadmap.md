@@ -13,8 +13,8 @@ approved.
 1. **2.2.0 on the clock** ([039](../../specs/039-animated-messages/SPEC.md)): Moni waving,
    hopping and slumped and the warning/error flash seen on agentmonitor-ade1f0 with 2.7.1
    (the owner, 2026-11-21); left: *Animated messages* off and the night hours. Drawing a
-   message took the clock's least free stack to 224 B: 304 B more on the branch, for the
-   next release.
+   message took the clock's least free stack to 224 B: 304 B more in 2.7.2: check
+   `stackFree` after messages.
 2. **Check 2.3.1 on the clock**: the update installs (4 KB of room left); pair the clock
    with the owner's OpenClaw Gateway ([041](../../specs/041-openclaw-node/SPEC.md), done in
    2.3.0 with [042](../../specs/042-flash-room-no-loss/SPEC.md),

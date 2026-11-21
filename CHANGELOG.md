@@ -7,6 +7,17 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+## 2.7.2 - 2026-11-21
+
+### Upgrading
+
+- **From 2.5.0:** Settings > Firmware update > **Install**, or install
+  `AIAgentMonitor_v2.7.2.update`. Settings, faces and photos are kept.
+- **From 1.4.0 to 2.4.x:** install `AIAgentMonitor_v2.7.2.bin.gz`, then press **Install**
+  on the setup page the clock comes back with (or install the `.update`).
+- **From the stock firmware:** install `SDPro_AIAgentMonitor_starter_v2.7.2.bin` from the
+  clock's own update page, join its setup network, and follow the steps.
+
 ### Fixed
 
 - Faces draw with 304 B more stack to spare: showing a message with Moni had left the

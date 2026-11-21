@@ -6,7 +6,9 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 
 ## Release and checkout
 
-The latest version is **2.7.1** (2026-11-21: a json-render spec short of memory answers
+The latest version is **2.7.2** (2026-11-21: 304 B more stack under every face's drawing,
+after Moni's messages left agentmonitor-ade1f0 224 B; not yet on a clock). Before it:
+**2.7.1** (2026-11-21: a json-render spec short of memory answers
 507 instead of 400; the gallery's other six json-render faces came with it, on `main`).
 The owner installed it on all four clocks (2026-11-21). `/status` about 25 minutes after,
 build `1c88a88`:
