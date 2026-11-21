@@ -6,9 +6,10 @@ approved.
 
 ## Next
 
-0. **Check 2.7.0 on the clock**: json-render specs saved and shown (2.7.0-dev seen on
-   agentmonitor-ade1f0, 2026-11-10), the gallery's json-render faces installed from the
-   settings page, "Needs 2.7.0" on an older clock, a day of running.
+0. **Check 2.7.1 on the clocks** (installed on all three 2026-11-21; json-render specs seen
+   on agentmonitor-ade1f0 as 2.7.0-dev): the gallery's json-render faces installed from
+   the settings page, no redraw of the face on screen while others are saved, a day of
+   running; agentmonitor-adec8a's panic (decode its crash log).
 1. **Check 2.2.0 on the clock**: Moni on waiting, done and error messages, the flashes,
    *Animated messages* off ([039](../../specs/039-animated-messages/SPEC.md)).
 2. **Check 2.3.1 on the clock**: the update installs (4 KB of room left); pair the clock

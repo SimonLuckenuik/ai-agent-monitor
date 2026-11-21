@@ -7,8 +7,19 @@ the [specs](../specs/README.md) and `CHANGELOG.md`.
 ## Release and checkout
 
 The latest version is **2.7.1** (2026-11-21: a json-render spec short of memory answers
-507 instead of 400; the gallery's other six json-render faces came with it, on `main`;
-not yet on a clock). Before it: **2.7.0** (2026-11-10: json-render specs compiled on the clock,
+507 instead of 400; the gallery's other six json-render faces came with it, on `main`).
+The owner installed it on every clock (2026-11-21). `/status` about 25 minutes after,
+build `1c88a88`:
+
+| Clock | Free heap (least) | `stackFree` | Notes |
+|---|---|---|---|
+| agentmonitor-ade1f0 (.90) | 27.3 KB (20.4) | 464 B | a custom face drawn (slowest 178 ms) |
+| agentmonitor-ade9c0 (.79) | 25.4 KB (22.7) | 984 B | |
+| agentmonitor-adec8a (.229) | 22.6 KB (19.3) | 484 B | one crash in its log: a panic after 4,958 s up, no face (`-1`), time and version unknown without the log (System > Crashes); MQTT "cannot connect (-2)" |
+
+agentmonitor-ade859 did not answer the scan. Not yet checked on a clock: the gallery's
+json-render faces installed from the settings page, no redraw of the face on screen while
+others are saved, a day's run. Before it: **2.7.0** (2026-11-10: json-render specs compiled on the clock,
 spec 047; the face gallery's firmware versions and six json-render faces, spec 049; a
 face upload no longer redraws the face on screen; about 3 KB of update room). Its
 2.7.0-dev build ran on agentmonitor-ade1f0: six specs saved, `jrStack` 4,084 B of 5,632,
