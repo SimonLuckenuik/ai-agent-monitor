@@ -3007,7 +3007,9 @@ bool faceAvailable(int face) {
   }
 }
 
-void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFace) {
+// Not inlined into loop(): its frame and loop()'s are both on the stack under every face's
+// drawing, and inlined, loop() grew by more than this frame.
+__attribute__((noinline)) void faceDraw(int face, const struct tm& t, bool timeValid, const char* customFace) {
   customWanted = customFace ? customFace : cfg.customFace.c_str();
   static int msSec = -1;
   if (t.tm_sec != msSec) { msSec = t.tm_sec; secondAt = millis(); }

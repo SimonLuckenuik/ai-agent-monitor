@@ -7,6 +7,11 @@ versioning. `/version` on the device reports the version it was built as; a
 
 ## Unreleased
 
+### Fixed
+
+- Faces draw with 304 B more stack to spare: showing a message with Moni had left the
+  clock 224 B of its 4 KB stack (no crash seen).
+
 ## 2.7.1 - 2026-11-21
 
 ### Upgrading

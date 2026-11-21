@@ -34,7 +34,7 @@ first minutes; a day of running not yet seen. Before it: **2.5.0** (2026-11-08, 
 comes with the update, `.update` files, Install from GitHub, the starter for stock
 clocks; 36 KB of update room), files `AIAgentMonitor_v2.5.0.update`, `.bin.gz` and
 `SDPro_AIAgentMonitor_starter_v2.5.0.bin`. Its 2.5.0-dev build ran on agentmonitor-ade1f0
-(the starter, then the .update from it); Install from GitHub not yet tried. Before it:
+(the starter, then the .update from it); Install from GitHub worked on a newer clock (the owner, 2026-11-21). Before it:
 **2.4.0** (2026-11-07: the setup network closes an hour after the clock joins the WiFi,
 WPA2 on recovery's network, an unused recovery ends; spec 046). Before that: **2.3.1**
 (2026-11-06: `clock.help` on the OpenClaw node, spec 045). Before that: **2.3.0** (2026-11-05, tag `v2.3.0`: the clock as an

@@ -167,6 +167,11 @@ declared = re.findall(r'\\"([a-z.]+)\\"', integ[integ.index("const char OPENCLAW
 skill_md = (root / "integrations/openclaw/skill/ai-agent-monitor/SKILL.md").read_text(encoding="utf-8")
 documented = [m.group(1) for m in re.finditer(r"^\| `([a-z]+\.[a-z.]+)` \|.*$", skill_md, re.M) if "**Bridge only**" not in m.group(0)]
 assert len(declared) == 11 and sorted(declared) == sorted(documented), f"OpenClaw skill table {documented} != node {declared}"
+# loop() stays on the 4 KB stack under every face's drawing: what it would inline stays out
+# (2026-11-21: Moni's message left the clock 224 B of stack; these took 304 B off the path).
+openclaw_src = (root / "src" / "openclaw.cpp").read_text(encoding="utf-8")
+for src, name in ((source, "void startOptionalServices()"), (faces_src, "void faceDraw("), (openclaw_src, "void readFrame()")):
+    assert "__attribute__((noinline)) " + name in src, f"{name} must stay out of loop(): noinline"
 # Our string literals stay in flash (spec 025): at most this much of them in RAM.
 subprocess.run(["python", str(root / "scripts/ram_report.py"), str(image.with_suffix(".elf")), "--max-ours", "4864"],
                check=True, stdout=subprocess.DEVNULL)

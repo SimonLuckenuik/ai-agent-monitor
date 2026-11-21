@@ -12,3 +12,14 @@
   length), the wave only leans the forearm; a waving GIF for the README.
 - 2026-11-04: released in 2.2.0. All 34 integration cases pass (the message cases again on
   the final build), unit, safety and page tests; `.bin.gz` 420,306 B. Not yet on the clock.
+
+## 2026-11-21: seen on the clock (2.7.1), and its stack
+
+- The owner watched agentmonitor-ade1f0 show waiting, done, error and warning messages:
+  Moni waves, hops and slumps, and the screen flashes, as specified. Not yet checked:
+  *Animated messages* off, the night hours.
+- The clock's least free stack fell to 224 B while they showed (352 B on
+  agentmonitor-adec8a, on "done"): Moni moving is drawn through `repaintBox` and the
+  expression evaluator, under `loop()`'s 656 B frame. Three functions kept out of
+  `loop()` give every face's drawing 304 B more (+192 B of image).
+  docs/issues/2026-11-21-message-face-left-224-bytes-of-stack.md.

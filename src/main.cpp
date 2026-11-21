@@ -1314,7 +1314,8 @@ void drawSafeScreen() {
   centerText(F("Settings > System > Crashes: Resume"), 208, 2, TFT_WHITE);
 }
 
-void startOptionalServices() {
+// Out of line: its locals would otherwise sit in loop()'s frame, under every face's drawing.
+__attribute__((noinline)) void startOptionalServices() {
   optionalStarted = true;
   markBoot(BOOT_STARTING); // A reset/crash during optional startup forces the next boot into recovery.
   LittleFS.setConfig(LittleFSConfig(false));

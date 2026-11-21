@@ -308,7 +308,9 @@ void onEvent(Payload& in) {
   if (!strcmp_P(jsonText(v, F("event")), PSTR("node.invoke.request"))) invoke(jsonAt(v, F("payload")));
 }
 
-void readFrame() {
+// Out of line: its buffer and the handlers it inlines (signing) would otherwise sit in
+// loop()'s frame, under every face's drawing (spec 039: Moni's message, 224 B of stack left).
+__attribute__((noinline)) void readFrame() {
   uint8_t h[8];
   if (!readExact(h, 2)) { lost(); return; }
   uint8_t op = h[0] & 15;
