@@ -15,7 +15,7 @@ build `1c88a88`:
 |---|---|---|---|
 | agentmonitor-ade1f0 (.90) | 27.3 KB (20.4) | 464 B | a custom face drawn (slowest 178 ms) |
 | agentmonitor-ade9c0 (.79) | 25.4 KB (22.7) | 984 B | |
-| agentmonitor-adec8a (.229) | 22.6 KB (19.3) | 484 B | one crash in its log: a panic after 4,958 s up, no face (`-1`), time and version unknown without the log (System > Crashes); MQTT "cannot connect (-2)" |
+| agentmonitor-adec8a (.229) | 22.6 KB (19.3) | 484 B | one crash in its log, from **1.9.1**, not 2.7.x: a panic after 4,958 s up with 4,000 B of heap free, during a web upload (the stack names `handlePhotoUpload`, `UpdaterClass::begin`; `scripts/decode_crash.py`, 2026-11-21); MQTT "cannot connect (-2)" |
 | agentmonitor-ade859 (.57) | 23.9 KB (22.4) | 720 B | |
 
 Not yet checked on a clock: the gallery's
