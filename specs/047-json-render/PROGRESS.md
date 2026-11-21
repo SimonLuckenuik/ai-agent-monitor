@@ -310,3 +310,11 @@ API key (`clock.py`).
 - Released on the owner's word ("if working, commit, push and release new version"), with
   spec 049's first set and the face-redraw fixes. Not seen on a clock in its final build:
   the redraw fixes; the 2.7.0-dev run above is the clock check.
+
+## 2026-11-21: a spec short of memory answered 400 (fixed, not released)
+
+- A spec compiled with about 15 KB free could lose pieces of its face (a `String` append
+  that fails drops its text), and the upload answered 400 "Expected JSON with an "items"
+  array". Now 507 "Not enough memory". Reproduced with `EMU_HEAP`; a compile of the
+  gallery's specs needs about 17 KB free. +64 B. Details:
+  docs/issues/2026-11-10-spec-refused-as-not-a-face.md.

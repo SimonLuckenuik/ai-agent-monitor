@@ -153,4 +153,5 @@ Order: [roadmap](plans/roadmap.md).
 
 ## Open issues
 
-See [issues](issues/README.md): the old setup network name after a reboot.
+See [issues](issues/README.md): the old setup network name after a reboot. A json-render
+spec short of memory answered 400 instead of 507: fixed in the source 2026-11-21, not released.

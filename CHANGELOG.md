@@ -15,6 +15,12 @@ versioning. `/version` on the device reports the version it was built as; a
   against goals) and laundry (washer and dryer). Like the first six, they show demo values
   as soon as they are installed, and need 2.7.0. The skill (plugin 0.8.1) lists them.
 
+### Fixed
+
+- A json-render spec sent while the clock is short of memory answers 507 "Not enough
+  memory" (try again later) instead of 400 "Expected JSON with an items array", which
+  made a valid spec look broken.
+
 ## 2.7.0 - 2026-11-10
 
 ### Upgrading

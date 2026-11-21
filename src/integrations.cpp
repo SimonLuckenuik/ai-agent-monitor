@@ -335,6 +335,7 @@ String storeFace(const String& name, String bodyIn) {
 #else
   const String& body = bodyIn;
   const size_t faceMax = FACE_JSON_MAX, itemsMax = 32;
+  const bool spec = false;
 #endif
   if (!storageReady || recoveryMode) return F("Storage unavailable");
   if (body.length() == 0 || body == "{}") {
@@ -352,7 +353,8 @@ String storeFace(const String& name, String bodyIn) {
   filter[F("show")] = true;
   DeserializationError e = parseJson(doc, body, filter);
   if (e == DeserializationError::NoMemory) return F(NO_MEMORY);
-  if (e || !doc[F("items")].is<JsonArray>()) return F("Expected JSON with an \"items\" array");
+  // A spec's compiled face that does not parse lost an append for want of memory.
+  if (e || !doc[F("items")].is<JsonArray>()) return spec ? F(NO_MEMORY) : F("Expected JSON with an \"items\" array");
   if (doc[F("items")].size() > itemsMax) return F("At most 32 items");
   if (!LittleFS.exists("/faces")) LittleFS.mkdir("/faces");
   if (!LittleFS.exists(facePath(name)) && customFaceCount() >= FACES_MAX) return F("At most 40 custom faces");
